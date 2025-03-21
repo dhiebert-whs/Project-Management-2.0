@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="org.frcpm.controllers.MainController"
+            prefHeight="768.0" prefWidth="1024.0">
+    
+    <top>
+        <MenuBar>
+            <menus>
+                <Menu text="File">
+                    <items>
+                        <MenuItem text="New Project" onAction="#handleNewProject"/>
+                        <MenuItem text="Open Project" onAction="#handleOpenProject"/>
+                        <SeparatorMenuItem />
+                        <MenuItem text="Exit" onAction="#handleExit"/>
+                    </items>
+                </Menu>
+                <Menu text="Team">
+                    <items>
+                        <MenuItem text="Subteams" onAction="#handleSubteams"/>
+                        <MenuItem text="Members" onAction="#handleMembers"/>
+                    </items>
+                </Menu>
+                <Menu text="Help">
+                    <items>
+                        <MenuItem text="User Guide" onAction="#handleUserGuide"/>
+                        <MenuItem text="About" onAction="#handleAbout"/>
+                    </items>
+                </Menu>
+            </menus>
+        </MenuBar>
+    </top>
+    
+    <center>
+        <TabPane>
+            <tabs>
+                <Tab text="Dashboard" closable="false">
+                    <VBox spacing="10" style="-fx-padding: 10;">
+                        <Label text="FRC Project Management System" style="-fx-font-size: 20; -fx-font-weight: bold;"/>
+                        <Label text="Welcome to the FRC Project Management System!" />
+                        
+                        <TitledPane text="Current Projects" collapsible="false">
+                            <TableView fx:id="projectsTable">
+                                <columns>
+                                    <TableColumn text="Name" fx:id="projectNameColumn"/>
+                                    <TableColumn text="Start Date" fx:id="projectStartColumn"/>
+                                    <TableColumn text="Goal End Date" fx:id="projectGoalColumn"/>
+                                    <TableColumn text="Hard Deadline" fx:id="projectDeadlineColumn"/>
+                                </columns>
+                            </TableView>
+                        </TitledPane>
+                        
+                        <HBox spacing="10">
+                            <Button text="New Project" onAction="#handleNewProject"/>
+                            <Button text="Open Project" onAction="#handleOpenProject" disable="true"/>
+                            <Button text="Import Project" onAction="#handleImportProject"/>
+                        </HBox>
+                    </VBox>
+                </Tab>
+                <Tab text="Project Details" closable="false" disable="true" fx:id="projectTab">
+                    <Label text="No project selected" style="-fx-padding: 20;"/>
+                </Tab>
+            </tabs>
+        </TabPane>
+    </center>
+    
+    <bottom>
+        <HBox style="-fx-padding: 5; -fx-background-color: #f0f0f0;">
+            <Label text="FRC Project Management System - v0.1.0" />
+        </HBox>
+    </bottom>
+    
+</BorderPane>
