@@ -3,6 +3,8 @@ package org.frcpm.controllers;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Menu;
@@ -17,6 +19,7 @@ import org.frcpm.utils.ShortcutManager;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -244,12 +247,35 @@ public class MainController {
     private void handleSettings(ActionEvent event) {
         showNotImplementedAlert("Settings");
     }
-    
+
     @FXML
     private void handleDatabaseManagement(ActionEvent event) {
-        showNotImplementedAlert("Database Management");
+        try {
+            // Load the FXML
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/DatabaseMigrationView.fxml"));
+            Parent root = loader.load();
+            
+            // Get the controller
+            DatabaseMigrationController controller = loader.getController();
+            
+            // Create the dialog stage
+            Stage dialogStage = new Stage();
+            dialogStage.setTitle("Database Management");
+            dialogStage.initModality(Modality.WINDOW_MODAL);
+            dialogStage.initOwner(((Node) event.getSource()).getScene().getWindow());
+            dialogStage.setScene(new Scene(root));
+            
+            // Set the controller's dialog stage
+            controller.setDialogStage(dialogStage);
+            
+            // Show the dialog
+            dialogStage.showAndWait();
+            
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Error loading database migration view", e);
+            showNotImplementedAlert("Database Management");
+        }
     }
-    
     // ---- Help Menu Handlers ----
     
     @FXML
@@ -266,34 +292,7 @@ public class MainController {
         alert.showAndWait();
     }
 
-    @FXML
-        private void handleDatabaseManagement(ActionEvent event) {
-            try {
-                // Load the FXML
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/DatabaseMigrationView.fxml"));
-                Parent root = loader.load();
-                
-                // Get the controller
-                DatabaseMigrationController controller = loader.getController();
-                
-                // Create the dialog stage
-                Stage dialogStage = new Stage();
-                dialogStage.setTitle("Database Management");
-                dialogStage.initModality(Modality.WINDOW_MODAL);
-                dialogStage.initOwner(((Node) event.getSource()).getScene().getWindow());
-                dialogStage.setScene(new Scene(root));
-                
-                // Set the controller's dialog stage
-                controller.setDialogStage(dialogStage);
-                
-                // Show the dialog
-                dialogStage.showAndWait();
-                
-            } catch (IOException e) {
-                LOGGER.log(Level.SEVERE, "Error loading database migration view", e);
-                showNotImplementedAlert("Database Management");
-            }
-        }
+    
     
     /**
      * Helper method to show a "Not Implemented" alert.
