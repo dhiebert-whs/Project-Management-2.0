@@ -2,15 +2,21 @@ package org.frcpm.controllers;
 
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Menu;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.stage.FileChooser;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+
 import org.frcpm.utils.ShortcutManager;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.logging.Logger;
 
 /**
@@ -259,6 +265,35 @@ public class MainController {
         alert.setContentText("A comprehensive project management tool designed specifically for FIRST Robotics Competition teams.\n\nVersion: 0.1.0");
         alert.showAndWait();
     }
+
+    @FXML
+        private void handleDatabaseManagement(ActionEvent event) {
+            try {
+                // Load the FXML
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/DatabaseMigrationView.fxml"));
+                Parent root = loader.load();
+                
+                // Get the controller
+                DatabaseMigrationController controller = loader.getController();
+                
+                // Create the dialog stage
+                Stage dialogStage = new Stage();
+                dialogStage.setTitle("Database Management");
+                dialogStage.initModality(Modality.WINDOW_MODAL);
+                dialogStage.initOwner(((Node) event.getSource()).getScene().getWindow());
+                dialogStage.setScene(new Scene(root));
+                
+                // Set the controller's dialog stage
+                controller.setDialogStage(dialogStage);
+                
+                // Show the dialog
+                dialogStage.showAndWait();
+                
+            } catch (IOException e) {
+                LOGGER.log(Level.SEVERE, "Error loading database migration view", e);
+                showNotImplementedAlert("Database Management");
+            }
+        }
     
     /**
      * Helper method to show a "Not Implemented" alert.
@@ -270,4 +305,6 @@ public class MainController {
         alert.setContentText("This feature is not yet implemented in the current version.");
         alert.showAndWait();
     }
+
+
 }
