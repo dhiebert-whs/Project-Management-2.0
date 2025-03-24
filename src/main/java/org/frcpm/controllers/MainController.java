@@ -51,6 +51,8 @@ public class MainController {
     @FXML
     private Menu recentProjectsMenu;
     
+
+    
     /**
      * Initializes the controller. This method is automatically called after the FXML file has been loaded.
      */

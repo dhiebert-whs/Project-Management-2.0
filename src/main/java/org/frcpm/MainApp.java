@@ -6,6 +6,8 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import org.frcpm.config.DatabaseConfig;
+import org.frcpm.services.ServiceFactory;
+import org.frcpm.services.SubteamService;
 
 import java.io.IOException;
 import java.util.logging.Level;
@@ -54,9 +56,34 @@ public class MainApp extends Application {
         try {
             DatabaseConfig.initialize();
             LOGGER.info("Database initialized successfully");
+            
+            // Check if this is the first run (no projects exist)
+            boolean firstRun = ServiceFactory.getProjectService().findAll().isEmpty();
+            if (firstRun) {
+                LOGGER.info("First run detected - creating default data");
+                createDefaultData();
+            }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error initializing database", e);
             showErrorAndExit("Error initializing database: " + e.getMessage());
+        }
+    }
+
+
+    /**
+     * Creates default data for first-time run.
+     */
+    private void createDefaultData() {
+        try {
+            // Create default subteams
+            SubteamService subteamService = ServiceFactory.getSubteamService();
+            subteamService.createSubteam("Programming", "#3366CC", "Java, Vision, Controls");
+            subteamService.createSubteam("Mechanical", "#CC3333", "CAD, Fabrication, Assembly");
+            subteamService.createSubteam("Electrical", "#FFCC00", "Wiring, Electronics, Control Systems");
+            
+            LOGGER.info("Default data created successfully");
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error creating default data", e);
         }
     }
 
