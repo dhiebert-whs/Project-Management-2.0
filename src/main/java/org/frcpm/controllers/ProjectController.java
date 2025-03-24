@@ -36,38 +36,28 @@ public class ProjectController {
     
     private static final Logger LOGGER = Logger.getLogger(ProjectController.class.getName());
     
-    @FXML
-    private Label projectNameLabel;
+    @FXML Label projectNameLabel;
     
-    @FXML
-    private Label startDateLabel;
+    @FXML Label startDateLabel;
     
-    @FXML
-    private Label goalDateLabel;
+    @FXML Label goalDateLabel;
     
-    @FXML
-    private Label deadlineLabel;
+    @FXML Label deadlineLabel;
     
-    @FXML
-    private TextArea descriptionArea;
+    @FXML TextArea descriptionArea;
     
     @FXML
     private ProgressBar completionProgressBar;
     
-    @FXML
-    private Label completionLabel;
+    @FXML Label completionLabel;
     
-    @FXML
-    private Label totalTasksLabel;
+    @FXML Label totalTasksLabel;
     
-    @FXML
-    private Label completedTasksLabel;
+    @FXML Label completedTasksLabel;
     
-    @FXML
-    private Label daysRemainingLabel;
+    @FXML Label daysRemainingLabel;
     
-    @FXML
-    private TableView<Task> tasksTable;
+    @FXML TableView<Task> tasksTable;
     
     @FXML
     private TableColumn<Task, String> taskTitleColumn;
@@ -81,8 +71,7 @@ public class ProjectController {
     @FXML
     private TableColumn<Task, LocalDate> taskDueDateColumn;
     
-    @FXML
-    private TableView<Milestone> milestonesTable;
+    @FXML TableView<Milestone> milestonesTable;
     
     @FXML
     private TableColumn<Milestone, String> milestoneNameColumn;
@@ -90,8 +79,7 @@ public class ProjectController {
     @FXML
     private TableColumn<Milestone, LocalDate> milestoneDateColumn;
     
-    @FXML
-    private TableView<Meeting> meetingsTable;
+    @FXML TableView<Meeting> meetingsTable;
     
     @FXML
     private TableColumn<Meeting, LocalDate> meetingDateColumn;
