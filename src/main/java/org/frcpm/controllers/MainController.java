@@ -1,5 +1,7 @@
 package org.frcpm.controllers;
 
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -8,17 +10,25 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
 import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
+import org.frcpm.models.Project;
+import org.frcpm.services.ProjectService;
+import org.frcpm.services.ServiceFactory;
 import org.frcpm.utils.ShortcutManager;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -29,7 +39,10 @@ public class MainController {
     
     private static final Logger LOGGER = Logger.getLogger(MainController.class.getName());
     private final ShortcutManager shortcutManager = new ShortcutManager();
-    
+    private final ProjectService projectService = ServiceFactory.getProjectService();
+    private ObservableList<Project> projectList = FXCollections.observableArrayList();
+
+
     @FXML
     private TableView<?> projectsTable;
     
@@ -52,16 +65,177 @@ public class MainController {
     private Menu recentProjectsMenu;
     
 
-    
+
     /**
      * Initializes the controller. This method is automatically called after the FXML file has been loaded.
      */
     @FXML
     private void initialize() {
         LOGGER.info("Initializing MainController");
-        // TODO: Set up the table columns and cell factories
         
-        // TODO: Load project data into the table
+        // Set up the table columns
+        projectNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
+        projectStartColumn.setCellValueFactory(new PropertyValueFactory<>("startDate"));
+        projectGoalColumn.setCellValueFactory(new PropertyValueFactory<>("goalEndDate"));
+        projectDeadlineColumn.setCellValueFactory(new PropertyValueFactory<>("hardDeadline"));
+        
+        // Format date columns
+        projectStartColumn.setCellFactory(column -> new TableCell<Project, LocalDate>() {
+            @Override
+            protected void updateItem(LocalDate date, boolean empty) {
+                super.updateItem(date, empty);
+                if (empty || date == null) {
+                    setText(null);
+                } else {
+                    setText(date.format(DateTimeFormatter.ofPattern("MM/dd/yyyy")));
+                }
+            }
+        });
+        
+        // Apply the same formatting to other date columns
+        projectGoalColumn.setCellFactory(projectStartColumn.getCellFactory());
+        projectDeadlineColumn.setCellFactory(projectStartColumn.getCellFactory());
+        
+        // Set up row double-click handler
+        projectsTable.setRowFactory(tv -> {
+            TableRow<Project> row = new TableRow<>();
+            row.setOnMouseClicked(event -> {
+                if (event.getClickCount() == 2 && !row.isEmpty()) {
+                    Project project = row.getItem();
+                    handleOpenProject(project);
+                }
+            });
+            return row;
+        });
+        
+        // Load project data
+        loadProjects();
+    }
+    
+    /**
+     * Loads projects from the database into the table.
+     */
+    private void loadProjects() {
+        try {
+            List<Project> projects = projectService.findAll();
+            projectList.setAll(projects);
+            projectsTable.setItems(projectList);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error loading projects", e);
+            showErrorAlert("Error Loading Projects", "Failed to load projects from the database.");
+        }
+    }
+    
+    /**
+     * Handles opening a project.
+     * 
+     * @param project the project to open
+     */
+    private void handleOpenProject(Project project) {
+        if (project == null) {
+            return;
+        }
+        
+        try {
+            // Load the project view
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/ProjectView.fxml"));
+            Parent projectView = loader.load();
+            
+            // Get the controller and set the project
+            ProjectController controller = loader.getController();
+            controller.setProject(project);
+            
+            // Set the project view in the project tab
+            projectTab.setContent(projectView);
+            projectTab.setText(project.getName());
+            projectTab.setDisable(false);
+            
+            // Switch to the project tab
+            TabPane tabPane = projectTab.getTabPane();
+            tabPane.getSelectionModel().select(projectTab);
+            
+            // Enable project-specific menu items
+            Menu projectMenu = getMenuById("projectMenu");
+            if (projectMenu != null) {
+                projectMenu.setDisable(false);
+            }
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Error loading project view", e);
+            showErrorAlert("Error Opening Project", "Failed to open the project view.");
+        }
+    }
+    
+    // Update the handleNewProject method to use the service
+    @FXML
+    private void handleNewProject(ActionEvent event) {
+        try {
+            // Load the new project dialog
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/NewProjectDialog.fxml"));
+            Parent dialogView = loader.load();
+            
+            // Create the dialog
+            Stage dialogStage = new Stage();
+            dialogStage.setTitle("New Project");
+            dialogStage.initModality(Modality.WINDOW_MODAL);
+            dialogStage.initOwner(((Node) event.getSource()).getScene().getWindow());
+            dialogStage.setScene(new Scene(dialogView));
+            
+            // Get the controller
+            NewProjectController controller = loader.getController();
+            controller.setDialogStage(dialogStage);
+            
+            // Show the dialog and wait for result
+            dialogStage.showAndWait();
+            
+            // Check if a new project was created
+            Project newProject = controller.getCreatedProject();
+            if (newProject != null) {
+                // Reload the projects and open the new one
+                loadProjects();
+                handleOpenProject(newProject);
+            }
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Error loading new project dialog", e);
+            showNotImplementedAlert("New Project");
+        }
+    }
+    
+    // Helper method to find a menu by ID
+    private Menu getMenuById(String menuId) {
+        Scene scene = projectsTable.getScene();
+        if (scene == null) {
+            return null;
+        }
+        
+        MenuBar menuBar = (MenuBar) scene.lookup(".menu-bar");
+        if (menuBar == null) {
+            return null;
+        }
+        
+        for (Menu menu : menuBar.getMenus()) {
+            if (menuId.equals(menu.getId())) {
+                return menu;
+            }
+        }
+        
+        return null;
+    }
+    
+    // Replace showNotImplementedAlert with these more specific alerts
+    private void showErrorAlert(String title, String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Error");
+        alert.setHeaderText(title);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+    
+    private void showInfoAlert(String title, String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Information");
+        alert.setHeaderText(title);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
     
     /**
