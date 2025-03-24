@@ -9,6 +9,7 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
+import javafx.scene.control.ChoiceDialog;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
@@ -25,6 +26,7 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
+import org.frcpm.models.Meeting;
 import org.frcpm.models.Project;
 import org.frcpm.services.ProjectService;
 import org.frcpm.services.ServiceFactory;
@@ -35,6 +37,7 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -406,18 +409,80 @@ public class MainController {
     
     @FXML
     private void handleSubteams(ActionEvent event) {
-        showNotImplementedAlert("Subteams Management");
+        try {
+            // Load the team management view
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/TeamView.fxml"));
+            Parent teamView = loader.load();
+            
+            // Create the dialog
+            Stage dialogStage = new Stage();
+            dialogStage.setTitle("Team Management");
+            dialogStage.initModality(Modality.WINDOW_MODAL);
+            dialogStage.initOwner(((Node) event.getSource()).getScene().getWindow());
+            dialogStage.setScene(new Scene(teamView));
+            
+            // Show the dialog
+            dialogStage.showAndWait();
+            
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Error loading team management view", e);
+            showErrorAlert("Error", "Failed to open team management.");
+        }
     }
     
     @FXML
     private void handleMembers(ActionEvent event) {
-        showNotImplementedAlert("Team Members Management");
+        // We can reuse the same view as handleSubteams, but select the members tab
+        handleSubteams(event);
     }
     
-    @FXML
-    private void handleTakeAttendance(ActionEvent event) {
-        showNotImplementedAlert("Take Attendance");
+@FXML
+private void handleTakeAttendance(ActionEvent event) {
+    // First, select a meeting
+    List<Meeting> meetings = ServiceFactory.getMeetingService().findByDateAfter(LocalDate.now().minusDays(7));
+    
+    if (meetings.isEmpty()) {
+        showErrorAlert("No Recent Meetings", "No meetings found in the past week. Please schedule a meeting first.");
+        return;
     }
+    
+    // Show meeting selection dialog
+    ChoiceDialog<Meeting> meetingDialog = new ChoiceDialog<>(meetings.get(0), meetings);
+    meetingDialog.setTitle("Select Meeting");
+    meetingDialog.setHeaderText("Select a meeting to take attendance");
+    meetingDialog.setContentText("Meeting:");
+    
+    Optional<Meeting> meetingResult = meetingDialog.showAndWait();
+    if (!meetingResult.isPresent()) {
+        return; // User canceled
+    }
+    
+    Meeting selectedMeeting = meetingResult.get();
+    
+    try {
+        // Load the attendance view
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/AttendanceView.fxml"));
+        Parent attendanceView = loader.load();
+        
+        // Create the dialog
+        Stage dialogStage = new Stage();
+        dialogStage.setTitle("Take Attendance");
+        dialogStage.initModality(Modality.WINDOW_MODAL);
+        dialogStage.initOwner(((Node) event.getSource()).getScene().getWindow());
+        dialogStage.setScene(new Scene(attendanceView));
+        
+        // Get the controller
+        AttendanceController controller = loader.getController();
+        controller.setMeeting(selectedMeeting);
+        
+        // Show the dialog
+        dialogStage.showAndWait();
+        
+    } catch (IOException e) {
+        LOGGER.log(Level.SEVERE, "Error loading attendance view", e);
+        showErrorAlert("Error", "Failed to open attendance view.");
+    }
+}
     
     @FXML
     private void handleAttendanceHistory(ActionEvent event) {

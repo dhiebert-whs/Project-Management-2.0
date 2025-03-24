@@ -444,9 +444,34 @@ private void handleEditTask(Task task) {
      * 
      * @param event the action event
      */
+    @FXML
     private void handleAddMilestone(ActionEvent event) {
-        // This will be implemented in Phase 3
-        showNotImplementedAlert("Add Milestone");
+        try {
+            // Load the milestone dialog
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/MilestoneView.fxml"));
+            Parent dialogView = loader.load();
+            
+            // Create the dialog
+            Stage dialogStage = new Stage();
+            dialogStage.setTitle("New Milestone");
+            dialogStage.initModality(Modality.WINDOW_MODAL);
+            dialogStage.initOwner(((Node) event.getSource()).getScene().getWindow());
+            dialogStage.setScene(new Scene(dialogView));
+            
+            // Get the controller
+            MilestoneController controller = loader.getController();
+            controller.setNewMilestone(project);
+            
+            // Show the dialog and wait for result
+            dialogStage.showAndWait();
+            
+            // Reload milestones to show the new one
+            loadMilestones();
+            
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Error loading milestone dialog", e);
+            showErrorAlert("Error Creating Milestone", "Failed to open the milestone creation dialog.");
+        }
     }
     
     /**
@@ -455,8 +480,36 @@ private void handleEditTask(Task task) {
      * @param milestone the milestone to edit
      */
     private void handleEditMilestone(Milestone milestone) {
-        // This will be implemented in Phase 3
-        showNotImplementedAlert("Edit Milestone");
+        if (milestone == null) {
+            return;
+        }
+        
+        try {
+            // Load the milestone dialog
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/MilestoneView.fxml"));
+            Parent dialogView = loader.load();
+            
+            // Create the dialog
+            Stage dialogStage = new Stage();
+            dialogStage.setTitle("Edit Milestone");
+            dialogStage.initModality(Modality.WINDOW_MODAL);
+            dialogStage.initOwner(milestonesTable.getScene().getWindow());
+            dialogStage.setScene(new Scene(dialogView));
+            
+            // Get the controller
+            MilestoneController controller = loader.getController();
+            controller.setMilestone(milestone);
+            
+            // Show the dialog and wait for result
+            dialogStage.showAndWait();
+            
+            // Reload milestones to show the updated one
+            loadMilestones();
+            
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Error loading milestone dialog", e);
+            showErrorAlert("Error Editing Milestone", "Failed to open the milestone editing dialog.");
+        }
     }
     
     /**
@@ -464,9 +517,34 @@ private void handleEditTask(Task task) {
      * 
      * @param event the action event
      */
+    @FXML
     private void handleScheduleMeeting(ActionEvent event) {
-        // This will be implemented in Phase 3
-        showNotImplementedAlert("Schedule Meeting");
+        try {
+            // Load the meeting dialog
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/MeetingView.fxml"));
+            Parent dialogView = loader.load();
+            
+            // Create the dialog
+            Stage dialogStage = new Stage();
+            dialogStage.setTitle("Schedule Meeting");
+            dialogStage.initModality(Modality.WINDOW_MODAL);
+            dialogStage.initOwner(((Node) event.getSource()).getScene().getWindow());
+            dialogStage.setScene(new Scene(dialogView));
+            
+            // Get the controller
+            MeetingController controller = loader.getController();
+            controller.setNewMeeting(project);
+            
+            // Show the dialog and wait for result
+            dialogStage.showAndWait();
+            
+            // Reload meetings to show the new one
+            loadMeetings();
+            
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Error loading meeting dialog", e);
+            showErrorAlert("Error Scheduling Meeting", "Failed to open the meeting scheduling dialog.");
+        }
     }
     
     /**
@@ -475,8 +553,36 @@ private void handleEditTask(Task task) {
      * @param meeting the meeting to edit
      */
     private void handleEditMeeting(Meeting meeting) {
-        // This will be implemented in Phase 3
-        showNotImplementedAlert("Edit Meeting");
+        if (meeting == null) {
+            return;
+        }
+        
+        try {
+            // Load the meeting dialog
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/MeetingView.fxml"));
+            Parent dialogView = loader.load();
+            
+            // Create the dialog
+            Stage dialogStage = new Stage();
+            dialogStage.setTitle("Edit Meeting");
+            dialogStage.initModality(Modality.WINDOW_MODAL);
+            dialogStage.initOwner(meetingsTable.getScene().getWindow());
+            dialogStage.setScene(new Scene(dialogView));
+            
+            // Get the controller
+            MeetingController controller = loader.getController();
+            controller.setMeeting(meeting);
+            
+            // Show the dialog and wait for result
+            dialogStage.showAndWait();
+            
+            // Reload meetings to show the updated one
+            loadMeetings();
+            
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Error loading meeting dialog", e);
+            showErrorAlert("Error Editing Meeting", "Failed to open the meeting editing dialog.");
+        }
     }
     
     /**
