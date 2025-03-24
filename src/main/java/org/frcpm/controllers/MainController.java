@@ -11,15 +11,19 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import javafx.scene.control.TableRow;
+import javafx.util.Callback;
 
 import org.frcpm.models.Project;
 import org.frcpm.services.ProjectService;
@@ -30,9 +34,9 @@ import java.io.File;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.List;
 
 /**
  * Controller for the main application view.
@@ -44,21 +48,20 @@ public class MainController {
     private final ProjectService projectService = ServiceFactory.getProjectService();
     private ObservableList<Project> projectList = FXCollections.observableArrayList();
 
-
     @FXML
-    private TableView<?> projectsTable;
+    private TableView<Project> projectsTable;
     
     @FXML
-    private TableColumn<?, ?> projectNameColumn;
+    private TableColumn<Project, String> projectNameColumn;
     
     @FXML
-    private TableColumn<?, ?> projectStartColumn;
+    private TableColumn<Project, LocalDate> projectStartColumn;
     
     @FXML
-    private TableColumn<?, ?> projectGoalColumn;
+    private TableColumn<Project, LocalDate> projectGoalColumn;
     
     @FXML
-    private TableColumn<?, ?> projectDeadlineColumn;
+    private TableColumn<Project, LocalDate> projectDeadlineColumn;
     
     @FXML
     private Tab projectTab;
@@ -66,7 +69,27 @@ public class MainController {
     @FXML
     private Menu recentProjectsMenu;
     
-
+    /**
+     * Helper method to create a date cell factory that works with any entity type.
+     * This allows us to reuse the same formatting logic across different table columns.
+     * 
+     * @param <T> the entity type for the table row
+     * @return a callback that creates properly formatted date cells
+     */
+    private <T> Callback<TableColumn<T, LocalDate>, TableCell<T, LocalDate>> createDateCellFactory() {
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+        return column -> new TableCell<T, LocalDate>() {
+            @Override
+            protected void updateItem(LocalDate date, boolean empty) {
+                super.updateItem(date, empty);
+                if (empty || date == null) {
+                    setText(null);
+                } else {
+                    setText(date.format(dateFormatter));
+                }
+            }
+        };
+    }
 
     /**
      * Initializes the controller. This method is automatically called after the FXML file has been loaded.
@@ -81,22 +104,10 @@ public class MainController {
         projectGoalColumn.setCellValueFactory(new PropertyValueFactory<>("goalEndDate"));
         projectDeadlineColumn.setCellValueFactory(new PropertyValueFactory<>("hardDeadline"));
         
-        // Format date columns
-        projectStartColumn.setCellFactory(column -> new TableCell<Project, LocalDate>() {
-            @Override
-            protected void updateItem(LocalDate date, boolean empty) {
-                super.updateItem(date, empty);
-                if (empty || date == null) {
-                    setText(null);
-                } else {
-                    setText(date.format(DateTimeFormatter.ofPattern("MM/dd/yyyy")));
-                }
-            }
-        });
-        
-        // Apply the same formatting to other date columns
-        projectGoalColumn.setCellFactory(projectStartColumn.getCellFactory());
-        projectDeadlineColumn.setCellFactory(projectStartColumn.getCellFactory());
+        // Apply the date cell factory to all date columns
+        projectStartColumn.setCellFactory(createDateCellFactory());
+        projectGoalColumn.setCellFactory(createDateCellFactory());
+        projectDeadlineColumn.setCellFactory(createDateCellFactory());
         
         // Set up row double-click handler
         projectsTable.setRowFactory(tv -> {
@@ -167,19 +178,6 @@ public class MainController {
         }
     }
     
-
-    
-    
-    /**
-     * Sets up the scene with shortcuts after the scene is loaded.
-     * This method should be called after the scene is set for the controller.
-     */
-    public void setupShortcuts() {
-        // This will be implemented in Phase 2
-        LOGGER.info("Setting up shortcuts");
-    }
-    
-    // ---- File Menu Handlers ----
     @FXML
     private void handleNewProject(ActionEvent event) {
         try {
@@ -235,7 +233,7 @@ public class MainController {
         return null;
     }
     
-    // Replace showNotImplementedAlert with these more specific alerts
+    // Alert helper methods
     private void showErrorAlert(String title, String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("Error");
@@ -251,7 +249,17 @@ public class MainController {
         alert.setContentText(message);
         alert.showAndWait();
     }
-
+    
+    /**
+     * Sets up the scene with shortcuts after the scene is loaded.
+     * This method should be called after the scene is set for the controller.
+     */
+    public void setupShortcuts() {
+        // This will be implemented in Phase 2
+        LOGGER.info("Setting up shortcuts");
+    }
+    
+    // ---- File Menu Handlers ----
     
     @FXML
     private void handleOpenProject(ActionEvent event) {
@@ -451,6 +459,7 @@ public class MainController {
             showNotImplementedAlert("Database Management");
         }
     }
+    
     // ---- Help Menu Handlers ----
     
     @FXML
@@ -466,8 +475,6 @@ public class MainController {
         alert.setContentText("A comprehensive project management tool designed specifically for FIRST Robotics Competition teams.\n\nVersion: 0.1.0");
         alert.showAndWait();
     }
-
-    
     
     /**
      * Helper method to show a "Not Implemented" alert.
@@ -479,6 +486,4 @@ public class MainController {
         alert.setContentText("This feature is not yet implemented in the current version.");
         alert.showAndWait();
     }
-
-
 }
