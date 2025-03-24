@@ -25,6 +25,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -345,25 +346,98 @@ public class ProjectController {
         }
     }
     
-    /**
-     * Handles adding a new task.
-     * 
-     * @param event the action event
-     */
-    private void handleAddTask(ActionEvent event) {
-        // This will be implemented in Phase 3
-        showNotImplementedAlert("Add Task");
+   /**
+ * Handles adding a new task.
+ * 
+ * @param event the action event
+ */
+private void handleAddTask(ActionEvent event) {
+    try {
+        // First, select a subsystem
+        List<Subsystem> subsystems = ServiceFactory.getSubsystemService().findAll();
+        
+        if (subsystems.isEmpty()) {
+            showErrorAlert("No Subsystems", "Please create at least one subsystem before adding tasks.");
+            return;
+        }
+        
+        // Show subsystem selection dialog
+        ChoiceDialog<Subsystem> subsystemDialog = new ChoiceDialog<>(subsystems.get(0), subsystems);
+        subsystemDialog.setTitle("Select Subsystem");
+        subsystemDialog.setHeaderText("Select a subsystem for the new task");
+        subsystemDialog.setContentText("Subsystem:");
+        
+        Optional<Subsystem> subsystemResult = subsystemDialog.showAndWait();
+        if (!subsystemResult.isPresent()) {
+            return; // User canceled
+        }
+        
+        Subsystem selectedSubsystem = subsystemResult.get();
+        
+        // Now load the task dialog
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/TaskView.fxml"));
+        Parent dialogView = loader.load();
+        
+        // Create the dialog
+        Stage dialogStage = new Stage();
+        dialogStage.setTitle("New Task");
+        dialogStage.initModality(Modality.WINDOW_MODAL);
+        dialogStage.initOwner(((Node) event.getSource()).getScene().getWindow());
+        dialogStage.setScene(new Scene(dialogView));
+        
+        // Get the controller
+        TaskController controller = loader.getController();
+        controller.setNewTask(project, selectedSubsystem);
+        
+        // Show the dialog and wait for result
+        dialogStage.showAndWait();
+        
+        // Reload tasks to show the new one
+        loadTasks();
+        
+    } catch (IOException e) {
+        LOGGER.log(Level.SEVERE, "Error loading task dialog", e);
+        showErrorAlert("Error Creating Task", "Failed to open the task creation dialog.");
+    }
+}
+
+/**
+ * Handles editing a task.
+ * 
+ * @param task the task to edit
+ */
+private void handleEditTask(Task task) {
+    if (task == null) {
+        return;
     }
     
-    /**
-     * Handles editing a task.
-     * 
-     * @param task the task to edit
-     */
-    private void handleEditTask(Task task) {
-        // This will be implemented in Phase 3
-        showNotImplementedAlert("Edit Task");
+    try {
+        // Load the task dialog
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/TaskView.fxml"));
+        Parent dialogView = loader.load();
+        
+        // Create the dialog
+        Stage dialogStage = new Stage();
+        dialogStage.setTitle("Edit Task");
+        dialogStage.initModality(Modality.WINDOW_MODAL);
+        dialogStage.initOwner(tasksTable.getScene().getWindow());
+        dialogStage.setScene(new Scene(dialogView));
+        
+        // Get the controller
+        TaskController controller = loader.getController();
+        controller.setTask(task);
+        
+        // Show the dialog and wait for result
+        dialogStage.showAndWait();
+        
+        // Reload tasks to show the updated one
+        loadTasks();
+        
+    } catch (IOException e) {
+        LOGGER.log(Level.SEVERE, "Error loading task dialog", e);
+        showErrorAlert("Error Editing Task", "Failed to open the task editing dialog.");
     }
+}
     
     /**
      * Handles adding a new milestone.
