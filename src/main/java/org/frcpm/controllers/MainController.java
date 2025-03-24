@@ -19,6 +19,7 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.scene.control.TableRow;
 
 import org.frcpm.models.Project;
 import org.frcpm.services.ProjectService;
@@ -31,6 +32,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.List;
 
 /**
  * Controller for the main application view.
@@ -165,7 +167,19 @@ public class MainController {
         }
     }
     
-    // Update the handleNewProject method to use the service
+
+    
+    
+    /**
+     * Sets up the scene with shortcuts after the scene is loaded.
+     * This method should be called after the scene is set for the controller.
+     */
+    public void setupShortcuts() {
+        // This will be implemented in Phase 2
+        LOGGER.info("Setting up shortcuts");
+    }
+    
+    // ---- File Menu Handlers ----
     @FXML
     private void handleNewProject(ActionEvent event) {
         try {
@@ -237,22 +251,7 @@ public class MainController {
         alert.setContentText(message);
         alert.showAndWait();
     }
-    
-    /**
-     * Sets up the scene with shortcuts after the scene is loaded.
-     * This method should be called after the scene is set for the controller.
-     */
-    public void setupShortcuts() {
-        // This will be implemented in Phase 2
-        LOGGER.info("Setting up shortcuts");
-    }
-    
-    // ---- File Menu Handlers ----
-    
-    @FXML
-    private void handleNewProject(ActionEvent event) {
-        showNotImplementedAlert("New Project");
-    }
+
     
     @FXML
     private void handleOpenProject(ActionEvent event) {

@@ -14,6 +14,7 @@ import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.scene.layout.HBox;
 import org.frcpm.models.*;
 import org.frcpm.services.*;
 
