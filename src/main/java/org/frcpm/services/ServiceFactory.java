@@ -11,7 +11,10 @@ public class ServiceFactory {
     private static final ProjectService projectService = new ProjectServiceImpl();
     private static final TaskService taskService = new TaskServiceImpl();
     private static final TeamMemberService teamMemberService = new TeamMemberServiceImpl();
-    // Add other services as we implement them
+    private static final SubteamService subteamService = new SubteamServiceImpl();
+    private static final SubsystemService subsystemService = new SubsystemServiceImpl();
+    private static final ComponentService componentService = new ComponentServiceImpl();
+    // Add remaining services
     
     /**
      * Gets the project service instance.
@@ -40,5 +43,32 @@ public class ServiceFactory {
         return teamMemberService;
     }
     
-    // Add getters for other services as we implement them
+    /**
+     * Gets the subteam service instance.
+     * 
+     * @return the subteam service
+     */
+    public static SubteamService getSubteamService() {
+        return subteamService;
+    }
+    
+    /**
+     * Gets the subsystem service instance.
+     * 
+     * @return the subsystem service
+     */
+    public static SubsystemService getSubsystemService() {
+        return subsystemService;
+    }
+    
+    /**
+     * Gets the component service instance.
+     * 
+     * @return the component service
+     */
+    public static ComponentService getComponentService() {
+        return componentService;
+    }
+    
+    // Add getters for remaining services
 }
