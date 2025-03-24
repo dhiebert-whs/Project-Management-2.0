@@ -4,87 +4,76 @@ import org.frcpm.models.Attendance;
 import org.frcpm.models.Meeting;
 import org.frcpm.models.TeamMember;
 
-import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
- * Service interface for managing Attendance entities.
+ * Service interface for Attendance entity.
  */
 public interface AttendanceService extends Service<Attendance, Long> {
-
+    
     /**
-     * Finds all attendance records for a specific meeting.
-     *
-     * @param meeting The meeting to find attendance for
-     * @return List of attendance records for the meeting
+     * Finds attendance records for a specific meeting.
+     * 
+     * @param meeting the meeting to find attendance for
+     * @return a list of attendance records for the meeting
      */
     List<Attendance> findByMeeting(Meeting meeting);
-
+    
     /**
-     * Finds all attendance records for a specific team member.
-     *
-     * @param teamMember The team member to find attendance for
-     * @return List of attendance records for the team member
+     * Finds attendance records for a specific team member.
+     * 
+     * @param member the team member to find attendance for
+     * @return a list of attendance records for the team member
      */
-    List<Attendance> findByTeamMember(TeamMember teamMember);
-
+    List<Attendance> findByMember(TeamMember member);
+    
     /**
-     * Finds all attendance records for a specific date.
-     *
-     * @param date The date to find attendance for
-     * @return List of attendance records for the date
+     * Finds attendance records for a specific meeting and team member.
+     * 
+     * @param meeting the meeting
+     * @param member the team member
+     * @return an Optional containing the attendance record, or empty if not found
      */
-    List<Attendance> findByDate(LocalDate date);
-
+    Optional<Attendance> findByMeetingAndMember(Meeting meeting, TeamMember member);
+    
     /**
-     * Records attendance for a team member at a meeting.
-     *
-     * @param meeting The meeting
-     * @param teamMember The team member
-     * @param present Whether the team member was present
-     * @return The created attendance record
+     * Creates a new attendance record.
+     * 
+     * @param meetingId the meeting ID
+     * @param memberId the team member ID
+     * @param present whether the member is present
+     * @return the created attendance record
      */
-    Attendance recordAttendance(Meeting meeting, TeamMember teamMember, boolean present);
-
+    Attendance createAttendance(Long meetingId, Long memberId, boolean present);
+    
     /**
-     * Records arrival time for a team member at a meeting.
-     *
-     * @param attendance The attendance record
-     * @param arrivalTime The arrival time
-     * @return The updated attendance record
+     * Updates an attendance record.
+     * 
+     * @param attendanceId the attendance ID
+     * @param present whether the member is present
+     * @param arrivalTime the arrival time (optional, only used if present is true)
+     * @param departureTime the departure time (optional, only used if present is true)
+     * @return the updated attendance record, or null if not found
      */
-    Attendance recordArrivalTime(Attendance attendance, LocalDate arrivalTime);
-
+    Attendance updateAttendance(Long attendanceId, boolean present, 
+                               LocalTime arrivalTime, LocalTime departureTime);
+    
     /**
-     * Records departure time for a team member at a meeting.
-     *
-     * @param attendance The attendance record
-     * @param departureTime The departure time
-     * @return The updated attendance record
+     * Records attendance for all team members in a meeting.
+     * 
+     * @param meetingId the meeting ID
+     * @param presentMemberIds the IDs of present team members
+     * @return the number of attendance records created or updated
      */
-    Attendance recordDepartureTime(Attendance attendance, LocalDate departureTime);
-
+    int recordAttendanceForMeeting(Long meetingId, List<Long> presentMemberIds);
+    
     /**
-     * Calculates the attendance rate for a team member.
-     *
-     * @param teamMember The team member
-     * @return The attendance rate as a percentage
+     * Gets attendance statistics for a team member.
+     * 
+     * @param memberId the team member ID
+     * @return a map containing attendance statistics
      */
-    double calculateAttendanceRate(TeamMember teamMember);
-
-    /**
-     * Gets all team members present at a specific meeting.
-     *
-     * @param meeting The meeting
-     * @return List of team members present at the meeting
-     */
-    List<TeamMember> getPresentTeamMembers(Meeting meeting);
-
-    /**
-     * Gets all team members absent from a specific meeting.
-     *
-     * @param meeting The meeting
-     * @return List of team members absent from the meeting
-     */
-    List<TeamMember> getAbsentTeamMembers(Meeting meeting);
+    java.util.Map<String, Object> getAttendanceStatistics(Long memberId);
 }

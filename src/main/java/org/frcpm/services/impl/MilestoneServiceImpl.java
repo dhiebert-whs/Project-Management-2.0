@@ -10,185 +10,145 @@ import org.frcpm.services.MilestoneService;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 /**
- * Implementation of the MilestoneService interface.
+ * Implementation of MilestoneService using repository layer.
  */
 public class MilestoneServiceImpl extends AbstractService<Milestone, Long, MilestoneRepository>
         implements MilestoneService {
-
-    private static final Logger LOGGER = Logger.getLogger(MilestoneServiceImpl.class.getName());
     
+    private static final Logger LOGGER = Logger.getLogger(MilestoneServiceImpl.class.getName());
     private final ProjectRepository projectRepository;
-
-    /**
-     * Constructor for MilestoneServiceImpl.
-     */
+    
     public MilestoneServiceImpl() {
         super(RepositoryFactory.getMilestoneRepository());
         this.projectRepository = RepositoryFactory.getProjectRepository();
     }
-
+    
     @Override
     public List<Milestone> findByProject(Project project) {
-        LOGGER.info("Finding milestones for project: " + project.getId());
         return repository.findByProject(project);
     }
-
+    
     @Override
-    public List<Milestone> findByDeadlineBefore(LocalDate date) {
-        LOGGER.info("Finding milestones with deadline before: " + date);
-        return repository.findByDeadlineBefore(date);
-    }
-
-    @Override
-    public List<Milestone> findByDeadlineAfter(LocalDate date) {
-        LOGGER.info("Finding milestones with deadline after: " + date);
-        return repository.findByDeadlineAfter(date);
-    }
-
-    @Override
-    public Milestone createMilestone(Project project, String name, String description, LocalDate deadline) {
-        LOGGER.info("Creating milestone: " + name + " for project: " + project.getId());
-        
-        Milestone milestone = new Milestone();
-        milestone.setProject(project);
-        milestone.setName(name);
-        milestone.setDescription(description);
-        milestone.setDeadline(deadline);
-        milestone.setCompleted(false);
-        milestone.setDependencies(new ArrayList<>());
-        
-        return repository.save(milestone);
-    }
-
-    @Override
-    public Milestone updateCompletionStatus(Milestone milestone, boolean completed) {
-        LOGGER.info("Updating completion status for milestone: " + milestone.getId() + " to: " + completed);
-        
-        milestone.setCompleted(completed);
-        
-        // If completing, set completion date to now
-        if (completed && milestone.getCompletionDate() == null) {
-            milestone.setCompletionDate(LocalDate.now());
-        }
-        
-        // If marking as incomplete, clear completion date
-        if (!completed) {
-            milestone.setCompletionDate(null);
-        }
-        
-        return repository.update(milestone);
-    }
-
-    @Override
-    public Milestone updateCompletionDate(Milestone milestone, LocalDate completionDate) {
-        LOGGER.info("Updating completion date for milestone: " + milestone.getId() + " to: " + completionDate);
-        
-        milestone.setCompletionDate(completionDate);
-        
-        // If setting completion date, mark as completed
-        if (completionDate != null) {
-            milestone.setCompleted(true);
-        }
-        
-        return repository.update(milestone);
-    }
-
-    @Override
-    public Milestone setDependency(Milestone milestone, Milestone dependency) {
-        LOGGER.info("Setting dependency for milestone: " + milestone.getId() + 
-                " on milestone: " + dependency.getId());
-        
-        // Prevent circular dependencies
-        if (isDependentOn(dependency, milestone)) {
-            LOGGER.warning("Circular dependency detected. Cannot set dependency.");
-            throw new IllegalArgumentException("Setting this dependency would create a circular reference");
-        }
-        
-        List<Milestone> dependencies = milestone.getDependencies();
-        if (dependencies == null) {
-            dependencies = new ArrayList<>();
-            milestone.setDependencies(dependencies);
-        }
-        
-        if (!dependencies.contains(dependency)) {
-            dependencies.add(dependency);
-        }
-        
-        return repository.update(milestone);
-    }
-
-    @Override
-    public Milestone removeDependency(Milestone milestone, Milestone dependency) {
-        LOGGER.info("Removing dependency for milestone: " + milestone.getId() + 
-                " on milestone: " + dependency.getId());
-        
-        List<Milestone> dependencies = milestone.getDependencies();
-        if (dependencies != null) {
-            dependencies.remove(dependency);
-        }
-        
-        return repository.update(milestone);
-    }
-
-    @Override
-    public List<Milestone> getUpcomingMilestones(Project project) {
-        LOGGER.info("Getting upcoming milestones for project: " + project.getId());
-        
-        LocalDate now = LocalDate.now();
-        
-        return repository.findByProject(project).stream()
-                .filter(m -> !m.isCompleted() && m.getDeadline().isAfter(now))
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<Milestone> getCompletedMilestones(Project project) {
-        LOGGER.info("Getting completed milestones for project: " + project.getId());
-        
-        return repository.findByProject(project).stream()
-                .filter(Milestone::isCompleted)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<Milestone> getOverdueMilestones(Project project) {
-        LOGGER.info("Getting overdue milestones for project: " + project.getId());
-        
-        LocalDate now = LocalDate.now();
-        
-        return repository.findByProject(project).stream()
-                .filter(m -> !m.isCompleted() && m.getDeadline().isBefore(now))
-                .collect(Collectors.toList());
+    public List<Milestone> findByDateBefore(LocalDate date) {
+        return repository.findByDateBefore(date);
     }
     
-    /**
-     * Checks if one milestone is dependent on another, directly or indirectly.
-     * Used to prevent circular dependencies.
-     *
-     * @param milestone The milestone to check
-     * @param potentialDependency The potential dependency
-     * @return True if milestone depends on potentialDependency, false otherwise
-     */
-    private boolean isDependentOn(Milestone milestone, Milestone potentialDependency) {
-        // Direct dependency check
-        if (milestone.getDependencies() != null && 
-                milestone.getDependencies().contains(potentialDependency)) {
-            return true;
+    @Override
+    public List<Milestone> findByDateAfter(LocalDate date) {
+        return repository.findByDateAfter(date);
+    }
+    
+    @Override
+    public List<Milestone> findByDateBetween(LocalDate startDate, LocalDate endDate) {
+        return repository.findByDateBetween(startDate, endDate);
+    }
+    
+    @Override
+    public Milestone createMilestone(String name, LocalDate date, Long projectId, String description) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Milestone name cannot be empty");
         }
         
-        // Recursive check for indirect dependencies
-        if (milestone.getDependencies() != null) {
-            for (Milestone dependency : milestone.getDependencies()) {
-                if (isDependentOn(dependency, potentialDependency)) {
-                    return true;
-                }
+        if (date == null) {
+            throw new IllegalArgumentException("Milestone date cannot be null");
+        }
+        
+        if (projectId == null) {
+            throw new IllegalArgumentException("Project ID cannot be null");
+        }
+        
+        Project project = projectRepository.findById(projectId).orElse(null);
+        if (project == null) {
+            LOGGER.log(Level.WARNING, "Project not found with ID: {0}", projectId);
+            throw new IllegalArgumentException("Project not found with ID: " + projectId);
+        }
+        
+        // Validate that the milestone date is within the project timeline
+        if (date.isBefore(project.getStartDate()) || date.isAfter(project.getHardDeadline())) {
+            LOGGER.log(Level.WARNING, "Milestone date is outside the project timeline");
+        }
+        
+        Milestone milestone = new Milestone(name, date, project);
+        milestone.setDescription(description);
+        
+        return save(milestone);
+    }
+    
+    @Override
+    public Milestone updateMilestoneDate(Long milestoneId, LocalDate date) {
+        if (milestoneId == null) {
+            throw new IllegalArgumentException("Milestone ID cannot be null");
+        }
+        
+        if (date == null) {
+            throw new IllegalArgumentException("Milestone date cannot be null");
+        }
+        
+        Milestone milestone = findById(milestoneId);
+        if (milestone == null) {
+            LOGGER.log(Level.WARNING, "Milestone not found with ID: {0}", milestoneId);
+            return null;
+        }
+        
+        Project project = milestone.getProject();
+        
+        // Validate that the milestone date is within the project timeline
+        if (date.isBefore(project.getStartDate()) || date.isAfter(project.getHardDeadline())) {
+            LOGGER.log(Level.WARNING, "Milestone date is outside the project timeline");
+        }
+        
+        milestone.setDate(date);
+        return save(milestone);
+    }
+    
+    @Override
+    public Milestone updateDescription(Long milestoneId, String description) {
+        if (milestoneId == null) {
+            throw new IllegalArgumentException("Milestone ID cannot be null");
+        }
+        
+        Milestone milestone = findById(milestoneId);
+        if (milestone == null) {
+            LOGGER.log(Level.WARNING, "Milestone not found with ID: {0}", milestoneId);
+            return null;
+        }
+        
+        milestone.setDescription(description);
+        return save(milestone);
+    }
+    
+    @Override
+    public List<Milestone> getUpcomingMilestones(Long projectId, int days) {
+        if (projectId == null) {
+            throw new IllegalArgumentException("Project ID cannot be null");
+        }
+        
+        if (days <= 0) {
+            throw new IllegalArgumentException("Days must be positive");
+        }
+        
+        Project project = projectRepository.findById(projectId).orElse(null);
+        if (project == null) {
+            LOGGER.log(Level.WARNING, "Project not found with ID: {0}", projectId);
+            return new ArrayList<>();
+        }
+        
+        LocalDate today = LocalDate.now();
+        LocalDate endDate = today.plusDays(days);
+        
+        List<Milestone> milestones = repository.findByProject(project);
+        List<Milestone> upcomingMilestones = new ArrayList<>();
+        
+        for (Milestone milestone : milestones) {
+            if (!milestone.getDate().isBefore(today) && !milestone.getDate().isAfter(endDate)) {
+                upcomingMilestones.add(milestone);
             }
         }
         
-        return false;
+        return upcomingMilestones;
     }
 }

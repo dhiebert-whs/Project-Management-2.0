@@ -2,135 +2,89 @@ package org.frcpm.services;
 
 import org.frcpm.models.Meeting;
 import org.frcpm.models.Project;
-import org.frcpm.models.Milestone;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
 /**
- * Service interface for managing Meeting entities.
+ * Service interface for Meeting entity.
  */
 public interface MeetingService extends Service<Meeting, Long> {
-
+    
     /**
-     * Finds all meetings for a specific project.
-     *
-     * @param project The project to find meetings for
-     * @return List of meetings for the project
+     * Finds meetings for a specific project.
+     * 
+     * @param project the project to find meetings for
+     * @return a list of meetings for the project
      */
     List<Meeting> findByProject(Project project);
-
+    
     /**
-     * Finds all meetings on a specific date.
-     *
-     * @param date The date to find meetings for
-     * @return List of meetings on the date
+     * Finds meetings on a specific date.
+     * 
+     * @param date the date to search for
+     * @return a list of meetings on the given date
      */
     List<Meeting> findByDate(LocalDate date);
-
+    
     /**
-     * Finds all meetings between two dates.
-     *
-     * @param startDate The start date
-     * @param endDate The end date
-     * @return List of meetings between the dates
+     * Finds meetings after a specific date.
+     * 
+     * @param date the date to compare against
+     * @return a list of meetings after the date
+     */
+    List<Meeting> findByDateAfter(LocalDate date);
+    
+    /**
+     * Finds meetings in a date range.
+     * 
+     * @param startDate the start date (inclusive)
+     * @param endDate the end date (inclusive)
+     * @return a list of meetings within the date range
      */
     List<Meeting> findByDateBetween(LocalDate startDate, LocalDate endDate);
-
+    
     /**
-     * Creates a new one-time meeting.
-     *
-     * @param project The project to create the meeting for
-     * @param title The title of the meeting
-     * @param description The description of the meeting
-     * @param date The date of the meeting
-     * @param startTime The start time of the meeting
-     * @param endTime The end time of the meeting
-     * @param location The location of the meeting
-     * @return The created meeting
+     * Creates a new meeting.
+     * 
+     * @param date the meeting date
+     * @param startTime the start time
+     * @param endTime the end time
+     * @param projectId the ID of the project the meeting is for
+     * @param notes any meeting notes (optional)
+     * @return the created meeting
      */
-    Meeting createOneTimeMeeting(Project project, String title, String description, 
-                                 LocalDate date, LocalTime startTime, LocalTime endTime, 
-                                 String location);
-
+    Meeting createMeeting(LocalDate date, LocalTime startTime, LocalTime endTime, 
+                          Long projectId, String notes);
+    
     /**
-     * Creates recurring meetings based on a pattern.
-     *
-     * @param project The project to create the meetings for
-     * @param title The title of the meetings
-     * @param description The description of the meetings
-     * @param startDate The start date for the recurring pattern
-     * @param endDate The end date for the recurring pattern
-     * @param dayOfWeek The day of the week for the meetings
-     * @param startTime The start time of the meetings
-     * @param endTime The end time of the meetings
-     * @param location The location of the meetings
-     * @return List of created meetings
+     * Updates a meeting's date and time.
+     * 
+     * @param meetingId the meeting ID
+     * @param date the new date (optional)
+     * @param startTime the new start time (optional)
+     * @param endTime the new end time (optional)
+     * @return the updated meeting, or null if not found
      */
-    List<Meeting> createRecurringMeetings(Project project, String title, String description,
-                                          LocalDate startDate, LocalDate endDate, DayOfWeek dayOfWeek,
-                                          LocalTime startTime, LocalTime endTime, String location);
-
+    Meeting updateMeetingDateTime(Long meetingId, LocalDate date, 
+                                  LocalTime startTime, LocalTime endTime);
+    
     /**
-     * Associates a meeting with a milestone.
-     *
-     * @param meeting The meeting to associate
-     * @param milestone The milestone to associate with
-     * @return The updated meeting
+     * Updates meeting notes.
+     * 
+     * @param meetingId the meeting ID
+     * @param notes the new notes
+     * @return the updated meeting, or null if not found
      */
-    Meeting associateWithMilestone(Meeting meeting, Milestone milestone);
-
+    Meeting updateNotes(Long meetingId, String notes);
+    
     /**
-     * Removes a milestone association from a meeting.
-     *
-     * @param meeting The meeting to update
-     * @param milestone The milestone to remove
-     * @return The updated meeting
+     * Gets upcoming meetings for a project.
+     * 
+     * @param projectId the project ID
+     * @param days the number of days to look ahead
+     * @return a list of upcoming meetings within the specified days
      */
-    Meeting removeMilestoneAssociation(Meeting meeting, Milestone milestone);
-
-    /**
-     * Updates the meeting notes.
-     *
-     * @param meeting The meeting to update
-     * @param notes The notes to set
-     * @return The updated meeting
-     */
-    Meeting updateNotes(Meeting meeting, String notes);
-
-    /**
-     * Cancels a meeting.
-     *
-     * @param meeting The meeting to cancel
-     * @return The canceled meeting
-     */
-    Meeting cancelMeeting(Meeting meeting);
-
-    /**
-     * Gets all upcoming meetings for a project.
-     *
-     * @param project The project to get meetings for
-     * @return List of upcoming meetings
-     */
-    List<Meeting> getUpcomingMeetings(Project project);
-
-    /**
-     * Gets the next scheduled meeting for a project.
-     *
-     * @param project The project to get the meeting for
-     * @return The next scheduled meeting, or null if none exists
-     */
-    Meeting getNextMeeting(Project project);
-
-    /**
-     * Finds all meetings that conflict with a proposed meeting time.
-     *
-     * @param date The proposed date
-     * @param startTime The proposed start time
-     * @param endTime The proposed end time
-     * @return List of conflicting meetings
-     */
-    List<Meeting> findConflictingMeetings(LocalDate date, LocalTime startTime, LocalTime endTime);
+    List<Meeting> getUpcomingMeetings(Long projectId, int days);
 }

@@ -7,102 +7,78 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Service interface for managing Milestone entities.
+ * Service interface for Milestone entity.
  */
 public interface MilestoneService extends Service<Milestone, Long> {
-
+    
     /**
-     * Finds all milestones for a specific project.
-     *
-     * @param project The project to find milestones for
-     * @return List of milestones for the project
+     * Finds milestones for a specific project.
+     * 
+     * @param project the project to find milestones for
+     * @return a list of milestones for the project
      */
     List<Milestone> findByProject(Project project);
-
+    
     /**
-     * Finds all milestones with a deadline on or before a specific date.
-     *
-     * @param date The date to check against
-     * @return List of milestones with deadlines on or before the date
+     * Finds milestones with a date before the specified date.
+     * 
+     * @param date the date to compare against
+     * @return a list of milestones before the date
      */
-    List<Milestone> findByDeadlineBefore(LocalDate date);
-
+    List<Milestone> findByDateBefore(LocalDate date);
+    
     /**
-     * Finds all milestones with a deadline on or after a specific date.
-     *
-     * @param date The date to check against
-     * @return List of milestones with deadlines on or after the date
+     * Finds milestones with a date after the specified date.
+     * 
+     * @param date the date to compare against
+     * @return a list of milestones after the date
      */
-    List<Milestone> findByDeadlineAfter(LocalDate date);
-
+    List<Milestone> findByDateAfter(LocalDate date);
+    
     /**
-     * Creates a new milestone for a project.
-     *
-     * @param project The project to create the milestone for
-     * @param name The name of the milestone
-     * @param description The description of the milestone
-     * @param deadline The deadline for the milestone
-     * @return The created milestone
+     * Finds milestones in a date range.
+     * 
+     * @param startDate the start date (inclusive)
+     * @param endDate the end date (inclusive)
+     * @return a list of milestones within the date range
      */
-    Milestone createMilestone(Project project, String name, String description, LocalDate deadline);
-
+    List<Milestone> findByDateBetween(LocalDate startDate, LocalDate endDate);
+    
     /**
-     * Updates the completion status of a milestone.
-     *
-     * @param milestone The milestone to update
-     * @param completed Whether the milestone is completed
-     * @return The updated milestone
+     * Creates a new milestone.
+     * 
+     * @param name the milestone name
+     * @param date the milestone date
+     * @param projectId the ID of the project the milestone is for
+     * @param description the milestone description (optional)
+     * @return the created milestone
      */
-    Milestone updateCompletionStatus(Milestone milestone, boolean completed);
-
+    Milestone createMilestone(String name, LocalDate date, Long projectId, String description);
+    
     /**
-     * Updates the completion date of a milestone.
-     *
-     * @param milestone The milestone to update
-     * @param completionDate The completion date of the milestone
-     * @return The updated milestone
+     * Updates a milestone's date.
+     * 
+     * @param milestoneId the milestone ID
+     * @param date the new date
+     * @return the updated milestone, or null if not found
      */
-    Milestone updateCompletionDate(Milestone milestone, LocalDate completionDate);
-
+    Milestone updateMilestoneDate(Long milestoneId, LocalDate date);
+    
     /**
-     * Sets a dependency between two milestones.
-     *
-     * @param milestone The milestone that depends on another
-     * @param dependency The milestone that is depended upon
-     * @return The updated milestone
+     * Updates a milestone's description.
+     * 
+     * @param milestoneId the milestone ID
+     * @param description the new description
+     * @return the updated milestone, or null if not found
      */
-    Milestone setDependency(Milestone milestone, Milestone dependency);
-
+    Milestone updateDescription(Long milestoneId, String description);
+    
     /**
-     * Removes a dependency between two milestones.
-     *
-     * @param milestone The milestone that depends on another
-     * @param dependency The milestone that is depended upon
-     * @return The updated milestone
+     * Gets upcoming milestones for a project.
+     * 
+     * @param projectId the project ID
+     * @param days the number of days to look ahead
+     * @return a list of upcoming milestones within the specified days
      */
-    Milestone removeDependency(Milestone milestone, Milestone dependency);
-
-    /**
-     * Gets all upcoming milestones for a project.
-     *
-     * @param project The project to get milestones for
-     * @return List of upcoming milestones
-     */
-    List<Milestone> getUpcomingMilestones(Project project);
-
-    /**
-     * Gets all completed milestones for a project.
-     *
-     * @param project The project to get milestones for
-     * @return List of completed milestones
-     */
-    List<Milestone> getCompletedMilestones(Project project);
-
-    /**
-     * Gets all overdue milestones for a project.
-     *
-     * @param project The project to get milestones for
-     * @return List of overdue milestones
-     */
-    List<Milestone> getOverdueMilestones(Project project);
+    List<Milestone> getUpcomingMilestones(Long projectId, int days);
 }

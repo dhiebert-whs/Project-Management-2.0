@@ -9,125 +9,189 @@ import org.frcpm.repositories.specific.MeetingRepository;
 import org.frcpm.repositories.specific.TeamMemberRepository;
 import org.frcpm.services.AttendanceService;
 
-import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 /**
- * Implementation of the AttendanceService interface.
+ * Implementation of AttendanceService using repository layer.
  */
 public class AttendanceServiceImpl extends AbstractService<Attendance, Long, AttendanceRepository>
         implements AttendanceService {
-
-    private static final Logger LOGGER = Logger.getLogger(AttendanceServiceImpl.class.getName());
     
+    private static final Logger LOGGER = Logger.getLogger(AttendanceServiceImpl.class.getName());
     private final MeetingRepository meetingRepository;
     private final TeamMemberRepository teamMemberRepository;
-
-    /**
-     * Constructor for AttendanceServiceImpl.
-     */
+    
     public AttendanceServiceImpl() {
         super(RepositoryFactory.getAttendanceRepository());
         this.meetingRepository = RepositoryFactory.getMeetingRepository();
         this.teamMemberRepository = RepositoryFactory.getTeamMemberRepository();
     }
-
+    
     @Override
     public List<Attendance> findByMeeting(Meeting meeting) {
-        LOGGER.info("Finding attendance records for meeting: " + meeting.getId());
         return repository.findByMeeting(meeting);
     }
-
+    
     @Override
-    public List<Attendance> findByTeamMember(TeamMember teamMember) {
-        LOGGER.info("Finding attendance records for team member: " + teamMember.getId());
-        return repository.findByTeamMember(teamMember);
+    public List<Attendance> findByMember(TeamMember member) {
+        return repository.findByMember(member);
     }
-
+    
     @Override
-    public List<Attendance> findByDate(LocalDate date) {
-        LOGGER.info("Finding attendance records for date: " + date);
-        return repository.findByDate(date);
+    public Optional<Attendance> findByMeetingAndMember(Meeting meeting, TeamMember member) {
+        return repository.findByMeetingAndMember(meeting, member);
     }
-
+    
     @Override
-    public Attendance recordAttendance(Meeting meeting, TeamMember teamMember, boolean present) {
-        LOGGER.info("Recording attendance for team member: " + teamMember.getId() + 
-                " at meeting: " + meeting.getId() + ", present: " + present);
+    public Attendance createAttendance(Long meetingId, Long memberId, boolean present) {
+        if (meetingId == null || memberId == null) {
+            throw new IllegalArgumentException("Meeting ID and Member ID cannot be null");
+        }
+        
+        Meeting meeting = meetingRepository.findById(meetingId).orElse(null);
+        if (meeting == null) {
+            LOGGER.log(Level.WARNING, "Meeting not found with ID: {0}", meetingId);
+            throw new IllegalArgumentException("Meeting not found with ID: " + meetingId);
+        }
+        
+        TeamMember member = teamMemberRepository.findById(memberId).orElse(null);
+        if (member == null) {
+            LOGGER.log(Level.WARNING, "Team member not found with ID: {0}", memberId);
+            throw new IllegalArgumentException("Team member not found with ID: " + memberId);
+        }
         
         // Check if an attendance record already exists
-        Attendance existingAttendance = repository.findByMeetingAndTeamMember(meeting, teamMember);
-        
-        if (existingAttendance != null) {
-            existingAttendance.setPresent(present);
-            return repository.update(existingAttendance);
-        } else {
-            Attendance attendance = new Attendance();
-            attendance.setMeeting(meeting);
-            attendance.setTeamMember(teamMember);
+        Optional<Attendance> existingAttendance = repository.findByMeetingAndMember(meeting, member);
+        if (existingAttendance.isPresent()) {
+            Attendance attendance = existingAttendance.get();
             attendance.setPresent(present);
-            attendance.setDate(meeting.getDate());
-            return repository.save(attendance);
-        }
-    }
-
-    @Override
-    public Attendance recordArrivalTime(Attendance attendance, LocalDate arrivalTime) {
-        LOGGER.info("Recording arrival time for attendance: " + attendance.getId());
-        attendance.setArrivalTime(arrivalTime);
-        return repository.update(attendance);
-    }
-
-    @Override
-    public Attendance recordDepartureTime(Attendance attendance, LocalDate departureTime) {
-        LOGGER.info("Recording departure time for attendance: " + attendance.getId());
-        attendance.setDepartureTime(departureTime);
-        return repository.update(attendance);
-    }
-
-    @Override
-    public double calculateAttendanceRate(TeamMember teamMember) {
-        LOGGER.info("Calculating attendance rate for team member: " + teamMember.getId());
-        
-        List<Attendance> attendanceRecords = repository.findByTeamMember(teamMember);
-        
-        if (attendanceRecords.isEmpty()) {
-            return 0.0;
+            return save(attendance);
         }
         
-        long presentCount = attendanceRecords.stream()
-                .filter(Attendance::isPresent)
-                .count();
+        // Create new attendance record
+        Attendance attendance = new Attendance(meeting, member, present);
         
-        return (double) presentCount / attendanceRecords.size() * 100.0;
+        // If present, set default arrival time to meeting start time
+        if (present) {
+            attendance.setArrivalTime(meeting.getStartTime());
+            attendance.setDepartureTime(meeting.getEndTime());
+        }
+        
+        return save(attendance);
     }
-
+    
     @Override
-    public List<TeamMember> getPresentTeamMembers(Meeting meeting) {
-        LOGGER.info("Getting present team members for meeting: " + meeting.getId());
+    public Attendance updateAttendance(Long attendanceId, boolean present,
+                                      LocalTime arrivalTime, LocalTime departureTime) {
+        if (attendanceId == null) {
+            throw new IllegalArgumentException("Attendance ID cannot be null");
+        }
         
-        List<Attendance> attendanceRecords = repository.findByMeeting(meeting);
+        Attendance attendance = findById(attendanceId);
+        if (attendance == null) {
+            LOGGER.log(Level.WARNING, "Attendance not found with ID: {0}", attendanceId);
+            return null;
+        }
         
-        return attendanceRecords.stream()
-                .filter(Attendance::isPresent)
-                .map(Attendance::getTeamMember)
-                .collect(Collectors.toList());
+        attendance.setPresent(present);
+        
+        if (present) {
+            if (arrivalTime != null) {
+                attendance.setArrivalTime(arrivalTime);
+            }
+            
+            if (departureTime != null) {
+                if (attendance.getArrivalTime() != null && 
+                    departureTime.isBefore(attendance.getArrivalTime())) {
+                    throw new IllegalArgumentException("Departure time cannot be before arrival time");
+                }
+                attendance.setDepartureTime(departureTime);
+            }
+        } else {
+            // If not present, clear times
+            attendance.setArrivalTime(null);
+            attendance.setDepartureTime(null);
+        }
+        
+        return save(attendance);
     }
-
+    
     @Override
-    public List<TeamMember> getAbsentTeamMembers(Meeting meeting) {
-        LOGGER.info("Getting absent team members for meeting: " + meeting.getId());
+    public int recordAttendanceForMeeting(Long meetingId, List<Long> presentMemberIds) {
+        if (meetingId == null) {
+            throw new IllegalArgumentException("Meeting ID cannot be null");
+        }
         
-        List<Attendance> attendanceRecords = repository.findByMeeting(meeting);
-        List<TeamMember> presentMembers = getPresentTeamMembers(meeting);
+        Meeting meeting = meetingRepository.findById(meetingId).orElse(null);
+        if (meeting == null) {
+            LOGGER.log(Level.WARNING, "Meeting not found with ID: {0}", meetingId);
+            throw new IllegalArgumentException("Meeting not found with ID: " + meetingId);
+        }
         
-        // Get all team members and filter out the present ones
+        // Get all team members
         List<TeamMember> allMembers = teamMemberRepository.findAll();
         
-        return allMembers.stream()
-                .filter(member -> !presentMembers.contains(member))
-                .collect(Collectors.toList());
+        int count = 0;
+        for (TeamMember member : allMembers) {
+            boolean present = presentMemberIds != null && presentMemberIds.contains(member.getId());
+            
+            // Check if an attendance record already exists
+            Optional<Attendance> existingAttendance = repository.findByMeetingAndMember(meeting, member);
+            Attendance attendance;
+            
+            if (existingAttendance.isPresent()) {
+                attendance = existingAttendance.get();
+                attendance.setPresent(present);
+            } else {
+                attendance = new Attendance(meeting, member, present);
+                
+                // If present, set default arrival time to meeting start time
+                if (present) {
+                    attendance.setArrivalTime(meeting.getStartTime());
+                    attendance.setDepartureTime(meeting.getEndTime());
+                }
+            }
+            
+            save(attendance);
+            count++;
+        }
+        
+        return count;
+    }
+    
+    @Override
+    public Map<String, Object> getAttendanceStatistics(Long memberId) {
+        Map<String, Object> statistics = new HashMap<>();
+        
+        if (memberId == null) {
+            throw new IllegalArgumentException("Member ID cannot be null");
+        }
+        
+        TeamMember member = teamMemberRepository.findById(memberId).orElse(null);
+        if (member == null) {
+            LOGGER.log(Level.WARNING, "Team member not found with ID: {0}", memberId);
+            return statistics;
+        }
+        
+        List<Attendance> attendanceRecords = repository.findByMember(member);
+        
+        int totalMeetings = attendanceRecords.size();
+        long presentCount = attendanceRecords.stream().filter(Attendance::isPresent).count();
+        double attendanceRate = totalMeetings > 0 ? (double) presentCount / totalMeetings * 100 : 0;
+        
+        statistics.put("memberId", memberId);
+        statistics.put("memberName", member.getFullName());
+        statistics.put("totalMeetings", totalMeetings);
+        statistics.put("presentCount", presentCount);
+        statistics.put("absentCount", totalMeetings - presentCount);
+        statistics.put("attendanceRate", attendanceRate);
+        
+        return statistics;
     }
 }
