@@ -11,10 +11,12 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import javafx.scene.layout.HBox;
+import javafx.util.Callback;
 import org.frcpm.models.*;
 import org.frcpm.services.*;
 
@@ -116,6 +118,28 @@ public class ProjectController {
     private ObservableList<Meeting> meetingList = FXCollections.observableArrayList();
     
     /**
+     * Helper method to create a date cell factory that works with any entity type.
+     * This allows us to reuse the same formatting logic across different table columns.
+     * 
+     * @param <T> the entity type for the table row
+     * @return a callback that creates properly formatted date cells
+     */
+    private <T> Callback<TableColumn<T, LocalDate>, TableCell<T, LocalDate>> createDateCellFactory() {
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+        return column -> new TableCell<T, LocalDate>() {
+            @Override
+            protected void updateItem(LocalDate date, boolean empty) {
+                super.updateItem(date, empty);
+                if (empty || date == null) {
+                    setText(null);
+                } else {
+                    setText(date.format(dateFormatter));
+                }
+            }
+        };
+    }
+    
+    /**
      * Initializes the controller.
      */
     @FXML
@@ -158,24 +182,10 @@ public class ProjectController {
             return new javafx.beans.property.SimpleStringProperty(timeStr);
         });
         
-        // Format date columns
-        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
-        
-        taskDueDateColumn.setCellFactory(column -> new TableCell<Task, LocalDate>() {
-            @Override
-            protected void updateItem(LocalDate date, boolean empty) {
-                super.updateItem(date, empty);
-                if (empty || date == null) {
-                    setText(null);
-                } else {
-                    setText(date.format(dateFormatter));
-                }
-            }
-        });
-        
-        // Apply the same formatter to other date columns
-        milestoneDateColumn.setCellFactory(taskDueDateColumn.getCellFactory());
-        meetingDateColumn.setCellFactory(taskDueDateColumn.getCellFactory());
+        // Apply the date cell factory to all date columns
+        taskDueDateColumn.setCellFactory(createDateCellFactory());
+        milestoneDateColumn.setCellFactory(createDateCellFactory());
+        meetingDateColumn.setCellFactory(createDateCellFactory());
         
         // Set up progress column renderer
         taskProgressColumn.setCellFactory(column -> new TableCell<Task, Integer>() {
