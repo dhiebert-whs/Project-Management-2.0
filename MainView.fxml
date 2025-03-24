@@ -9,30 +9,108 @@
             prefHeight="768.0" prefWidth="1024.0">
     
     <top>
-        <MenuBar>
-            <menus>
-                <Menu text="File">
-                    <items>
-                        <MenuItem text="New Project" onAction="#handleNewProject"/>
-                        <MenuItem text="Open Project" onAction="#handleOpenProject"/>
-                        <SeparatorMenuItem />
-                        <MenuItem text="Exit" onAction="#handleExit"/>
-                    </items>
-                </Menu>
-                <Menu text="Team">
-                    <items>
-                        <MenuItem text="Subteams" onAction="#handleSubteams"/>
-                        <MenuItem text="Members" onAction="#handleMembers"/>
-                    </items>
-                </Menu>
-                <Menu text="Help">
-                    <items>
-                        <MenuItem text="User Guide" onAction="#handleUserGuide"/>
-                        <MenuItem text="About" onAction="#handleAbout"/>
-                    </items>
-                </Menu>
-            </menus>
-        </MenuBar>
+        <VBox>
+            <MenuBar>
+                <menus>
+                    <!-- File Menu -->
+                    <Menu text="File" id="fileMenu">
+                        <items>
+                            <MenuItem text="New Project" onAction="#handleNewProject" accelerator="Ctrl+N"/>
+                            <MenuItem text="Open Project" onAction="#handleOpenProject" accelerator="Ctrl+O"/>
+                            <MenuItem text="Close Project" onAction="#handleCloseProject" accelerator="Ctrl+W" disable="true"/>
+                            <SeparatorMenuItem />
+                            <MenuItem text="Save" onAction="#handleSave" accelerator="Ctrl+S" disable="true"/>
+                            <MenuItem text="Save As..." onAction="#handleSaveAs" accelerator="Ctrl+Shift+S" disable="true"/>
+                            <SeparatorMenuItem />
+                            <MenuItem text="Import Project..." onAction="#handleImportProject"/>
+                            <MenuItem text="Export Project..." onAction="#handleExportProject" disable="true"/>
+                            <SeparatorMenuItem />
+                            <Menu text="Recent Projects" fx:id="recentProjectsMenu" disable="true"/>
+                            <SeparatorMenuItem />
+                            <MenuItem text="Exit" onAction="#handleExit" accelerator="Alt+F4"/>
+                        </items>
+                    </Menu>
+                    
+                    <!-- Edit Menu -->
+                    <Menu text="Edit" id="editMenu">
+                        <items>
+                            <MenuItem text="Undo" onAction="#handleUndo" accelerator="Ctrl+Z" disable="true"/>
+                            <MenuItem text="Redo" onAction="#handleRedo" accelerator="Ctrl+Y" disable="true"/>
+                            <SeparatorMenuItem />
+                            <MenuItem text="Cut" onAction="#handleCut" accelerator="Ctrl+X" disable="true"/>
+                            <MenuItem text="Copy" onAction="#handleCopy" accelerator="Ctrl+C" disable="true"/>
+                            <MenuItem text="Paste" onAction="#handlePaste" accelerator="Ctrl+V" disable="true"/>
+                            <MenuItem text="Delete" onAction="#handleDelete" accelerator="Delete" disable="true"/>
+                            <SeparatorMenuItem />
+                            <MenuItem text="Select All" onAction="#handleSelectAll" accelerator="Ctrl+A" disable="true"/>
+                            <MenuItem text="Find..." onAction="#handleFind" accelerator="Ctrl+F" disable="true"/>
+                        </items>
+                    </Menu>
+                    
+                    <!-- View Menu -->
+                    <Menu text="View" id="viewMenu">
+                        <items>
+                            <MenuItem text="Dashboard" onAction="#handleViewDashboard"/>
+                            <MenuItem text="Gantt Chart" onAction="#handleViewGantt" disable="true"/>
+                            <MenuItem text="Calendar" onAction="#handleViewCalendar" disable="true"/>
+                            <MenuItem text="Daily View" onAction="#handleViewDaily" disable="true"/>
+                            <SeparatorMenuItem />
+                            <MenuItem text="Refresh" onAction="#handleRefresh" accelerator="F5"/>
+                        </items>
+                    </Menu>
+                    
+                    <!-- Project Menu -->
+                    <Menu text="Project" id="projectMenu" disable="true">
+                        <items>
+                            <MenuItem text="Project Properties" onAction="#handleProjectProperties" accelerator="Alt+Enter"/>
+                            <SeparatorMenuItem />
+                            <MenuItem text="Add Milestone" onAction="#handleAddMilestone" accelerator="Ctrl+Shift+M"/>
+                            <MenuItem text="Schedule Meeting" onAction="#handleScheduleMeeting" accelerator="Ctrl+Shift+E"/>
+                            <MenuItem text="Add Task" onAction="#handleAddTask" accelerator="Ctrl+T"/>
+                            <SeparatorMenuItem />
+                            <MenuItem text="Statistics" onAction="#handleProjectStatistics"/>
+                        </items>
+                    </Menu>
+                    
+                    <!-- Team Menu -->
+                    <Menu text="Team" id="teamMenu">
+                        <items>
+                            <MenuItem text="Subteams" onAction="#handleSubteams"/>
+                            <MenuItem text="Team Members" onAction="#handleMembers"/>
+                            <SeparatorMenuItem />
+                            <MenuItem text="Take Attendance" onAction="#handleTakeAttendance" accelerator="Ctrl+Shift+A" disable="true"/>
+                            <MenuItem text="View Attendance History" onAction="#handleAttendanceHistory" disable="true"/>
+                        </items>
+                    </Menu>
+                    
+                    <!-- Tools Menu -->
+                    <Menu text="Tools" id="toolsMenu">
+                        <items>
+                            <MenuItem text="Settings" onAction="#handleSettings"/>
+                            <MenuItem text="Database Management" onAction="#handleDatabaseManagement"/>
+                        </items>
+                    </Menu>
+                    
+                    <!-- Help Menu -->
+                    <Menu text="Help" id="helpMenu">
+                        <items>
+                            <MenuItem text="User Guide" onAction="#handleUserGuide" accelerator="F1"/>
+                            <MenuItem text="About" onAction="#handleAbout"/>
+                        </items>
+                    </Menu>
+                </menus>
+            </MenuBar>
+            
+            <!-- Toolbar Placeholder - Will be implemented in Phase 2 -->
+            <ToolBar>
+                <items>
+                    <Button text="New Project" onAction="#handleNewProject"/>
+                    <Button text="Open Project" onAction="#handleOpenProject"/>
+                    <Separator orientation="VERTICAL"/>
+                    <Button text="Import Project" onAction="#handleImportProject"/>
+                </items>
+            </ToolBar>
+        </VBox>
     </top>
     
     <center>
