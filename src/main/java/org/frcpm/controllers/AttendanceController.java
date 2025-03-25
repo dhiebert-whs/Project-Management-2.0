@@ -376,4 +376,159 @@ public class AttendanceController {
         alert.setContentText(message);
         alert.showAndWait();
     }
+
+    //getters for testing
+    /**
+     * Gets the meeting title label.
+     * 
+     * @return the meeting title label
+     */
+    public Label getMeetingTitleLabel() {
+        return meetingTitleLabel;
+    }
+
+    /**
+     * Gets the current meeting.
+     * 
+     * @return the meeting
+     */
+    public Meeting getMeeting() {
+        return meeting;
+    }
+
+    /**
+     * Gets the date label.
+     * 
+     * @return the date label
+     */
+    public Label getDateLabel() {
+        return dateLabel;
+    }
+
+    /**
+     * Gets the time label.
+     * 
+     * @return the time label
+     */
+    public Label getTimeLabel() {
+        return timeLabel;
+    }
+
+    /**
+     * Gets the attendance table.
+     * 
+     * @return the attendance table
+     */
+    public TableView<TeamMemberAttendanceRecord> getAttendanceTable() {
+        return attendanceTable;
+    }
+
+    /**
+     * Gets the save button.
+     * 
+     * @return the save button
+     */
+    public Button getSaveButton() {
+        return saveButton;
+    }
+
+    /**
+     * Gets the cancel button.
+     * 
+     * @return the cancel button
+     */
+    public Button getCancelButton() {
+        return cancelButton;
+    }
+
+    /**
+     * Gets the attendance records.
+     * 
+     * @return the attendance records
+     */
+    public ObservableList<TeamMemberAttendanceRecord> getAttendanceRecords() {
+        return attendanceRecords;
+    }
+
+    /**
+     * Gets the name column.
+     * 
+     * @return the name column
+     */
+    public TableColumn<TeamMemberAttendanceRecord, String> getNameColumn() {
+        return nameColumn;
+    }
+
+    /**
+     * Gets the subteam column.
+     * 
+     * @return the subteam column
+     */
+    public TableColumn<TeamMemberAttendanceRecord, String> getSubteamColumn() {
+        return subteamColumn;
+    }
+
+    /**
+     * Gets the present column.
+     * 
+     * @return the present column
+     */
+    public TableColumn<TeamMemberAttendanceRecord, Boolean> getPresentColumn() {
+        return presentColumn;
+    }
+
+    /**
+     * Gets the arrival column.
+     * 
+     * @return the arrival column
+     */
+    public TableColumn<TeamMemberAttendanceRecord, LocalTime> getArrivalColumn() {
+        return arrivalColumn;
+    }
+
+    /**
+     * Gets the departure column.
+     * 
+     * @return the departure column
+     */
+    public TableColumn<TeamMemberAttendanceRecord, LocalTime> getDepartureColumn() {
+        return departureColumn;
+    }
+
+    /**
+     * Gets the arrival time field.
+     * 
+     * @return the arrival time field
+     */
+    public TextField getArrivalTimeField() {
+        return arrivalTimeField;
+    }
+
+    /**
+     * Gets the departure time field.
+     * 
+     * @return the departure time field
+     */
+    public TextField getDepartureTimeField() {
+        return departureTimeField;
+    }
+
+    /**
+     * Public method to access handleSave for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleSave(ActionEvent event) {
+        handleSave(event);
+    }
+
+    /**
+     * Public method to access handleCancel for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleCancel(ActionEvent event) {
+        handleCancel(event);
+    }
+
 }

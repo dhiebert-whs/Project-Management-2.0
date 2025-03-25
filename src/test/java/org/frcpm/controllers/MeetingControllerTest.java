@@ -2,6 +2,8 @@ package org.frcpm.controllers;
 
 import javafx.event.ActionEvent;
 import javafx.scene.control.*;
+import javafx.stage.Stage;
+
 import org.frcpm.models.Meeting;
 import org.frcpm.models.Project;
 import org.frcpm.services.MeetingService;

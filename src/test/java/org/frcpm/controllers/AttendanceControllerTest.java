@@ -4,6 +4,8 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.scene.control.*;
+import javafx.stage.Stage;
+
 import org.frcpm.controllers.AttendanceController.TeamMemberAttendanceRecord;
 import org.frcpm.models.Attendance;
 import org.frcpm.models.Meeting;
@@ -29,6 +31,9 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -141,19 +146,68 @@ public class AttendanceControllerTest {
         testRecords.add(new TeamMemberAttendanceRecord(member2, null));
         
         // Initialize controller by setting the mock fields
-        attendanceController.meetingTitleLabel = meetingTitleLabel;
-        attendanceController.dateLabel = dateLabel;
-        attendanceController.timeLabel = timeLabel;
-        attendanceController.attendanceTable = attendanceTable;
-        attendanceController.nameColumn = nameColumn;
-        attendanceController.subteamColumn = subteamColumn;
-        attendanceController.presentColumn = presentColumn;
-        attendanceController.arrivalColumn = arrivalColumn;
-        attendanceController.departureColumn = departureColumn;
-        attendanceController.arrivalTimeField = arrivalTimeField;
-        attendanceController.departureTimeField = departureTimeField;
-        attendanceController.saveButton = saveButton;
-        attendanceController.cancelButton = cancelButton;
+        //attendanceController.meetingTitleLabel = meetingTitleLabel;
+        // Use reflection to set private fields
+        //java.lang.reflect.Field 
+
+    try {
+        // Use reflection to set private fields
+        java.lang.reflect.Field field;
+
+        field = AttendanceController.class.getDeclaredField("meetingTitleLabel");
+        field.setAccessible(true);
+        field.set(attendanceController, meetingTitleLabel);
+        
+        field = AttendanceController.class.getDeclaredField("dateLabel");
+        field.setAccessible(true);
+        field.set(attendanceController, dateLabel);
+        
+        field = AttendanceController.class.getDeclaredField("timeLabel");
+        field.setAccessible(true);
+        field.set(attendanceController, timeLabel);
+        
+        field = AttendanceController.class.getDeclaredField("attendanceTable");
+        field.setAccessible(true);
+        field.set(attendanceController, attendanceTable);
+        
+        field = AttendanceController.class.getDeclaredField("nameColumn");
+        field.setAccessible(true);
+        field.set(attendanceController, nameColumn);
+        
+        field = AttendanceController.class.getDeclaredField("subteamColumn");
+        field.setAccessible(true);
+        field.set(attendanceController, subteamColumn);
+        
+        field = AttendanceController.class.getDeclaredField("presentColumn");
+        field.setAccessible(true);
+        field.set(attendanceController, presentColumn);
+        
+        field = AttendanceController.class.getDeclaredField("arrivalColumn");
+        field.setAccessible(true);
+        field.set(attendanceController, arrivalColumn);
+        
+        field = AttendanceController.class.getDeclaredField("departureColumn");
+        field.setAccessible(true);
+        field.set(attendanceController, departureColumn);
+        
+        field = AttendanceController.class.getDeclaredField("arrivalTimeField");
+        field.setAccessible(true);
+        field.set(attendanceController, arrivalTimeField);
+        
+        field = AttendanceController.class.getDeclaredField("departureTimeField");
+        field.setAccessible(true);
+        field.set(attendanceController, departureTimeField);
+        
+        field = AttendanceController.class.getDeclaredField("saveButton");
+        field.setAccessible(true);
+        field.set(attendanceController, saveButton);
+        
+        field = AttendanceController.class.getDeclaredField("cancelButton");
+        field.setAccessible(true);
+        field.set(attendanceController, cancelButton);
+    } catch (Exception e) {
+        fail("Failed to set fields using reflection: " + e.getMessage());
+    }
         
         // Set attendanceRecords field using reflection
         try {
@@ -171,9 +225,9 @@ public class AttendanceControllerTest {
         when(attendanceService.updateAttendance(anyLong(), anyBoolean(), any(), any())).thenReturn(attendance1);
         
         // Mock UI component behavior
-        when(attendanceTable.getItems()).thenReturn(testRecords);
-        when(saveButton.getScene()).thenReturn(mock(javafx.scene.Scene.class));
-        when(saveButton.getScene().getWindow()).thenReturn(mockStage);
+        when(attendanceController.getAttendanceTable().getItems()).thenReturn(testRecords);
+        when(attendanceController.getSaveButton().getScene()).thenReturn(mock(javafx.scene.Scene.class));
+        when(attendanceController.getSaveButton().getScene().getWindow()).thenReturn(mockStage);
     }
 
     @Test
@@ -185,18 +239,18 @@ public class AttendanceControllerTest {
             initMethod.invoke(attendanceController);
             
             // Verify that the table columns are set up
-            verify(nameColumn).setCellValueFactory(any());
-            verify(subteamColumn).setCellValueFactory(any());
-            verify(presentColumn).setCellValueFactory(any());
-            verify(arrivalColumn).setCellValueFactory(any());
-            verify(departureColumn).setCellValueFactory(any());
+            verify(attendanceController.getNameColumn()).setCellValueFactory(any());
+            verify(attendanceController.getSubteamColumn()).setCellValueFactory(any());
+            verify(attendanceController.getPresentColumn()).setCellValueFactory(any());
+            verify(attendanceController.getArrivalColumn()).setCellValueFactory(any());
+            verify(attendanceController.getDepartureColumn()).setCellValueFactory(any());
             
             // Verify that button actions are set
-            verify(saveButton).setOnAction(any());
-            verify(cancelButton).setOnAction(any());
+            verify(attendanceController.getSaveButton()).setOnAction(any());
+            verify(attendanceController.getCancelButton()).setOnAction(any());
             
             // Verify that table items are set
-            verify(attendanceTable).setItems(testRecords);
+            verify(attendanceController.getAttendanceTable()).setItems(testRecords);
             
         } catch (Exception e) {
             fail("Exception during initialize: " + e.getMessage());
@@ -209,12 +263,12 @@ public class AttendanceControllerTest {
         attendanceController.setMeeting(testMeeting);
         
         // Verify the meeting is set
-        assertEquals(testMeeting, attendanceController.meeting);
+        assertEquals(testMeeting, attendanceController.getMeeting());
         
         // Verify that attendance data is loaded
-        verify(meetingTitleLabel).setText("Meeting Attendance");
-        verify(dateLabel).setText(testMeeting.getDate().toString());
-        verify(timeLabel).setText(testMeeting.getStartTime() + " - " + testMeeting.getEndTime());
+        verify(attendanceController.getMeetingTitleLabel()).setText("Meeting Attendance");
+        verify(attendanceController.getDateLabel()).setText(testMeeting.getDate().toString());
+        verify(attendanceController.getTimeLabel()).setText(testMeeting.getStartTime() + " - " + testMeeting.getEndTime());
         
         // Verify that team members and attendance records are loaded
         verify(teamMemberService).findAll();
@@ -247,7 +301,7 @@ public class AttendanceControllerTest {
         attendanceController.setMeeting(testMeeting);
         
         // Test saving
-        attendanceController.handleSave(mockEvent);
+        attendanceController.testHandleSave(mockEvent);
         
         // Since we have 2 members, one present and one absent,
         // we should have one create/update call for each
@@ -265,7 +319,7 @@ public class AttendanceControllerTest {
     @Test
     public void testHandleCancel() {
         // Test canceling
-        attendanceController.handleCancel(mockEvent);
+        attendanceController.testHandleCancel(mockEvent);
         
         // Verify dialog was closed
         verify(mockStage).close();
@@ -286,4 +340,6 @@ public class AttendanceControllerTest {
         assertEquals(attendance.getDepartureTime(), record.getDepartureTime());
         assertEquals(member.getFullName(), record.getName());
     }
+
+    
 }

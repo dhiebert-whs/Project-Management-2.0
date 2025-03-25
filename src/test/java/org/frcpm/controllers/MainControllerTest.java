@@ -4,6 +4,7 @@ import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.scene.control.*;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 import org.frcpm.models.Project;
