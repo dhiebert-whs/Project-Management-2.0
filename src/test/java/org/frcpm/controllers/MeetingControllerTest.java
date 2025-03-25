@@ -1,0 +1,241 @@
+package org.frcpm.controllers;
+
+import javafx.event.ActionEvent;
+import javafx.scene.control.*;
+import org.frcpm.models.Meeting;
+import org.frcpm.models.Project;
+import org.frcpm.services.MeetingService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
+public class MeetingControllerTest {
+
+    @Mock
+    private MeetingService meetingService;
+    
+    @InjectMocks
+    private MeetingController meetingController;
+    
+    @Mock
+    private DatePicker datePicker;
+    
+    @Mock
+    private TextField startTimeField;
+    
+    @Mock
+    private TextField endTimeField;
+    
+    @Mock
+    private TextArea notesArea;
+    
+    @Mock
+    private Button saveButton;
+    
+    @Mock
+    private Button cancelButton;
+    
+    @Mock
+    private Stage mockStage;
+    
+    @Mock
+    private ActionEvent mockEvent;
+    
+    private Project testProject;
+    private Meeting testMeeting;
+
+    @BeforeEach
+    public void setUp() {
+        // Create test project
+        testProject = new Project(
+                "Test Project",
+                LocalDate.now(),
+                LocalDate.now().plusWeeks(6),
+                LocalDate.now().plusWeeks(8)
+        );
+        testProject.setId(1L);
+        
+        // Create test meeting
+        testMeeting = new Meeting(
+                LocalDate.now().plusDays(1),
+                LocalTime.of(18, 0),
+                LocalTime.of(20, 0),
+                testProject
+        );
+        testMeeting.setId(1L);
+        testMeeting.setNotes("Test meeting notes");
+        
+        // Initialize controller by setting the mock fields
+        meetingController.datePicker = datePicker;
+        meetingController.startTimeField = startTimeField;
+        meetingController.endTimeField = endTimeField;
+        meetingController.notesArea = notesArea;
+        meetingController.saveButton = saveButton;
+        meetingController.cancelButton = cancelButton;
+        
+        // Mock service behavior
+        when(meetingService.createMeeting(any(), any(), any(), anyLong(), anyString()))
+            .thenReturn(testMeeting);
+        when(meetingService.updateMeetingDateTime(anyLong(), any(), any(), any()))
+            .thenReturn(testMeeting);
+        when(meetingService.updateNotes(anyLong(), anyString()))
+            .thenReturn(testMeeting);
+        
+        // Mock UI component behavior
+        when(datePicker.getValue()).thenReturn(LocalDate.now().plusDays(1));
+        when(startTimeField.getText()).thenReturn("18:00");
+        when(endTimeField.getText()).thenReturn("20:00");
+        when(notesArea.getText()).thenReturn("Test meeting notes");
+        when(saveButton.getScene()).thenReturn(mock(javafx.scene.Scene.class));
+        when(saveButton.getScene().getWindow()).thenReturn(mockStage);
+    }
+
+    @Test
+    public void testInitialize() {
+        // Call initialize via reflection (since it's private)
+        try {
+            java.lang.reflect.Method initMethod = MeetingController.class.getDeclaredMethod("initialize");
+            initMethod.setAccessible(true);
+            initMethod.invoke(meetingController);
+            
+            // Verify that default values are set
+            verify(datePicker).setValue(any(LocalDate.class));
+            verify(startTimeField).setText("16:00");
+            verify(endTimeField).setText("18:00");
+            
+            // Verify that button actions are set
+            verify(saveButton).setOnAction(any());
+            verify(cancelButton).setOnAction(any());
+            
+        } catch (Exception e) {
+            fail("Exception during initialize: " + e.getMessage());
+        }
+    }
+
+    @Test
+    public void testSetNewMeeting() {
+        // Test setting up for a new meeting
+        meetingController.setNewMeeting(testProject);
+        
+        // Verify the fields are initialized correctly
+        assertEquals(testProject, meetingController.project);
+        assertNull(meetingController.meeting);
+        assertTrue(meetingController.isNewMeeting);
+        verify(datePicker).setValue(any(LocalDate.class));
+        verify(startTimeField).setText("16:00");
+        verify(endTimeField).setText("18:00");
+        verify(notesArea).setText("");
+    }
+    
+    @Test
+    public void testSetMeeting() {
+        // Test setting up for editing an existing meeting
+        meetingController.setMeeting(testMeeting);
+        
+        // Verify the fields are initialized correctly
+        assertEquals(testMeeting, meetingController.meeting);
+        assertEquals(testProject, meetingController.project);
+        assertFalse(meetingController.isNewMeeting);
+        verify(datePicker).setValue(testMeeting.getDate());
+        verify(startTimeField).setText(testMeeting.getStartTime().toString());
+        verify(endTimeField).setText(testMeeting.getEndTime().toString());
+        verify(notesArea).setText(testMeeting.getNotes());
+    }
+    
+    @Test
+    public void testHandleSaveForNewMeeting() {
+        // Set up for a new meeting
+        meetingController.setNewMeeting(testProject);
+        
+        // Test saving
+        meetingController.handleSave(mockEvent);
+        
+        // Verify service was called to create a new meeting
+        verify(meetingService).createMeeting(
+            datePicker.getValue(),
+            LocalTime.parse(startTimeField.getText()),
+            LocalTime.parse(endTimeField.getText()),
+            testProject.getId(),
+            notesArea.getText()
+        );
+        
+        // Verify dialog was closed
+        verify(mockStage).close();
+    }
+    
+    @Test
+    public void testHandleSaveForExistingMeeting() {
+        // Set up for editing an existing meeting
+        meetingController.setMeeting(testMeeting);
+        
+        // Test saving
+        meetingController.handleSave(mockEvent);
+        
+        // Verify service was called to update the meeting
+        verify(meetingService).updateMeetingDateTime(
+            testMeeting.getId(),
+            datePicker.getValue(),
+            LocalTime.parse(startTimeField.getText()),
+            LocalTime.parse(endTimeField.getText())
+        );
+        verify(meetingService).updateNotes(
+            testMeeting.getId(),
+            notesArea.getText()
+        );
+        
+        // Verify dialog was closed
+        verify(mockStage).close();
+    }
+    
+    @Test
+    public void testHandleSaveWithValidationErrors() {
+        // Set up for a new meeting with invalid values
+        meetingController.setNewMeeting(testProject);
+        
+        // Mock missing date
+        when(datePicker.getValue()).thenReturn(null);
+        
+        // Test saving
+        meetingController.handleSave(mockEvent);
+        
+        // Verify service was NOT called to create a new meeting
+        verify(meetingService, never()).createMeeting(any(), any(), any(), anyLong(), anyString());
+        
+        // Verify dialog was NOT closed
+        verify(mockStage, never()).close();
+    }
+    
+    @Test
+    public void testHandleCancel() {
+        // Test canceling
+        meetingController.handleCancel(mockEvent);
+        
+        // Verify dialog was closed
+        verify(mockStage).close();
+    }
+    
+    @Test
+    public void testGetMeeting() {
+        // Set up a meeting
+        meetingController.setMeeting(testMeeting);
+        
+        // Test getting the meeting
+        Meeting result = meetingController.getMeeting();
+        
+        // Verify the correct meeting is returned
+        assertEquals(testMeeting, result);
+    }
+}
