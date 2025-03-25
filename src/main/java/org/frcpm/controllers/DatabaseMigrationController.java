@@ -247,4 +247,138 @@ public class DatabaseMigrationController {
             });
         }
     }
+
+    /**
+     * Gets the source database path field.
+     * 
+     * @return the source database path field
+     */
+    public TextField getSourceDbPathField() {
+        return sourceDbPathField;
+    }
+
+    /**
+     * Gets the browse button.
+     * 
+     * @return the browse button
+     */
+    public Button getBrowseButton() {
+        return browseButton;
+    }
+
+    /**
+     * Gets the migrate button.
+     * 
+     * @return the migrate button
+     */
+    public Button getMigrateButton() {
+        return migrateButton;
+    }
+
+    /**
+     * Gets the progress bar.
+     * 
+     * @return the progress bar
+     */
+    public ProgressBar getProgressBar() {
+        return progressBar;
+    }
+
+    /**
+     * Gets the progress label.
+     * 
+     * @return the progress label
+     */
+    public Label getProgressLabel() {
+        return progressLabel;
+    }
+
+    /**
+     * Gets the log text area.
+     * 
+     * @return the log text area
+     */
+    public TextArea getLogTextArea() {
+        return logTextArea;
+    }
+
+    /**
+     * Gets the close button.
+     * 
+     * @return the close button
+     */
+    public Button getCloseButton() {
+        return closeButton;
+    }
+
+    /**
+     * Gets the error box.
+     * 
+     * @return the error box
+     */
+    public VBox getErrorBox() {
+        return errorBox;
+    }
+
+    /**
+     * Gets the error list view.
+     * 
+     * @return the error list view
+     */
+    public ListView<String> getErrorListView() {
+        return errorListView;
+    }
+
+    /**
+     * Gets the dialog stage.
+     * 
+     * @return the dialog stage
+     */
+    public Stage getDialogStage() {
+        return dialogStage;
+    }
+
+    /**
+     * Public method to access handleBrowseSourceDb for testing.
+     */
+    public void testHandleBrowseSourceDb() {
+        handleBrowseSourceDb();
+    }
+
+    /**
+     * Public method to access handleMigrate for testing.
+     */
+    public void testHandleMigrate() {
+        handleMigrate();
+    }
+
+    /**
+     * Public method to access logMessage for testing.
+     * 
+     * @param message the message to log
+     */
+    public void testLogMessage(String message) {
+        logMessage(message);
+    }
+
+    /**
+     * Public method to access showAlert for testing.
+     * 
+     * @param alertType the alert type
+     * @param title the title
+     * @param message the message
+     */
+    public void testShowAlert(Alert.AlertType alertType, String title, String message) {
+        showAlert(alertType, title, message);
+    }
+
+    /**
+     * Public method to access MigrationTask constructor for testing.
+     * 
+     * @param sourceDbPath the source database path
+     * @return the migration task
+     */
+    public MigrationTask testCreateMigrationTask(String sourceDbPath) {
+        return new MigrationTask(sourceDbPath);
+    }
 }

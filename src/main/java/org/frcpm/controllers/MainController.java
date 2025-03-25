@@ -551,4 +551,150 @@ private void handleTakeAttendance(ActionEvent event) {
         alert.setContentText("This feature is not yet implemented in the current version.");
         alert.showAndWait();
     }
+
+    // Add these getters to MainController.java
+
+    /**
+     * Gets the projects table.
+     * 
+     * @return the projects table
+     */
+    public TableView<Project> getProjectsTable() {
+        return projectsTable;
+    }
+
+    /**
+     * Gets the project name column.
+     * 
+     * @return the project name column
+     */
+    public TableColumn<Project, String> getProjectNameColumn() {
+        return projectNameColumn;
+    }
+
+    /**
+     * Gets the project start column.
+     * 
+     * @return the project start column
+     */
+    public TableColumn<Project, LocalDate> getProjectStartColumn() {
+        return projectStartColumn;
+    }
+
+    /**
+     * Gets the project goal column.
+     * 
+     * @return the project goal column
+     */
+    public TableColumn<Project, LocalDate> getProjectGoalColumn() {
+        return projectGoalColumn;
+    }
+
+    /**
+     * Gets the project deadline column.
+     * 
+     * @return the project deadline column
+     */
+    public TableColumn<Project, LocalDate> getProjectDeadlineColumn() {
+        return projectDeadlineColumn;
+    }
+
+    /**
+     * Gets the project tab.
+     * 
+     * @return the project tab
+     */
+    public Tab getProjectTab() {
+        return projectTab;
+    }
+
+    /**
+     * Gets the recent projects menu.
+     * 
+     * @return the recent projects menu
+     */
+    public Menu getRecentProjectsMenu() {
+        return recentProjectsMenu;
+    }
+
+    /**
+     * Gets the project list.
+     * 
+     * @return the project list
+     */
+    public ObservableList<Project> getProjectList() {
+        return projectList;
+    }
+
+    /**
+     * Public method to access initialize for testing.
+     */
+    public void testInitialize() {
+        initialize();
+    }
+
+    /**
+     * Public method to access loadProjects for testing.
+     */
+    public void testLoadProjects() {
+        loadProjects();
+    }
+
+    /**
+     * Public method to access handleOpenProject for testing.
+     * 
+     * @param project the project to open
+     */
+    public void testHandleOpenProject(Project project) {
+        handleOpenProject(project);
+    }
+
+    /**
+     * Public method to access getMenuById for testing.
+     * 
+     * @param menuId the menu ID
+     * @return the menu
+     */
+    public Menu testGetMenuById(String menuId) {
+        return getMenuById(menuId);
+    }
+
+    /**
+     * Public method to access showErrorAlert for testing.
+     * 
+     * @param title the title
+     * @param message the message
+     */
+    public void testShowErrorAlert(String title, String message) {
+        showErrorAlert(title, message);
+    }
+
+    /**
+     * Public method to access showInfoAlert for testing.
+     * 
+     * @param title the title
+     * @param message the message
+     */
+    public void testShowInfoAlert(String title, String message) {
+        showInfoAlert(title, message);
+    }
+
+    /**
+     * Public method to access showNotImplementedAlert for testing.
+     * 
+     * @param feature the feature
+     */
+    public void testShowNotImplementedAlert(String feature) {
+        showNotImplementedAlert(feature);
+    }
+
+    /**
+     * Public method to access createDateCellFactory for testing.
+     * 
+     * @param <T> the type parameter
+     * @return the cell factory
+     */
+    public <T> Callback<TableColumn<T, LocalDate>, TableCell<T, LocalDate>> testCreateDateCellFactory() {
+        return createDateCellFactory();
+    }
 }

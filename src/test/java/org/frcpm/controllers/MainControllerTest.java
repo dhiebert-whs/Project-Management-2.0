@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -89,19 +90,19 @@ public class MainControllerTest {
         testProjects = Arrays.asList(project1, project2);
         
         // Initialize controller by setting the mock fields
-        mainController.projectsTable = projectsTable;
-        mainController.projectNameColumn = projectNameColumn;
-        mainController.projectStartColumn = projectStartColumn;
-        mainController.projectGoalColumn = projectGoalColumn;
-        mainController.projectDeadlineColumn = projectDeadlineColumn;
-        mainController.projectTab = projectTab;
-        mainController.recentProjectsMenu = recentProjectsMenu;
+        assertSame(projectsTable, mainController.getProjectsTable());
+        assertSame(projectNameColumn, mainController.getProjectNameColumn());
+        assertSame(projectStartColumn, mainController.getProjectStartColumn());
+        assertSame(projectGoalColumn, mainController.getProjectGoalColumn());
+        assertSame(projectDeadlineColumn, mainController.getProjectDeadlineColumn());
+        assertSame(projectTab, mainController.getProjectTab());
+        assertSame(recentProjectsMenu, mainController.getRecentProjectsMenu());
         
         // Mock project service behavior
         when(projectService.findAll()).thenReturn(testProjects);
         
         // Mock table behavior
-        when(projectsTable.getItems()).thenReturn(FXCollections.observableArrayList());
+        when(mainController.getProjectsTable().getItems()).thenReturn(FXCollections.observableArrayList());
         
         // Mock event behavior for UI tests
         when(mockEvent.getSource()).thenReturn(new Button());
@@ -115,15 +116,13 @@ public class MainControllerTest {
     public void testInitialize() {
         // Call initialize via reflection (since it's private)
         try {
-            java.lang.reflect.Method initMethod = MainController.class.getDeclaredMethod("initialize");
-            initMethod.setAccessible(true);
-            initMethod.invoke(mainController);
-            
+            mainController.testInitialize();
+
             // Verify that the table columns are set up
-            verify(projectNameColumn).setCellValueFactory(any());
-            verify(projectStartColumn).setCellValueFactory(any());
-            verify(projectGoalColumn).setCellValueFactory(any());
-            verify(projectDeadlineColumn).setCellValueFactory(any());
+            verify(mainController.getProjectNameColumn()).setCellValueFactory(any());
+            verify(mainController.getProjectStartColumn()).setCellValueFactory(any());
+            verify(mainController.getProjectGoalColumn()).setCellValueFactory(any());
+            verify(mainController.getProjectDeadlineColumn()).setCellValueFactory(any());
             
             // Verify that projects are loaded
             verify(projectService).findAll();
@@ -137,9 +136,8 @@ public class MainControllerTest {
     public void testLoadProjects() {
         // Call the method to test
         try {
-            java.lang.reflect.Method loadProjectsMethod = MainController.class.getDeclaredMethod("loadProjects");
-            loadProjectsMethod.setAccessible(true);
-            loadProjectsMethod.invoke(mainController);
+            mainController.testLoadProjects();
+
             
             // Verify that projects are loaded from the service
             verify(projectService).findAll();
