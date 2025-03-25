@@ -20,6 +20,9 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -81,12 +84,12 @@ public class MeetingControllerTest {
         testMeeting.setNotes("Test meeting notes");
         
         // Initialize controller by setting the mock fields
-        meetingController.datePicker = datePicker;
-        meetingController.startTimeField = startTimeField;
-        meetingController.endTimeField = endTimeField;
-        meetingController.notesArea = notesArea;
-        meetingController.saveButton = saveButton;
-        meetingController.cancelButton = cancelButton;
+        when(meetingController.getDatePicker()).thenReturn(datePicker);
+        when(meetingController.getStartTimeField()).thenReturn(startTimeField);
+        when(meetingController.getEndTimeField()).thenReturn(endTimeField);
+        when(meetingController.getNotesArea()).thenReturn(notesArea);
+        when(meetingController.getSaveButton()).thenReturn(saveButton);
+        when(meetingController.getCancelButton()).thenReturn(cancelButton);
         
         // Mock service behavior
         when(meetingService.createMeeting(any(), any(), any(), anyLong(), anyString()))
@@ -109,9 +112,7 @@ public class MeetingControllerTest {
     public void testInitialize() {
         // Call initialize via reflection (since it's private)
         try {
-            java.lang.reflect.Method initMethod = MeetingController.class.getDeclaredMethod("initialize");
-            initMethod.setAccessible(true);
-            initMethod.invoke(meetingController);
+            meetingController.testInitialize();
             
             // Verify that default values are set
             verify(datePicker).setValue(any(LocalDate.class));
@@ -133,9 +134,9 @@ public class MeetingControllerTest {
         meetingController.setNewMeeting(testProject);
         
         // Verify the fields are initialized correctly
-        assertEquals(testProject, meetingController.project);
-        assertNull(meetingController.meeting);
-        assertTrue(meetingController.isNewMeeting);
+        assertEquals(testProject, meetingController.getProject());
+        assertNull(meetingController.getMeeting());
+        assertTrue(meetingController.isNewMeeting());
         verify(datePicker).setValue(any(LocalDate.class));
         verify(startTimeField).setText("16:00");
         verify(endTimeField).setText("18:00");
@@ -148,9 +149,9 @@ public class MeetingControllerTest {
         meetingController.setMeeting(testMeeting);
         
         // Verify the fields are initialized correctly
-        assertEquals(testMeeting, meetingController.meeting);
-        assertEquals(testProject, meetingController.project);
-        assertFalse(meetingController.isNewMeeting);
+        assertEquals(testMeeting, meetingController.getMeeting());
+        assertEquals(testProject, meetingController.getProject());
+        assertFalse(meetingController.isNewMeeting());
         verify(datePicker).setValue(testMeeting.getDate());
         verify(startTimeField).setText(testMeeting.getStartTime().toString());
         verify(endTimeField).setText(testMeeting.getEndTime().toString());
@@ -163,7 +164,7 @@ public class MeetingControllerTest {
         meetingController.setNewMeeting(testProject);
         
         // Test saving
-        meetingController.handleSave(mockEvent);
+        meetingController.testHandleSave(mockEvent);
         
         // Verify service was called to create a new meeting
         verify(meetingService).createMeeting(
@@ -184,7 +185,7 @@ public class MeetingControllerTest {
         meetingController.setMeeting(testMeeting);
         
         // Test saving
-        meetingController.handleSave(mockEvent);
+        meetingController.testHandleSave(mockEvent);
         
         // Verify service was called to update the meeting
         verify(meetingService).updateMeetingDateTime(
@@ -211,7 +212,7 @@ public class MeetingControllerTest {
         when(datePicker.getValue()).thenReturn(null);
         
         // Test saving
-        meetingController.handleSave(mockEvent);
+        meetingController.testHandleSave(mockEvent);
         
         // Verify service was NOT called to create a new meeting
         verify(meetingService, never()).createMeeting(any(), any(), any(), anyLong(), anyString());
@@ -223,7 +224,7 @@ public class MeetingControllerTest {
     @Test
     public void testHandleCancel() {
         // Test canceling
-        meetingController.handleCancel(mockEvent);
+        meetingController.testHandleCancel(mockEvent);
         
         // Verify dialog was closed
         verify(mockStage).close();

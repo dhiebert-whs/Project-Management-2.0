@@ -179,14 +179,7 @@ public class MeetingController {
         closeDialog();
     }
     
-    /**
-     * Gets the meeting that was created or edited.
-     * 
-     * @return the meeting
-     */
-    public Meeting getMeeting() {
-        return meeting;
-    }
+
     
     /**
      * Closes the dialog.
@@ -208,5 +201,128 @@ public class MeetingController {
         alert.setHeaderText(title);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    /**
+     * Gets the date picker.
+     * 
+     * @return the date picker
+     */
+    public DatePicker getDatePicker() {
+        return datePicker;
+    }
+
+    /**
+     * Gets the start time field.
+     * 
+     * @return the start time field
+     */
+    public TextField getStartTimeField() {
+        return startTimeField;
+    }
+
+    /**
+     * Gets the end time field.
+     * 
+     * @return the end time field
+     */
+    public TextField getEndTimeField() {
+        return endTimeField;
+    }
+
+    /**
+     * Gets the notes area.
+     * 
+     * @return the notes area
+     */
+    public TextArea getNotesArea() {
+        return notesArea;
+    }
+
+    /**
+     * Gets the save button.
+     * 
+     * @return the save button
+     */
+    public Button getSaveButton() {
+        return saveButton;
+    }
+
+    /**
+     * Gets the cancel button.
+     * 
+     * @return the cancel button
+     */
+    public Button getCancelButton() {
+        return cancelButton;
+    }
+
+    /**
+     * Gets the meeting.
+     * 
+     * @return the meeting
+     */
+    public Meeting getMeeting() {
+        return meeting;
+    }
+
+    /**
+     * Gets the project.
+     * 
+     * @return the project
+     */
+    public Project getProject() {
+        return project;
+    }
+
+    /**
+     * Gets the isNewMeeting flag.
+     * 
+     * @return true if this is a new meeting, false otherwise
+     */
+    public boolean isNewMeeting() {
+        return isNewMeeting;
+    }
+
+    /**
+     * Public method to access initialize for testing.
+     */
+    public void testInitialize() {
+        initialize();
+    }
+
+    /**
+     * Public method to access handleSave for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleSave(ActionEvent event) {
+        handleSave(event);
+    }
+
+    /**
+     * Public method to access handleCancel for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleCancel(ActionEvent event) {
+        handleCancel(event);
+    }
+
+    /**
+     * Public method to access closeDialog for testing.
+     */
+    public void testCloseDialog() {
+        closeDialog();
+    }
+
+    /**
+     * Public method to access showErrorAlert for testing.
+     * 
+     * @param title the title
+     * @param message the message
+     */
+    public void testShowErrorAlert(String title, String message) {
+        showErrorAlert(title, message);
     }
 }
