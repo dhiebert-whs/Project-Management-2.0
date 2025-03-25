@@ -151,7 +151,7 @@ public class MainControllerTest {
     public void testHandleNewProject() {
         // This test can only verify that the method doesn't throw exceptions
         // since it involves FXMLLoader which can't be easily mocked
-        assertDoesNotThrow(() -> mainController.handleNewProject(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleNewProject(mockEvent));
     }
     
     @Test
@@ -163,67 +163,67 @@ public class MainControllerTest {
     @Test
     public void testFileMenuHandlers() {
         // Test that these methods don't throw exceptions
-        assertDoesNotThrow(() -> mainController.handleOpenProject(mockEvent));
-        assertDoesNotThrow(() -> mainController.handleCloseProject(mockEvent));
-        assertDoesNotThrow(() -> mainController.handleSave(mockEvent));
-        assertDoesNotThrow(() -> mainController.handleSaveAs(mockEvent));
-        assertDoesNotThrow(() -> mainController.handleImportProject(mockEvent));
-        assertDoesNotThrow(() -> mainController.handleExportProject(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleOpenProject(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleCloseProject(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleSave(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleSaveAs(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleImportProject(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleExportProject(mockEvent));
     }
     
     @Test
     public void testEditMenuHandlers() {
         // Test that these methods don't throw exceptions
-        assertDoesNotThrow(() -> mainController.handleUndo(mockEvent));
-        assertDoesNotThrow(() -> mainController.handleRedo(mockEvent));
-        assertDoesNotThrow(() -> mainController.handleCut(mockEvent));
-        assertDoesNotThrow(() -> mainController.handleCopy(mockEvent));
-        assertDoesNotThrow(() -> mainController.handlePaste(mockEvent));
-        assertDoesNotThrow(() -> mainController.handleDelete(mockEvent));
-        assertDoesNotThrow(() -> mainController.handleSelectAll(mockEvent));
-        assertDoesNotThrow(() -> mainController.handleFind(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleUndo(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleRedo(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleCut(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleCopy(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandlePaste(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleDelete(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleSelectAll(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleFind(mockEvent));
     }
     
     @Test
     public void testViewMenuHandlers() {
         // Test that these methods don't throw exceptions
-        assertDoesNotThrow(() -> mainController.handleViewDashboard(mockEvent));
-        assertDoesNotThrow(() -> mainController.handleViewGantt(mockEvent));
-        assertDoesNotThrow(() -> mainController.handleViewCalendar(mockEvent));
-        assertDoesNotThrow(() -> mainController.handleViewDaily(mockEvent));
-        assertDoesNotThrow(() -> mainController.handleRefresh(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleViewDashboard(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleViewGantt(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleViewCalendar(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleViewDaily(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleRefresh(mockEvent));
     }
     
     @Test
     public void testProjectMenuHandlers() {
         // Test that these methods don't throw exceptions
-        assertDoesNotThrow(() -> mainController.handleProjectProperties(mockEvent));
-        assertDoesNotThrow(() -> mainController.handleAddMilestone(mockEvent));
-        assertDoesNotThrow(() -> mainController.handleScheduleMeeting(mockEvent));
-        assertDoesNotThrow(() -> mainController.handleAddTask(mockEvent));
-        assertDoesNotThrow(() -> mainController.handleProjectStatistics(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleProjectProperties(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleAddMilestone(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleScheduleMeeting(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleAddTask(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleProjectStatistics(mockEvent));
     }
     
     @Test
     public void testTeamMenuHandlers() {
         // Test that these methods don't throw exceptions
-        assertDoesNotThrow(() -> mainController.handleSubteams(mockEvent));
-        assertDoesNotThrow(() -> mainController.handleMembers(mockEvent));
-        assertDoesNotThrow(() -> mainController.handleTakeAttendance(mockEvent));
-        assertDoesNotThrow(() -> mainController.handleAttendanceHistory(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleSubteams(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleMembers(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleTakeAttendance(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleAttendanceHistory(mockEvent));
     }
     
     @Test
     public void testToolsMenuHandlers() {
         // Test that these methods don't throw exceptions
-        assertDoesNotThrow(() -> mainController.handleSettings(mockEvent));
-        assertDoesNotThrow(() -> mainController.handleDatabaseManagement(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleSettings(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleDatabaseManagement(mockEvent));
     }
     
     @Test
     public void testHelpMenuHandlers() {
         // Test that these methods don't throw exceptions
-        assertDoesNotThrow(() -> mainController.handleUserGuide(mockEvent));
-        assertDoesNotThrow(() -> mainController.handleAbout(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleUserGuide(mockEvent));
+        assertDoesNotThrow(() -> mainController.testHandleAbout(mockEvent));
     }
 }

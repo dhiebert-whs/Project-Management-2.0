@@ -697,4 +697,310 @@ private void handleTakeAttendance(ActionEvent event) {
     public <T> Callback<TableColumn<T, LocalDate>, TableCell<T, LocalDate>> testCreateDateCellFactory() {
         return createDateCellFactory();
     }
+
+    /**
+     * Public method to access handleNewProject for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleNewProject(ActionEvent event) {
+        handleNewProject(event);
+    }
+
+    /**
+     * Public method to access handleOpenProject for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleOpenProject(ActionEvent event) {
+        handleOpenProject(event);
+    }
+
+    /**
+     * Public method to access handleCloseProject for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleCloseProject(ActionEvent event) {
+        handleCloseProject(event);
+    }
+
+    /**
+     * Public method to access handleSave for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleSave(ActionEvent event) {
+        handleSave(event);
+    }
+
+    /**
+     * Public method to access handleSaveAs for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleSaveAs(ActionEvent event) {
+        handleSaveAs(event);
+    }
+
+    /**
+     * Public method to access handleImportProject for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleImportProject(ActionEvent event) {
+        handleImportProject(event);
+    }
+
+    /**
+     * Public method to access handleExportProject for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleExportProject(ActionEvent event) {
+        handleExportProject(event);
+    }
+
+    /**
+     * Public method to access handleExit for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleExit(ActionEvent event) {
+        handleExit(event);
+    }
+
+    /**
+     * Public method to access handleUndo for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleUndo(ActionEvent event) {
+        handleUndo(event);
+    }
+
+    /**
+     * Public method to access handleRedo for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleRedo(ActionEvent event) {
+        handleRedo(event);
+    }
+
+    /**
+     * Public method to access handleCut for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleCut(ActionEvent event) {
+        handleCut(event);
+    }
+
+    /**
+     * Public method to access handleCopy for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleCopy(ActionEvent event) {
+        handleCopy(event);
+    }
+
+    /**
+     * Public method to access handlePaste for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandlePaste(ActionEvent event) {
+        handlePaste(event);
+    }
+
+    /**
+     * Public method to access handleDelete for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleDelete(ActionEvent event) {
+        handleDelete(event);
+    }
+
+    /**
+     * Public method to access handleSelectAll for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleSelectAll(ActionEvent event) {
+        handleSelectAll(event);
+    }
+
+    /**
+     * Public method to access handleFind for testing.a
+     * 
+     * @param event the action event
+     */
+    public void testHandleFind(ActionEvent event) {
+        handleFind(event);
+    }
+
+    /**
+     * Public method to access handleViewDashboard for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleViewDashboard(ActionEvent event) {
+        handleViewDashboard(event);
+    }
+
+    /**
+     * Public method to access handleViewGantt for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleViewGantt(ActionEvent event) {
+        handleViewGantt(event);
+    }
+
+    /**
+     * Public method to access handleViewCalendar for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleViewCalendar(ActionEvent event) {
+        handleViewCalendar(event);
+    }
+
+    /**
+     * Public method to access handleViewDaily for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleViewDaily(ActionEvent event) {
+        handleViewDaily(event);
+    }
+
+    /**
+     * Public method to access handleRefresh for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleRefresh(ActionEvent event) {
+        handleRefresh(event);
+    }
+
+    /**
+     * Public method to access handleProjectProperties for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleProjectProperties(ActionEvent event) {
+        handleProjectProperties(event);
+    }
+
+    /**
+     * Public method to access handleAddMilestone for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleAddMilestone(ActionEvent event) {
+        handleAddMilestone(event);
+    }
+
+    /**
+     * Public method to access handleScheduleMeeting for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleScheduleMeeting(ActionEvent event) {
+        handleScheduleMeeting(event);
+    }
+
+    /**
+     * Public method to access handleAddTask for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleAddTask(ActionEvent event) {
+        handleAddTask(event);
+    }
+
+    /**
+     * Public method to access handleProjectStatistics for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleProjectStatistics(ActionEvent event) {
+        handleProjectStatistics(event);
+    }
+
+    /**
+     * Public method to access handleSubteams for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleSubteams(ActionEvent event) {
+        handleSubteams(event);
+    }
+
+    /**
+     * Public method to access handleMembers for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleMembers(ActionEvent event) {
+        handleMembers(event);
+    }
+
+    /**
+     * Public method to access handleTakeAttendance for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleTakeAttendance(ActionEvent event) {
+        handleTakeAttendance(event);
+    }
+
+    /**
+     * Public method to access handleAttendanceHistory for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleAttendanceHistory(ActionEvent event) {
+        handleAttendanceHistory(event);
+    }
+
+    /**
+     * Public method to access handleSettings for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleSettings(ActionEvent event) {
+        handleSettings(event);
+    }
+
+    /**
+     * Public method to access handleDatabaseManagement for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleDatabaseManagement(ActionEvent event) {
+        handleDatabaseManagement(event);
+    }
+
+    /**
+     * Public method to access handleUserGuide for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleUserGuide(ActionEvent event) {
+        handleUserGuide(event);
+    }
+
+    /**
+     * Public method to access handleAbout for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleAbout(ActionEvent event) {
+        handleAbout(event);
+    }
 }
