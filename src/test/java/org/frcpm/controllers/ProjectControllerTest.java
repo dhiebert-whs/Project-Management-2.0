@@ -1,7 +1,6 @@
 package org.frcpm.controllers;
 
 import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
@@ -82,7 +81,7 @@ public class ProjectControllerTest {
         );
         testProject.setDescription("Test project description");
 
-        // Initialize controller
+        // Initialize controller by setting the mock fields
         projectController.projectNameLabel = projectNameLabel;
         projectController.startDateLabel = startDateLabel;
         projectController.goalDateLabel = goalDateLabel;
@@ -142,22 +141,47 @@ public class ProjectControllerTest {
     public void testHandleAddTask() {
         // This method would test the dialog opening for adding a task
         // It's difficult to test JavaFX dialogs without a running JavaFX application
-        // So we'll just verify that the project is not null when trying to add a task
+        // So we'll modify this to test if the project is set before attempting to add a task
+        
+        // Set the project
         projectController.setProject(testProject);
-        assertNotNull(projectController.project);
+        
+        // Try to handle add task - we'll need to modify the controller to expose this method
+        projectController.handleAddTask(); // This would typically be a private method called by a button handler
+        
+        // Verify that some expected behavior happened
+        // This would depend on how the controller is implemented
+        // For example, if it should show a dialog, we could verify that a dialog service was called
+        // Or if it directly adds a task, we could verify the task service was called
     }
 
     @Test
     public void testHandleAddMilestone() {
-        // Similar to testHandleAddTask, but for milestones
+        // Similar to testHandleAddTask
         projectController.setProject(testProject);
-        assertNotNull(projectController.project);
+        projectController.handleAddMilestone();
+        
+        // Verify expected behavior
     }
 
     @Test
     public void testHandleScheduleMeeting() {
-        // Similar to testHandleAddTask, but for meetings
+        // Similar to testHandleAddTask
         projectController.setProject(testProject);
-        assertNotNull(projectController.project);
+        projectController.handleScheduleMeeting();
+        
+        // Verify expected behavior
+    }
+    
+    // Add a new test to verify project is null initially and not null after setting
+    @Test
+    public void testProjectInitiallyNullThenSet() {
+        // Initially the project should be null
+        assertNull(projectController.getProject());
+        
+        // After setting, it should not be null
+        projectController.setProject(testProject);
+        assertNotNull(projectController.getProject());
+        assertEquals(testProject.getId(), projectController.getProject().getId());
     }
 }

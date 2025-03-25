@@ -339,7 +339,7 @@ public class ProjectController {
  * 
  * @param event the action event
  */
-private void handleAddTask(ActionEvent event) {
+public void handleAddTask(ActionEvent event) {
     try {
         // First, select a subsystem
         List<Subsystem> subsystems = ServiceFactory.getSubsystemService().findAll();
@@ -394,7 +394,7 @@ private void handleAddTask(ActionEvent event) {
  * 
  * @param task the task to edit
  */
-private void handleEditTask(Task task) {
+public void handleEditTask(Task task) {
     if (task == null) {
         return;
     }
@@ -433,7 +433,7 @@ private void handleEditTask(Task task) {
      * @param event the action event
      */
     @FXML
-    private void handleAddMilestone(ActionEvent event) {
+    public void handleAddMilestone(ActionEvent event) {
         try {
             // Load the milestone dialog
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/MilestoneView.fxml"));
@@ -467,7 +467,7 @@ private void handleEditTask(Task task) {
      * 
      * @param milestone the milestone to edit
      */
-    private void handleEditMilestone(Milestone milestone) {
+    public void handleEditMilestone(Milestone milestone) {
         if (milestone == null) {
             return;
         }
@@ -506,7 +506,7 @@ private void handleEditTask(Task task) {
      * @param event the action event
      */
     @FXML
-    private void handleScheduleMeeting(ActionEvent event) {
+    public void handleScheduleMeeting(ActionEvent event) {
         try {
             // Load the meeting dialog
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/MeetingView.fxml"));
@@ -540,7 +540,7 @@ private void handleEditTask(Task task) {
      * 
      * @param meeting the meeting to edit
      */
-    private void handleEditMeeting(Meeting meeting) {
+    public void handleEditMeeting(Meeting meeting) {
         if (meeting == null) {
             return;
         }
@@ -598,5 +598,10 @@ private void handleEditTask(Task task) {
         alert.setHeaderText(title);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    //Getter for project
+    public Project getProject() {
+        return project;
     }
 }
