@@ -1,10 +1,14 @@
 package org.frcpm.controllers;
 
 import javafx.collections.FXCollections;
+import javafx.event.ActionEvent;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
+import org.frcpm.models.Meeting;
+import org.frcpm.models.Milestone;
 import org.frcpm.models.Project;
+import org.frcpm.models.Task;
 import org.frcpm.services.ProjectService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,13 +37,13 @@ public class ProjectControllerTest {
     private ProjectController projectController;
 
     @Mock
-    private TableView<Project> tasksTable;
+    private TableView<Task> tasksTable;
 
     @Mock
-    private TableView<Project> milestonesTable;
+    private TableView<Milestone> milestonesTable;
 
     @Mock
-    private TableView<Project> meetingsTable;
+    private TableView<Meeting> meetingsTable;
 
     @Mock
     private Label projectNameLabel;
@@ -139,41 +143,49 @@ public class ProjectControllerTest {
 
     @Test
     public void testHandleAddTask() {
-        // This method would test the dialog opening for adding a task
-        // It's difficult to test JavaFX dialogs without a running JavaFX application
-        // So we'll modify this to test if the project is set before attempting to add a task
+        // Create a mock ActionEvent
+        ActionEvent mockEvent = mock(ActionEvent.class);
         
         // Set the project
         projectController.setProject(testProject);
         
-        // Try to handle add task - we'll need to modify the controller to expose this method
-        projectController.handleAddTask(); // This would typically be a private method called by a button handler
+        // Call the handler with the mock event
+        projectController.handleAddTask(mockEvent);
         
-        // Verify that some expected behavior happened
-        // This would depend on how the controller is implemented
-        // For example, if it should show a dialog, we could verify that a dialog service was called
-        // Or if it directly adds a task, we could verify the task service was called
+        // Since we can't easily test dialog creation, we'll just verify the project is set
+        assertNotNull(projectController.getProject());
     }
 
     @Test
     public void testHandleAddMilestone() {
-        // Similar to testHandleAddTask
-        projectController.setProject(testProject);
-        projectController.handleAddMilestone();
+        // Create a mock ActionEvent
+        ActionEvent mockEvent = mock(ActionEvent.class);
         
-        // Verify expected behavior
+        // Set the project
+        projectController.setProject(testProject);
+        
+        // Call the handler with the mock event
+        projectController.handleAddMilestone(mockEvent);
+        
+        // Verify project is set
+        assertNotNull(projectController.getProject());
     }
 
     @Test
     public void testHandleScheduleMeeting() {
-        // Similar to testHandleAddTask
-        projectController.setProject(testProject);
-        projectController.handleScheduleMeeting();
+        // Create a mock ActionEvent
+        ActionEvent mockEvent = mock(ActionEvent.class);
         
-        // Verify expected behavior
+        // Set the project
+        projectController.setProject(testProject);
+        
+        // Call the handler with the mock event
+        projectController.handleScheduleMeeting(mockEvent);
+        
+        // Verify project is set
+        assertNotNull(projectController.getProject());
     }
     
-    // Add a new test to verify project is null initially and not null after setting
     @Test
     public void testProjectInitiallyNullThenSet() {
         // Initially the project should be null
