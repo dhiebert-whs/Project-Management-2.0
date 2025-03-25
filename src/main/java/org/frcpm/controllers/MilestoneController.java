@@ -144,14 +144,7 @@ public class MilestoneController {
         closeDialog();
     }
     
-    /**
-     * Gets the milestone that was created or edited.
-     * 
-     * @return the milestone
-     */
-    public Milestone getMilestone() {
-        return milestone;
-    }
+
     
     /**
      * Closes the dialog.
@@ -173,5 +166,128 @@ public class MilestoneController {
         alert.setHeaderText(title);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    /**
+     * Gets the name field.
+     * 
+     * @return the name field
+     */
+    public TextField getNameField() {
+        return nameField;
+    }
+
+    /**
+     * Gets the date picker.
+     * 
+     * @return the date picker
+     */
+    public DatePicker getDatePicker() {
+        return datePicker;
+    }
+
+    /**
+     * Gets the description area.
+     * 
+     * @return the description area
+     */
+    public TextArea getDescriptionArea() {
+        return descriptionArea;
+    }
+
+    /**
+     * Gets the save button.
+     * 
+     * @return the save button
+     */
+    public Button getSaveButton() {
+        return saveButton;
+    }
+
+    /**
+     * Gets the cancel button.
+     * 
+     * @return the cancel button
+     */
+    public Button getCancelButton() {
+        return cancelButton;
+    }
+
+    /**
+     * Gets the milestone service.
+     * 
+     * @return the milestone service
+     */
+    public MilestoneService getMilestoneService() {
+        return milestoneService;
+    }
+
+    /**
+     * Gets the milestone.
+     * 
+     * @return the milestone
+     */
+    public Milestone getMilestone() {
+        return milestone;
+    }
+
+    /**
+     * Gets the project.
+     * 
+     * @return the project
+     */
+    public Project getProject() {
+        return project;
+    }
+
+    /**
+     * Gets the isNewMilestone flag.
+     * 
+     * @return true if this is a new milestone, false otherwise
+     */
+    public boolean isNewMilestone() {
+        return isNewMilestone;
+    }
+
+    /**
+     * Public method to access initialize for testing.
+     */
+    public void testInitialize() {
+        initialize();
+    }
+
+    /**
+     * Public method to access handleSave for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleSave(ActionEvent event) {
+        handleSave(event);
+    }
+
+    /**
+     * Public method to access handleCancel for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleCancel(ActionEvent event) {
+        handleCancel(event);
+    }
+
+    /**
+     * Public method to access closeDialog for testing.
+     */
+    public void testCloseDialog() {
+        closeDialog();
+    }
+
+    /**
+     * Public method to access showErrorAlert for testing.
+     * 
+     * @param title the title
+     * @param message the message
+     */
+    public void testShowErrorAlert(String title, String message) {
+        showErrorAlert(title, message);
     }
 }

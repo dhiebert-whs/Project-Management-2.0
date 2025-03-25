@@ -19,6 +19,9 @@ import org.mockito.quality.Strictness;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -72,11 +75,11 @@ public class MilestoneControllerTest {
         testMilestone.setDescription("Test milestone description");
         
         // Initialize controller by setting the mock fields
-        milestoneController.nameField = nameField;
-        milestoneController.datePicker = datePicker;
-        milestoneController.descriptionArea = descriptionArea;
-        milestoneController.saveButton = saveButton;
-        milestoneController.cancelButton = cancelButton;
+        when(milestoneController.getNameField()).thenReturn(nameField);
+        when(milestoneController.getDatePicker()).thenReturn(datePicker);
+        when(milestoneController.getDescriptionArea()).thenReturn(descriptionArea);
+        when(milestoneController.getSaveButton()).thenReturn(saveButton);
+        when(milestoneController.getCancelButton()).thenReturn(cancelButton);
         
         // Mock service behavior
         when(milestoneService.createMilestone(anyString(), any(), anyLong(), anyString()))
@@ -98,9 +101,7 @@ public class MilestoneControllerTest {
     public void testInitialize() {
         // Call initialize via reflection (since it's private)
         try {
-            java.lang.reflect.Method initMethod = MilestoneController.class.getDeclaredMethod("initialize");
-            initMethod.setAccessible(true);
-            initMethod.invoke(milestoneController);
+            milestoneController.testInitialize();
             
             // Verify that default date is set
             verify(datePicker).setValue(any(LocalDate.class));
@@ -120,9 +121,9 @@ public class MilestoneControllerTest {
         milestoneController.setNewMilestone(testProject);
         
         // Verify the fields are initialized correctly
-        assertEquals(testProject, milestoneController.project);
-        assertNull(milestoneController.milestone);
-        assertTrue(milestoneController.isNewMilestone);
+        assertEquals(testProject, milestoneController.getProject());
+        assertNull(milestoneController.getMilestone());
+        assertTrue(milestoneController.isNewMilestone());
         verify(nameField).setText("");
         verify(datePicker).setValue(any(LocalDate.class));
         verify(descriptionArea).setText("");
@@ -134,9 +135,9 @@ public class MilestoneControllerTest {
         milestoneController.setMilestone(testMilestone);
         
         // Verify the fields are initialized correctly
-        assertEquals(testMilestone, milestoneController.milestone);
-        assertEquals(testProject, milestoneController.project);
-        assertFalse(milestoneController.isNewMilestone);
+        assertEquals(testMilestone, milestoneController.getMilestone());
+        assertEquals(testProject, milestoneController.getProject());
+        assertFalse(milestoneController.isNewMilestone());
         verify(nameField).setText(testMilestone.getName());
         verify(datePicker).setValue(testMilestone.getDate());
         verify(descriptionArea).setText(testMilestone.getDescription());
@@ -148,7 +149,7 @@ public class MilestoneControllerTest {
         milestoneController.setNewMilestone(testProject);
         
         // Test saving
-        milestoneController.handleSave(mockEvent);
+        milestoneController.testHandleSave(mockEvent);
         
         // Verify service was called to create a new milestone
         verify(milestoneService).createMilestone(
@@ -168,7 +169,7 @@ public class MilestoneControllerTest {
         milestoneController.setMilestone(testMilestone);
         
         // Test saving
-        milestoneController.handleSave(mockEvent);
+        milestoneController.testHandleSave(mockEvent);
         
         // Verify service was called to update the milestone
         verify(milestoneService).updateMilestoneDate(
@@ -193,7 +194,7 @@ public class MilestoneControllerTest {
         when(nameField.getText()).thenReturn("");
         
         // Test saving
-        milestoneController.handleSave(mockEvent);
+        milestoneController.testHandleSave(mockEvent);
         
         // Verify service was NOT called to create a new milestone
         verify(milestoneService, never()).createMilestone(anyString(), any(), anyLong(), anyString());
@@ -205,7 +206,7 @@ public class MilestoneControllerTest {
     @Test
     public void testHandleCancel() {
         // Test canceling
-        milestoneController.handleCancel(mockEvent);
+        milestoneController.testHandleCancel(mockEvent);
         
         // Verify dialog was closed
         verify(mockStage).close();
