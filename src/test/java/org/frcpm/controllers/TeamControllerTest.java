@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -143,32 +144,32 @@ public class TeamControllerTest {
         testSubteams = Arrays.asList(subteam1, subteam2);
         
         // Initialize controller by setting the mock fields
-        teamController.tabPane = tabPane;
-        teamController.membersTable = membersTable;
-        teamController.memberUsernameColumn = memberUsernameColumn;
-        teamController.memberNameColumn = memberNameColumn;
-        teamController.memberEmailColumn = memberEmailColumn;
-        teamController.memberSubteamColumn = memberSubteamColumn;
-        teamController.memberLeaderColumn = memberLeaderColumn;
-        teamController.addMemberButton = addMemberButton;
-        teamController.editMemberButton = editMemberButton;
-        teamController.deleteMemberButton = deleteMemberButton;
-        teamController.subteamsTable = subteamsTable;
-        teamController.subteamNameColumn = subteamNameColumn;
-        teamController.subteamColorColumn = subteamColorColumn;
-        teamController.subteamSpecialtiesColumn = subteamSpecialtiesColumn;
-        teamController.addSubteamButton = addSubteamButton;
-        teamController.editSubteamButton = editSubteamButton;
-        teamController.deleteSubteamButton = deleteSubteamButton;
-        teamController.usernameField = usernameField;
-        teamController.firstNameField = firstNameField;
-        teamController.lastNameField = lastNameField;
-        teamController.emailField = emailField;
-        teamController.phoneField = phoneField;
-        teamController.skillsArea = skillsArea;
-        teamController.subteamComboBox = subteamComboBox;
-        teamController.leaderCheckBox = leaderCheckBox;
-        teamController.subteamNameField = subteamNameField;
+        when(teamController.getTabPane()).thenReturn(tabPane);
+        when(teamController.getMembersTable()).thenReturn(membersTable);
+        when(teamController.getMemberUsernameColumn()).thenReturn(memberUsernameColumn);
+        when(teamController.getMemberNameColumn()).thenReturn(memberNameColumn);
+        when(teamController.getMemberEmailColumn()).thenReturn(memberEmailColumn);
+        when(teamController.getMemberSubteamColumn()).thenReturn(memberSubteamColumn);
+        when(teamController.getMemberLeaderColumn()).thenReturn(memberLeaderColumn);
+        when(teamController.getAddMemberButton()).thenReturn(addMemberButton);
+        when(teamController.getEditMemberButton()).thenReturn(editMemberButton);
+        when(teamController.getDeleteMemberButton()).thenReturn(deleteMemberButton);
+        when(teamController.getSubteamsTable()).thenReturn(subteamsTable);
+        when(teamController.getSubteamNameColumn()).thenReturn(subteamNameColumn);
+        when(teamController.getSubteamColorColumn()).thenReturn(subteamColorColumn);
+        when(teamController.getSubteamSpecialtiesColumn()).thenReturn(subteamSpecialtiesColumn);
+        when(teamController.getAddSubteamButton()).thenReturn(addSubteamButton);
+        when(teamController.getEditSubteamButton()).thenReturn(editSubteamButton);
+        when(teamController.getDeleteSubteamButton()).thenReturn(deleteSubteamButton);
+        when(teamController.getUsernameField()).thenReturn(usernameField);
+        when(teamController.getFirstNameField()).thenReturn(firstNameField);
+        when(teamController.getLastNameField()).thenReturn(lastNameField);
+        when(teamController.getEmailField()).thenReturn(emailField);
+        when(teamController.getPhoneField()).thenReturn(phoneField);
+        when(teamController.getSkillsArea()).thenReturn(skillsArea);
+        when(teamController.getSubteamComboBox()).thenReturn(subteamComboBox);
+        when(teamController.getLeaderCheckBox()).thenReturn(leaderCheckBox);
+        when(teamController.getSubteamNameField()).thenReturn(subteamNameField);    
         
         // Mock service behavior
         when(teamMemberService.findAll()).thenReturn(testMembers);
@@ -185,11 +186,9 @@ public class TeamControllerTest {
 
     @Test
     public void testInitialize() {
-        // Call initialize via reflection (since it's private)
+        
         try {
-            java.lang.reflect.Method initMethod = TeamController.class.getDeclaredMethod("initialize");
-            initMethod.setAccessible(true);
-            initMethod.invoke(teamController);
+            teamController.testInitialize();
             
             // Verify that the table columns are set up
             verify(memberUsernameColumn).setCellValueFactory(any());
@@ -215,9 +214,7 @@ public class TeamControllerTest {
     public void testLoadTeamData() {
         // Call the method to test
         try {
-            java.lang.reflect.Method loadDataMethod = TeamController.class.getDeclaredMethod("loadTeamData");
-            loadDataMethod.setAccessible(true);
-            loadDataMethod.invoke(teamController);
+            teamController.testLoadTeamData();
             
             // Verify that data is loaded from the services
             verify(teamMemberService).findAll();
@@ -232,7 +229,7 @@ public class TeamControllerTest {
     public void testHandleAddMember() {
         // This is a complex method involving dialog creation
         // We'll just test that it doesn't throw exceptions
-        assertDoesNotThrow(() -> teamController.handleAddMember(mockEvent));
+        assertDoesNotThrow(() -> teamController.testHandleAddMember(mockEvent));
     }
     
     @Test
@@ -242,7 +239,7 @@ public class TeamControllerTest {
         when(membersTable.getSelectionModel().getSelectedItem()).thenReturn(testMembers.get(0));
         
         // Test the method
-        assertDoesNotThrow(() -> teamController.handleEditMember(mockEvent));
+        assertDoesNotThrow(() -> teamController.testHandleEditMember(mockEvent));
     }
     
     @Test
@@ -252,7 +249,7 @@ public class TeamControllerTest {
         when(membersTable.getSelectionModel().getSelectedItem()).thenReturn(null);
         
         // Test the method
-        assertDoesNotThrow(() -> teamController.handleEditMember(mockEvent));
+        assertDoesNotThrow(() -> teamController.testHandleEditMember(mockEvent));
     }
     
     @Test
@@ -262,13 +259,13 @@ public class TeamControllerTest {
         when(membersTable.getSelectionModel().getSelectedItem()).thenReturn(testMembers.get(0));
         
         // Test the method
-        assertDoesNotThrow(() -> teamController.handleDeleteMember(mockEvent));
+        assertDoesNotThrow(() -> teamController.testHandleDeleteMember(mockEvent));
     }
     
     @Test
     public void testHandleAddSubteam() {
         // Test the method
-        assertDoesNotThrow(() -> teamController.handleAddSubteam(mockEvent));
+        assertDoesNotThrow(() -> teamController.testHandleAddSubteam(mockEvent));
     }
     
     @Test
@@ -278,7 +275,7 @@ public class TeamControllerTest {
         when(subteamsTable.getSelectionModel().getSelectedItem()).thenReturn(testSubteams.get(0));
         
         // Test the method
-        assertDoesNotThrow(() -> teamController.handleEditSubteam(mockEvent));
+        assertDoesNotThrow(() -> teamController.testHandleEditSubteam(mockEvent));
     }
     
     @Test
@@ -288,6 +285,6 @@ public class TeamControllerTest {
         when(subteamsTable.getSelectionModel().getSelectedItem()).thenReturn(testSubteams.get(0));
         
         // Test the method
-        assertDoesNotThrow(() -> teamController.handleDeleteSubteam(mockEvent));
+        assertDoesNotThrow(() -> teamController.testHandleDeleteSubteam(mockEvent));
     }
 }
