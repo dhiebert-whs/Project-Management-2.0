@@ -12,6 +12,7 @@ import org.frcpm.services.ServiceFactory;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
+import java.util.function.BiConsumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -19,6 +20,10 @@ import java.util.logging.Logger;
  * Controller for meeting management.
  */
 public class MeetingController {
+    // Fields for testing - allows tests to override behavior
+    private Runnable closeDialogOverride;
+    private BiConsumer<String, String> showErrorAlertOverride;
+
     
     private static final Logger LOGGER = Logger.getLogger(MeetingController.class.getName());
     
@@ -185,6 +190,10 @@ public class MeetingController {
      * Closes the dialog.
      */
     private void closeDialog() {
+        if (closeDialogOverride != null) {
+            closeDialogOverride.run();
+            return;
+        }
         Stage stage = (Stage) saveButton.getScene().getWindow();
         stage.close();
     }
@@ -196,6 +205,10 @@ public class MeetingController {
      * @param message the message
      */
     private void showErrorAlert(String title, String message) {
+        if (showErrorAlertOverride != null) {
+            showErrorAlertOverride.accept(title, message);
+            return;
+        }
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("Error");
         alert.setHeaderText(title);
@@ -310,19 +323,19 @@ public class MeetingController {
     }
 
     /**
-     * Public method to access closeDialog for testing.
+     * Special version of closeDialog for testing.
+     * This can be overridden in tests to avoid JavaFX thread issues.
      */
     public void testCloseDialog() {
         closeDialog();
     }
 
     /**
-     * Public method to access showErrorAlert for testing.
-     * 
-     * @param title the title
-     * @param message the message
+     * Special version of showErrorAlert for testing.
+     * This can be overridden in tests to avoid JavaFX thread issues.
      */
     public void testShowErrorAlert(String title, String message) {
         showErrorAlert(title, message);
     }
+
 }
