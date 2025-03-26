@@ -572,6 +572,20 @@ public void handleEditTask(Task task) {
             showErrorAlert("Error Editing Meeting", "Failed to open the meeting editing dialog.");
         }
     }
+
+    /**
+     * Shows an information alert dialog.
+     * 
+     * @param title the title
+     * @param message the message
+     */
+    private void showInfoAlert(String title, String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Information");
+        alert.setHeaderText(title);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
     
     /**
      * Shows a "Not Implemented" alert dialog.
@@ -604,4 +618,386 @@ public void handleEditTask(Task task) {
     public Project getProject() {
         return project;
     }
+
+    /**
+     * Gets the project name label.
+     * 
+     * @return the project name label
+     */
+    public Label getProjectNameLabel() {
+        return projectNameLabel;
+    }
+
+    /**
+     * Gets the start date label.
+     * 
+     * @return the start date label
+     */
+    public Label getStartDateLabel() {
+        return startDateLabel;
+    }
+
+    /**
+     * Gets the goal date label.
+     * 
+     * @return the goal date label
+     */
+    public Label getGoalDateLabel() {
+        return goalDateLabel;
+    }
+
+    /**
+     * Gets the deadline label.
+     * 
+     * @return the deadline label
+     */
+    public Label getDeadlineLabel() {
+        return deadlineLabel;
+    }
+
+    /**
+     * Gets the description area.
+     * 
+     * @return the description area
+     */
+    public TextArea getDescriptionArea() {
+        return descriptionArea;
+    }
+
+    /**
+     * Gets the completion progress bar.
+     * 
+     * @return the completion progress bar
+     */
+    public ProgressBar getCompletionProgressBar() {
+        return completionProgressBar;
+    }
+
+    /**
+     * Gets the completion label.
+     * 
+     * @return the completion label
+     */
+    public Label getCompletionLabel() {
+        return completionLabel;
+    }
+
+    /**
+     * Gets the total tasks label.
+     * 
+     * @return the total tasks label
+     */
+    public Label getTotalTasksLabel() {
+        return totalTasksLabel;
+    }
+
+    /**
+     * Gets the completed tasks label.
+     * 
+     * @return the completed tasks label
+     */
+    public Label getCompletedTasksLabel() {
+        return completedTasksLabel;
+    }
+
+    /**
+     * Gets the days remaining label.
+     * 
+     * @return the days remaining label
+     */
+    public Label getDaysRemainingLabel() {
+        return daysRemainingLabel;
+    }
+
+    /**
+     * Gets the tasks table.
+     * 
+     * @return the tasks table
+     */
+    public TableView<Task> getTasksTable() {
+        return tasksTable;
+    }
+
+    /**
+     * Gets the task title column.
+     * 
+     * @return the task title column
+     */
+    public TableColumn<Task, String> getTaskTitleColumn() {
+        return taskTitleColumn;
+    }
+
+    /**
+     * Gets the task subsystem column.
+     * 
+     * @return the task subsystem column
+     */
+    public TableColumn<Task, String> getTaskSubsystemColumn() {
+        return taskSubsystemColumn;
+    }
+
+    /**
+     * Gets the task progress column.
+     * 
+     * @return the task progress column
+     */
+    public TableColumn<Task, Integer> getTaskProgressColumn() {
+        return taskProgressColumn;
+    }
+
+    /**
+     * Gets the task due date column.
+     * 
+     * @return the task due date column
+     */
+    public TableColumn<Task, LocalDate> getTaskDueDateColumn() {
+        return taskDueDateColumn;
+    }
+
+    /**
+     * Gets the milestones table.
+     * 
+     * @return the milestones table
+     */
+    public TableView<Milestone> getMilestonesTable() {
+        return milestonesTable;
+    }
+
+    /**
+     * Gets the milestone name column.
+     * 
+     * @return the milestone name column
+     */
+    public TableColumn<Milestone, String> getMilestoneNameColumn() {
+        return milestoneNameColumn;
+    }
+
+    /**
+     * Gets the milestone date column.
+     * 
+     * @return the milestone date column
+     */
+    public TableColumn<Milestone, LocalDate> getMilestoneDateColumn() {
+        return milestoneDateColumn;
+    }
+
+    /**
+     * Gets the meetings table.
+     * 
+     * @return the meetings table
+     */
+    public TableView<Meeting> getMeetingsTable() {
+        return meetingsTable;
+    }
+
+    /**
+     * Gets the meeting date column.
+     * 
+     * @return the meeting date column
+     */
+    public TableColumn<Meeting, LocalDate> getMeetingDateColumn() {
+        return meetingDateColumn;
+    }
+
+    /**
+     * Gets the meeting time column.
+     * 
+     * @return the meeting time column
+     */
+    public TableColumn<Meeting, String> getMeetingTimeColumn() {
+        return meetingTimeColumn;
+    }
+
+    /**
+     * Gets the add task button.
+     * 
+     * @return the add task button
+     */
+    public Button getAddTaskButton() {
+        return addTaskButton;
+    }
+
+    /**
+     * Gets the add milestone button.
+     * 
+     * @return the add milestone button
+     */
+    public Button getAddMilestoneButton() {
+        return addMilestoneButton;
+    }
+
+    /**
+     * Gets the schedule meeting button.
+     * 
+     * @return the schedule meeting button
+     */
+    public Button getScheduleMeetingButton() {
+        return scheduleMeetingButton;
+    }
+
+    /**
+     * Gets the project service.
+     * 
+     * @return the project service
+     */
+    public ProjectService getProjectService() {
+        return projectService;
+    }
+
+    /**
+     * Gets the task service.
+     * 
+     * @return the task service
+     */
+    public TaskService getTaskService() {
+        return taskService;
+    }
+
+    /**
+     * Gets the milestone service.
+     * 
+     * @return the milestone service
+     */
+    public MilestoneService getMilestoneService() {
+        return milestoneService;
+    }
+
+    /**
+     * Gets the meeting service.
+     * 
+     * @return the meeting service
+     */
+    public MeetingService getMeetingService() {
+        return meetingService;
+    }
+
+    /**
+     * Gets the task list.
+     * 
+     * @return the task list
+     */
+    public ObservableList<Task> getTaskList() {
+        return taskList;
+    }
+
+    /**
+     * Gets the milestone list.
+     * 
+     * @return the milestone list
+     */
+    public ObservableList<Milestone> getMilestoneList() {
+        return milestoneList;
+    }
+
+    /**
+     * Gets the meeting list.
+     * 
+     * @return the meeting list
+     */
+    public ObservableList<Meeting> getMeetingList() {
+        return meetingList;
+    }
+
+    /**
+     * Public method to access initialize for testing.
+     */
+    public void testInitialize() {
+        initialize();
+    }
+
+    /**
+     * Public method to access loadProjectData for testing.
+     */
+    public void testLoadProjectData() {
+        loadProjectData();
+    }
+
+    /**
+     * Public method to access loadTasks for testing.
+     */
+    public void testLoadTasks() {
+        loadTasks();
+    }
+
+    /**
+     * Public method to access loadMilestones for testing.
+     */
+    public void testLoadMilestones() {
+        loadMilestones();
+    }
+
+    /**
+     * Public method to access loadMeetings for testing.
+     */
+    public void testLoadMeetings() {
+        loadMeetings();
+    }
+
+    /**
+     * Public method to access createDateCellFactory for testing.
+     * 
+     * @param <T> the type parameter
+     * @return the date cell factory
+     */
+    public <T> Callback<TableColumn<T, LocalDate>, TableCell<T, LocalDate>> testCreateDateCellFactory() {
+        return createDateCellFactory();
+    }
+
+    /**
+     * Public method to access showErrorAlert for testing.
+     * 
+     * @param title the title
+     * @param message the message
+     */
+    public void testShowErrorAlert(String title, String message) {
+        showErrorAlert(title, message);
+    }
+
+    /**
+     * Public method to access showInfoAlert for testing.
+     * 
+     * @param title the title
+     * @param message the message
+     */
+    public void testShowInfoAlert(String title, String message) {
+        showInfoAlert(title, message);
+    }
+
+    /**
+     * Public method to access showNotImplementedAlert for testing.
+     * 
+     * @param feature the feature
+     */
+    public void testShowNotImplementedAlert(String feature) {
+        showNotImplementedAlert(feature);
+    }
+
+    /**
+     * Public method to access handleEditTask for testing.
+     * 
+     * @param task the task to edit
+     */
+    public void testHandleEditTask(Task task) {
+        handleEditTask(task);
+    }
+
+    /**
+     * Public method to access handleEditMilestone for testing.
+     * 
+     * @param milestone the milestone to edit
+     */
+    public void testHandleEditMilestone(Milestone milestone) {
+        handleEditMilestone(milestone);
+    }
+
+    /**
+     * Public method to access handleEditMeeting for testing.
+     * 
+     * @param meeting the meeting to edit
+     */
+    public void testHandleEditMeeting(Meeting meeting) {
+        handleEditMeeting(meeting);
+    }
+
+    
 }

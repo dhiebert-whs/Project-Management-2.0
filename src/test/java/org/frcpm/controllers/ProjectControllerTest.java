@@ -86,18 +86,18 @@ public class ProjectControllerTest {
         testProject.setDescription("Test project description");
 
         // Initialize controller by setting the mock fields
-        projectController.projectNameLabel = projectNameLabel;
-        projectController.startDateLabel = startDateLabel;
-        projectController.goalDateLabel = goalDateLabel;
-        projectController.deadlineLabel = deadlineLabel;
-        projectController.completionLabel = completionLabel;
-        projectController.totalTasksLabel = totalTasksLabel;
-        projectController.completedTasksLabel = completedTasksLabel;
-        projectController.daysRemainingLabel = daysRemainingLabel;
-        projectController.descriptionArea = descriptionArea;
-        projectController.tasksTable = tasksTable;
-        projectController.milestonesTable = milestonesTable;
-        projectController.meetingsTable = meetingsTable;
+        when(projectController.getProjectNameLabel()).thenReturn(projectNameLabel);
+        when(projectController.getStartDateLabel()).thenReturn(startDateLabel);
+        when(projectController.getGoalDateLabel()).thenReturn(goalDateLabel);
+        when(projectController.getDeadlineLabel()).thenReturn(deadlineLabel);
+        when(projectController.getCompletionLabel()).thenReturn(completionLabel);
+        when(projectController.getTotalTasksLabel()).thenReturn(totalTasksLabel);
+        when(projectController.getCompletedTasksLabel()).thenReturn(completedTasksLabel);
+        when(projectController.getDaysRemainingLabel()).thenReturn(daysRemainingLabel);
+        when(projectController.getDescriptionArea()).thenReturn(descriptionArea);
+        when(projectController.getTasksTable()).thenReturn(tasksTable);
+        when(projectController.getMilestonesTable()).thenReturn(milestonesTable);
+        when(projectController.getMeetingsTable()).thenReturn(meetingsTable);
 
         // Mock project summary data
         Map<String, Object> summaryData = new HashMap<>();
@@ -115,21 +115,21 @@ public class ProjectControllerTest {
 
     @Test
     public void testSetProject() {
-        // Call the method to test
-        projectController.setProject(testProject);
+    // Call the method to test
+    projectController.setProject(testProject);
 
         // Verify that UI elements are updated
-        verify(projectNameLabel).setText(testProject.getName());
-        verify(startDateLabel).setText(testProject.getStartDate().toString());
-        verify(goalDateLabel).setText(testProject.getGoalEndDate().toString());
-        verify(deadlineLabel).setText(testProject.getHardDeadline().toString());
-        verify(descriptionArea).setText(testProject.getDescription());
+        verify(projectController.getProjectNameLabel()).setText(testProject.getName());
+        verify(projectController.getStartDateLabel()).setText(testProject.getStartDate().toString());
+        verify(projectController.getGoalDateLabel()).setText(testProject.getGoalEndDate().toString());
+        verify(projectController.getDeadlineLabel()).setText(testProject.getHardDeadline().toString());
+        verify(projectController.getDescriptionArea()).setText(testProject.getDescription());
 
         // Verify that summary data is displayed
-        verify(completionLabel).setText(String.format("%.1f%%", 50.0));
-        verify(totalTasksLabel).setText("10");
-        verify(completedTasksLabel).setText("5");
-        verify(daysRemainingLabel).setText("42 days until goal");
+        verify(projectController.getCompletionLabel()).setText(String.format("%.1f%%", 50.0));
+        verify(projectController.getTotalTasksLabel()).setText("10");
+        verify(projectController.getCompletedTasksLabel()).setText("5");
+        verify(projectController.getDaysRemainingLabel()).setText("42 days until goal");
     }
 
     @Test
@@ -137,8 +137,11 @@ public class ProjectControllerTest {
         // Set up the project
         projectController.setProject(testProject);
 
+        // Call the method to test
+        projectController.testLoadProjectData();
+
         // Verify that task, milestone, and meeting lists are loaded
-        verify(projectService).getProjectSummary(testProject.getId());
+        verify(projectService, times(2)).getProjectSummary(testProject.getId());
     }
 
     @Test
@@ -158,7 +161,7 @@ public class ProjectControllerTest {
 
     @Test
     public void testHandleAddMilestone() {
-        // Create a mock ActionEvent
+    // Create a mock ActionEvent
         ActionEvent mockEvent = mock(ActionEvent.class);
         
         // Set the project
@@ -173,7 +176,7 @@ public class ProjectControllerTest {
 
     @Test
     public void testHandleScheduleMeeting() {
-        // Create a mock ActionEvent
+    // Create a mock ActionEvent
         ActionEvent mockEvent = mock(ActionEvent.class);
         
         // Set the project
