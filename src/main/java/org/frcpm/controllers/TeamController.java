@@ -220,6 +220,13 @@ public class TeamController {
         // Load data
         loadTeamData();
     }
+
+    /**
+     * Public method to access initialize for testing.
+     */
+    public void testInitialize() {
+        initialize();
+    }
     
     /**
      * Loads team data from the database.
@@ -232,6 +239,13 @@ public class TeamController {
         // Load team members
         List<TeamMember> members = teamMemberService.findAll();
         membersList.setAll(members);
+    }
+
+    /**
+     * Public method to access loadTeamData for testing.
+     */
+    public void testLoadTeamData() {
+        loadTeamData();
     }
     
     /**
@@ -247,6 +261,15 @@ public class TeamController {
             // Reload data to show the new member
             loadTeamData();
         });
+    }
+
+    /**
+     * Public method to access handleAddMember for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleAddMember(ActionEvent event) {
+        handleAddMember(event);
     }
     
     /**
@@ -268,6 +291,15 @@ public class TeamController {
             // Reload data to show the updated member
             loadTeamData();
         });
+    }
+
+    /**
+     * Public method to access handleEditMember for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleEditMember(ActionEvent event) {
+        handleEditMember(event);
     }
     
     /**
@@ -305,6 +337,15 @@ public class TeamController {
             }
         }
     }
+
+    /**
+     * Public method to access handleDeleteMember for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleDeleteMember(ActionEvent event) {
+        handleDeleteMember(event);
+    }
     
     /**
      * Handles adding a new subteam.
@@ -319,6 +360,15 @@ public class TeamController {
             // Reload data to show the new subteam
             loadTeamData();
         });
+    }
+
+    /**
+     * Public method to access handleAddSubteam for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleAddSubteam(ActionEvent event) {
+        handleAddSubteam(event);
     }
     
     /**
@@ -340,6 +390,15 @@ public class TeamController {
             // Reload data to show the updated subteam
             loadTeamData();
         });
+    }
+
+    /**
+     * Public method to access handleEditSubteam for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleEditSubteam(ActionEvent event) {
+        handleEditSubteam(event);
     }
     
     /**
@@ -384,6 +443,15 @@ public class TeamController {
                 showErrorAlert("Error", "Failed to delete subteam: " + e.getMessage());
             }
         }
+    }
+
+    /**
+     * Public method to access handleDeleteSubteam for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleDeleteSubteam(ActionEvent event) {
+        handleDeleteSubteam(event);
     }
     
     /**
@@ -537,6 +605,16 @@ public class TeamController {
         
         return dialog;
     }
+
+    /**
+     * Public method to access createMemberDialog for testing.
+     * 
+     * @param member the team member to edit, or null for a new member
+     * @return the dialog
+     */
+    public Dialog<TeamMember> testCreateMemberDialog(TeamMember member) {
+        return createMemberDialog(member);
+    }
     
     /**
      * Creates a dialog for adding or editing a subteam.
@@ -642,6 +720,16 @@ public class TeamController {
         
         return dialog;
     }
+
+    /**
+     * Public method to access createSubteamDialog for testing.
+     * 
+     * @param subteam the subteam to edit, or null for a new subteam
+     * @return the dialog
+     */
+    public Dialog<Subteam> testCreateSubteamDialog(Subteam subteam) {
+        return createSubteamDialog(subteam);
+    }
     
     /**
      * Shows an error alert dialog.
@@ -656,6 +744,16 @@ public class TeamController {
         alert.setContentText(message);
         alert.showAndWait();
     }
+
+    /**
+     * Public method to access showErrorAlert for testing.
+     * 
+     * @param title the title
+     * @param message the message
+     */
+    public void testShowErrorAlert(String title, String message) {
+        showErrorAlert(title, message);
+    }
     
     /**
      * Shows an information alert dialog.
@@ -669,5 +767,303 @@ public class TeamController {
         alert.setHeaderText(title);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    /**
+     * Public method to access showInfoAlert for testing.
+     * 
+     * @param title the title
+     * @param message the message
+     */
+    public void testShowInfoAlert(String title, String message) {
+        showInfoAlert(title, message);
+    }
+    
+    /**
+     * Gets the tab pane.
+     * 
+     * @return the tab pane
+     */
+    public TabPane getTabPane() {
+        return tabPane;
+    }
+    
+    /**
+     * Gets the members table.
+     * 
+     * @return the members table
+     */
+    public TableView<TeamMember> getMembersTable() {
+        return membersTable;
+    }
+    
+    /**
+     * Gets the member username column.
+     * 
+     * @return the member username column
+     */
+    public TableColumn<TeamMember, String> getMemberUsernameColumn() {
+        return memberUsernameColumn;
+    }
+    
+    /**
+     * Gets the member name column.
+     * 
+     * @return the member name column
+     */
+    public TableColumn<TeamMember, String> getMemberNameColumn() {
+        return memberNameColumn;
+    }
+    
+    /**
+     * Gets the member email column.
+     * 
+     * @return the member email column
+     */
+    public TableColumn<TeamMember, String> getMemberEmailColumn() {
+        return memberEmailColumn;
+    }
+    
+    /**
+     * Gets the member subteam column.
+     * 
+     * @return the member subteam column
+     */
+    public TableColumn<TeamMember, String> getMemberSubteamColumn() {
+        return memberSubteamColumn;
+    }
+    
+    /**
+     * Gets the member leader column.
+     * 
+     * @return the member leader column
+     */
+    public TableColumn<TeamMember, Boolean> getMemberLeaderColumn() {
+        return memberLeaderColumn;
+    }
+    
+    /**
+     * Gets the add member button.
+     * 
+     * @return the add member button
+     */
+    public Button getAddMemberButton() {
+        return addMemberButton;
+    }
+    
+    /**
+     * Gets the edit member button.
+     * 
+     * @return the edit member button
+     */
+    public Button getEditMemberButton() {
+        return editMemberButton;
+    }
+    
+    /**
+     * Gets the delete member button.
+     * 
+     * @return the delete member button
+     */
+    public Button getDeleteMemberButton() {
+        return deleteMemberButton;
+    }
+    
+    /**
+     * Gets the subteams table.
+     * 
+     * @return the subteams table
+     */
+    public TableView<Subteam> getSubteamsTable() {
+        return subteamsTable;
+    }
+    
+    /**
+     * Gets the subteam name column.
+     * 
+     * @return the subteam name column
+     */
+    public TableColumn<Subteam, String> getSubteamNameColumn() {
+        return subteamNameColumn;
+    }
+    
+    /**
+     * Gets the subteam color column.
+     * 
+     * @return the subteam color column
+     */
+    public TableColumn<Subteam, String> getSubteamColorColumn() {
+        return subteamColorColumn;
+    }
+    
+    /**
+     * Gets the subteam specialties column.
+     * 
+     * @return the subteam specialties column
+     */
+    public TableColumn<Subteam, String> getSubteamSpecialtiesColumn() {
+        return subteamSpecialtiesColumn;
+    }
+    
+    /**
+     * Gets the add subteam button.
+     * 
+     * @return the add subteam button
+     */
+    public Button getAddSubteamButton() {
+        return addSubteamButton;
+    }
+    
+    /**
+     * Gets the edit subteam button.
+     * 
+     * @return the edit subteam button
+     */
+    public Button getEditSubteamButton() {
+        return editSubteamButton;
+    }
+    
+    /**
+     * Gets the delete subteam button.
+     * 
+     * @return the delete subteam button
+     */
+    public Button getDeleteSubteamButton() {
+        return deleteSubteamButton;
+    }
+    
+    /**
+     * Gets the username field.
+     * 
+     * @return the username field
+     */
+    public TextField getUsernameField() {
+        return usernameField;
+    }
+    
+    /**
+     * Gets the first name field.
+     * 
+     * @return the first name field
+     */
+    public TextField getFirstNameField() {
+        return firstNameField;
+    }
+    
+    /**
+     * Gets the last name field.
+     * 
+     * @return the last name field
+     */
+    public TextField getLastNameField() {
+        return lastNameField;
+    }
+    
+    /**
+     * Gets the email field.
+     * 
+     * @return the email field
+     */
+    public TextField getEmailField() {
+        return emailField;
+    }
+    
+    /**
+     * Gets the phone field.
+     * 
+     * @return the phone field
+     */
+    public TextField getPhoneField() {
+        return phoneField;
+    }
+    
+    /**
+     * Gets the skills area.
+     * 
+     * @return the skills area
+     */
+    public TextArea getSkillsArea() {
+        return skillsArea;
+    }
+    
+    /**
+     * Gets the subteam combo box.
+     * 
+     * @return the subteam combo box
+     */
+    public ComboBox<Subteam> getSubteamComboBox() {
+        return subteamComboBox;
+    }
+    
+    /**
+     * Gets the leader check box.
+     * 
+     * @return the leader check box
+     */
+    public CheckBox getLeaderCheckBox() {
+        return leaderCheckBox;
+    }
+    
+    /**
+     * Gets the subteam name field.
+     * 
+     * @return the subteam name field
+     */
+    public TextField getSubteamNameField() {
+        return subteamNameField;
+    }
+    
+    /**
+     * Gets the color picker.
+     * 
+     * @return the color picker
+     */
+    public ColorPicker getColorPicker() {
+        return colorPicker;
+    }
+    
+    /**
+     * Gets the specialties area.
+     * 
+     * @return the specialties area
+     */
+    public TextArea getSpecialtiesArea() {
+        return specialtiesArea;
+    }
+    
+    /**
+     * Gets the team member service.
+     * 
+     * @return the team member service
+     */
+    public TeamMemberService getTeamMemberService() {
+        return teamMemberService;
+    }
+    
+    /**
+     * Gets the subteam service.
+     * 
+     * @return the subteam service
+     */
+    public SubteamService getSubteamService() {
+        return subteamService;
+    }
+    
+    /**
+     * Gets the members list.
+     * 
+     * @return the members list
+     */
+    public ObservableList<TeamMember> getMembersList() {
+        return membersList;
+    }
+    
+    /**
+     * Gets the subteams list.
+     * 
+     * @return the subteams list
+     */
+    public ObservableList<Subteam> getSubteamsList() {
+        return subteamsList;
     }
 }
