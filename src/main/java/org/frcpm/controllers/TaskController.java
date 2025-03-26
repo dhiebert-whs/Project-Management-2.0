@@ -951,5 +951,125 @@ public class TaskController {
     public Button getAddDependencyButton() {
         return addDependencyButton;
     }
-    
+    /**
+     * Gets the remove dependency button.
+     * 
+     * @return the remove dependency button
+     */
+    public Button getRemoveDependencyButton() {
+        return removeDependencyButton;
+    }
+
+    /**
+     * Public method to access initialize for testing.
+     */
+    public void testInitialize() {
+        initialize();
+    }
+
+    /**
+     * Public method to access loadTaskData for testing.
+     */
+    public void testLoadTaskData() {
+        loadTaskData();
+    }
+
+    /**
+     * Public method to access handleSave for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleSave(ActionEvent event) {
+        handleSave(event);
+    }
+
+    /**
+     * Public method to access handleCancel for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleCancel(ActionEvent event) {
+        handleCancel(event);
+    }
+
+    /**
+     * Public method to access closeDialog for testing.
+     */
+    public void testCloseDialog() {
+        closeDialog();
+    }
+
+    /**
+     * Public method to access showErrorAlert for testing.
+     * 
+     * @param title the title
+     * @param message the message
+     */
+    public void testShowErrorAlert(String title, String message) {
+        showErrorAlert(title, message);
+    }
+
+    /**
+     * Public method to access showInfoAlert for testing.
+     * 
+     * @param title the title
+     * @param message the message
+     */
+    public void testShowInfoAlert(String title, String message) {
+        showInfoAlert(title, message);
+    }
+
+    /**
+     * Public method to access handleAddMember for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleAddMember(ActionEvent event) {
+        handleAddMember(event);
+    }
+
+    /**
+     * Public method to access handleRemoveMember for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleRemoveMember(ActionEvent event) {
+        handleRemoveMember(event);
+    }
+
+    /**
+     * Public method to access handleAddComponent for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleAddComponent(ActionEvent event) {
+        handleAddComponent(event);
+    }
+
+    /**
+     * Public method to access handleRemoveComponent for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleRemoveComponent(ActionEvent event) {
+        handleRemoveComponent(event);
+    }
+
+    /**
+     * Public method to access handleAddDependency for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleAddDependency(ActionEvent event) {
+        handleAddDependency(event);
+    }
+
+    /**
+     * Public method to access handleRemoveDependency for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleRemoveDependency(ActionEvent event) {
+        handleRemoveDependency(event);
+    }
 }

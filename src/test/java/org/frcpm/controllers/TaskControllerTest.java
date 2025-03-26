@@ -28,6 +28,13 @@ import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -223,36 +230,36 @@ public class TaskControllerTest {
         dependencies.addAll(dependencySet);
         
         // Initialize controller by setting the mock fields
-        taskController.taskTitleLabel = taskTitleLabel;
-        taskController.projectLabel = projectLabel;
-        taskController.subsystemLabel = subsystemLabel;
-        taskController.descriptionArea = descriptionArea;
-        taskController.startDatePicker = startDatePicker;
-        taskController.endDatePicker = endDatePicker;
-        taskController.priorityComboBox = priorityComboBox;
-        taskController.progressSlider = progressSlider;
-        taskController.progressLabel = progressLabel;
-        taskController.completedCheckBox = completedCheckBox;
-        taskController.estimatedHoursField = estimatedHoursField;
-        taskController.actualHoursField = actualHoursField;
-        taskController.assignedMembersTable = assignedMembersTable;
-        taskController.memberNameColumn = memberNameColumn;
-        taskController.memberSubteamColumn = memberSubteamColumn;
-        taskController.requiredComponentsTable = requiredComponentsTable;
-        taskController.componentNameColumn = componentNameColumn;
-        taskController.componentPartNumberColumn = componentPartNumberColumn;
-        taskController.componentDeliveredColumn = componentDeliveredColumn;
-        taskController.dependenciesTable = dependenciesTable;
-        taskController.dependencyTitleColumn = dependencyTitleColumn;
-        taskController.dependencyProgressColumn = dependencyProgressColumn;
-        taskController.saveButton = saveButton;
-        taskController.cancelButton = cancelButton;
-        taskController.addMemberButton = addMemberButton;
-        taskController.removeMemberButton = removeMemberButton;
-        taskController.addComponentButton = addComponentButton;
-        taskController.removeComponentButton = removeComponentButton;
-        taskController.addDependencyButton = addDependencyButton;
-        taskController.removeDependencyButton = removeDependencyButton;
+        when(taskController.getTaskTitleLabel()).thenReturn(taskTitleLabel);
+        when(taskController.getProjectLabel()).thenReturn(projectLabel);
+        when(taskController.getSubsystemLabel()).thenReturn(subsystemLabel);
+        when(taskController.getDescriptionArea()).thenReturn(descriptionArea);
+        when(taskController.getStartDatePicker()).thenReturn(startDatePicker);
+        when(taskController.getEndDatePicker()).thenReturn(endDatePicker);
+        when(taskController.getPriorityComboBox()).thenReturn(priorityComboBox);
+        when(taskController.getProgressSlider()).thenReturn(progressSlider);
+        when(taskController.getProgressLabel()).thenReturn(progressLabel);
+        when(taskController.getCompletedCheckBox()).thenReturn(completedCheckBox);
+        when(taskController.getEstimatedHoursField()).thenReturn(estimatedHoursField);
+        when(taskController.getActualHoursField()).thenReturn(actualHoursField);
+        when(taskController.getAssignedMembersTable()).thenReturn(assignedMembersTable);
+        when(taskController.getMemberNameColumn()).thenReturn(memberNameColumn);
+        when(taskController.getMemberSubteamColumn()).thenReturn(memberSubteamColumn);
+        when(taskController.getRequiredComponentsTable()).thenReturn(requiredComponentsTable);
+        when(taskController.getComponentNameColumn()).thenReturn(componentNameColumn);
+        when(taskController.getComponentPartNumberColumn()).thenReturn(componentPartNumberColumn);
+        when(taskController.getComponentDeliveredColumn()).thenReturn(componentDeliveredColumn);
+        when(taskController.getDependenciesTable()).thenReturn(dependenciesTable);
+        when(taskController.getDependencyTitleColumn()).thenReturn(dependencyTitleColumn);
+        when(taskController.getDependencyProgressColumn()).thenReturn(dependencyProgressColumn);
+        when(taskController.getSaveButton()).thenReturn(saveButton);
+        when(taskController.getCancelButton()).thenReturn(cancelButton);
+        when(taskController.getAddMemberButton()).thenReturn(addMemberButton);
+        when(taskController.getRemoveMemberButton()).thenReturn(removeMemberButton);
+        when(taskController.getAddComponentButton()).thenReturn(addComponentButton);
+        when(taskController.getRemoveComponentButton()).thenReturn(removeComponentButton);
+        when(taskController.getAddDependencyButton()).thenReturn(addDependencyButton);
+        when(taskController.getRemoveDependencyButton()).thenReturn(removeDependencyButton);
         
         // Set up observable lists using reflection
         try {
@@ -310,9 +317,8 @@ public class TaskControllerTest {
     public void testInitialize() {
         // Call initialize via reflection (since it's private)
         try {
-            java.lang.reflect.Method initMethod = TaskController.class.getDeclaredMethod("initialize");
-            initMethod.setAccessible(true);
-            initMethod.invoke(taskController);
+            // Using test access method
+            taskController.testInitialize();
             
             // Verify that progress slider is set up
             verify(priorityComboBox).setItems(any());
@@ -343,12 +349,19 @@ public class TaskControllerTest {
 
     @Test
     public void testSetTask() {
+        // Create a spy to capture values
+        TaskController spyController = spy(taskController);
+
         // Test setting an existing task
-        taskController.setTask(testTask);
-        
+        spyController.setTask(testTask);
+
+        // Capture values
+        boolean isNewTask = spyController.isNewTask;
+        Task task = spyController.task;
+
         // Verify the task is set
-        assertFalse(taskController.isNewTask);
-        assertEquals(testTask, taskController.task);
+        assertFalse(isNewTask);
+        assertEquals(testTask, task);
         
         // Verify UI elements are updated
         verify(taskTitleLabel).setText(testTask.getTitle());
@@ -389,9 +402,8 @@ public class TaskControllerTest {
         
         // Call the method to test
         try {
-            java.lang.reflect.Method loadDataMethod = TaskController.class.getDeclaredMethod("loadTaskData");
-            loadDataMethod.setAccessible(true);
-            loadDataMethod.invoke(taskController);
+            // Using test access method
+            taskController.testLoadTaskData();
             
             // Verify UI elements are updated
             verify(taskTitleLabel, times(2)).setText(testTask.getTitle());
