@@ -331,8 +331,10 @@ public class MeetingController {
     }
 
     /**
-     * Special version of showErrorAlert for testing.
-     * This can be overridden in tests to avoid JavaFX thread issues.
+     * Public method to access showErrorAlert for testing.
+     * 
+     * @param title the title
+     * @param message the message
      */
     public void testShowErrorAlert(String title, String message) {
         showErrorAlert(title, message);

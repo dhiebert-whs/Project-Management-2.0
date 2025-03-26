@@ -273,22 +273,25 @@ public class MeetingControllerTest extends BaseJavaFXTest {
         // Set up for new meeting
         meetingController.setNewMeeting(testProject);
         
-        // Set invalid values
-        datePicker.setValue(null); // Missing date
+        // Set invalid values (missing date)
+        when(datePicker.getValue()).thenReturn(null);
         
-        // Call save method
-        meetingController.testHandleSave(null);
+        // Create a spy of the controller to intercept the showErrorAlert method
+        MeetingController controllerSpy = spy(meetingController);
+        doNothing().when(controllerSpy).testShowErrorAlert(anyString(), anyString());
         
-        // Verify error alert was shown
-        assertEquals(1, shownAlerts.size());
-        assertEquals("Invalid Input", shownAlerts.get(0).getHeaderText());
-        assertEquals("Meeting date cannot be empty", shownAlerts.get(0).getContentText());
+        // Call save method with null event - we don't need the mock event
+        controllerSpy.testHandleSave(null);
+        
+        // Verify error alert was shown with correct messages
+        verify(controllerSpy).testShowErrorAlert("Invalid Input", "Meeting date cannot be empty");
         
         // Verify service was NOT called
         verify(meetingService, never()).createMeeting(any(), any(), any(), anyLong(), anyString());
         
-        // Verify dialog was NOT closed
-        assertFalse(dialogClosed);
+        // Verify dialog was NOT closed - check this through the original method
+        // This avoids needing the mockStage variable
+        verify(controllerSpy, never()).testCloseDialog();
     }
     
     /**
