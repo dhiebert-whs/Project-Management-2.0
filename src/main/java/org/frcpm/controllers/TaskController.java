@@ -128,9 +128,9 @@ public class TaskController {
     // Data
     protected Task task;
     protected boolean isNewTask;
-    private ObservableList<TeamMember> assignedMembers = FXCollections.observableArrayList();
-    private ObservableList<Component> requiredComponents = FXCollections.observableArrayList();
-    private ObservableList<Task> dependencies = FXCollections.observableArrayList();
+    ObservableList<TeamMember> assignedMembers = FXCollections.observableArrayList();
+    ObservableList<Component> requiredComponents = FXCollections.observableArrayList();
+    ObservableList<Task> dependencies = FXCollections.observableArrayList();
     
     /**
      * Helper method to create a date cell factory that works with any entity type.

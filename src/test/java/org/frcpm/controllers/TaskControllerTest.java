@@ -261,22 +261,10 @@ public class TaskControllerTest {
         when(taskController.getAddDependencyButton()).thenReturn(addDependencyButton);
         when(taskController.getRemoveDependencyButton()).thenReturn(removeDependencyButton);
         
-        // Set up observable lists using reflection
-        try {
-            java.lang.reflect.Field assignedMembersField = TaskController.class.getDeclaredField("assignedMembers");
-            assignedMembersField.setAccessible(true);
-            assignedMembersField.set(taskController, assignedMembers);
-            
-            java.lang.reflect.Field requiredComponentsField = TaskController.class.getDeclaredField("requiredComponents");
-            requiredComponentsField.setAccessible(true);
-            requiredComponentsField.set(taskController, requiredComponents);
-            
-            java.lang.reflect.Field dependenciesField = TaskController.class.getDeclaredField("dependencies");
-            dependenciesField.setAccessible(true);
-            dependenciesField.set(taskController, dependencies);
-        } catch (Exception e) {
-            fail("Failed to set fields via reflection: " + e.getMessage());
-        }
+        // Set observable lists directly
+        taskController.assignedMembers = assignedMembers;
+        taskController.requiredComponents = requiredComponents;
+        taskController.dependencies = dependencies;
         
         // Mock service behavior
         when(taskService.createTask(anyString(), any(), any(), anyDouble(), any(), any(), any())).thenReturn(testTask);
@@ -315,9 +303,9 @@ public class TaskControllerTest {
 
     @Test
     public void testInitialize() {
-        // Call initialize via reflection (since it's private)
+       
         try {
-            // Using test access method
+            // Call initialize via test access method
             taskController.testInitialize();
             
             // Verify that progress slider is set up
@@ -400,20 +388,16 @@ public class TaskControllerTest {
         // Set up a task first
         taskController.setTask(testTask);
         
-        // Call the method to test
-        try {
-            // Using test access method
-            taskController.testLoadTaskData();
+        // Call the method to test using test access method
+        taskController.testLoadTaskData();
             
-            // Verify UI elements are updated
-            verify(taskTitleLabel, times(2)).setText(testTask.getTitle());
-            verify(projectLabel, times(2)).setText(testTask.getProject().getName());
-            verify(subsystemLabel, times(2)).setText(testTask.getSubsystem().getName());
-            verify(descriptionArea, times(2)).setText(testTask.getDescription());
-            
-        } catch (Exception e) {
-            fail("Exception during loadTaskData: " + e.getMessage());
-        }
+        //todo: should this be commented out? (the verify statements)
+        // Verify UI elements are updated
+        verify(taskTitleLabel, times(2)).setText(testTask.getTitle());
+        verify(projectLabel, times(2)).setText(testTask.getProject().getName());
+        verify(subsystemLabel, times(2)).setText(testTask.getSubsystem().getName());
+        verify(descriptionArea, times(2)).setText(testTask.getDescription());
+
     }
     
     @Test
@@ -422,7 +406,7 @@ public class TaskControllerTest {
         taskController.setNewTask(testProject, testSubsystem);
         
         // Test saving
-        taskController.handleSave(mockEvent);
+        taskController.testHandleSave(mockEvent);
         
         // Verify service was called to create a new task
         verify(taskService).createTask(
@@ -445,7 +429,7 @@ public class TaskControllerTest {
         taskController.setTask(testTask);
         
         // Test saving
-        taskController.handleSave(mockEvent);
+        taskController.testHandleSave(mockEvent);
         
         // Verify service was called to update the task
         verify(taskService).updateTaskProgress(
@@ -467,7 +451,7 @@ public class TaskControllerTest {
         when(taskTitleLabel.getText()).thenReturn("");
         
         // Test saving
-        taskController.handleSave(mockEvent);
+        taskController.testHandleSave(mockEvent);
         
         // Verify service was NOT called to create a new task
         verify(taskService, never()).createTask(
@@ -487,7 +471,7 @@ public class TaskControllerTest {
     @Test
     public void testHandleCancel() {
         // Test canceling
-        taskController.handleCancel(mockEvent);
+        taskController.testHandleCancel(mockEvent);
         
         // Verify dialog was closed
         verify(mockStage).close();
@@ -507,7 +491,7 @@ public class TaskControllerTest {
         spyController.setTask(testTask);
         
         // Test adding a member
-        spyController.handleAddMember(mockEvent);
+        spyController.testHandleAddMember(mockEvent);
         
         // Verify member is added
         assertEquals(2, assignedMembers.size());
@@ -523,7 +507,7 @@ public class TaskControllerTest {
         when(assignedMembersTable.getSelectionModel().getSelectedItem()).thenReturn(testMembers.get(0));
         
         // Test removing a member
-        taskController.handleRemoveMember(mockEvent);
+        taskController.testHandleRemoveMember(mockEvent);
         
         // Verify member is removed
         assertEquals(0, assignedMembers.size());
@@ -543,7 +527,7 @@ public class TaskControllerTest {
         spyController.setTask(testTask);
         
         // Test adding a component
-        spyController.handleAddComponent(mockEvent);
+        spyController.testHandleAddComponent(mockEvent);
         
         // Verify component is added
         assertEquals(2, requiredComponents.size());
@@ -559,7 +543,7 @@ public class TaskControllerTest {
         when(requiredComponentsTable.getSelectionModel().getSelectedItem()).thenReturn(testComponents.get(0));
         
         // Test removing a component
-        taskController.handleRemoveComponent(mockEvent);
+        taskController.testHandleRemoveComponent(mockEvent);
         
         // Verify component is removed
         assertEquals(0, requiredComponents.size());
@@ -583,7 +567,7 @@ public class TaskControllerTest {
         
         // Test adding a dependency
         dependencies.clear(); // Clear the list first
-        spyController.handleAddDependency(mockEvent);
+        spyController.testHandleAddDependency(mockEvent);
         
         // Verify dependency is added
         verify(taskService).addDependency(newTask.getId(), dependencyTask.getId());
@@ -598,29 +582,10 @@ public class TaskControllerTest {
         when(dependenciesTable.getSelectionModel().getSelectedItem()).thenReturn(testDependencies.get(0));
         
         // Test removing a dependency
-        taskController.handleRemoveDependency(mockEvent);
+        taskController.testHandleRemoveDependency(mockEvent);
         
         // Verify service is called
         verify(taskService).removeDependency(testTask.getId(), testDependencies.get(0).getId());
     }
     
-    // Helper method to create a mock member dialog for testing
-    private ChoiceDialog<TeamMember> createMemberDialog(List<TeamMember> availableMembers) {
-        ChoiceDialog<TeamMember> dialog = mock(ChoiceDialog.class);
-        when(dialog.showAndWait()).thenReturn(java.util.Optional.of(availableMembers.get(0)));
-        return dialog;
-    }
-    
-    // Helper method to create a mock component dialog for testing
-    private ChoiceDialog<Component> createComponentDialog(List<Component> availableComponents) {
-        ChoiceDialog<Component> dialog = mock(ChoiceDialog.class);
-        when(dialog.showAndWait()).thenReturn(java.util.Optional.of(availableComponents.get(0)));
-        return dialog;
-    }
-    
-    // Helper method to create a mock dependency dialog for testing
-    private ChoiceDialog<Task> createDependencyDialog(List<Task> availableTasks) {
-        ChoiceDialog<Task> dialog = mock(ChoiceDialog.class);
-        when(dialog.showAndWait()).thenReturn(java.util.Optional.of(availableTasks.get(0)));
-        return dialog;
-    }
+}
