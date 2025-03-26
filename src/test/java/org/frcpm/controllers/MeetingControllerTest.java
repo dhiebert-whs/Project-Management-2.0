@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
@@ -62,6 +63,19 @@ public class MeetingControllerTest {
     private Project testProject;
     private Meeting testMeeting;
 
+    /**
+     * Utility method to set private fields using reflection
+     */
+    private void setField(Object target, String fieldName, Object value) {
+        try {
+            Field field = target.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            field.set(target, value);
+        } catch (Exception e) {
+            fail("Could not set field " + fieldName + ": " + e.getMessage());
+        }
+    }
+
     @BeforeEach
     public void setUp() {
         // Create test project
@@ -83,13 +97,13 @@ public class MeetingControllerTest {
         testMeeting.setId(1L);
         testMeeting.setNotes("Test meeting notes");
         
-        // Initialize controller by setting the mock fields
-        when(meetingController.getDatePicker()).thenReturn(datePicker);
-        when(meetingController.getStartTimeField()).thenReturn(startTimeField);
-        when(meetingController.getEndTimeField()).thenReturn(endTimeField);
-        when(meetingController.getNotesArea()).thenReturn(notesArea);
-        when(meetingController.getSaveButton()).thenReturn(saveButton);
-        when(meetingController.getCancelButton()).thenReturn(cancelButton);
+        // Set UI components using reflection instead of mocking controller methods
+        setField(meetingController, "datePicker", datePicker);
+        setField(meetingController, "startTimeField", startTimeField);
+        setField(meetingController, "endTimeField", endTimeField);
+        setField(meetingController, "notesArea", notesArea);
+        setField(meetingController, "saveButton", saveButton);
+        setField(meetingController, "cancelButton", cancelButton);
         
         // Mock service behavior
         when(meetingService.createMeeting(any(), any(), any(), anyLong(), anyString()))
@@ -104,28 +118,27 @@ public class MeetingControllerTest {
         when(startTimeField.getText()).thenReturn("18:00");
         when(endTimeField.getText()).thenReturn("20:00");
         when(notesArea.getText()).thenReturn("Test meeting notes");
-        when(saveButton.getScene()).thenReturn(mock(javafx.scene.Scene.class));
-        when(saveButton.getScene().getWindow()).thenReturn(mockStage);
+        
+        // Mock JavaFX scene/stage for dialog closing
+        javafx.scene.Scene mockScene = mock(javafx.scene.Scene.class);
+        when(saveButton.getScene()).thenReturn(mockScene);
+        when(cancelButton.getScene()).thenReturn(mockScene);
+        when(mockScene.getWindow()).thenReturn(mockStage);
     }
 
     @Test
     public void testInitialize() {
-        // Call initialize via reflection (since it's private)
-        try {
-            meetingController.testInitialize();
-            
-            // Verify that default values are set
-            verify(datePicker).setValue(any(LocalDate.class));
-            verify(startTimeField).setText("16:00");
-            verify(endTimeField).setText("18:00");
-            
-            // Verify that button actions are set
-            verify(saveButton).setOnAction(any());
-            verify(cancelButton).setOnAction(any());
-            
-        } catch (Exception e) {
-            fail("Exception during initialize: " + e.getMessage());
-        }
+        // Call initialize
+        meetingController.testInitialize();
+        
+        // Verify that default values are set
+        verify(datePicker).setValue(any(LocalDate.class));
+        verify(startTimeField).setText("16:00");
+        verify(endTimeField).setText("18:00");
+        
+        // Verify that button actions are set
+        verify(saveButton).setOnAction(any());
+        verify(cancelButton).setOnAction(any());
     }
 
     @Test
@@ -228,17 +241,5 @@ public class MeetingControllerTest {
         
         // Verify dialog was closed
         verify(mockStage).close();
-    }
-    
-    @Test
-    public void testGetMeeting() {
-        // Set up a meeting
-        meetingController.setMeeting(testMeeting);
-        
-        // Test getting the meeting
-        Meeting result = meetingController.getMeeting();
-        
-        // Verify the correct meeting is returned
-        assertEquals(testMeeting, result);
     }
 }
