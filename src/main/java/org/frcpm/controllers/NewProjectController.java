@@ -171,4 +171,129 @@ public class NewProjectController {
         alert.setContentText(message);
         alert.showAndWait();
     }
+
+    // Add these methods at the end of the NewProjectController class
+
+    /**
+     * Gets the name field.
+     * 
+     * @return the name field
+     */
+    public TextField getNameField() {
+        return nameField;
+    }
+
+    /**
+     * Gets the start date picker.
+     * 
+     * @return the start date picker
+     */
+    public DatePicker getStartDatePicker() {
+        return startDatePicker;
+    }
+
+    /**
+     * Gets the goal end date picker.
+     * 
+     * @return the goal end date picker
+     */
+    public DatePicker getGoalEndDatePicker() {
+        return goalEndDatePicker;
+    }
+
+    /**
+     * Gets the hard deadline picker.
+     * 
+     * @return the hard deadline picker
+     */
+    public DatePicker getHardDeadlinePicker() {
+        return hardDeadlinePicker;
+    }
+
+    /**
+     * Gets the description area.
+     * 
+     * @return the description area
+     */
+    public TextArea getDescriptionArea() {
+        return descriptionArea;
+    }
+
+    /**
+     * Gets the create button.
+     * 
+     * @return the create button
+     */
+    public Button getCreateButton() {
+        return createButton;
+    }
+
+    /**
+     * Gets the cancel button.
+     * 
+     * @return the cancel button
+     */
+    public Button getCancelButton() {
+        return cancelButton;
+    }
+
+    /**
+     * Gets the dialog stage.
+     * 
+     * @return the dialog stage
+     */
+    public Stage getDialogStage() {
+        return dialogStage;
+    }
+
+    /**
+     * Gets the project service.
+     * 
+     * @return the project service
+     */
+    public ProjectService getProjectService() {
+        return projectService;
+    }
+
+    /**
+     * Public method to access initialize for testing.
+     */
+    public void testInitialize() {
+        initialize();
+    }
+
+    /**
+     * Public method to access handleCreate for testing.
+     */
+    public void testHandleCreate() {
+        handleCreate();
+    }
+
+    /**
+     * Public method to access validateInput for testing.
+     * 
+     * @return true if the input is valid, false otherwise
+     */
+    public boolean testValidateInput() {
+        return validateInput();
+    }
+
+    /**
+     * Public method to access showErrorAlert for testing.
+     * 
+     * @param title the title
+     * @param message the message
+     */
+    public void testShowErrorAlert(String title, String message) {
+        showErrorAlert(title, message);
+    }
+
+    /**
+     * Helper method to create an error alert for testing mocks.
+     * 
+     * @return the alert
+     */
+    protected Alert createErrorAlert() {
+        return new Alert(Alert.AlertType.ERROR);
+    }
 }

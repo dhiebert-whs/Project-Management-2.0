@@ -126,8 +126,8 @@ public class TaskController {
     private final ComponentService componentService = ServiceFactory.getComponentService();
     
     // Data
-    private Task task;
-    private boolean isNewTask;
+    protected Task task;
+    protected boolean isNewTask;
     private ObservableList<TeamMember> assignedMembers = FXCollections.observableArrayList();
     private ObservableList<Component> requiredComponents = FXCollections.observableArrayList();
     private ObservableList<Task> dependencies = FXCollections.observableArrayList();
@@ -341,7 +341,7 @@ public class TaskController {
      * 
      * @param event the action event
      */
-    private void handleSave(ActionEvent event) {
+    public void handleSave(ActionEvent event) {
         if (task == null) {
             return;
         }
@@ -649,4 +649,307 @@ public class TaskController {
         alert.setContentText(message);
         alert.showAndWait();
     }
+    
+    /**
+     * Helper method to create a member selection dialog for testing.
+     * This is a placeholder for mocking in tests.
+     * 
+     * @param availableMembers the list of available members
+     * @return the dialog
+     */
+    public ChoiceDialog<TeamMember> createMemberDialog(List<TeamMember> availableMembers) {
+        return new ChoiceDialog<>(
+            availableMembers.isEmpty() ? null : availableMembers.get(0), 
+            availableMembers);
+    }
+    
+    /**
+     * Helper method to create a component selection dialog for testing.
+     * This is a placeholder for mocking in tests.
+     * 
+     * @param availableComponents the list of available components
+     * @return the dialog
+     */
+    public ChoiceDialog<Component> createComponentDialog(List<Component> availableComponents) {
+        return new ChoiceDialog<>(
+            availableComponents.isEmpty() ? null : availableComponents.get(0), 
+            availableComponents);
+    }
+    
+    /**
+     * Helper method to create a dependency selection dialog for testing.
+     * This is a placeholder for mocking in tests.
+     * 
+     * @param availableTasks the list of available tasks
+     * @return the dialog
+     */
+    public ChoiceDialog<Task> createDependencyDialog(List<Task> availableTasks) {
+        return new ChoiceDialog<>(
+            availableTasks.isEmpty() ? null : availableTasks.get(0), 
+            availableTasks);
+    }
+    
+    // Getters for testing
+    
+    /**
+     * Gets the task title label.
+     * 
+     * @return the task title label
+     */
+    public Label getTaskTitleLabel() {
+        return taskTitleLabel;
+    }
+    
+    /**
+     * Gets the project label.
+     * 
+     * @return the project label
+     */
+    public Label getProjectLabel() {
+        return projectLabel;
+    }
+    
+    /**
+     * Gets the subsystem label.
+     * 
+     * @return the subsystem label
+     */
+    public Label getSubsystemLabel() {
+        return subsystemLabel;
+    }
+    
+    /**
+     * Gets the description area.
+     * 
+     * @return the description area
+     */
+    public TextArea getDescriptionArea() {
+        return descriptionArea;
+    }
+    
+    /**
+     * Gets the start date picker.
+     * 
+     * @return the start date picker
+     */
+    public DatePicker getStartDatePicker() {
+        return startDatePicker;
+    }
+    
+    /**
+     * Gets the end date picker.
+     * 
+     * @return the end date picker
+     */
+    public DatePicker getEndDatePicker() {
+        return endDatePicker;
+    }
+    
+    /**
+     * Gets the priority combo box.
+     * 
+     * @return the priority combo box
+     */
+    public ComboBox<Task.Priority> getPriorityComboBox() {
+        return priorityComboBox;
+    }
+    
+    /**
+     * Gets the progress slider.
+     * 
+     * @return the progress slider
+     */
+    public Slider getProgressSlider() {
+        return progressSlider;
+    }
+    
+    /**
+     * Gets the progress label.
+     * 
+     * @return the progress label
+     */
+    public Label getProgressLabel() {
+        return progressLabel;
+    }
+    
+    /**
+     * Gets the completed check box.
+     * 
+     * @return the completed check box
+     */
+    public CheckBox getCompletedCheckBox() {
+        return completedCheckBox;
+    }
+    
+    /**
+     * Gets the estimated hours field.
+     * 
+     * @return the estimated hours field
+     */
+    public TextField getEstimatedHoursField() {
+        return estimatedHoursField;
+    }
+    
+    /**
+     * Gets the actual hours field.
+     * 
+     * @return the actual hours field
+     */
+    public TextField getActualHoursField() {
+        return actualHoursField;
+    }
+    
+    /**
+     * Gets the assigned members table.
+     * 
+     * @return the assigned members table
+     */
+    public TableView<TeamMember> getAssignedMembersTable() {
+        return assignedMembersTable;
+    }
+    
+    /**
+     * Gets the member name column.
+     * 
+     * @return the member name column
+     */
+    public TableColumn<TeamMember, String> getMemberNameColumn() {
+        return memberNameColumn;
+    }
+    
+    /**
+     * Gets the member subteam column.
+     * 
+     * @return the member subteam column
+     */
+    public TableColumn<TeamMember, String> getMemberSubteamColumn() {
+        return memberSubteamColumn;
+    }
+    
+    /**
+     * Gets the required components table.
+     * 
+     * @return the required components table
+     */
+    public TableView<Component> getRequiredComponentsTable() {
+        return requiredComponentsTable;
+    }
+    
+    /**
+     * Gets the component name column.
+     * 
+     * @return the component name column
+     */
+    public TableColumn<Component, String> getComponentNameColumn() {
+        return componentNameColumn;
+    }
+    
+    /**
+     * Gets the component part number column.
+     * 
+     * @return the component part number column
+     */
+    public TableColumn<Component, String> getComponentPartNumberColumn() {
+        return componentPartNumberColumn;
+    }
+    
+    /**
+     * Gets the component delivered column.
+     * 
+     * @return the component delivered column
+     */
+    public TableColumn<Component, Boolean> getComponentDeliveredColumn() {
+        return componentDeliveredColumn;
+    }
+    
+    /**
+     * Gets the dependencies table.
+     * 
+     * @return the dependencies table
+     */
+    public TableView<Task> getDependenciesTable() {
+        return dependenciesTable;
+    }
+    
+    /**
+     * Gets the dependency title column.
+     * 
+     * @return the dependency title column
+     */
+    public TableColumn<Task, String> getDependencyTitleColumn() {
+        return dependencyTitleColumn;
+    }
+    
+    /**
+     * Gets the dependency progress column.
+     * 
+     * @return the dependency progress column
+     */
+    public TableColumn<Task, Integer> getDependencyProgressColumn() {
+        return dependencyProgressColumn;
+    }
+    
+    /**
+     * Gets the save button.
+     * 
+     * @return the save button
+     */
+    public Button getSaveButton() {
+        return saveButton;
+    }
+    
+    /**
+     * Gets the cancel button.
+     * 
+     * @return the cancel button
+     */
+    public Button getCancelButton() {
+        return cancelButton;
+    }
+    
+    /**
+     * Gets the add member button.
+     * 
+     * @return the add member button
+     */
+    public Button getAddMemberButton() {
+        return addMemberButton;
+    }
+    
+    /**
+     * Gets the remove member button.
+     * 
+     * @return the remove member button
+     */
+    public Button getRemoveMemberButton() {
+        return removeMemberButton;
+    }
+    
+    /**
+     * Gets the add component button.
+     * 
+     * @return the add component button
+     */
+    public Button getAddComponentButton() {
+        return addComponentButton;
+    }
+    
+    /**
+     * Gets the remove component button.
+     * 
+     * @return the remove component button
+     */
+    public Button getRemoveComponentButton() {
+        return removeComponentButton;
+    }
+    
+    /**
+     * Gets the add dependency button.
+     * 
+     * @return the add dependency button
+     */
+    public Button getAddDependencyButton() {
+        return addDependencyButton;
+    }
+    
 }
