@@ -86,7 +86,7 @@ public class MeetingViewModelTest {
         viewModel.initExistingMeeting(testMeeting);
         
         // Verify state
-        assertEquals(testMeeting, viewModel.meetingProperty().get());
+        assertEquals(testMeeting, viewModel.getMeeting());
         assertEquals(testProject, viewModel.getProject());
         assertFalse(viewModel.isNewMeeting());
         

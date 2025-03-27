@@ -228,60 +228,7 @@ public class MeetingViewModel extends BaseViewModel {
     public BooleanProperty validProperty() {
         return valid;
     }
-    
-    /**
-     * Gets the project property.
-     * 
-     * @return the project property
-     */
-    public ObjectProperty<Project> projectProperty() {
-        return project;
-    }
-
-    /**
-     * Gets the project.
-     * 
-     * @return the project
-     */
-    public Project getProject() {
-        return project.get();
-    }
-
-    /**
-     * Gets the date property.
-     * 
-     * @return the date property
-     */
-    public ObjectProperty<LocalDate> dateProperty() {
-        return date;
-    }
-    
-    /**
-     * Gets the start time string property.
-     * 
-     * @return the start time string property
-     */
-    public StringProperty startTimeStringProperty() {
-        return startTimeString;
-    }
-    
-    /**
-     * Gets the end time string property.
-     * 
-     * @return the end time string property
-     */
-    public StringProperty endTimeStringProperty() {
-        return endTimeString;
-    }
-    
-    /**
-     * Gets the notes property.
-     * 
-     * @return the notes property
-     */
-    public StringProperty notesProperty() {
-        return notes;
-    }
+   
     
     /**
      * Gets the save command.
@@ -335,5 +282,82 @@ public class MeetingViewModel extends BaseViewModel {
      */
     public BooleanProperty isNewMeetingProperty() {
         return isNewMeeting;
+    }
+
+    // Date property accessors
+    public ObjectProperty<LocalDate> dateProperty() {
+        return date;
+    }
+
+    public LocalDate getDate() {
+        return date.get();
+    }
+
+    public void setDate(LocalDate value) {
+        date.set(value);
+    }
+
+    // Start time string property accessors
+    public StringProperty startTimeStringProperty() {
+        return startTimeString;
+    }
+
+    public String getStartTimeString() {
+        return startTimeString.get();
+    }
+
+    public void setStartTimeString(String value) {
+        startTimeString.set(value);
+    }
+
+    // End time string property accessors
+    public StringProperty endTimeStringProperty() {
+        return endTimeString;
+    }
+
+    public String getEndTimeString() {
+        return endTimeString.get();
+    }
+
+    public void setEndTimeString(String value) {
+        endTimeString.set(value);
+    }
+
+    // Notes property accessors
+    public StringProperty notesProperty() {
+        return notes;
+    }
+
+    public String getNotes() {
+        return notes.get();
+    }
+
+    public void setNotes(String value) {
+        notes.set(value);
+    }
+
+    // Project property accessors
+    public ObjectProperty<Project> projectProperty() {
+        return project;
+    }
+
+    public Project getProject() {
+        return project.get();
+    }
+
+    public void setProject(Project value) {
+        project.set(value);
+    }
+
+    public void setMeeting(Meeting value) {
+        meeting.set(value);
+    }
+
+    public void setIsNewMeeting(boolean value) {
+        isNewMeeting.set(value);
+    }
+
+    public void setValid(boolean value) {
+        valid.set(value);
     }
 }
