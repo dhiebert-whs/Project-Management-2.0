@@ -6,6 +6,7 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.stage.Stage;
 import javafx.util.Callback;
 import org.frcpm.models.*;
 import org.frcpm.services.ServiceFactory;
@@ -19,6 +20,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -26,7 +28,10 @@ import java.util.logging.Logger;
  * Controller for task view and management.
  */
 public class TaskController {
-    
+    private Runnable closeDialogOverride;
+    private BiConsumer<String, String> showErrorAlertOverride;
+    private BiConsumer<String, String> showInfoAlertOverride;
+
     private static final Logger LOGGER = Logger.getLogger(TaskController.class.getName());
     
     // FXML Controls
@@ -617,18 +622,22 @@ public class TaskController {
      * Closes the task dialog.
      */
     private void closeDialog() {
-        // Get the current stage
-        javafx.stage.Stage stage = (javafx.stage.Stage) saveButton.getScene().getWindow();
+        if (closeDialogOverride != null) {
+            closeDialogOverride.run();
+            return;
+        }
+        // Original implementation
+        Stage stage = (Stage) saveButton.getScene().getWindow();
         stage.close();
     }
     
-    /**
-     * Shows an error alert dialog.
-     * 
-     * @param title the title
-     * @param message the message
-     */
+    // Modify the showErrorAlert method
     private void showErrorAlert(String title, String message) {
+        if (showErrorAlertOverride != null) {
+            showErrorAlertOverride.accept(title, message);
+            return;
+        }
+        // Original implementation
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("Error");
         alert.setHeaderText(title);
@@ -636,13 +645,13 @@ public class TaskController {
         alert.showAndWait();
     }
     
-    /**
-     * Shows an information alert dialog.
-     * 
-     * @param title the title
-     * @param message the message
-     */
+    // Modify the showInfoAlert method
     private void showInfoAlert(String title, String message) {
+        if (showInfoAlertOverride != null) {
+            showInfoAlertOverride.accept(title, message);
+            return;
+        }
+        // Original implementation
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Information");
         alert.setHeaderText(title);
@@ -1071,5 +1080,9 @@ public class TaskController {
      */
     public void testHandleRemoveDependency(ActionEvent event) {
         handleRemoveDependency(event);
+    }
+    @FunctionalInterface
+    public interface BiConsumer<T, U> {
+        void accept(T t, U u);
     }
 }
