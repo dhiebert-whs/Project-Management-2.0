@@ -375,7 +375,8 @@ public void handleAddTask(ActionEvent event) {
         
         // Get the controller
         TaskController controller = loader.getController();
-        controller.setNewTask(project, selectedSubsystem);
+        Task newTask = new Task("", project, selectedSubsystem);
+        controller.initNewTask(newTask);
         
         // Show the dialog and wait for result
         dialogStage.showAndWait();
@@ -413,7 +414,7 @@ public void handleEditTask(Task task) {
         
         // Get the controller
         TaskController controller = loader.getController();
-        controller.setTask(task);
+        controller.initExistingTask(task);
         
         // Show the dialog and wait for result
         dialogStage.showAndWait();

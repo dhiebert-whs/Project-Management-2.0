@@ -128,12 +128,14 @@ public class TaskController {
         ViewModelBinding.bindTextField(estimatedHoursField, estimatedHoursStringProp);
 
 
-        ViewModelBinding.bindTextField(actualHoursField, 
-            Bindings.createStringBinding(
-                () -> String.valueOf(viewModel.getActualHours()),
-                viewModel.actualHoursProperty()
-            )
-        );
+        StringProperty actualHoursStringProp = new SimpleStringProperty();
+        actualHoursStringProp.bind(Bindings.createStringBinding(
+            () -> String.valueOf(viewModel.getActualHours()),
+            viewModel.actualHoursProperty()
+        ));
+        ViewModelBinding.bindTextField(actualHoursField, actualHoursStringProp);
+
+
         ViewModelBinding.bindTextArea(descriptionArea, viewModel.descriptionProperty());
         
         // Bind date pickers

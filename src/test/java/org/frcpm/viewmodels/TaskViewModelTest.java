@@ -55,7 +55,12 @@ public class TaskViewModelTest {
         testSubteam = new Subteam("Test Subteam", "#FF0000");
         testSubteam.setId(1L);
         
-        testSubsystem = new Subsystem("Test Subsystem", testProject, testSubteam);
+        testSubsystem = new Subsystem();
+        testSubsystem.setId(1L);
+        testSubsystem.setName("Test Subsystem");
+
+        //testSubsystem.setProject(testProject);
+        testSubsystem.setResponsibleSubteam(testSubteam);
         testSubsystem.setId(1L);
         
         testTask = new Task("Test Task", testProject, testSubsystem);
