@@ -34,7 +34,7 @@ public class MeetingViewModel extends BaseViewModel {
     private final ObjectProperty<Meeting> meeting = new SimpleObjectProperty<>();
     private final BooleanProperty isNewMeeting = new SimpleBooleanProperty(true);
     private final BooleanProperty valid = new SimpleBooleanProperty(false);
-    
+     
     // Commands
     private final Command saveCommand;
     private final Command cancelCommand;
@@ -229,6 +229,24 @@ public class MeetingViewModel extends BaseViewModel {
         return valid;
     }
     
+    /**
+     * Gets the project property.
+     * 
+     * @return the project property
+     */
+    public ObjectProperty<Project> projectProperty() {
+        return project;
+    }
+
+    /**
+     * Gets the project.
+     * 
+     * @return the project
+     */
+    public Project getProject() {
+        return project.get();
+    }
+
     /**
      * Gets the date property.
      * 
