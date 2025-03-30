@@ -40,58 +40,55 @@ public class TaskViewModelTest {
     private Component testComponent;
     
     @BeforeEach
-    public void setUp() {
-        MockitoAnnotations.initMocks(this);
-        
-        // Create test data
-        testProject = new Project(
-            "Test Project",
-            LocalDate.now(),
-            LocalDate.now().plusWeeks(6),
-            LocalDate.now().plusWeeks(8)
-        );
-        testProject.setId(1L);
-        
-        testSubteam = new Subteam("Test Subteam", "#FF0000");
-        testSubteam.setId(1L);
-        
-        testSubsystem = new Subsystem();
-        testSubsystem.setId(1L);
-        testSubsystem.setName("Test Subsystem");
-
-        //testSubsystem.setProject(testProject);
-        testSubsystem.setResponsibleSubteam(testSubteam);
-        testSubsystem.setId(1L);
-        
-        testTask = new Task("Test Task", testProject, testSubsystem);
-        testTask.setId(1L);
-        testTask.setDescription("Test task description");
-        testTask.setEstimatedDuration(Duration.ofHours(2));
-        testTask.setPriority(Task.Priority.HIGH);
-        testTask.setStartDate(LocalDate.now());
-        testTask.setEndDate(LocalDate.now().plusDays(3));
-        
-        testMember = new TeamMember("testuser", "Test", "User", "test@example.com");
-        testMember.setId(1L);
-        testMember.setSubteam(testSubteam);
-        
-        testComponent = new Component("Test Component", "TC-001");
-        testComponent.setId(1L);
-        
-        // Set up mock service
-        when(taskService.createTask(anyString(), any(), any(), anyDouble(), any(), any(), any()))
-            .thenReturn(testTask);
-        when(taskService.save(any(Task.class))).thenReturn(testTask);
-        when(taskService.updateTaskProgress(anyLong(), anyInt(), anyBoolean()))
-            .thenReturn(testTask);
-        when(taskService.assignMembers(anyLong(), anySet()))
-            .thenReturn(testTask);
-        when(taskService.addDependency(anyLong(), anyLong()))
-            .thenReturn(true);
-        
-        // Create ViewModel with mocked services
-        viewModel = new TaskViewModel(taskService, teamMemberService, componentService);
-    }
+public void setUp() {
+    MockitoAnnotations.initMocks(this);
+    
+    // Create test data
+    testProject = new Project(
+        "Test Project",
+        LocalDate.now(),
+        LocalDate.now().plusWeeks(6),
+        LocalDate.now().plusWeeks(8)
+    );
+    testProject.setId(1L);
+    
+    testSubteam = new Subteam("Test Subteam", "#FF0000");
+    testSubteam.setId(1L);
+    
+    // Use the proper constructor for Subsystem
+    testSubsystem = new Subsystem("Test Subsystem");
+    testSubsystem.setId(1L);
+    testSubsystem.setResponsibleSubteam(testSubteam);
+    
+    testTask = new Task("Test Task", testProject, testSubsystem);
+    testTask.setId(1L);
+    testTask.setDescription("Test task description");
+    testTask.setEstimatedDuration(Duration.ofHours(2));
+    testTask.setPriority(Task.Priority.HIGH);
+    testTask.setStartDate(LocalDate.now());
+    testTask.setEndDate(LocalDate.now().plusDays(3));
+    
+    testMember = new TeamMember("testuser", "Test", "User", "test@example.com");
+    testMember.setId(1L);
+    testMember.setSubteam(testSubteam);
+    
+    testComponent = new Component("Test Component", "TC-001");
+    testComponent.setId(1L);
+    
+    // Set up mock service
+    when(taskService.createTask(anyString(), any(), any(), anyDouble(), any(), any(), any()))
+        .thenReturn(testTask);
+    when(taskService.save(any(Task.class))).thenReturn(testTask);
+    when(taskService.updateTaskProgress(anyLong(), anyInt(), anyBoolean()))
+        .thenReturn(testTask);
+    when(taskService.assignMembers(anyLong(), anySet()))
+        .thenReturn(testTask);
+    when(taskService.addDependency(anyLong(), anyLong()))
+        .thenReturn(true);
+    
+    // Create ViewModel with mocked services
+    viewModel = new TaskViewModel(taskService, teamMemberService, componentService);
+}
     
     @Test
     public void testInitNewTask() {

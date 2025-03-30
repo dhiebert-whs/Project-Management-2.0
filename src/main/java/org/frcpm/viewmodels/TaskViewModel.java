@@ -162,6 +162,10 @@ public class TaskViewModel extends BaseViewModel {
      * @param task the task to edit
      */
     public void initExistingTask(Task task) {
+        if (task == null) {
+            throw new IllegalArgumentException("Task cannot be null");
+        }
+        
         this.task.set(task);
         project.set(task.getProject());
         subsystem.set(task.getSubsystem());
@@ -169,23 +173,35 @@ public class TaskViewModel extends BaseViewModel {
         
         // Set field values from task
         title.set(task.getTitle());
-        description.set(task.getDescription());
+        description.set(task.getDescription() != null ? task.getDescription() : "");
+        
         Duration estimated = task.getEstimatedDuration();
-        estimatedHours.set(estimated.toMinutes() / 60.0);
+        estimatedHours.set(estimated != null ? estimated.toMinutes() / 60.0 : 1.0);
         
         Duration actual = task.getActualDuration();
         actualHours.set(actual != null ? actual.toMinutes() / 60.0 : 0.0);
         
-        priority.set(task.getPriority());
+        priority.set(task.getPriority() != null ? task.getPriority() : Task.Priority.MEDIUM);
         progress.set(task.getProgress());
         startDate.set(task.getStartDate());
         endDate.set(task.getEndDate());
         completed.set(task.isCompleted());
         
         // Set collections
-        assignedMembers.setAll(task.getAssignedTo());
-        preDependencies.setAll(task.getPreDependencies());
-        requiredComponents.setAll(task.getRequiredComponents());
+        assignedMembers.clear();
+        if (task.getAssignedTo() != null) {
+            assignedMembers.addAll(task.getAssignedTo());
+        }
+        
+        preDependencies.clear();
+        if (task.getPreDependencies() != null) {
+            preDependencies.addAll(task.getPreDependencies());
+        }
+        
+        requiredComponents.clear();
+        if (task.getRequiredComponents() != null) {
+            requiredComponents.addAll(task.getRequiredComponents());
+        }
         
         // Clear dirty flag and validate
         setDirty(false);
@@ -217,6 +233,10 @@ public class TaskViewModel extends BaseViewModel {
         }
         
         // Check dates
+        if (startDate.get() == null) {
+            errors.add("Start date cannot be empty");
+        }
+        
         if (startDate.get() != null && endDate.get() != null && 
             endDate.get().isBefore(startDate.get())) {
             errors.add("End date cannot be before start date");
@@ -231,85 +251,125 @@ public class TaskViewModel extends BaseViewModel {
         }
     }
     
-    /**
-     * Saves the task.
-     * Called when the save command is executed.
-     */
-    private void save() {
-        if (!valid.get()) {
-            return;
-        }
-        
-        try {
-            Task savedTask;
-            if (isNewTask.get()) {
-                // Create new task
-                savedTask = taskService.createTask(
-                    title.get(),
-                    project.get(),
-                    subsystem.get(),
-                    estimatedHours.get(),
-                    priority.get(),
-                    startDate.get(),
-                    endDate.get()
-                );
-                savedTask.setDescription(description.get());
-                
-                // Save again to update description
-                savedTask = taskService.save(savedTask);
-                
-            } else {
-                // Update existing task
-                Task existingTask = task.get();
-                existingTask.setTitle(title.get());
-                existingTask.setDescription(description.get());
-                existingTask.setEstimatedDuration(Duration.ofMinutes((long)(estimatedHours.get() * 60)));
-                
-                if (actualHours.get() > 0) {
-                    existingTask.setActualDuration(Duration.ofMinutes((long)(actualHours.get() * 60)));
-                }
-                
-                existingTask.setPriority(priority.get());
-                existingTask.setStartDate(startDate.get());
-                existingTask.setEndDate(endDate.get());
-                
-                // Update progress and completion status
-                savedTask = taskService.updateTaskProgress(
-                    existingTask.getId(),
-                    progress.get(),
-                    completed.get()
-                );
-                
-                // Update assigned members
+ /**
+ * Saves the task.
+ * Called when the save command is executed.
+ */
+private void save() {
+    if (!valid.get()) {
+        return;
+    }
+    
+    try {
+        Task savedTask;
+        if (isNewTask.get()) {
+            // Create new task
+            savedTask = taskService.createTask(
+                title.get(),
+                project.get(),
+                subsystem.get(),
+                estimatedHours.get(),
+                priority.get(),
+                startDate.get(),
+                endDate.get()
+            );
+            savedTask.setDescription(description.get());
+            
+            // Save again to update description
+            savedTask = taskService.save(savedTask);
+            
+            // Only handle members if there are any to assign
+            if (!assignedMembers.isEmpty()) {
                 Set<TeamMember> members = new HashSet<>(assignedMembers);
                 savedTask = taskService.assignMembers(savedTask.getId(), members);
             }
             
-            // Handle dependencies and components for both new and existing tasks
-            // For new tasks, we need to first save the task to get an ID
-            for (Task dependency : preDependencies) {
-                taskService.addDependency(savedTask.getId(), dependency.getId());
+            // Only handle dependencies if there are any
+            if (!preDependencies.isEmpty()) {
+                for (Task dependency : preDependencies) {
+                    if (dependency.getId() != null) {
+                        taskService.addDependency(savedTask.getId(), dependency.getId());
+                    }
+                }
             }
             
-            for (Component component : requiredComponents) {
-                savedTask.addRequiredComponent(component);
+            // Only handle components if there are any
+            if (!requiredComponents.isEmpty()) {
+                for (Component component : requiredComponents) {
+                    savedTask.addRequiredComponent(component);
+                }
             }
             
             // Final save to ensure all changes are persisted
             savedTask = taskService.save(savedTask);
             
-            // Update task property with saved task
-            task.set(savedTask);
+        } else {
+            // Update existing task
+            Task existingTask = task.get();
+            existingTask.setTitle(title.get());
+            existingTask.setDescription(description.get());
+            existingTask.setEstimatedDuration(Duration.ofMinutes((long)(estimatedHours.get() * 60)));
             
-            // Clear dirty flag
-            setDirty(false);
+            if (actualHours.get() > 0) {
+                existingTask.setActualDuration(Duration.ofMinutes((long)(actualHours.get() * 60)));
+            }
             
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error saving task", e);
-            setErrorMessage("Failed to save task: " + e.getMessage());
-            valid.set(false);
+            existingTask.setPriority(priority.get());
+            existingTask.setStartDate(startDate.get());
+            existingTask.setEndDate(endDate.get());
+            
+            // Update progress and completion status
+            savedTask = taskService.updateTaskProgress(
+                existingTask.getId(),
+                progress.get(),
+                completed.get()
+            );
+            
+            // Only handle members if there are any to assign
+            if (!assignedMembers.isEmpty()) {
+                Set<TeamMember> members = new HashSet<>(assignedMembers);
+                savedTask = taskService.assignMembers(savedTask.getId(), members);
+            }
+            
+            // Only handle dependencies if there are any to add
+            if (!preDependencies.isEmpty()) {
+                for (Task dependency : preDependencies) {
+                    if (dependency.getId() != null && 
+                        !task.get().getPreDependencies().contains(dependency)) {
+                        taskService.addDependency(savedTask.getId(), dependency.getId());
+                    }
+                }
+            }
+            
+            // Only handle components if there are any to add
+            if (!requiredComponents.isEmpty()) {
+                for (Component component : requiredComponents) {
+                    if (!task.get().getRequiredComponents().contains(component)) {
+                        savedTask.addRequiredComponent(component);
+                    }
+                }
+            }
+            
+            // Final save to ensure all changes are persisted
+            savedTask = taskService.save(savedTask);
         }
+        
+        // Update task property with saved task
+        task.set(savedTask);
+        
+        // Clear dirty flag
+        setDirty(false);
+        
+    } catch (Exception e) {
+        LOGGER.log(Level.SEVERE, "Error saving task", e);
+        String errorMsg = e.getMessage();
+        if (errorMsg == null || errorMsg.isEmpty()) {
+            errorMsg = "Unknown error occurred while saving task";
+        }
+        setErrorMessage("Failed to save task: " + errorMsg);
+        valid.set(false);
     }
+}
     
     // Helper methods for commands
     
@@ -344,15 +404,56 @@ public class TaskViewModel extends BaseViewModel {
         // Placeholder for adding a dependency
     }
     
-    public void addDependency(Task dependency) {
-        if (dependency != null && !preDependencies.contains(dependency)) {
-            // Prevent circular dependencies
-            if (task.get() != null && dependency.getPostDependencies().contains(task.get())) {
+ /**
+ * Adds a dependency to the task.
+ * 
+ * @param dependency the dependency to add
+ */
+public void addDependency(Task dependency) {
+    if (dependency == null) {
+        return;
+    }
+    
+    // Prevent adding itself as a dependency
+    if (task.get() != null && task.get().equals(dependency)) {
+        setErrorMessage("Cannot add task as a dependency to itself");
+        return;
+    }
+    
+    // Prevent adding a dependency that already exists
+    if (preDependencies.contains(dependency)) {
+        return;
+    }
+    
+    // Prevent circular dependencies
+    if (task.get() != null) {
+        // Direct circular dependency - task depends on dependency, which already depends on task
+        if (dependency.getPostDependencies().contains(task.get())) {
+            setErrorMessage("Adding this dependency would create a circular dependency");
+            return;
+        }
+        
+        // Check for potential indirect circular dependencies
+        for (Task transitiveTask : dependency.getPreDependencies()) {
+            if (transitiveTask.equals(task.get())) {
                 setErrorMessage("Adding this dependency would create a circular dependency");
                 return;
             }
-            preDependencies.add(dependency);
         }
+    }
+    
+    preDependencies.add(dependency);
+}
+    
+    private boolean wouldCreateCircularDependency(Task dependency) {
+        // Basic implementation - in a real application, you'd want to do a proper graph traversal
+        for (Task subDependency : dependency.getPreDependencies()) {
+            if (subDependency.equals(task.get()) || 
+                subDependency.getPreDependencies().contains(task.get())) {
+                return true;
+            }
+        }
+        return false;
     }
     
     private void removeDependency() {
