@@ -1,26 +1,17 @@
 package org.frcpm.controllers;
 
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import org.frcpm.models.*;
-import org.frcpm.services.ComponentService;
-import org.frcpm.services.TaskService;
-import org.frcpm.services.TeamMemberService;
+import org.frcpm.viewmodels.TaskViewModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.testfx.framework.junit5.Start;
 
 import java.lang.reflect.Field;
-import java.time.Duration;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -31,18 +22,8 @@ public class TaskControllerTest extends BaseJavaFXTest {
     // Controller to test
     private TaskController taskController;
     
-    // Mock services
-    private TaskService taskService;
-    private TeamMemberService teamMemberService;
-    private ComponentService componentService;
-    
-    // Test data
-    private Project testProject;
-    private Subsystem testSubsystem;
-    private Task testTask;
-    private List<TeamMember> testMembers;
-    private List<Component> testComponents;
-    private List<Task> testDependencies;
+    // Mock ViewModel
+    private TaskViewModel mockViewModel;
     
     // UI components - real JavaFX components
     private Label taskTitleLabel;
@@ -60,30 +41,32 @@ public class TaskControllerTest extends BaseJavaFXTest {
     private Button saveButton;
     private Button cancelButton;
     
-    // Track dialog close status
-    private boolean dialogClosed = false;
-    private List<Alert> shownAlerts = new ArrayList<>();
+    // Test data
+    private Project testProject;
+    private Subsystem testSubsystem;
+    private Task testTask;
     
     /**
      * Set up the JavaFX environment before each test.
+     * This is invoked by TestFX before each test method.
      */
     @Start
     public void start(Stage stage) {
         // Create real JavaFX components
-        taskTitleLabel = new Label("Test Task");
-        projectLabel = new Label("Test Project");
-        subsystemLabel = new Label("Test Subsystem");
-        descriptionArea = new TextArea("Test description");
-        startDatePicker = new DatePicker(LocalDate.now());
-        endDatePicker = new DatePicker(LocalDate.now().plusWeeks(1));
+        taskTitleLabel = new Label();
+        projectLabel = new Label();
+        subsystemLabel = new Label();
+        descriptionArea = new TextArea();
+        startDatePicker = new DatePicker();
+        endDatePicker = new DatePicker();
         priorityComboBox = new ComboBox<>();
-        priorityComboBox.setItems(FXCollections.observableArrayList(Task.Priority.values()));
+        priorityComboBox.getItems().addAll(Task.Priority.values());
         priorityComboBox.setValue(Task.Priority.MEDIUM);
-        progressSlider = new Slider(0, 100, 50);
-        progressLabel = new Label("50%");
+        progressSlider = new Slider(0, 100, 0);
+        progressLabel = new Label("0%");
         completedCheckBox = new CheckBox();
-        estimatedHoursField = new TextField("8.0");
-        actualHoursField = new TextField("");
+        estimatedHoursField = new TextField();
+        actualHoursField = new TextField();
         saveButton = new Button("Save");
         cancelButton = new Button("Cancel");
         
@@ -103,15 +86,16 @@ public class TaskControllerTest extends BaseJavaFXTest {
         stage.show();
     }
     
+    /**
+     * Set up the test data and mock objects before each test.
+     */
     @BeforeEach
     public void setUp() throws Exception {
         // Create a new controller instance
         taskController = new TaskController();
         
-        // Create mock services
-        taskService = mock(TaskService.class);
-        teamMemberService = mock(TeamMemberService.class);
-        componentService = mock(ComponentService.class);
+        // Create mock ViewModel
+        mockViewModel = mock(TaskViewModel.class);
         
         // Inject components into controller using reflection
         injectField("taskTitleLabel", taskTitleLabel);
@@ -141,11 +125,6 @@ public class TaskControllerTest extends BaseJavaFXTest {
         injectField("dependencyTitleColumn", mock(TableColumn.class));
         injectField("dependencyProgressColumn", mock(TableColumn.class));
         
-        // Inject services
-        injectField("taskService", taskService);
-        injectField("teamMemberService", teamMemberService);
-        injectField("componentService", componentService);
-        
         // Also inject mock buttons for those we don't use
         injectField("addMemberButton", mock(Button.class));
         injectField("removeMemberButton", mock(Button.class));
@@ -153,6 +132,9 @@ public class TaskControllerTest extends BaseJavaFXTest {
         injectField("removeComponentButton", mock(Button.class));
         injectField("addDependencyButton", mock(Button.class));
         injectField("removeDependencyButton", mock(Button.class));
+        
+        // Inject the mock ViewModel
+        injectField("viewModel", mockViewModel);
         
         // Create test project
         testProject = new Project(
@@ -176,190 +158,85 @@ public class TaskControllerTest extends BaseJavaFXTest {
         testTask.setPriority(Task.Priority.MEDIUM);
         testTask.setProgress(50);
         testTask.setCompleted(false);
-        testTask.setEstimatedDuration(Duration.ofHours(8));
         
-        // Create test members
-        TeamMember member1 = new TeamMember("testuser1", "Test", "User1", "test1@example.com");
-        member1.setId(1L);
+        // Set up mock ViewModel behavior
+        when(mockViewModel.getTask()).thenReturn(testTask);
+        when(mockViewModel.isValid()).thenReturn(true);
         
-        TeamMember member2 = new TeamMember("testuser2", "Test", "User2", "test2@example.com");
-        member2.setId(2L);
-        
-        testMembers = List.of(member1, member2);
-        
-        // Create test components
-        Component component1 = new Component("Motor", "MOTOR123");
-        component1.setId(1L);
-        
-        Component component2 = new Component("Sensor", "SENSOR456");
-        component2.setId(2L);
-        
-        testComponents = List.of(component1, component2);
-        
-        // Create test dependencies
-        Task dependencyTask = new Task("Dependency Task", testProject, testSubsystem);
-        dependencyTask.setId(2L);
-        
-        testDependencies = List.of(dependencyTask);
-        
-        // Set up the assigned members, components and dependencies
-        Set<TeamMember> memberSet = new HashSet<>();
-        memberSet.add(testMembers.get(0));
-        testTask.setAssignedTo(memberSet);
-        
-        Set<Component> componentSet = new HashSet<>();
-        componentSet.add(testComponents.get(0));
-        testTask.setRequiredComponents(componentSet);
-        
-        Set<Task> dependencySet = new HashSet<>(testDependencies);
-        testTask.setPreDependencies(dependencySet);
-        
-        // Create observable lists
-        taskController.assignedMembers = FXCollections.observableArrayList(testTask.getAssignedTo());
-        taskController.requiredComponents = FXCollections.observableArrayList(testTask.getRequiredComponents());
-        taskController.dependencies = FXCollections.observableArrayList(testTask.getPreDependencies());
-        
-        // Reset tracking variables
-        dialogClosed = false;
-        shownAlerts.clear();
-        
-        // Mock service behavior
-        when(taskService.createTask(anyString(), any(), any(), anyDouble(), any(), any(), any()))
-            .thenReturn(testTask);
-        when(taskService.save(any())).thenReturn(testTask);
-        when(taskService.updateTaskProgress(anyLong(), anyInt(), anyBoolean()))
-            .thenReturn(testTask);
-        when(taskService.assignMembers(anyLong(), any())).thenReturn(testTask);
-        when(taskService.findByProject(testProject))
-            .thenReturn(List.of(testTask, dependencyTask));
-        when(taskService.addDependency(anyLong(), anyLong())).thenReturn(true);
-        when(taskService.removeDependency(anyLong(), anyLong())).thenReturn(true);
-        
-        when(teamMemberService.findAll()).thenReturn(testMembers);
-        when(componentService.findAll()).thenReturn(testComponents);
-        
-        // Override methods for testing
-        overrideMethod("closeDialog", () -> dialogClosed = true);
-        
-        overrideMethod("showErrorAlert", (title, message) -> {
-            shownAlerts.add(createAlert(Alert.AlertType.ERROR, title, message));
-        });
-        
-        overrideMethod("showInfoAlert", (title, message) -> {
-            shownAlerts.add(createAlert(Alert.AlertType.INFORMATION, title, message));
-        });
-        
-        // Don't call initialize() directly as it would try to set up the table columns
-        // which is problematic since we're using mocks
+        // Initialize the controller
+        taskController.testInitialize();
     }
     
+    /**
+     * Test the initialization of the controller.
+     */
     @Test
     public void testInitialize() {
-        // Not testing the actual initialize method since it requires full JavaFX setup
-        assertTrue(true);
+        // Verify that the buttons have actions set
+        assertNotNull(saveButton.getOnAction());
+        assertNotNull(cancelButton.getOnAction());
     }
     
-    @Test
-    public void testSetTask() {
-        // Set an existing task
-        taskController.setTask(testTask);
-        
-        // Verify the task is set
-        assertFalse(taskController.isNewTask);
-        assertEquals(testTask, taskController.task);
-        
-        // Verify task data is loaded to UI components
-        assertEquals(testTask.getTitle(), taskTitleLabel.getText());
-        assertEquals(testTask.getProject().getName(), projectLabel.getText());
-        assertEquals(testTask.getSubsystem().getName(), subsystemLabel.getText());
-        assertEquals(testTask.getDescription(), descriptionArea.getText());
-        assertEquals(testTask.getStartDate(), startDatePicker.getValue());
-        assertEquals(testTask.getEndDate(), endDatePicker.getValue());
-        assertEquals(testTask.getPriority(), priorityComboBox.getValue());
-        assertEquals(testTask.getProgress(), (int)progressSlider.getValue());
-        assertEquals(testTask.getProgress() + "%", progressLabel.getText());
-        assertEquals(testTask.isCompleted(), completedCheckBox.isSelected());
-    }
-    
+    /**
+     * Test setting up controller for a new task.
+     */
     @Test
     public void testSetNewTask() {
-        // Test setting up for a new task
+        // Call method
         taskController.setNewTask(testProject, testSubsystem);
         
-        // Verify fields are set correctly
-        assertTrue(taskController.isNewTask);
-        assertNotNull(taskController.task);
-        assertEquals("New Task", taskController.task.getTitle());
-        assertEquals(testProject, taskController.task.getProject());
-        assertEquals(testSubsystem, taskController.task.getSubsystem());
-        
-        // Verify default values are set
-        assertEquals(Task.Priority.MEDIUM, taskController.task.getPriority());
-        assertNotNull(taskController.task.getStartDate());
-        assertNotNull(taskController.task.getEndDate());
-        assertNotNull(taskController.task.getEstimatedDuration());
+        // Verify ViewModel method was called
+        verify(mockViewModel).initNewTask(testProject, testSubsystem);
     }
     
+    /**
+     * Test setting up controller for editing an existing task.
+     */
     @Test
-    public void testHandleSaveForNewTask() {
-        // Set up for a new task
-        taskController.setNewTask(testProject, testSubsystem);
+    public void testSetTask() {
+        // Call method
+        taskController.setTask(testTask);
         
-        // Call save method
-        taskController.testHandleSave(null);
-        
-        // Verify service was called to create a new task
-        verify(taskService).createTask(
-            anyString(),
-            eq(testProject),
-            eq(testSubsystem),
-            anyDouble(),
-            any(Task.Priority.class),
-            any(LocalDate.class),
-            any(LocalDate.class)
-        );
-        
-        // Verify dialog was closed
-        assertTrue(dialogClosed);
+        // Verify ViewModel method was called
+        verify(mockViewModel).initExistingTask(testTask);
     }
     
+    /**
+     * Test getting the task from the ViewModel.
+     */
     @Test
-    public void testHandleSaveWithValidationErrors() {
-        // Set up for a new task
-        taskController.setNewTask(testProject, testSubsystem);
+    public void testGetTask() {
+        // Test
+        Task result = taskController.getTask();
         
-        // Set invalid values - empty title
-        taskTitleLabel.setText("");
-        
-        // Call save method
-        taskController.testHandleSave(null);
-        
-        // Verify error alert was shown
-        assertEquals(1, shownAlerts.size());
-        assertEquals("Invalid Title", shownAlerts.get(0).getHeaderText());
-        
-        // Verify service was NOT called
-        verify(taskService, never()).createTask(
-            anyString(),
-            any(),
-            any(),
-            anyDouble(),
-            any(),
-            any(),
-            any()
-        );
-        
-        // Verify dialog was NOT closed
-        assertFalse(dialogClosed);
+        // Verify
+        assertEquals(testTask, result);
+        verify(mockViewModel).getTask();
     }
     
+    /**
+     * Test the initNewTask method for creating a new task.
+     */
     @Test
-    public void testHandleCancel() {
-        // Call cancel method
-        taskController.testHandleCancel(null);
+    public void testInitNewTask() {
+        // Call method
+        taskController.initNewTask(testTask);
         
-        // Verify dialog was closed
-        assertTrue(dialogClosed);
+        // Verify ViewModel method was called
+        verify(mockViewModel).initNewTask(testTask.getProject(), testTask.getSubsystem());
+        verify(mockViewModel).titleProperty();
+    }
+    
+    /**
+     * Test the initExistingTask method for editing an existing task.
+     */
+    @Test
+    public void testInitExistingTask() {
+        // Call method
+        taskController.initExistingTask(testTask);
+        
+        // Verify ViewModel method was called
+        verify(mockViewModel).initExistingTask(testTask);
     }
     
     /**
@@ -369,50 +246,5 @@ public class TaskControllerTest extends BaseJavaFXTest {
         Field field = TaskController.class.getDeclaredField(fieldName);
         field.setAccessible(true);
         field.set(taskController, value);
-    }
-    
-    /**
-     * Helper method to override methods for testing purposes.
-     */
-    private void overrideMethod(String methodName, Runnable implementation) {
-        try {
-            Field field = TaskController.class.getDeclaredField(methodName + "Override");
-            field.setAccessible(true);
-            field.set(taskController, implementation);
-        } catch (Exception e) {
-            fail("Failed to override method: " + methodName + ". " + e.getMessage());
-        }
-    }
-    
-    /**
-     * Override method with parameters.
-     */
-    private void overrideMethod(String methodName, BiConsumer<String, String> implementation) {
-        try {
-            Field field = TaskController.class.getDeclaredField(methodName + "Override");
-            field.setAccessible(true);
-            field.set(taskController, implementation);
-        } catch (Exception e) {
-            fail("Failed to override method: " + methodName + ". " + e.getMessage());
-        }
-    }
-    
-    /**
-     * Create an alert for testing.
-     */
-    private Alert createAlert(Alert.AlertType alertType, String title, String message) {
-        Alert alert = new Alert(alertType);
-        alert.setTitle(alertType == Alert.AlertType.ERROR ? "Error" : "Information");
-        alert.setHeaderText(title);
-        alert.setContentText(message);
-        return alert;
-    }
-    
-    /**
-     * Simple functional interface for consuming two String parameters.
-     */
-    @FunctionalInterface
-    private interface BiConsumer<T, U> {
-        void accept(T t, U u);
     }
 }

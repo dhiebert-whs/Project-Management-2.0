@@ -341,4 +341,20 @@ public class TaskController {
         Task newTask = new Task("New Task", project, subsystem);
         initNewTask(newTask);
     }
+
+    /**
+     * Public method to access initialize for testing.
+     */
+    public void testInitialize() {
+        initialize();
+    }
+
+    /**
+     * Gets the task from the ViewModel.
+     * 
+     * @return the task
+     */
+    public Task getTask() {
+        return viewModel.getTask();
+    }
 }
