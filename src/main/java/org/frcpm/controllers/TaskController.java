@@ -12,6 +12,8 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.Stage;
 import org.frcpm.binding.ViewModelBinding;
 import org.frcpm.models.Component;
+import org.frcpm.models.Project;
+import org.frcpm.models.Subsystem;
 import org.frcpm.models.Task;
 import org.frcpm.models.TeamMember;
 import org.frcpm.viewmodels.TaskViewModel;
@@ -318,5 +320,25 @@ public class TaskController {
     private void handleCancel() {
         Stage stage = (Stage) cancelButton.getScene().getWindow();
         stage.close();
+    }
+
+    /**
+     * Compatibility method for legacy code calling setTask
+     * 
+     * @param task the task to edit
+     */
+    public void setTask(Task task) {
+        initExistingTask(task);
+    }
+
+    /**
+     * Compatibility method for legacy code calling setNewTask
+     * 
+     * @param project the project
+     * @param subsystem the subsystem
+     */
+    public void setNewTask(Project project, Subsystem subsystem) {
+        Task newTask = new Task("New Task", project, subsystem);
+        initNewTask(newTask);
     }
 }
