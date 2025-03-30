@@ -4,6 +4,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import org.frcpm.binding.Command;
 import org.frcpm.models.*;
 import org.frcpm.viewmodels.TaskViewModel;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,6 +13,7 @@ import org.testfx.framework.junit5.Start;
 
 import java.lang.reflect.Field;
 import java.time.LocalDate;
+import javafx.collections.FXCollections;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -24,6 +26,16 @@ public class TaskControllerTest extends BaseJavaFXTest {
     
     // Mock ViewModel
     private TaskViewModel mockViewModel;
+    
+    // Mock Commands
+    private Command mockSaveCommand;
+    private Command mockCancelCommand;
+    private Command mockAddMemberCommand;
+    private Command mockRemoveMemberCommand;
+    private Command mockAddComponentCommand;
+    private Command mockRemoveComponentCommand;
+    private Command mockAddDependencyCommand;
+    private Command mockRemoveDependencyCommand;
     
     // UI components - real JavaFX components
     private Label taskTitleLabel;
@@ -94,8 +106,31 @@ public class TaskControllerTest extends BaseJavaFXTest {
         // Create a new controller instance
         taskController = new TaskController();
         
+        // Create mock Command objects
+        mockSaveCommand = mock(Command.class);
+        mockCancelCommand = mock(Command.class);
+        mockAddMemberCommand = mock(Command.class);
+        mockRemoveMemberCommand = mock(Command.class);
+        mockAddComponentCommand = mock(Command.class);
+        mockRemoveComponentCommand = mock(Command.class);
+        mockAddDependencyCommand = mock(Command.class);
+        mockRemoveDependencyCommand = mock(Command.class);
+        
         // Create mock ViewModel
         mockViewModel = mock(TaskViewModel.class);
+        
+        // Set up basic mock behavior
+        when(mockViewModel.getSaveCommand()).thenReturn(mockSaveCommand);
+        when(mockViewModel.getCancelCommand()).thenReturn(mockCancelCommand);
+        when(mockViewModel.getAddMemberCommand()).thenReturn(mockAddMemberCommand);
+        when(mockViewModel.getRemoveMemberCommand()).thenReturn(mockRemoveMemberCommand);
+        when(mockViewModel.getAddComponentCommand()).thenReturn(mockAddComponentCommand);
+        when(mockViewModel.getRemoveComponentCommand()).thenReturn(mockRemoveComponentCommand);
+        when(mockViewModel.getAddDependencyCommand()).thenReturn(mockAddDependencyCommand);
+        when(mockViewModel.getRemoveDependencyCommand()).thenReturn(mockRemoveDependencyCommand);
+        when(mockViewModel.getAssignedMembers()).thenReturn(FXCollections.observableArrayList());
+        when(mockViewModel.getRequiredComponents()).thenReturn(FXCollections.observableArrayList());
+        when(mockViewModel.getPreDependencies()).thenReturn(FXCollections.observableArrayList());
         
         // Inject components into controller using reflection
         injectField("taskTitleLabel", taskTitleLabel);
@@ -172,9 +207,24 @@ public class TaskControllerTest extends BaseJavaFXTest {
      */
     @Test
     public void testInitialize() {
-        // Verify that the buttons have actions set
-        assertNotNull(saveButton.getOnAction());
-        assertNotNull(cancelButton.getOnAction());
+        // Verify that bindings were set up
+        verify(mockViewModel).titleProperty();
+        verify(mockViewModel).descriptionProperty();
+        verify(mockViewModel).startDateProperty();
+        verify(mockViewModel).endDateProperty();
+        verify(mockViewModel).priorityProperty();
+        verify(mockViewModel).progressProperty();
+        verify(mockViewModel).completedProperty();
+        
+        // Verify command bindings
+        verify(mockViewModel).getSaveCommand();
+        verify(mockViewModel).getCancelCommand();
+        verify(mockViewModel).getAddMemberCommand();
+        verify(mockViewModel).getRemoveMemberCommand();
+        verify(mockViewModel).getAddComponentCommand();
+        verify(mockViewModel).getRemoveComponentCommand();
+        verify(mockViewModel).getAddDependencyCommand();
+        verify(mockViewModel).getRemoveDependencyCommand();
     }
     
     /**
@@ -215,6 +265,18 @@ public class TaskControllerTest extends BaseJavaFXTest {
     }
     
     /**
+     * Test getting the ViewModel.
+     */
+    @Test
+    public void testGetViewModel() {
+        // Test
+        TaskViewModel result = taskController.getViewModel();
+        
+        // Verify
+        assertEquals(mockViewModel, result);
+    }
+    
+    /**
      * Test the initNewTask method for creating a new task.
      */
     @Test
@@ -224,7 +286,7 @@ public class TaskControllerTest extends BaseJavaFXTest {
         
         // Verify ViewModel method was called
         verify(mockViewModel).initNewTask(testTask.getProject(), testTask.getSubsystem());
-        verify(mockViewModel).titleProperty();
+        verify(mockViewModel, atLeastOnce()).titleProperty();
     }
     
     /**
@@ -237,6 +299,21 @@ public class TaskControllerTest extends BaseJavaFXTest {
         
         // Verify ViewModel method was called
         verify(mockViewModel).initExistingTask(testTask);
+    }
+    
+    /**
+     * Test the save button action when validation succeeds.
+     */
+    @Test
+    public void testSaveButtonAction_Valid() {
+        // Set up
+        when(mockViewModel.isValid()).thenReturn(true);
+        
+        // Trigger the save button action
+        saveButton.fire();
+        
+        // Verify command was executed
+        verify(mockSaveCommand).execute();
     }
     
     /**

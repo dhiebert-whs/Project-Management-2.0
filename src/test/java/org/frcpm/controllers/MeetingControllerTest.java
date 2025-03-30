@@ -1,10 +1,10 @@
-// src/test/java/org/frcpm/controllers/MeetingControllerTest.java
 package org.frcpm.controllers;
 
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import org.frcpm.binding.Command;
 import org.frcpm.models.Meeting;
 import org.frcpm.models.Project;
 import org.frcpm.viewmodels.MeetingViewModel;
@@ -27,6 +27,10 @@ public class MeetingControllerTest extends BaseJavaFXTest {
     
     // Mock ViewModel
     private MeetingViewModel mockViewModel;
+    
+    // Mock Commands
+    private Command mockSaveCommand;
+    private Command mockCancelCommand;
     
     // UI components - real JavaFX components, not mocks
     private DatePicker datePicker;
@@ -79,8 +83,17 @@ public class MeetingControllerTest extends BaseJavaFXTest {
         // Create a new controller instance
         meetingController = new MeetingController();
         
+        // Create mock Command objects
+        mockSaveCommand = mock(Command.class);
+        mockCancelCommand = mock(Command.class);
+        
         // Create mock ViewModel
         mockViewModel = mock(MeetingViewModel.class);
+        
+        // Set up basic mock behavior
+        when(mockViewModel.getSaveCommand()).thenReturn(mockSaveCommand);
+        when(mockViewModel.getCancelCommand()).thenReturn(mockCancelCommand);
+        when(mockViewModel.isValid()).thenReturn(true);
         
         // Inject components into controller using reflection
         injectField("datePicker", datePicker);
@@ -111,7 +124,6 @@ public class MeetingControllerTest extends BaseJavaFXTest {
         testMeeting.setNotes("Test meeting notes");
         
         // Set up mock ViewModel behavior
-        when(mockViewModel.isValid()).thenReturn(true);
         when(mockViewModel.getMeeting()).thenReturn(testMeeting);
         
         // Initialize the controller
@@ -123,6 +135,12 @@ public class MeetingControllerTest extends BaseJavaFXTest {
      */
     @Test
     public void testInitialize() {
+        // Verify that bindings were set up
+        verify(mockViewModel).dateProperty();
+        verify(mockViewModel).startTimeStringProperty();
+        verify(mockViewModel).endTimeStringProperty();
+        verify(mockViewModel).notesProperty();
+        
         // Verify that the buttons have actions set
         assertNotNull(saveButton.getOnAction());
         assertNotNull(cancelButton.getOnAction());
@@ -163,6 +181,58 @@ public class MeetingControllerTest extends BaseJavaFXTest {
         // Verify
         assertEquals(testMeeting, result);
         verify(mockViewModel).getMeeting();
+    }
+    
+    /**
+     * Test getting the ViewModel.
+     */
+    @Test
+    public void testGetViewModel() {
+        // Test
+        MeetingViewModel result = meetingController.getViewModel();
+        
+        // Verify
+        assertEquals(mockViewModel, result);
+    }
+    
+    /**
+     * Test the save button action when validation succeeds.
+     */
+    @Test
+    public void testSaveButtonAction_Valid() {
+        // Set up
+        when(mockViewModel.isValid()).thenReturn(true);
+        
+        // Trigger the save button action
+        saveButton.fire();
+        
+        // Verify command was executed
+        verify(mockSaveCommand).execute();
+    }
+    
+    /**
+     * Test the save button action when validation fails.
+     */
+    @Test
+    public void testSaveButtonAction_Invalid() {
+        // Set up
+        when(mockViewModel.isValid()).thenReturn(false);
+        when(mockViewModel.getErrorMessage()).thenReturn("Test error message");
+        
+        // Trigger the save button action
+        saveButton.fire();
+        
+        // Verify command was not executed
+        verify(mockSaveCommand, never()).execute();
+    }
+    
+    /**
+     * Test the cancel button action.
+     */
+    @Test
+    public void testCancelButtonAction() {
+        // Trigger the cancel button action
+        cancelButton.fire();
     }
     
     /**

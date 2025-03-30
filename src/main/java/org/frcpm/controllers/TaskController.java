@@ -357,4 +357,13 @@ public class TaskController {
     public Task getTask() {
         return viewModel.getTask();
     }
+
+    /**
+     * Gets the ViewModel.
+     * 
+     * @return the ViewModel
+     */
+    public TaskViewModel getViewModel() {
+        return viewModel;
+    }
 }
