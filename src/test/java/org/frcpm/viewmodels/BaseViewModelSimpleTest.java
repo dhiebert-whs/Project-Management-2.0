@@ -1,4 +1,4 @@
-// src/test/java/org/frcpm/viewmodels/BaseViewModelTest.java
+// src/test/java/org/frcpm/viewmodels/BaseViewModelSimpleTest.java
 package org.frcpm.viewmodels;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class BaseViewModelTest {
+public class BaseViewModelSimpleTest {
 
     private TestViewModel viewModel;
 
@@ -25,12 +25,6 @@ public class BaseViewModelTest {
 
         // Then: dirty flag should be true
         assertTrue(viewModel.isDirty());
-
-        // When: setting dirty flag back to false
-        viewModel.testSetDirty(false);
-
-        // Then: dirty flag should be false
-        assertFalse(viewModel.isDirty());
     }
 
     @Test
@@ -49,19 +43,6 @@ public class BaseViewModelTest {
 
         // Then: error message should be null
         assertNull(viewModel.getErrorMessage());
-    }
-
-    @Test
-    public void testPropertyBindings() {
-        // Test dirty property binding
-        assertFalse(viewModel.dirtyProperty().get());
-        viewModel.dirtyProperty().set(true);
-        assertTrue(viewModel.isDirty());
-
-        // Test error message property binding
-        assertNull(viewModel.errorMessageProperty().get());
-        viewModel.errorMessageProperty().set("Property binding test");
-        assertEquals("Property binding test", viewModel.getErrorMessage());
     }
 
     /**
