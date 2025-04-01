@@ -112,13 +112,6 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- For headless testing -->
-        <dependency>
-            <groupId>org.testfx</groupId>
-            <artifactId>openjfx-monocle</artifactId>
-            <version>jdk-21+5</version>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
     <build>
