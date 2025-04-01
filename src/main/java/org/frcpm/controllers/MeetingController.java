@@ -1,10 +1,8 @@
 package org.frcpm.controllers;
 
-import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
-import org.frcpm.binding.Command;
 import org.frcpm.binding.ViewModelBinding;
 import org.frcpm.models.Meeting;
 import org.frcpm.models.Project;
@@ -17,43 +15,43 @@ import java.util.logging.Logger;
  * Controller for meeting management.
  */
 public class MeetingController {
-    
+
     private static final Logger LOGGER = Logger.getLogger(MeetingController.class.getName());
-    
+
     @FXML
     private DatePicker datePicker;
-    
+
     @FXML
     private TextField startTimeField;
-    
+
     @FXML
     private TextField endTimeField;
-    
+
     @FXML
     private TextArea notesArea;
-    
+
     @FXML
     private Button saveButton;
-    
+
     @FXML
     private Button cancelButton;
-    
+
     // ViewModel
     private final MeetingViewModel viewModel = new MeetingViewModel();
-    
+
     /**
      * Initializes the controller.
      */
     @FXML
     private void initialize() {
         LOGGER.info("Initializing MeetingController");
-        
+
         // Bind UI elements to ViewModel properties
         ViewModelBinding.bindDatePicker(datePicker, viewModel.dateProperty());
         ViewModelBinding.bindTextField(startTimeField, viewModel.startTimeStringProperty());
         ViewModelBinding.bindTextField(endTimeField, viewModel.endTimeStringProperty());
         ViewModelBinding.bindTextArea(notesArea, viewModel.notesProperty());
-        
+
         // Bind commands to buttons
         saveButton.setOnAction(event -> {
             if (viewModel.isValid()) {
@@ -63,10 +61,10 @@ public class MeetingController {
                 showErrorAlert("Invalid Input", viewModel.getErrorMessage());
             }
         });
-        
+
         cancelButton.setOnAction(event -> closeDialog());
     }
-    
+
     /**
      * Sets up the controller for creating a new meeting.
      * 
@@ -75,7 +73,7 @@ public class MeetingController {
     public void setNewMeeting(Project project) {
         viewModel.initNewMeeting(project);
     }
-    
+
     /**
      * Sets up the controller for editing an existing meeting.
      * 
@@ -84,7 +82,7 @@ public class MeetingController {
     public void setMeeting(Meeting meeting) {
         viewModel.initExistingMeeting(meeting);
     }
-    
+
     /**
      * Closes the dialog.
      */
@@ -96,11 +94,11 @@ public class MeetingController {
             LOGGER.log(Level.SEVERE, "Error closing dialog", e);
         }
     }
-    
+
     /**
      * Shows an error alert dialog.
      * 
-     * @param title the title
+     * @param title   the title
      * @param message the message
      */
     private void showErrorAlert(String title, String message) {
@@ -113,10 +111,10 @@ public class MeetingController {
         } catch (IllegalStateException e) {
             // This can happen in tests when not on FX thread
             // Just log the error for testing purposes
-            LOGGER.log(Level.INFO, "Alert would show: {0} - {1}", new Object[]{title, message});
+            LOGGER.log(Level.INFO, "Alert would show: {0} - {1}", new Object[] { title, message });
         }
     }
-    
+
     /**
      * Gets the ViewModel.
      * 
@@ -125,7 +123,7 @@ public class MeetingController {
     public MeetingViewModel getViewModel() {
         return viewModel;
     }
-    
+
     /**
      * Gets the meeting from the ViewModel.
      * 
@@ -134,7 +132,7 @@ public class MeetingController {
     public Meeting getMeeting() {
         return viewModel.getMeeting();
     }
-    
+
     /**
      * Public method to access initialize for testing.
      */

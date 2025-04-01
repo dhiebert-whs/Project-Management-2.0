@@ -5,23 +5,15 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Node;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
-import javafx.util.Callback;
 import org.frcpm.models.Subteam;
 import org.frcpm.models.TeamMember;
 import org.frcpm.services.ServiceFactory;
 import org.frcpm.services.SubteamService;
 import org.frcpm.services.TeamMemberService;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -31,121 +23,119 @@ import java.util.logging.Logger;
  * Controller for team management functionality.
  */
 public class TeamController {
-    
+
     private static final Logger LOGGER = Logger.getLogger(TeamController.class.getName());
-    
+
     @FXML
     private TabPane tabPane;
-    
+
     // Members tab controls
     @FXML
     private TableView<TeamMember> membersTable;
-    
+
     @FXML
     private TableColumn<TeamMember, String> memberUsernameColumn;
-    
+
     @FXML
     private TableColumn<TeamMember, String> memberNameColumn;
-    
+
     @FXML
     private TableColumn<TeamMember, String> memberEmailColumn;
-    
+
     @FXML
     private TableColumn<TeamMember, String> memberSubteamColumn;
-    
+
     @FXML
     private TableColumn<TeamMember, Boolean> memberLeaderColumn;
-    
+
     @FXML
     private Button addMemberButton;
-    
+
     @FXML
     private Button editMemberButton;
-    
+
     @FXML
     private Button deleteMemberButton;
-    
+
     // Subteams tab controls
     @FXML
     private TableView<Subteam> subteamsTable;
-    
+
     @FXML
     private TableColumn<Subteam, String> subteamNameColumn;
-    
+
     @FXML
     private TableColumn<Subteam, String> subteamColorColumn;
-    
+
     @FXML
     private TableColumn<Subteam, String> subteamSpecialtiesColumn;
-    
+
     @FXML
     private Button addSubteamButton;
-    
+
     @FXML
     private Button editSubteamButton;
-    
+
     @FXML
     private Button deleteSubteamButton;
-    
+
     // Member details controls
     @FXML
     private TextField usernameField;
-    
+
     @FXML
     private TextField firstNameField;
-    
+
     @FXML
     private TextField lastNameField;
-    
+
     @FXML
     private TextField emailField;
-    
+
     @FXML
     private TextField phoneField;
-    
+
     @FXML
     private TextArea skillsArea;
-    
+
     @FXML
     private ComboBox<Subteam> subteamComboBox;
-    
+
     @FXML
     private CheckBox leaderCheckBox;
-    
+
     // Subteam details controls
     @FXML
     private TextField subteamNameField;
-    
+
     @FXML
     private ColorPicker colorPicker;
-    
+
     @FXML
     private TextArea specialtiesArea;
-    
+
     private final TeamMemberService teamMemberService = ServiceFactory.getTeamMemberService();
     private final SubteamService subteamService = ServiceFactory.getSubteamService();
-    
+
     private ObservableList<TeamMember> membersList = FXCollections.observableArrayList();
     private ObservableList<Subteam> subteamsList = FXCollections.observableArrayList();
-    
+
     /**
      * Initializes the controller.
      */
     @FXML
     private void initialize() {
         LOGGER.info("Initializing TeamController");
-        
+
         // Initialize Members Table
         memberUsernameColumn.setCellValueFactory(new PropertyValueFactory<>("username"));
-        memberNameColumn.setCellValueFactory(cellData -> 
-            new javafx.beans.property.SimpleStringProperty(cellData.getValue().getFullName()));
+        memberNameColumn.setCellValueFactory(
+                cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getFullName()));
         memberEmailColumn.setCellValueFactory(new PropertyValueFactory<>("email"));
-        memberSubteamColumn.setCellValueFactory(cellData -> 
-            new javafx.beans.property.SimpleStringProperty(
-                cellData.getValue().getSubteam() != null ? 
-                cellData.getValue().getSubteam().getName() : ""));
+        memberSubteamColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(
+                cellData.getValue().getSubteam() != null ? cellData.getValue().getSubteam().getName() : ""));
         memberLeaderColumn.setCellValueFactory(new PropertyValueFactory<>("leader"));
-        
+
         // Create a cell factory for the leader column (checkbox)
         memberLeaderColumn.setCellFactory(column -> new TableCell<TeamMember, Boolean>() {
             @Override
@@ -162,12 +152,12 @@ public class TeamController {
                 }
             }
         });
-        
+
         // Initialize Subteams Table
         subteamNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         subteamColorColumn.setCellValueFactory(new PropertyValueFactory<>("colorCode"));
         subteamSpecialtiesColumn.setCellValueFactory(new PropertyValueFactory<>("specialties"));
-        
+
         // Create a cell factory for the color column (colored rectangle)
         subteamColorColumn.setCellFactory(column -> new TableCell<Subteam, String>() {
             @Override
@@ -182,16 +172,16 @@ public class TeamController {
                 }
             }
         });
-        
+
         // Set up button actions
         addMemberButton.setOnAction(this::handleAddMember);
         editMemberButton.setOnAction(this::handleEditMember);
         deleteMemberButton.setOnAction(this::handleDeleteMember);
-        
+
         addSubteamButton.setOnAction(this::handleAddSubteam);
         editSubteamButton.setOnAction(this::handleEditSubteam);
         deleteSubteamButton.setOnAction(this::handleDeleteSubteam);
-        
+
         // Set up row double-click handlers
         membersTable.setRowFactory(tv -> {
             TableRow<TeamMember> row = new TableRow<>();
@@ -202,7 +192,7 @@ public class TeamController {
             });
             return row;
         });
-        
+
         subteamsTable.setRowFactory(tv -> {
             TableRow<Subteam> row = new TableRow<>();
             row.setOnMouseClicked(event -> {
@@ -212,11 +202,11 @@ public class TeamController {
             });
             return row;
         });
-        
+
         // Set table items
         membersTable.setItems(membersList);
         subteamsTable.setItems(subteamsList);
-        
+
         // Load data
         loadTeamData();
     }
@@ -227,7 +217,7 @@ public class TeamController {
     public void testInitialize() {
         initialize();
     }
-    
+
     /**
      * Loads team data from the database.
      */
@@ -235,7 +225,7 @@ public class TeamController {
         // Load subteams
         List<Subteam> subteams = subteamService.findAll();
         subteamsList.setAll(subteams);
-        
+
         // Load team members
         List<TeamMember> members = teamMemberService.findAll();
         membersList.setAll(members);
@@ -247,7 +237,7 @@ public class TeamController {
     public void testLoadTeamData() {
         loadTeamData();
     }
-    
+
     /**
      * Handles adding a new team member.
      * 
@@ -255,7 +245,7 @@ public class TeamController {
      */
     private void handleAddMember(ActionEvent event) {
         Dialog<TeamMember> dialog = createMemberDialog(null);
-        
+
         Optional<TeamMember> result = dialog.showAndWait();
         result.ifPresent(member -> {
             // Reload data to show the new member
@@ -271,7 +261,7 @@ public class TeamController {
     public void testHandleAddMember(ActionEvent event) {
         handleAddMember(event);
     }
-    
+
     /**
      * Handles editing a team member.
      * 
@@ -283,9 +273,9 @@ public class TeamController {
             showErrorAlert("No Selection", "Please select a team member to edit");
             return;
         }
-        
+
         Dialog<TeamMember> dialog = createMemberDialog(selectedMember);
-        
+
         Optional<TeamMember> result = dialog.showAndWait();
         result.ifPresent(member -> {
             // Reload data to show the updated member
@@ -301,7 +291,7 @@ public class TeamController {
     public void testHandleEditMember(ActionEvent event) {
         handleEditMember(event);
     }
-    
+
     /**
      * Handles deleting a team member.
      * 
@@ -313,23 +303,23 @@ public class TeamController {
             showErrorAlert("No Selection", "Please select a team member to delete");
             return;
         }
-        
+
         // Ask for confirmation
         Alert confirmDialog = new Alert(Alert.AlertType.CONFIRMATION);
         confirmDialog.setTitle("Confirm Delete");
         confirmDialog.setHeaderText("Delete Team Member");
-        confirmDialog.setContentText("Are you sure you want to delete " + 
-                                    selectedMember.getFullName() + "?");
-        
+        confirmDialog.setContentText("Are you sure you want to delete " +
+                selectedMember.getFullName() + "?");
+
         Optional<ButtonType> result = confirmDialog.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
             try {
                 // Delete the member
                 teamMemberService.deleteById(selectedMember.getId());
-                
+
                 // Reload data
                 loadTeamData();
-                
+
                 showInfoAlert("Member Deleted", "Team member deleted successfully");
             } catch (Exception e) {
                 LOGGER.log(Level.SEVERE, "Error deleting team member", e);
@@ -346,7 +336,7 @@ public class TeamController {
     public void testHandleDeleteMember(ActionEvent event) {
         handleDeleteMember(event);
     }
-    
+
     /**
      * Handles adding a new subteam.
      * 
@@ -354,7 +344,7 @@ public class TeamController {
      */
     private void handleAddSubteam(ActionEvent event) {
         Dialog<Subteam> dialog = createSubteamDialog(null);
-        
+
         Optional<Subteam> result = dialog.showAndWait();
         result.ifPresent(subteam -> {
             // Reload data to show the new subteam
@@ -370,7 +360,7 @@ public class TeamController {
     public void testHandleAddSubteam(ActionEvent event) {
         handleAddSubteam(event);
     }
-    
+
     /**
      * Handles editing a subteam.
      * 
@@ -382,9 +372,9 @@ public class TeamController {
             showErrorAlert("No Selection", "Please select a subteam to edit");
             return;
         }
-        
+
         Dialog<Subteam> dialog = createSubteamDialog(selectedSubteam);
-        
+
         Optional<Subteam> result = dialog.showAndWait();
         result.ifPresent(subteam -> {
             // Reload data to show the updated subteam
@@ -400,7 +390,7 @@ public class TeamController {
     public void testHandleEditSubteam(ActionEvent event) {
         handleEditSubteam(event);
     }
-    
+
     /**
      * Handles deleting a subteam.
      * 
@@ -412,31 +402,31 @@ public class TeamController {
             showErrorAlert("No Selection", "Please select a subteam to delete");
             return;
         }
-        
+
         // Check if subteam has members
         List<TeamMember> members = teamMemberService.findBySubteam(selectedSubteam);
         if (!members.isEmpty()) {
             showErrorAlert("Cannot Delete", "This subteam has members assigned to it. " +
-                          "Please reassign or delete these members first.");
+                    "Please reassign or delete these members first.");
             return;
         }
-        
+
         // Ask for confirmation
         Alert confirmDialog = new Alert(Alert.AlertType.CONFIRMATION);
         confirmDialog.setTitle("Confirm Delete");
         confirmDialog.setHeaderText("Delete Subteam");
-        confirmDialog.setContentText("Are you sure you want to delete " + 
-                                    selectedSubteam.getName() + "?");
-        
+        confirmDialog.setContentText("Are you sure you want to delete " +
+                selectedSubteam.getName() + "?");
+
         Optional<ButtonType> result = confirmDialog.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
             try {
                 // Delete the subteam
                 subteamService.deleteById(selectedSubteam.getId());
-                
+
                 // Reload data
                 loadTeamData();
-                
+
                 showInfoAlert("Subteam Deleted", "Subteam deleted successfully");
             } catch (Exception e) {
                 LOGGER.log(Level.SEVERE, "Error deleting subteam", e);
@@ -453,7 +443,7 @@ public class TeamController {
     public void testHandleDeleteSubteam(ActionEvent event) {
         handleDeleteSubteam(event);
     }
-    
+
     /**
      * Creates a dialog for adding or editing a team member.
      * 
@@ -462,47 +452,47 @@ public class TeamController {
      */
     private Dialog<TeamMember> createMemberDialog(TeamMember member) {
         boolean isNewMember = member == null;
-        
+
         // Create the dialog
         Dialog<TeamMember> dialog = new Dialog<>();
         dialog.setTitle(isNewMember ? "Add Team Member" : "Edit Team Member");
         dialog.setHeaderText(isNewMember ? "Create a new team member" : "Edit team member details");
-        
+
         // Set the button types
         ButtonType saveButtonType = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(saveButtonType, ButtonType.CANCEL);
-        
+
         // Create the dialog content
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
         grid.setPadding(new javafx.geometry.Insets(20, 150, 10, 10));
-        
+
         TextField usernameField = new TextField();
         usernameField.setPromptText("Username");
-        
+
         TextField firstNameField = new TextField();
         firstNameField.setPromptText("First Name");
-        
+
         TextField lastNameField = new TextField();
         lastNameField.setPromptText("Last Name");
-        
+
         TextField emailField = new TextField();
         emailField.setPromptText("Email");
-        
+
         TextField phoneField = new TextField();
         phoneField.setPromptText("Phone");
-        
+
         TextArea skillsArea = new TextArea();
         skillsArea.setPromptText("Skills");
         skillsArea.setPrefRowCount(3);
-        
+
         ComboBox<Subteam> subteamComboBox = new ComboBox<>();
         subteamComboBox.setItems(FXCollections.observableArrayList(subteamService.findAll()));
         subteamComboBox.setPromptText("Select Subteam");
-        
+
         CheckBox leaderCheckBox = new CheckBox("Is Team Leader");
-        
+
         // Add fields to the grid
         grid.add(new Label("Username:"), 0, 0);
         grid.add(usernameField, 1, 0);
@@ -519,7 +509,7 @@ public class TeamController {
         grid.add(leaderCheckBox, 1, 6);
         grid.add(new Label("Skills:"), 0, 7);
         grid.add(skillsArea, 1, 7);
-        
+
         // Set initial values if editing existing member
         if (!isNewMember) {
             usernameField.setText(member.getUsername());
@@ -530,7 +520,7 @@ public class TeamController {
             phoneField.setText(member.getPhone());
             skillsArea.setText(member.getSkills());
             leaderCheckBox.setSelected(member.isLeader());
-            
+
             if (member.getSubteam() != null) {
                 // Find the matching subteam in the list
                 for (Subteam subteam : subteamComboBox.getItems()) {
@@ -541,13 +531,13 @@ public class TeamController {
                 }
             }
         }
-        
+
         // Set the dialog content
         dialog.getDialogPane().setContent(grid);
-        
+
         // Request focus on the username field
         Platform.runLater(() -> usernameField.requestFocus());
-        
+
         // Convert the result to a team member when the save button is clicked
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == saveButtonType) {
@@ -560,21 +550,21 @@ public class TeamController {
                     boolean isLeader = leaderCheckBox.isSelected();
                     String skills = skillsArea.getText();
                     Subteam subteam = subteamComboBox.getValue();
-                    
+
                     // Validate required fields
                     if (username == null || username.trim().isEmpty()) {
                         throw new IllegalArgumentException("Username is required");
                     }
-                    
+
                     if (firstName == null || firstName.trim().isEmpty()) {
                         throw new IllegalArgumentException("First name is required");
                     }
-                    
+
                     TeamMember result;
                     if (isNewMember) {
                         // Create new team member
                         result = teamMemberService.createTeamMember(
-                            username, firstName, lastName, email, phone, isLeader);
+                                username, firstName, lastName, email, phone, isLeader);
                     } else {
                         // Update existing team member
                         result = member;
@@ -582,18 +572,18 @@ public class TeamController {
                         result.setLastName(lastName);
                         result.setLeader(isLeader);
                         result = teamMemberService.updateContactInfo(
-                            result.getId(), email, phone);
+                                result.getId(), email, phone);
                     }
-                    
+
                     // Update skills
                     result = teamMemberService.updateSkills(result.getId(), skills);
-                    
+
                     // Assign to subteam if selected
                     if (subteam != null) {
                         result = teamMemberService.assignToSubteam(
-                            result.getId(), subteam.getId());
+                                result.getId(), subteam.getId());
                     }
-                    
+
                     return result;
                 } catch (Exception e) {
                     showErrorAlert("Error", "Failed to save team member: " + e.getMessage());
@@ -602,7 +592,7 @@ public class TeamController {
             }
             return null;
         });
-        
+
         return dialog;
     }
 
@@ -615,7 +605,7 @@ public class TeamController {
     public Dialog<TeamMember> testCreateMemberDialog(TeamMember member) {
         return createMemberDialog(member);
     }
-    
+
     /**
      * Creates a dialog for adding or editing a subteam.
      * 
@@ -624,32 +614,32 @@ public class TeamController {
      */
     private Dialog<Subteam> createSubteamDialog(Subteam subteam) {
         boolean isNewSubteam = subteam == null;
-        
+
         // Create the dialog
         Dialog<Subteam> dialog = new Dialog<>();
         dialog.setTitle(isNewSubteam ? "Add Subteam" : "Edit Subteam");
         dialog.setHeaderText(isNewSubteam ? "Create a new subteam" : "Edit subteam details");
-        
+
         // Set the button types
         ButtonType saveButtonType = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(saveButtonType, ButtonType.CANCEL);
-        
+
         // Create the dialog content
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
         grid.setPadding(new javafx.geometry.Insets(20, 150, 10, 10));
-        
+
         TextField nameField = new TextField();
         nameField.setPromptText("Subteam Name");
-        
+
         javafx.scene.control.ColorPicker colorPicker = new javafx.scene.control.ColorPicker();
         colorPicker.setPromptText("Select Color");
-        
+
         TextArea specialtiesArea = new TextArea();
         specialtiesArea.setPromptText("Specialties");
         specialtiesArea.setPrefRowCount(3);
-        
+
         // Add fields to the grid
         grid.add(new Label("Name:"), 0, 0);
         grid.add(nameField, 1, 0);
@@ -657,12 +647,12 @@ public class TeamController {
         grid.add(colorPicker, 1, 1);
         grid.add(new Label("Specialties:"), 0, 2);
         grid.add(specialtiesArea, 1, 2);
-        
+
         // Set initial values if editing existing subteam
         if (!isNewSubteam) {
             nameField.setText(subteam.getName());
             specialtiesArea.setText(subteam.getSpecialties());
-            
+
             // Set color picker value
             try {
                 javafx.scene.paint.Color color = javafx.scene.paint.Color.web(subteam.getColorCode());
@@ -675,13 +665,13 @@ public class TeamController {
             // Default color for new subteam
             colorPicker.setValue(javafx.scene.paint.Color.BLUE);
         }
-        
+
         // Set the dialog content
         dialog.getDialogPane().setContent(grid);
-        
+
         // Request focus on the name field
         Platform.runLater(() -> nameField.requestFocus());
-        
+
         // Convert the result to a subteam when the save button is clicked
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == saveButtonType) {
@@ -689,16 +679,16 @@ public class TeamController {
                     String name = nameField.getText();
                     javafx.scene.paint.Color color = colorPicker.getValue();
                     String colorCode = String.format("#%02X%02X%02X",
-                        (int)(color.getRed() * 255),
-                        (int)(color.getGreen() * 255),
-                        (int)(color.getBlue() * 255));
+                            (int) (color.getRed() * 255),
+                            (int) (color.getGreen() * 255),
+                            (int) (color.getBlue() * 255));
                     String specialties = specialtiesArea.getText();
-                    
+
                     // Validate required fields
                     if (name == null || name.trim().isEmpty()) {
                         throw new IllegalArgumentException("Name is required");
                     }
-                    
+
                     Subteam result;
                     if (isNewSubteam) {
                         // Create new subteam
@@ -708,7 +698,7 @@ public class TeamController {
                         result = subteamService.updateColorCode(subteam.getId(), colorCode);
                         result = subteamService.updateSpecialties(result.getId(), specialties);
                     }
-                    
+
                     return result;
                 } catch (Exception e) {
                     showErrorAlert("Error", "Failed to save subteam: " + e.getMessage());
@@ -717,7 +707,7 @@ public class TeamController {
             }
             return null;
         });
-        
+
         return dialog;
     }
 
@@ -730,11 +720,11 @@ public class TeamController {
     public Dialog<Subteam> testCreateSubteamDialog(Subteam subteam) {
         return createSubteamDialog(subteam);
     }
-    
+
     /**
      * Shows an error alert dialog.
      * 
-     * @param title the title
+     * @param title   the title
      * @param message the message
      */
     private void showErrorAlert(String title, String message) {
@@ -748,17 +738,17 @@ public class TeamController {
     /**
      * Public method to access showErrorAlert for testing.
      * 
-     * @param title the title
+     * @param title   the title
      * @param message the message
      */
     public void testShowErrorAlert(String title, String message) {
         showErrorAlert(title, message);
     }
-    
+
     /**
      * Shows an information alert dialog.
      * 
-     * @param title the title
+     * @param title   the title
      * @param message the message
      */
     private void showInfoAlert(String title, String message) {
@@ -772,13 +762,13 @@ public class TeamController {
     /**
      * Public method to access showInfoAlert for testing.
      * 
-     * @param title the title
+     * @param title   the title
      * @param message the message
      */
     public void testShowInfoAlert(String title, String message) {
         showInfoAlert(title, message);
     }
-    
+
     /**
      * Gets the tab pane.
      * 
@@ -787,7 +777,7 @@ public class TeamController {
     public TabPane getTabPane() {
         return tabPane;
     }
-    
+
     /**
      * Gets the members table.
      * 
@@ -796,7 +786,7 @@ public class TeamController {
     public TableView<TeamMember> getMembersTable() {
         return membersTable;
     }
-    
+
     /**
      * Gets the member username column.
      * 
@@ -805,7 +795,7 @@ public class TeamController {
     public TableColumn<TeamMember, String> getMemberUsernameColumn() {
         return memberUsernameColumn;
     }
-    
+
     /**
      * Gets the member name column.
      * 
@@ -814,7 +804,7 @@ public class TeamController {
     public TableColumn<TeamMember, String> getMemberNameColumn() {
         return memberNameColumn;
     }
-    
+
     /**
      * Gets the member email column.
      * 
@@ -823,7 +813,7 @@ public class TeamController {
     public TableColumn<TeamMember, String> getMemberEmailColumn() {
         return memberEmailColumn;
     }
-    
+
     /**
      * Gets the member subteam column.
      * 
@@ -832,7 +822,7 @@ public class TeamController {
     public TableColumn<TeamMember, String> getMemberSubteamColumn() {
         return memberSubteamColumn;
     }
-    
+
     /**
      * Gets the member leader column.
      * 
@@ -841,7 +831,7 @@ public class TeamController {
     public TableColumn<TeamMember, Boolean> getMemberLeaderColumn() {
         return memberLeaderColumn;
     }
-    
+
     /**
      * Gets the add member button.
      * 
@@ -850,7 +840,7 @@ public class TeamController {
     public Button getAddMemberButton() {
         return addMemberButton;
     }
-    
+
     /**
      * Gets the edit member button.
      * 
@@ -859,7 +849,7 @@ public class TeamController {
     public Button getEditMemberButton() {
         return editMemberButton;
     }
-    
+
     /**
      * Gets the delete member button.
      * 
@@ -868,7 +858,7 @@ public class TeamController {
     public Button getDeleteMemberButton() {
         return deleteMemberButton;
     }
-    
+
     /**
      * Gets the subteams table.
      * 
@@ -877,7 +867,7 @@ public class TeamController {
     public TableView<Subteam> getSubteamsTable() {
         return subteamsTable;
     }
-    
+
     /**
      * Gets the subteam name column.
      * 
@@ -886,7 +876,7 @@ public class TeamController {
     public TableColumn<Subteam, String> getSubteamNameColumn() {
         return subteamNameColumn;
     }
-    
+
     /**
      * Gets the subteam color column.
      * 
@@ -895,7 +885,7 @@ public class TeamController {
     public TableColumn<Subteam, String> getSubteamColorColumn() {
         return subteamColorColumn;
     }
-    
+
     /**
      * Gets the subteam specialties column.
      * 
@@ -904,7 +894,7 @@ public class TeamController {
     public TableColumn<Subteam, String> getSubteamSpecialtiesColumn() {
         return subteamSpecialtiesColumn;
     }
-    
+
     /**
      * Gets the add subteam button.
      * 
@@ -913,7 +903,7 @@ public class TeamController {
     public Button getAddSubteamButton() {
         return addSubteamButton;
     }
-    
+
     /**
      * Gets the edit subteam button.
      * 
@@ -922,7 +912,7 @@ public class TeamController {
     public Button getEditSubteamButton() {
         return editSubteamButton;
     }
-    
+
     /**
      * Gets the delete subteam button.
      * 
@@ -931,7 +921,7 @@ public class TeamController {
     public Button getDeleteSubteamButton() {
         return deleteSubteamButton;
     }
-    
+
     /**
      * Gets the username field.
      * 
@@ -940,7 +930,7 @@ public class TeamController {
     public TextField getUsernameField() {
         return usernameField;
     }
-    
+
     /**
      * Gets the first name field.
      * 
@@ -949,7 +939,7 @@ public class TeamController {
     public TextField getFirstNameField() {
         return firstNameField;
     }
-    
+
     /**
      * Gets the last name field.
      * 
@@ -958,7 +948,7 @@ public class TeamController {
     public TextField getLastNameField() {
         return lastNameField;
     }
-    
+
     /**
      * Gets the email field.
      * 
@@ -967,7 +957,7 @@ public class TeamController {
     public TextField getEmailField() {
         return emailField;
     }
-    
+
     /**
      * Gets the phone field.
      * 
@@ -976,7 +966,7 @@ public class TeamController {
     public TextField getPhoneField() {
         return phoneField;
     }
-    
+
     /**
      * Gets the skills area.
      * 
@@ -985,7 +975,7 @@ public class TeamController {
     public TextArea getSkillsArea() {
         return skillsArea;
     }
-    
+
     /**
      * Gets the subteam combo box.
      * 
@@ -994,7 +984,7 @@ public class TeamController {
     public ComboBox<Subteam> getSubteamComboBox() {
         return subteamComboBox;
     }
-    
+
     /**
      * Gets the leader check box.
      * 
@@ -1003,7 +993,7 @@ public class TeamController {
     public CheckBox getLeaderCheckBox() {
         return leaderCheckBox;
     }
-    
+
     /**
      * Gets the subteam name field.
      * 
@@ -1012,7 +1002,7 @@ public class TeamController {
     public TextField getSubteamNameField() {
         return subteamNameField;
     }
-    
+
     /**
      * Gets the color picker.
      * 
@@ -1021,7 +1011,7 @@ public class TeamController {
     public ColorPicker getColorPicker() {
         return colorPicker;
     }
-    
+
     /**
      * Gets the specialties area.
      * 
@@ -1030,7 +1020,7 @@ public class TeamController {
     public TextArea getSpecialtiesArea() {
         return specialtiesArea;
     }
-    
+
     /**
      * Gets the team member service.
      * 
@@ -1039,7 +1029,7 @@ public class TeamController {
     public TeamMemberService getTeamMemberService() {
         return teamMemberService;
     }
-    
+
     /**
      * Gets the subteam service.
      * 
@@ -1048,7 +1038,7 @@ public class TeamController {
     public SubteamService getSubteamService() {
         return subteamService;
     }
-    
+
     /**
      * Gets the members list.
      * 
@@ -1057,7 +1047,7 @@ public class TeamController {
     public ObservableList<TeamMember> getMembersList() {
         return membersList;
     }
-    
+
     /**
      * Gets the subteams list.
      * 
