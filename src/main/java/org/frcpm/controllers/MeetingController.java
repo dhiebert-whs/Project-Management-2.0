@@ -12,7 +12,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Controller for meeting management.
+ * Controller for meeting management using MVVM pattern.
  */
 public class MeetingController {
 
@@ -46,13 +46,21 @@ public class MeetingController {
     private void initialize() {
         LOGGER.info("Initializing MeetingController");
 
-        // Bind UI elements to ViewModel properties
+        // Set up bindings
+        setupBindings();
+    }
+
+    /**
+     * Sets up the bindings between UI controls and ViewModel properties.
+     */
+    private void setupBindings() {
+        // Bind UI elements to ViewModel properties using ViewModelBinding utility
         ViewModelBinding.bindDatePicker(datePicker, viewModel.dateProperty());
         ViewModelBinding.bindTextField(startTimeField, viewModel.startTimeStringProperty());
         ViewModelBinding.bindTextField(endTimeField, viewModel.endTimeStringProperty());
         ViewModelBinding.bindTextArea(notesArea, viewModel.notesProperty());
 
-        // Bind commands to buttons
+        // Bind buttons to commands using onAction
         saveButton.setOnAction(event -> {
             if (viewModel.isValid()) {
                 viewModel.getSaveCommand().execute();
@@ -63,6 +71,9 @@ public class MeetingController {
         });
 
         cancelButton.setOnAction(event -> closeDialog());
+
+        // Bind button disable property to command canExecute
+        saveButton.disableProperty().bind(viewModel.validProperty().not());
     }
 
     /**

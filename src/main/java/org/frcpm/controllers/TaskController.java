@@ -1,5 +1,3 @@
-// Path: src/main/java/org/frcpm/controllers/TaskController.java
-
 package org.frcpm.controllers;
 
 import javafx.beans.binding.Bindings;
@@ -20,11 +18,15 @@ import org.frcpm.viewmodels.TaskViewModel;
 
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Controller for the Task view.
  */
 public class TaskController {
+
+    private static final Logger LOGGER = Logger.getLogger(TaskController.class.getName());
 
     // FXML controls
     @FXML
@@ -100,6 +102,8 @@ public class TaskController {
      */
     @FXML
     private void initialize() {
+        LOGGER.info("Initializing TaskController");
+
         // Create view model
         viewModel = new TaskViewModel();
 
@@ -107,6 +111,22 @@ public class TaskController {
         priorityComboBox.getItems().addAll(Arrays.asList(Task.Priority.values()));
 
         // Set up table columns
+        setupTableColumns();
+
+        // Set up progress slider and label binding
+        progressSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
+            int progress = newVal.intValue();
+            progressLabel.setText(progress + "%");
+        });
+
+        // Set up bindings
+        setupBindings();
+    }
+
+    /**
+     * Sets up the table columns.
+     */
+    private void setupTableColumns() {
         memberNameColumn
                 .setCellValueFactory(cellData -> Bindings.createStringBinding(() -> cellData.getValue().getFullName()));
         memberSubteamColumn.setCellValueFactory(
@@ -120,22 +140,12 @@ public class TaskController {
 
         dependencyTitleColumn.setCellValueFactory(new PropertyValueFactory<>("title"));
         dependencyProgressColumn.setCellValueFactory(new PropertyValueFactory<>("progress"));
-
-        // Set up progress slider and label binding
-        progressSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
-            int progress = newVal.intValue();
-            progressLabel.setText(progress + "%");
-            viewModel.setProgress(progress);
-        });
-
-        // Set up bindings
-        bindViewModel();
     }
 
     /**
      * Binds the view model to the UI controls.
      */
-    private void bindViewModel() {
+    private void setupBindings() {
         // Bind text fields
         taskTitleLabel.textProperty().bind(viewModel.titleProperty());
         projectLabel.textProperty().bind(
@@ -187,12 +197,34 @@ public class TaskController {
         ViewModelBinding.bindCommandButton(addDependencyButton, viewModel.getAddDependencyCommand());
         ViewModelBinding.bindCommandButton(removeDependencyButton, viewModel.getRemoveDependencyCommand());
 
+        // Setup selection changes with view model
+        assignedMembersTable.getSelectionModel().selectedItemProperty().addListener(
+                (obs, oldVal, newVal) -> removeMemberButton.setDisable(newVal == null));
+
+        requiredComponentsTable.getSelectionModel().selectedItemProperty().addListener(
+                (obs, oldVal, newVal) -> removeComponentButton.setDisable(newVal == null));
+
+        dependenciesTable.getSelectionModel().selectedItemProperty().addListener(
+                (obs, oldVal, newVal) -> removeDependencyButton.setDisable(newVal == null));
+
         // Set up error message binding
         viewModel.errorMessageProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null && !newVal.isEmpty()) {
                 showErrorAlert(newVal);
             }
         });
+
+        // Set up save and cancel actions
+        saveButton.setOnAction(event -> {
+            if (viewModel.isValid()) {
+                viewModel.getSaveCommand().execute();
+                closeDialog();
+            } else {
+                showErrorAlert(viewModel.getErrorMessage());
+            }
+        });
+
+        cancelButton.setOnAction(event -> closeDialog());
     }
 
     /**
@@ -220,60 +252,35 @@ public class TaskController {
      * @param message the error message
      */
     private void showErrorAlert(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Error");
-        alert.setHeaderText("Validation Error");
-        alert.setContentText(message);
-        alert.showAndWait();
+        try {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText("Validation Error");
+            alert.setContentText(message);
+            alert.showAndWait();
+        } catch (IllegalStateException e) {
+            // This can happen in tests when not on FX thread
+            // Just log the error for testing purposes
+            LOGGER.log(Level.INFO, "Alert would show: Validation Error - {0}", message);
+        }
     }
 
     /**
-     * Shows a dialog to select a team member.
-     * 
-     * @param members the available team members
-     * @return the selected team member, or empty if cancelled
+     * Closes the dialog.
      */
-    private Optional<TeamMember> showMemberSelectionDialog(ObservableList<TeamMember> members) {
-        // In a real implementation, this would show a dialog to select a team member
-        // For now, we'll just return an empty Optional
-        return Optional.empty();
+    private void closeDialog() {
+        try {
+            Stage stage = (Stage) saveButton.getScene().getWindow();
+            stage.close();
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error closing dialog", e);
+        }
     }
 
-    /**
-     * Shows a dialog to select a component.
-     * 
-     * @param components the available components
-     * @return the selected component, or empty if cancelled
-     */
-    private Optional<Component> showComponentSelectionDialog(ObservableList<Component> components) {
-        // In a real implementation, this would show a dialog to select a component
-        // For now, we'll just return an empty Optional
-        return Optional.empty();
-    }
+    // Table selection handlers
 
     /**
-     * Shows a dialog to select a task dependency.
-     * 
-     * @param tasks the available tasks
-     * @return the selected task, or empty if cancelled
-     */
-    private Optional<Task> showTaskSelectionDialog(ObservableList<Task> tasks) {
-        // In a real implementation, this would show a dialog to select a task
-        // For now, we'll just return an empty Optional
-        return Optional.empty();
-    }
-
-    /**
-     * Handles the add member button action.
-     */
-    @FXML
-    private void handleAddMember() {
-        // In a real implementation, this would show a dialog to select a team member
-        // and then add the selected member to the view model
-    }
-
-    /**
-     * Handles the remove member button action.
+     * Handles the remove member action when a member is selected.
      */
     @FXML
     private void handleRemoveMember() {
@@ -284,16 +291,7 @@ public class TaskController {
     }
 
     /**
-     * Handles the add component button action.
-     */
-    @FXML
-    private void handleAddComponent() {
-        // In a real implementation, this would show a dialog to select a component
-        // and then add the selected component to the view model
-    }
-
-    /**
-     * Handles the remove component button action.
+     * Handles the remove component action when a component is selected.
      */
     @FXML
     private void handleRemoveComponent() {
@@ -304,16 +302,7 @@ public class TaskController {
     }
 
     /**
-     * Handles the add dependency button action.
-     */
-    @FXML
-    private void handleAddDependency() {
-        // In a real implementation, this would show a dialog to select a task
-        // and then add the selected task as a dependency to the view model
-    }
-
-    /**
-     * Handles the remove dependency button action.
+     * Handles the remove dependency action when a dependency is selected.
      */
     @FXML
     private void handleRemoveDependency() {
@@ -321,26 +310,6 @@ public class TaskController {
         if (selectedDependency != null) {
             viewModel.removeDependency(selectedDependency);
         }
-    }
-
-    /**
-     * Handles the save button action.
-     */
-    @FXML
-    private void handleSave() {
-        // The save action is handled by the view model's save command
-        // When save is complete, close the dialog
-        Stage stage = (Stage) saveButton.getScene().getWindow();
-        stage.close();
-    }
-
-    /**
-     * Handles the cancel button action.
-     */
-    @FXML
-    private void handleCancel() {
-        Stage stage = (Stage) cancelButton.getScene().getWindow();
-        stage.close();
     }
 
     /**
