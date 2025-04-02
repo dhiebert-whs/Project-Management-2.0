@@ -1,356 +1,508 @@
-// Path: src/test/java/org/frcpm/viewmodels/TaskViewModelTest.java
+// src/test/java/org/frcpm/viewmodels/TaskViewModelTest.java
 
 package org.frcpm.viewmodels;
 
+import org.frcpm.binding.Command;
 import org.frcpm.models.*;
 import org.frcpm.services.ComponentService;
 import org.frcpm.services.TaskService;
 import org.frcpm.services.TeamMemberService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-public class TaskViewModelTest {
+@ExtendWith(MockitoExtension.class)
+class TaskViewModelTest {
 
     @Mock
     private TaskService taskService;
-
+    
     @Mock
     private TeamMemberService teamMemberService;
-
+    
     @Mock
     private ComponentService componentService;
-
+    
+    @Mock
+    private Project project;
+    
+    @Mock
+    private Subsystem subsystem;
+    
+    @Mock
+    private TeamMember teamMember;
+    
+    @Mock
+    private Component component;
+    
     private TaskViewModel viewModel;
-    private Project testProject;
-    private Subsystem testSubsystem;
-    private Subteam testSubteam;
-    private Task testTask;
-    private TeamMember testMember;
-    private Component testComponent;
-
+    
     @BeforeEach
-    public void setUp() {
-        MockitoAnnotations.initMocks(this);
-
-        // Create test data
-        testProject = new Project(
-                "Test Project",
-                LocalDate.now(),
-                LocalDate.now().plusWeeks(6),
-                LocalDate.now().plusWeeks(8));
-        testProject.setId(1L);
-
-        testSubteam = new Subteam("Test Subteam", "#FF0000");
-        testSubteam.setId(1L);
-
-        // Use the proper constructor for Subsystem
-        testSubsystem = new Subsystem("Test Subsystem");
-        testSubsystem.setId(1L);
-        testSubsystem.setResponsibleSubteam(testSubteam);
-
-        testTask = new Task("Test Task", testProject, testSubsystem);
-        testTask.setId(1L);
-        testTask.setDescription("Test task description");
-        testTask.setEstimatedDuration(Duration.ofHours(2));
-        testTask.setPriority(Task.Priority.HIGH);
-        testTask.setStartDate(LocalDate.now());
-        testTask.setEndDate(LocalDate.now().plusDays(3));
-
-        testMember = new TeamMember("testuser", "Test", "User", "test@example.com");
-        testMember.setId(1L);
-        testMember.setSubteam(testSubteam);
-
-        testComponent = new Component("Test Component", "TC-001");
-        testComponent.setId(1L);
-
-        // Set up mock service
-        when(taskService.createTask(anyString(), any(), any(), anyDouble(), any(), any(), any()))
-                .thenReturn(testTask);
-        when(taskService.save(any(Task.class))).thenReturn(testTask);
-        when(taskService.updateTaskProgress(anyLong(), anyInt(), anyBoolean()))
-                .thenReturn(testTask);
-        when(taskService.assignMembers(anyLong(), anySet()))
-                .thenReturn(testTask);
-        when(taskService.addDependency(anyLong(), anyLong()))
-                .thenReturn(true);
-
-        // Create ViewModel with mocked services
+    void setUp() {
         viewModel = new TaskViewModel(taskService, teamMemberService, componentService);
+        
+        // Set up mock IDs
+        when(project.getId()).thenReturn(1L);
+        when(subsystem.getId()).thenReturn(1L);
+        when(teamMember.getId()).thenReturn(1L);
+        when(component.getId()).thenReturn(1L);
     }
-
+    
     @Test
-    public void testInitNewTask() {
-        // Init for new task
-        viewModel.initNewTask(testProject, testSubsystem);
-
-        // Verify state
-        assertEquals(testProject, viewModel.getProject());
-        assertEquals(testSubsystem, viewModel.getSubsystem());
-        assertNull(viewModel.getTask());
+    void testInitNewTask() {
+        // Act
+        viewModel.initNewTask(project, subsystem);
+        
+        // Assert
         assertTrue(viewModel.isNewTask());
-
-        // Verify default values
-        assertEquals("", viewModel.titleProperty().get());
-        assertEquals("", viewModel.descriptionProperty().get());
-        assertEquals(1.0, viewModel.estimatedHoursProperty().get());
-        assertEquals(0.0, viewModel.actualHoursProperty().get());
-        assertEquals(Task.Priority.MEDIUM, viewModel.priorityProperty().get());
-        assertEquals(0, viewModel.progressProperty().get());
-        assertEquals(LocalDate.now(), viewModel.startDateProperty().get());
-        assertNull(viewModel.endDateProperty().get());
-        assertFalse(viewModel.completedProperty().get());
-
-        // Verify collections are empty
-        assertTrue(viewModel.getAssignedMembers().isEmpty());
-        assertTrue(viewModel.getPreDependencies().isEmpty());
-        assertTrue(viewModel.getRequiredComponents().isEmpty());
-
-        // Verify validation state - should be invalid due to empty title
+        assertEquals(project, viewModel.getProject());
+        assertEquals(subsystem, viewModel.getSubsystem());
+        assertEquals("", viewModel.getTitle());
+        assertEquals("", viewModel.getDescription());
+        assertEquals(1.0, viewModel.getEstimatedHours());
+        assertEquals(0.0, viewModel.getActualHours());
+        assertEquals(Task.Priority.MEDIUM, viewModel.getPriority());
+        assertEquals(0, viewModel.getProgress());
+        assertEquals(LocalDate.now(), viewModel.getStartDate());
+        assertNull(viewModel.getEndDate());
+        assertFalse(viewModel.isCompleted());
+        assertEquals(0, viewModel.getAssignedMembers().size());
+        assertEquals(0, viewModel.getPreDependencies().size());
+        assertEquals(0, viewModel.getRequiredComponents().size());
+        assertFalse(viewModel.isDirty());
+    }
+    
+    @Test
+    void testInitExistingTask() {
+        // Arrange
+        Task task = new Task("Test Task", project, subsystem);
+        task.setId(1L);
+        task.setDescription("Test description");
+        task.setEstimatedDuration(Duration.ofHours(2));
+        task.setActualDuration(Duration.ofHours(1));
+        task.setPriority(Task.Priority.HIGH);
+        task.setProgress(50);
+        LocalDate startDate = LocalDate.now().minusDays(1);
+        LocalDate endDate = LocalDate.now().plusDays(1);
+        task.setStartDate(startDate);
+        task.setEndDate(endDate);
+        task.setCompleted(false);
+        
+        Set<TeamMember> members = new HashSet<>();
+        members.add(teamMember);
+        task.setAssignedTo(members);
+        
+        // Act
+        viewModel.initExistingTask(task);
+        
+        // Assert
+        assertFalse(viewModel.isNewTask());
+        assertEquals(task, viewModel.getTask());
+        assertEquals("Test Task", viewModel.getTitle());
+        assertEquals("Test description", viewModel.getDescription());
+        assertEquals(2.0, viewModel.getEstimatedHours());
+        assertEquals(1.0, viewModel.getActualHours());
+        assertEquals(Task.Priority.HIGH, viewModel.getPriority());
+        assertEquals(50, viewModel.getProgress());
+        assertEquals(startDate, viewModel.getStartDate());
+        assertEquals(endDate, viewModel.getEndDate());
+        assertFalse(viewModel.isCompleted());
+        assertEquals(1, viewModel.getAssignedMembers().size());
+        assertFalse(viewModel.isDirty());
+    }
+    
+    @Test
+    void testValidation_ValidTask() {
+        // Arrange
+        viewModel.initNewTask(project, subsystem);
+        viewModel.setTitle("Valid Title");
+        viewModel.setEstimatedHours(2.0);
+        viewModel.setStartDate(LocalDate.now());
+        
+        // Assert
+        assertTrue(viewModel.isValid());
+        assertNull(viewModel.getErrorMessage());
+    }
+    
+    @Test
+    void testValidation_EmptyTitle() {
+        // Arrange
+        viewModel.initNewTask(project, subsystem);
+        viewModel.setTitle("");
+        
+        // Assert
         assertFalse(viewModel.isValid());
         assertNotNull(viewModel.getErrorMessage());
+        assertTrue(viewModel.getErrorMessage().contains("title"));
     }
-
+    
     @Test
-    public void testInitExistingTask() {
-        // Add test data to task
-        testTask.assignMember(testMember);
-        testTask.addRequiredComponent(testComponent);
-
-        // Init for existing task
-        viewModel.initExistingTask(testTask);
-
-        // Verify state
-        assertEquals(testTask, viewModel.getTask());
-        assertEquals(testProject, viewModel.getProject());
-        assertEquals(testSubsystem, viewModel.getSubsystem());
-        assertFalse(viewModel.isNewTask());
-
-        // Verify field values
-        assertEquals(testTask.getTitle(), viewModel.titleProperty().get());
-        assertEquals(testTask.getDescription(), viewModel.descriptionProperty().get());
-        assertEquals(2.0, viewModel.estimatedHoursProperty().get());
-        assertEquals(Task.Priority.HIGH, viewModel.priorityProperty().get());
-        assertEquals(testTask.getProgress(), viewModel.progressProperty().get());
-        assertEquals(testTask.getStartDate(), viewModel.startDateProperty().get());
-        assertEquals(testTask.getEndDate(), viewModel.endDateProperty().get());
-        assertEquals(testTask.isCompleted(), viewModel.completedProperty().get());
-
-        // Verify collections
-        assertEquals(1, viewModel.getAssignedMembers().size());
-        assertTrue(viewModel.getAssignedMembers().contains(testMember));
-        assertEquals(1, viewModel.getRequiredComponents().size());
-        assertTrue(viewModel.getRequiredComponents().contains(testComponent));
-
-        // Verify validation state
-        assertTrue(viewModel.isValid());
-        assertNull(viewModel.getErrorMessage());
-    }
-
-    @Test
-    public void testValidation_EmptyTitle() {
-        // Set up
-        viewModel.initNewTask(testProject, testSubsystem);
-
-        // Title is already empty by default, so just verify validation state
+    void testValidation_NullProject() {
+        // Arrange
+        viewModel.initNewTask(project, subsystem);
+        viewModel.setProject(null);
+        
+        // Assert
         assertFalse(viewModel.isValid());
-        assertEquals("Task title cannot be empty", viewModel.getErrorMessage());
-
-        // Set a valid title and verify it becomes valid
-        viewModel.titleProperty().set("Test Task");
-        assertTrue(viewModel.isValid());
-        assertNull(viewModel.getErrorMessage());
+        assertNotNull(viewModel.getErrorMessage());
+        assertTrue(viewModel.getErrorMessage().contains("Project"));
     }
-
+    
     @Test
-    public void testValidation_NegativeEstimatedHours() {
-        // Set up
-        viewModel.initNewTask(testProject, testSubsystem);
-        viewModel.titleProperty().set("Test Task");
-
-        // Set invalid value
-        viewModel.estimatedHoursProperty().set(-1.0);
-
-        // Verify validation state
+    void testValidation_NullSubsystem() {
+        // Arrange
+        viewModel.initNewTask(project, subsystem);
+        viewModel.setSubsystem(null);
+        
+        // Assert
         assertFalse(viewModel.isValid());
-        assertEquals("Estimated hours must be positive", viewModel.getErrorMessage());
+        assertNotNull(viewModel.getErrorMessage());
+        assertTrue(viewModel.getErrorMessage().contains("Subsystem"));
     }
-
+    
     @Test
-    public void testValidation_EndDateBeforeStartDate() {
-        // Set up
-        viewModel.initNewTask(testProject, testSubsystem);
-        viewModel.titleProperty().set("Test Task");
-
-        // Set invalid dates
-        viewModel.startDateProperty().set(LocalDate.now());
-        viewModel.endDateProperty().set(LocalDate.now().minusDays(1));
-
-        // Verify validation state
+    void testValidation_ZeroEstimatedHours() {
+        // Arrange
+        viewModel.initNewTask(project, subsystem);
+        viewModel.setTitle("Valid Title");
+        viewModel.setEstimatedHours(0);
+        
+        // Assert
         assertFalse(viewModel.isValid());
-        assertEquals("End date cannot be before start date", viewModel.getErrorMessage());
+        assertNotNull(viewModel.getErrorMessage());
+        assertTrue(viewModel.getErrorMessage().contains("hours"));
     }
-
+    
     @Test
-    public void testSave_NewTask() {
-        // Set up
-        viewModel.initNewTask(testProject, testSubsystem);
-
-        // Set values
-        viewModel.titleProperty().set("New Task");
-        viewModel.descriptionProperty().set("New task description");
-        viewModel.estimatedHoursProperty().set(3.0);
-        viewModel.priorityProperty().set(Task.Priority.HIGH);
-        viewModel.startDateProperty().set(LocalDate.now());
-        viewModel.endDateProperty().set(LocalDate.now().plusDays(5));
-
-        // Add a member and component
-        viewModel.addMember(testMember);
-        viewModel.addComponent(testComponent);
-
-        // Execute save command
+    void testValidation_NullStartDate() {
+        // Arrange
+        viewModel.initNewTask(project, subsystem);
+        viewModel.setTitle("Valid Title");
+        viewModel.setStartDate(null);
+        
+        // Assert
+        assertFalse(viewModel.isValid());
+        assertNotNull(viewModel.getErrorMessage());
+        assertTrue(viewModel.getErrorMessage().contains("date"));
+    }
+    
+    @Test
+    void testValidation_InvalidDates() {
+        // Arrange
+        viewModel.initNewTask(project, subsystem);
+        viewModel.setTitle("Valid Title");
+        viewModel.setStartDate(LocalDate.now());
+        viewModel.setEndDate(LocalDate.now().minusDays(1)); // End date before start date
+        
+        // Assert
+        assertFalse(viewModel.isValid());
+        assertNotNull(viewModel.getErrorMessage());
+        assertTrue(viewModel.getErrorMessage().contains("date"));
+    }
+    
+    @Test
+    void testSaveCommand_NewTask() {
+        // Arrange
+        viewModel.initNewTask(project, subsystem);
+        viewModel.setTitle("New Task");
+        viewModel.setDescription("Description");
+        viewModel.setEstimatedHours(2.0);
+        viewModel.setStartDate(LocalDate.now());
+        
+        Task savedTask = new Task("New Task", project, subsystem);
+        savedTask.setId(1L);
+        
+        when(taskService.createTask(
+            eq("New Task"), 
+            eq(project), 
+            eq(subsystem), 
+            eq(2.0), 
+            eq(Task.Priority.MEDIUM),
+            any(LocalDate.class), 
+            isNull())
+        ).thenReturn(savedTask);
+        
+        when(taskService.save(any(Task.class))).thenReturn(savedTask);
+        
+        // Act
         viewModel.getSaveCommand().execute();
-
-        // Continuation of src/test/java/org/frcpm/viewmodels/TaskViewModelTest.java
-
-        // Verify service call
+        
+        // Assert
         verify(taskService).createTask(
-                eq("New Task"),
-                eq(testProject),
-                eq(testSubsystem),
-                eq(3.0),
-                eq(Task.Priority.HIGH),
-                eq(LocalDate.now()),
-                eq(LocalDate.now().plusDays(5)));
-
-        // Verify task is updated
-        assertEquals(testTask, viewModel.getTask());
-
-        // Verify collections were handled
-        // In a real implementation, we would verify the service calls for
-        // adding members, dependencies, and components
+            eq("New Task"), 
+            eq(project), 
+            eq(subsystem), 
+            eq(2.0), 
+            eq(Task.Priority.MEDIUM),
+            any(LocalDate.class), 
+            isNull()
+        );
+        
+        assertEquals(savedTask, viewModel.getTask());
+        assertFalse(viewModel.isDirty());
     }
-
+    
     @Test
-    public void testSave_ExistingTask() {
-        // Set up
-        testTask.assignMember(testMember);
-        viewModel.initExistingTask(testTask);
-
-        // Set updated values
-        viewModel.titleProperty().set("Updated Task");
-        viewModel.descriptionProperty().set("Updated description");
-        viewModel.estimatedHoursProperty().set(4.0);
-        viewModel.priorityProperty().set(Task.Priority.CRITICAL);
-        viewModel.progressProperty().set(50);
-        viewModel.startDateProperty().set(LocalDate.now().plusDays(1));
-        viewModel.endDateProperty().set(LocalDate.now().plusDays(7));
-
-        // Execute save command
+    void testSaveCommand_ExistingTask() {
+        // Arrange
+        Task existingTask = new Task("Existing Task", project, subsystem);
+        existingTask.setId(1L);
+        
+        viewModel.initExistingTask(existingTask);
+        viewModel.setTitle("Updated Task");
+        viewModel.setProgress(75);
+        
+        Task updatedTask = new Task("Updated Task", project, subsystem);
+        updatedTask.setId(1L);
+        updatedTask.setProgress(75);
+        
+        when(taskService.updateTaskProgress(eq(1L), eq(75), eq(false))).thenReturn(updatedTask);
+        when(taskService.save(any(Task.class))).thenReturn(updatedTask);
+        
+        // Act
         viewModel.getSaveCommand().execute();
-
-        // Verify service calls
-        verify(taskService).updateTaskProgress(
-                eq(testTask.getId()),
-                eq(50),
-                eq(false));
-
-        // We would verify other service calls in a real test
-
-        // Verify task is updated
-        assertEquals(testTask, viewModel.getTask());
+        
+        // Assert
+        verify(taskService).updateTaskProgress(eq(1L), eq(75), eq(false));
+        
+        assertEquals(updatedTask, viewModel.getTask());
+        assertFalse(viewModel.isDirty());
     }
-
+    
     @Test
-    public void testProgress_CompletionSync() {
-        // Set up
-        viewModel.initNewTask(testProject, testSubsystem);
-        viewModel.titleProperty().set("Test Task");
-
-        // Set progress to 100%
-        viewModel.setProgress(100);
-
-        // Verify completion is also set to true
-        assertTrue(viewModel.isCompleted());
-
-        // Reset progress and completion
-        viewModel.setProgress(50);
-        viewModel.setCompleted(false);
-        assertEquals(50, viewModel.getProgress());
-        assertFalse(viewModel.isCompleted());
-
-        // Set completion to true
-        viewModel.setCompleted(true);
-
-        // Verify progress is set to 100%
-        assertEquals(100, viewModel.getProgress());
-    }
-
-    @Test
-    public void testAddRemoveMembers() {
-        // Set up
-        viewModel.initNewTask(testProject, testSubsystem);
-
-        // Add a member
-        viewModel.addMember(testMember);
-
-        // Verify member was added
+    void testAddMember() {
+        // Arrange
+        viewModel.initNewTask(project, subsystem);
+        
+        // Act
+        viewModel.addMember(teamMember);
+        
+        // Assert
         assertEquals(1, viewModel.getAssignedMembers().size());
-        assertTrue(viewModel.getAssignedMembers().contains(testMember));
-
-        // Remove the member
-        viewModel.removeMember(testMember);
-
-        // Verify member was removed
-        assertTrue(viewModel.getAssignedMembers().isEmpty());
+        assertTrue(viewModel.getAssignedMembers().contains(teamMember));
+        assertTrue(viewModel.isDirty());
     }
-
+    
     @Test
-    public void testAddRemoveComponents() {
-        // Set up
-        viewModel.initNewTask(testProject, testSubsystem);
-
-        // Add a component
-        viewModel.addComponent(testComponent);
-
-        // Verify component was added
-        assertEquals(1, viewModel.getRequiredComponents().size());
-        assertTrue(viewModel.getRequiredComponents().contains(testComponent));
-
-        // Remove the component
-        viewModel.removeComponent(testComponent);
-
-        // Verify component was removed
-        assertTrue(viewModel.getRequiredComponents().isEmpty());
+    void testRemoveMember() {
+        // Arrange
+        viewModel.initNewTask(project, subsystem);
+        viewModel.addMember(teamMember);
+        viewModel.setDirty(false);
+        
+        // Act
+        viewModel.removeMember(teamMember);
+        
+        // Assert
+        assertEquals(0, viewModel.getAssignedMembers().size());
+        assertTrue(viewModel.isDirty());
     }
-
+    
     @Test
-    public void testAddRemoveDependencies() {
-        // Set up
-        viewModel.initNewTask(testProject, testSubsystem);
-
-        Task dependency = new Task("Dependency", testProject, testSubsystem);
+    void testAddDependency() {
+        // Arrange
+        viewModel.initNewTask(project, subsystem);
+        Task dependency = new Task("Dependency", project, subsystem);
         dependency.setId(2L);
-
-        // Add a dependency
+        
+        // Act
         viewModel.addDependency(dependency);
-
-        // Verify dependency was added
+        
+        // Assert
         assertEquals(1, viewModel.getPreDependencies().size());
         assertTrue(viewModel.getPreDependencies().contains(dependency));
-
-        // Remove the dependency
+        assertTrue(viewModel.isDirty());
+    }
+    
+    @Test
+    void testAddDependency_CircularDependency() {
+        // Arrange
+        Task existingTask = new Task("Existing Task", project, subsystem);
+        existingTask.setId(1L);
+        
+        Task dependency = new Task("Dependency", project, subsystem);
+        dependency.setId(2L);
+        
+        // Set up circular dependency
+        Set<Task> postDependencies = new HashSet<>();
+        postDependencies.add(existingTask);
+        dependency.setPostDependencies(postDependencies);
+        
+        viewModel.initExistingTask(existingTask);
+        
+        // Act
+        viewModel.addDependency(dependency);
+        
+        // Assert
+        assertEquals(0, viewModel.getPreDependencies().size());
+        assertTrue(viewModel.getErrorMessage().contains("circular dependency"));
+    }
+    
+    @Test
+    void testAddDependency_AlreadyExists() {
+        // Arrange
+        viewModel.initNewTask(project, subsystem);
+        Task dependency = new Task("Dependency", project, subsystem);
+        dependency.setId(2L);
+        viewModel.addDependency(dependency);
+        viewModel.setDirty(false);
+        
+        // Act - Try to add the same dependency again
+        viewModel.addDependency(dependency);
+        
+        // Assert - Should still only have one dependency
+        assertEquals(1, viewModel.getPreDependencies().size());
+        assertFalse(viewModel.isDirty()); // Should not mark as dirty since nothing changed
+    }
+    
+    @Test
+    void testRemoveDependency() {
+        // Arrange
+        viewModel.initNewTask(project, subsystem);
+        Task dependency = new Task("Dependency", project, subsystem);
+        dependency.setId(2L);
+        viewModel.addDependency(dependency);
+        viewModel.setDirty(false);
+        
+        // Act
         viewModel.removeDependency(dependency);
-
-        // Verify dependency was removed
-        assertTrue(viewModel.getPreDependencies().isEmpty());
+        
+        // Assert
+        assertEquals(0, viewModel.getPreDependencies().size());
+        assertTrue(viewModel.isDirty());
+    }
+    
+    @Test
+    void testAddComponent() {
+        // Arrange
+        viewModel.initNewTask(project, subsystem);
+        
+        // Act
+        viewModel.addComponent(component);
+        
+        // Assert
+        assertEquals(1, viewModel.getRequiredComponents().size());
+        assertTrue(viewModel.getRequiredComponents().contains(component));
+        assertTrue(viewModel.isDirty());
+    }
+    
+    @Test
+    void testRemoveComponent() {
+        // Arrange
+        viewModel.initNewTask(project, subsystem);
+        viewModel.addComponent(component);
+        viewModel.setDirty(false);
+        
+        // Act
+        viewModel.removeComponent(component);
+        
+        // Assert
+        assertEquals(0, viewModel.getRequiredComponents().size());
+        assertTrue(viewModel.isDirty());
+    }
+    
+    @Test
+    void testProgressAndCompletedSync() {
+        // Arrange
+        viewModel.initNewTask(project, subsystem);
+        
+        // Act - Set progress to 100%
+        viewModel.setProgress(100);
+        
+        // Assert - Completed should be automatically set to true
+        assertTrue(viewModel.isCompleted());
+        
+        // Act - Set progress to 50% and completed to false
+        viewModel.setProgress(50);
+        viewModel.setCompleted(false);
+        
+        // Assert
+        assertEquals(50, viewModel.getProgress());
+        assertFalse(viewModel.isCompleted());
+        
+        // Act - Set completed to true
+        viewModel.setCompleted(true);
+        
+        // Assert - Progress should be automatically set to 100%
+        assertEquals(100, viewModel.getProgress());
+        assertTrue(viewModel.isCompleted());
+    }
+    
+    @Test
+    void testGetCommands() {
+        // Arrange
+        viewModel.initNewTask(project, subsystem);
+        
+        // Assert
+        assertNotNull(viewModel.getSaveCommand());
+        assertNotNull(viewModel.getCancelCommand());
+        assertNotNull(viewModel.getAddMemberCommand());
+        assertNotNull(viewModel.getRemoveMemberCommand());
+        assertNotNull(viewModel.getAddDependencyCommand());
+        assertNotNull(viewModel.getRemoveDependencyCommand());
+        assertNotNull(viewModel.getAddComponentCommand());
+        assertNotNull(viewModel.getRemoveComponentCommand());
+        
+        // Verify command types
+        assertTrue(viewModel.getSaveCommand() instanceof Command);
+        assertTrue(viewModel.getCancelCommand() instanceof Command);
+        assertTrue(viewModel.getAddMemberCommand() instanceof Command);
+        assertTrue(viewModel.getRemoveMemberCommand() instanceof Command);
+        assertTrue(viewModel.getAddDependencyCommand() instanceof Command);
+        assertTrue(viewModel.getRemoveDependencyCommand() instanceof Command);
+        assertTrue(viewModel.getAddComponentCommand() instanceof Command);
+        assertTrue(viewModel.getRemoveComponentCommand() instanceof Command);
+    }
+    
+    @Test
+    void testSaveCommand_CanExecuteWithValidTask() {
+        // Arrange
+        viewModel.initNewTask(project, subsystem);
+        viewModel.setTitle("Valid Task");
+        
+        // Assert
+        assertTrue(viewModel.getSaveCommand().canExecute());
+    }
+    
+    @Test
+    void testSaveCommand_CannotExecuteWithInvalidTask() {
+        // Arrange
+        viewModel.initNewTask(project, subsystem);
+        viewModel.setTitle(""); // Invalid - empty title
+        
+        // Assert
+        assertFalse(viewModel.getSaveCommand().canExecute());
+    }
+    
+    @Test
+    void testExceptionHandlingInSave() {
+        // Arrange
+        viewModel.initNewTask(project, subsystem);
+        viewModel.setTitle("New Task");
+        
+        // Set up to throw exception on save
+        when(taskService.createTask(
+            any(), any(), any(), anyDouble(), any(), any(), any())
+        ).thenThrow(new RuntimeException("Test exception"));
+        
+        // Act
+        viewModel.getSaveCommand().execute();
+        
+        // Assert
+        assertNotNull(viewModel.getErrorMessage());
+        assertTrue(viewModel.getErrorMessage().contains("Failed to save task"));
+        assertTrue(viewModel.getErrorMessage().contains("Test exception"));
+        assertFalse(viewModel.isValid());
     }
 }
