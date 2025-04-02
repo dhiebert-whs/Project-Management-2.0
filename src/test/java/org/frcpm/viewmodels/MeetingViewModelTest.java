@@ -34,8 +34,8 @@ class MeetingViewModelTest {
     void setUp() {
         viewModel = new MeetingViewModel(meetingService);
 
-        // Set up mock ID
-        when(project.getId()).thenReturn(1L);
+        // We'll set up project ID only in tests that need it
+        // This avoids the "unnecessary stubbing" error
     }
 
     @Test
@@ -177,6 +177,8 @@ class MeetingViewModelTest {
     @Test
     void testSaveCommand_NewMeeting() {
         // Arrange
+        when(project.getId()).thenReturn(1L); // Only stub where needed
+
         viewModel.initNewMeeting(project);
         viewModel.setDate(LocalDate.of(2025, 4, 10));
         viewModel.setStartTimeString("09:00");
@@ -216,6 +218,8 @@ class MeetingViewModelTest {
     @Test
     void testSaveCommand_ExistingMeeting() {
         // Arrange
+        when(project.getId()).thenReturn(1L); // Only stub where needed
+
         Meeting existingMeeting = new Meeting(
                 LocalDate.of(2025, 4, 10),
                 LocalTime.of(9, 0),
@@ -265,6 +269,8 @@ class MeetingViewModelTest {
     @Test
     void testExceptionHandlingInSave() {
         // Arrange
+        when(project.getId()).thenReturn(1L); // Only stub where needed
+
         viewModel.initNewMeeting(project);
 
         // Set up to throw exception on save
