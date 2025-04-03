@@ -18,9 +18,9 @@ import java.util.logging.Logger;
 /**
  * Controller for milestone management.
  */
-public class MilestoneController {
+public class MilestoneControllerTest {
     
-    private static final Logger LOGGER = Logger.getLogger(MilestoneController.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(MilestoneControllerTest.class.getName());
     
     @FXML
     private TextField nameField;

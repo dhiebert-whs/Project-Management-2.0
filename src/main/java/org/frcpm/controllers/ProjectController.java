@@ -453,7 +453,7 @@ public class ProjectController {
             dialogStage.setScene(new Scene(dialogView));
 
             // Get the controller
-            MilestoneController controller = loader.getController();
+            MilestoneControllerTest controller = loader.getController();
             controller.setNewMilestone(project);
 
             // Show the dialog and wait for result
@@ -491,7 +491,7 @@ public class ProjectController {
             dialogStage.setScene(new Scene(dialogView));
 
             // Get the controller
-            MilestoneController controller = loader.getController();
+            MilestoneControllerTest controller = loader.getController();
             controller.setMilestone(milestone);
 
             // Show the dialog and wait for result
