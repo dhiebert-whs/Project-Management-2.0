@@ -9,7 +9,7 @@ import org.frcpm.models.Milestone;
 import org.frcpm.models.Project;
 import org.frcpm.services.MilestoneService;
 import org.frcpm.services.ServiceFactory;
-import org.frcpm.viewmodels.MilestoneViewModel;
+import org.frcpm.viewmodels.MilestoneViewModelTest;
 
 import java.time.LocalDate;
 import java.util.logging.Level;
@@ -38,7 +38,7 @@ public class MilestoneController {
     private Button cancelButton;
     
     private final MilestoneService milestoneService = ServiceFactory.getMilestoneService();
-    private MilestoneViewModel viewModel;
+    private MilestoneViewModelTest viewModel;
     
     private Milestone milestone;
     private Project project;
@@ -52,7 +52,7 @@ public class MilestoneController {
         LOGGER.info("Initializing MilestoneController");
         
         // Create the view model
-        viewModel = new MilestoneViewModel(milestoneService);
+        viewModel = new MilestoneViewModelTest(milestoneService);
         
         // Set default date to today
         datePicker.setValue(LocalDate.now());
@@ -273,7 +273,7 @@ public class MilestoneController {
      * 
      * @return the view model
      */
-    public MilestoneViewModel getViewModel() {
+    public MilestoneViewModelTest getViewModel() {
         return viewModel;
     }
 
