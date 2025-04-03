@@ -15,20 +15,22 @@ import javafx.scene.layout.HBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Callback;
+import org.frcpm.binding.Command;
+import org.frcpm.binding.ViewModelBinding;
 import org.frcpm.models.*;
 import org.frcpm.services.*;
+import org.frcpm.viewmodels.ProjectViewModel;
 
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Controller for the project view.
+ * Controller for the project view using MVVM pattern.
  */
 public class ProjectController {
 
@@ -106,20 +108,20 @@ public class ProjectController {
     @FXML
     private Button scheduleMeetingButton;
 
-    private Project project;
-    private final ProjectService projectService = ServiceFactory.getProjectService();
-    private final TaskService taskService = ServiceFactory.getTaskService();
-    private final MilestoneService milestoneService = ServiceFactory.getMilestoneService();
-    private final MeetingService meetingService = ServiceFactory.getMeetingService();
+    // ViewModel
+    private final ProjectViewModel viewModel = new ProjectViewModel();
 
+    // Observable collections for tables
     private ObservableList<Task> taskList = FXCollections.observableArrayList();
-    private ObservableList<Milestone> milestoneList = FXCollections.observableArrayList();
     private ObservableList<Meeting> meetingList = FXCollections.observableArrayList();
+
+    // Custom commands for UI actions
+    private Command addTaskCommand;
+    private Command addMilestoneCommand;
+    private Command scheduleMeetingCommand;
 
     /**
      * Helper method to create a date cell factory that works with any entity type.
-     * This allows us to reuse the same formatting logic across different table
-     * columns.
      * 
      * @param <T> the entity type for the table row
      * @return a callback that creates properly formatted date cells
@@ -145,6 +147,9 @@ public class ProjectController {
     @FXML
     private void initialize() {
         LOGGER.info("Initializing ProjectController");
+
+        // Initialize custom commands
+        initializeCommands();
 
         // Set up task table columns
         taskTitleColumn.setCellValueFactory(
@@ -240,10 +245,56 @@ public class ProjectController {
             return row;
         });
 
-        // Set up button actions
-        addTaskButton.setOnAction(this::handleAddTask);
-        addMilestoneButton.setOnAction(this::handleAddMilestone);
-        scheduleMeetingButton.setOnAction(this::handleScheduleMeeting);
+        // Set up error message display
+        viewModel.errorMessageProperty().addListener((obs, oldValue, newValue) -> {
+            if (newValue != null && !newValue.isEmpty()) {
+                showErrorAlert("Error", newValue);
+            }
+        });
+
+        // Set up bindings to ViewModel
+        setupBindings();
+    }
+
+    /**
+     * Initializes the custom commands for UI actions.
+     */
+    private void initializeCommands() {
+        // Create commands for UI actions
+        addTaskCommand = new Command(this::handleAddTaskAction);
+        addMilestoneCommand = new Command(this::handleAddMilestoneAction);
+        scheduleMeetingCommand = new Command(this::handleScheduleMeetingAction);
+    }
+
+    /**
+     * Sets up bindings between UI controls and ViewModel properties.
+     */
+    private void setupBindings() {
+        // Bind project details
+        projectNameLabel.textProperty().bind(viewModel.projectNameProperty());
+        descriptionArea.textProperty().bind(viewModel.projectDescriptionProperty());
+
+        // Bind date labels
+        startDateLabel.textProperty().bind(viewModel.startDateProperty().asString());
+        goalDateLabel.textProperty().bind(viewModel.goalEndDateProperty().asString());
+        deadlineLabel.textProperty().bind(viewModel.hardDeadlineProperty().asString());
+
+        // Bind progress indicators
+        completionProgressBar.progressProperty().bind(viewModel.completionPercentageProperty().divide(100.0));
+        completionLabel.textProperty().bind(viewModel.completionPercentageProperty().asString("%.1f%%"));
+        totalTasksLabel.textProperty().bind(viewModel.totalTasksProperty().asString());
+        completedTasksLabel.textProperty().bind(viewModel.completedTasksProperty().asString());
+        daysRemainingLabel.textProperty().bind(viewModel.daysUntilGoalProperty().asString("%d days until goal"));
+
+        // Bind tables
+        tasksTable.setItems(taskList);
+        milestonesTable.setItems(viewModel.getMilestones());
+        meetingsTable.setItems(meetingList);
+
+        // Bind buttons to commands
+        ViewModelBinding.bindCommandButton(addTaskButton, addTaskCommand);
+        ViewModelBinding.bindCommandButton(addMilestoneButton, addMilestoneCommand);
+        ViewModelBinding.bindCommandButton(scheduleMeetingButton, scheduleMeetingCommand);
     }
 
     /**
@@ -252,7 +303,7 @@ public class ProjectController {
      * @param project the project
      */
     public void setProject(Project project) {
-        this.project = project;
+        viewModel.initExistingProject(project);
         loadProjectData();
     }
 
@@ -260,40 +311,13 @@ public class ProjectController {
      * Loads the project data.
      */
     private void loadProjectData() {
+        Project project = viewModel.getSelectedProject();
         if (project == null) {
             return;
         }
 
-        // Set project details
-        projectNameLabel.setText(project.getName());
-        startDateLabel.setText(project.getStartDate().toString());
-        goalDateLabel.setText(project.getGoalEndDate().toString());
-        deadlineLabel.setText(project.getHardDeadline().toString());
-        descriptionArea.setText(project.getDescription());
-
-        // Load project summary
-        Map<String, Object> summary = projectService.getProjectSummary(project.getId());
-
-        // Update progress indicators
-        double completionPercentage = (double) summary.get("completionPercentage");
-        completionProgressBar.setProgress(completionPercentage / 100.0);
-        completionLabel.setText(String.format("%.1f%%", completionPercentage));
-
-        // Update task counts
-        totalTasksLabel.setText(summary.get("totalTasks").toString());
-        completedTasksLabel.setText(summary.get("completedTasks").toString());
-
-        // Update days remaining
-        long daysUntilGoal = (long) summary.get("daysUntilGoal");
-        daysRemainingLabel.setText(daysUntilGoal + " days until goal");
-
-        // Load tasks
+        // Load tasks and meetings
         loadTasks();
-
-        // Load milestones
-        loadMilestones();
-
-        // Load meetings
         loadMeetings();
     }
 
@@ -302,26 +326,16 @@ public class ProjectController {
      */
     private void loadTasks() {
         try {
-            List<Task> tasks = taskService.findByProject(project);
+            Project project = viewModel.getSelectedProject();
+            if (project == null) {
+                return;
+            }
+
+            List<Task> tasks = ServiceFactory.getTaskService().findByProject(project);
             taskList.setAll(tasks);
-            tasksTable.setItems(taskList);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error loading tasks", e);
             showErrorAlert("Error Loading Tasks", "Failed to load tasks for the project.");
-        }
-    }
-
-    /**
-     * Loads the milestones for the project.
-     */
-    private void loadMilestones() {
-        try {
-            List<Milestone> milestones = milestoneService.findByProject(project);
-            milestoneList.setAll(milestones);
-            milestonesTable.setItems(milestoneList);
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error loading milestones", e);
-            showErrorAlert("Error Loading Milestones", "Failed to load milestones for the project.");
         }
     }
 
@@ -330,9 +344,13 @@ public class ProjectController {
      */
     private void loadMeetings() {
         try {
-            List<Meeting> meetings = meetingService.findByProject(project);
+            Project project = viewModel.getSelectedProject();
+            if (project == null) {
+                return;
+            }
+
+            List<Meeting> meetings = ServiceFactory.getMeetingService().findByProject(project);
             meetingList.setAll(meetings);
-            meetingsTable.setItems(meetingList);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error loading meetings", e);
             showErrorAlert("Error Loading Meetings", "Failed to load meetings for the project.");
@@ -340,12 +358,17 @@ public class ProjectController {
     }
 
     /**
-     * Handles adding a new task.
-     * 
-     * @param event the action event
+     * Handles the add task action.
+     * Bound to the addTaskCommand.
      */
-    public void handleAddTask(ActionEvent event) {
+    private void handleAddTaskAction() {
         try {
+            Project project = viewModel.getSelectedProject();
+            if (project == null) {
+                showErrorAlert("No Project", "No project is selected.");
+                return;
+            }
+
             // First, select a subsystem
             List<Subsystem> subsystems = ServiceFactory.getSubsystemService().findAll();
 
@@ -375,7 +398,7 @@ public class ProjectController {
             Stage dialogStage = new Stage();
             dialogStage.setTitle("New Task");
             dialogStage.initModality(Modality.WINDOW_MODAL);
-            dialogStage.initOwner(((Node) event.getSource()).getScene().getWindow());
+            dialogStage.initOwner(addTaskButton.getScene().getWindow());
             dialogStage.setScene(new Scene(dialogView));
 
             // Get the controller
@@ -393,6 +416,17 @@ public class ProjectController {
             LOGGER.log(Level.SEVERE, "Error loading task dialog", e);
             showErrorAlert("Error Creating Task", "Failed to open the task creation dialog.");
         }
+    }
+
+    /**
+     * Handles adding a new task.
+     * Used for event handlers.
+     * 
+     * @param event the action event
+     */
+    @FXML
+    public void handleAddTask(ActionEvent event) {
+        addTaskCommand.execute();
     }
 
     /**
@@ -433,11 +467,18 @@ public class ProjectController {
         }
     }
 
-
-
-    @FXML
-    public void handleAddMilestone(ActionEvent event) {
+    /**
+     * Handles the add milestone action.
+     * Bound to the addMilestoneCommand.
+     */
+    private void handleAddMilestoneAction() {
         try {
+            Project project = viewModel.getSelectedProject();
+            if (project == null) {
+                showErrorAlert("No Project", "No project is selected.");
+                return;
+            }
+
             // Load the milestone dialog
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/MilestoneView.fxml"));
             Parent dialogView = loader.load();
@@ -446,7 +487,7 @@ public class ProjectController {
             Stage dialogStage = new Stage();
             dialogStage.setTitle("New Milestone");
             dialogStage.initModality(Modality.WINDOW_MODAL);
-            dialogStage.initOwner(((Node) event.getSource()).getScene().getWindow());
+            dialogStage.initOwner(addMilestoneButton.getScene().getWindow());
             dialogStage.setScene(new Scene(dialogView));
 
             // Get the controller
@@ -456,8 +497,8 @@ public class ProjectController {
             // Show the dialog and wait for result
             dialogStage.showAndWait();
 
-            // Reload milestones to show the new one
-            loadMilestones();
+            // Reload milestones using ViewModel command
+            viewModel.getLoadMilestonesCommand().execute();
 
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Error loading milestone dialog", e);
@@ -465,6 +506,22 @@ public class ProjectController {
         }
     }
 
+    /**
+     * Handles adding a new milestone.
+     * Used for event handlers.
+     * 
+     * @param event the action event
+     */
+    @FXML
+    public void handleAddMilestone(ActionEvent event) {
+        addMilestoneCommand.execute();
+    }
+
+    /**
+     * Handles editing a milestone.
+     * 
+     * @param milestone the milestone to edit
+     */
     public void handleEditMilestone(Milestone milestone) {
         if (milestone == null) {
             return;
@@ -489,8 +546,8 @@ public class ProjectController {
             // Show the dialog and wait for result
             dialogStage.showAndWait();
 
-            // Reload milestones to show the updated one
-            loadMilestones();
+            // Reload milestones using ViewModel command
+            viewModel.getLoadMilestonesCommand().execute();
 
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Error loading milestone dialog", e);
@@ -499,13 +556,17 @@ public class ProjectController {
     }
 
     /**
-     * Handles scheduling a new meeting.
-     * 
-     * @param event the action event
+     * Handles the schedule meeting action.
+     * Bound to the scheduleMeetingCommand.
      */
-    @FXML
-    public void handleScheduleMeeting(ActionEvent event) {
+    private void handleScheduleMeetingAction() {
         try {
+            Project project = viewModel.getSelectedProject();
+            if (project == null) {
+                showErrorAlert("No Project", "No project is selected.");
+                return;
+            }
+
             // Load the meeting dialog
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/MeetingView.fxml"));
             Parent dialogView = loader.load();
@@ -514,7 +575,7 @@ public class ProjectController {
             Stage dialogStage = new Stage();
             dialogStage.setTitle("Schedule Meeting");
             dialogStage.initModality(Modality.WINDOW_MODAL);
-            dialogStage.initOwner(((Node) event.getSource()).getScene().getWindow());
+            dialogStage.initOwner(scheduleMeetingButton.getScene().getWindow());
             dialogStage.setScene(new Scene(dialogView));
 
             // Get the controller
@@ -531,6 +592,17 @@ public class ProjectController {
             LOGGER.log(Level.SEVERE, "Error loading meeting dialog", e);
             showErrorAlert("Error Scheduling Meeting", "Failed to open the meeting scheduling dialog.");
         }
+    }
+
+    /**
+     * Handles scheduling a new meeting.
+     * Used for event handlers.
+     * 
+     * @param event the action event
+     */
+    @FXML
+    public void handleScheduleMeeting(ActionEvent event) {
+        scheduleMeetingCommand.execute();
     }
 
     /**
@@ -586,19 +658,6 @@ public class ProjectController {
     }
 
     /**
-     * Shows a "Not Implemented" alert dialog.
-     * 
-     * @param feature the feature that is not implemented
-     */
-    private void showNotImplementedAlert(String feature) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Not Implemented");
-        alert.setHeaderText(feature);
-        alert.setContentText("This feature is not yet implemented in the current version.");
-        alert.showAndWait();
-    }
-
-    /**
      * Shows an error alert dialog.
      * 
      * @param title   the title
@@ -612,389 +671,123 @@ public class ProjectController {
         alert.showAndWait();
     }
 
-    // Getter for project
-    public Project getProject() {
-        return project;
+    /**
+     * Gets the ViewModel.
+     * 
+     * @return the ViewModel
+     */
+    public ProjectViewModel getViewModel() {
+        return viewModel;
     }
 
     /**
-     * Gets the project name label.
+     * Gets the project from the ViewModel.
      * 
-     * @return the project name label
+     * @return the selected project
      */
+    public Project getProject() {
+        return viewModel.getSelectedProject();
+    }
+
+    // Getters for UI elements (for testing)
+
     public Label getProjectNameLabel() {
         return projectNameLabel;
     }
 
-    /**
-     * Gets the start date label.
-     * 
-     * @return the start date label
-     */
     public Label getStartDateLabel() {
         return startDateLabel;
     }
 
-    /**
-     * Gets the goal date label.
-     * 
-     * @return the goal date label
-     */
     public Label getGoalDateLabel() {
         return goalDateLabel;
     }
 
-    /**
-     * Gets the deadline label.
-     * 
-     * @return the deadline label
-     */
     public Label getDeadlineLabel() {
         return deadlineLabel;
     }
 
-    /**
-     * Gets the description area.
-     * 
-     * @return the description area
-     */
     public TextArea getDescriptionArea() {
         return descriptionArea;
     }
 
-    /**
-     * Gets the completion progress bar.
-     * 
-     * @return the completion progress bar
-     */
     public ProgressBar getCompletionProgressBar() {
         return completionProgressBar;
     }
 
-    /**
-     * Gets the completion label.
-     * 
-     * @return the completion label
-     */
     public Label getCompletionLabel() {
         return completionLabel;
     }
 
-    /**
-     * Gets the total tasks label.
-     * 
-     * @return the total tasks label
-     */
     public Label getTotalTasksLabel() {
         return totalTasksLabel;
     }
 
-    /**
-     * Gets the completed tasks label.
-     * 
-     * @return the completed tasks label
-     */
     public Label getCompletedTasksLabel() {
         return completedTasksLabel;
     }
 
-    /**
-     * Gets the days remaining label.
-     * 
-     * @return the days remaining label
-     */
     public Label getDaysRemainingLabel() {
         return daysRemainingLabel;
     }
 
-    /**
-     * Gets the tasks table.
-     * 
-     * @return the tasks table
-     */
     public TableView<Task> getTasksTable() {
         return tasksTable;
     }
 
-    /**
-     * Gets the task title column.
-     * 
-     * @return the task title column
-     */
-    public TableColumn<Task, String> getTaskTitleColumn() {
-        return taskTitleColumn;
-    }
-
-    /**
-     * Gets the task subsystem column.
-     * 
-     * @return the task subsystem column
-     */
-    public TableColumn<Task, String> getTaskSubsystemColumn() {
-        return taskSubsystemColumn;
-    }
-
-    /**
-     * Gets the task progress column.
-     * 
-     * @return the task progress column
-     */
-    public TableColumn<Task, Integer> getTaskProgressColumn() {
-        return taskProgressColumn;
-    }
-
-    /**
-     * Gets the task due date column.
-     * 
-     * @return the task due date column
-     */
-    public TableColumn<Task, LocalDate> getTaskDueDateColumn() {
-        return taskDueDateColumn;
-    }
-
-    /**
-     * Gets the milestones table.
-     * 
-     * @return the milestones table
-     */
     public TableView<Milestone> getMilestonesTable() {
         return milestonesTable;
     }
 
-    /**
-     * Gets the milestone name column.
-     * 
-     * @return the milestone name column
-     */
-    public TableColumn<Milestone, String> getMilestoneNameColumn() {
-        return milestoneNameColumn;
-    }
-
-    /**
-     * Gets the milestone date column.
-     * 
-     * @return the milestone date column
-     */
-    public TableColumn<Milestone, LocalDate> getMilestoneDateColumn() {
-        return milestoneDateColumn;
-    }
-
-    /**
-     * Gets the meetings table.
-     * 
-     * @return the meetings table
-     */
     public TableView<Meeting> getMeetingsTable() {
         return meetingsTable;
     }
 
-    /**
-     * Gets the meeting date column.
-     * 
-     * @return the meeting date column
-     */
-    public TableColumn<Meeting, LocalDate> getMeetingDateColumn() {
-        return meetingDateColumn;
-    }
-
-    /**
-     * Gets the meeting time column.
-     * 
-     * @return the meeting time column
-     */
-    public TableColumn<Meeting, String> getMeetingTimeColumn() {
-        return meetingTimeColumn;
-    }
-
-    /**
-     * Gets the add task button.
-     * 
-     * @return the add task button
-     */
     public Button getAddTaskButton() {
         return addTaskButton;
     }
 
-    /**
-     * Gets the add milestone button.
-     * 
-     * @return the add milestone button
-     */
     public Button getAddMilestoneButton() {
         return addMilestoneButton;
     }
 
-    /**
-     * Gets the schedule meeting button.
-     * 
-     * @return the schedule meeting button
-     */
     public Button getScheduleMeetingButton() {
         return scheduleMeetingButton;
     }
 
-    /**
-     * Gets the project service.
-     * 
-     * @return the project service
-     */
-    public ProjectService getProjectService() {
-        return projectService;
-    }
-
-    /**
-     * Gets the task service.
-     * 
-     * @return the task service
-     */
-    public TaskService getTaskService() {
-        return taskService;
-    }
-
-    /**
-     * Gets the milestone service.
-     * 
-     * @return the milestone service
-     */
-    public MilestoneService getMilestoneService() {
-        return milestoneService;
-    }
-
-    /**
-     * Gets the meeting service.
-     * 
-     * @return the meeting service
-     */
-    public MeetingService getMeetingService() {
-        return meetingService;
-    }
-
-    /**
-     * Gets the task list.
-     * 
-     * @return the task list
-     */
     public ObservableList<Task> getTaskList() {
         return taskList;
     }
 
-    /**
-     * Gets the milestone list.
-     * 
-     * @return the milestone list
-     */
-    public ObservableList<Milestone> getMilestoneList() {
-        return milestoneList;
-    }
-
-    /**
-     * Gets the meeting list.
-     * 
-     * @return the meeting list
-     */
     public ObservableList<Meeting> getMeetingList() {
         return meetingList;
     }
 
     /**
-     * Public method to access initialize for testing.
+     * For testing purposes.
      */
     public void testInitialize() {
         initialize();
     }
 
     /**
-     * Public method to access loadProjectData for testing.
+     * For testing purposes.
      */
     public void testLoadProjectData() {
         loadProjectData();
     }
 
     /**
-     * Public method to access loadTasks for testing.
+     * For testing purposes.
      */
     public void testLoadTasks() {
         loadTasks();
     }
 
     /**
-     * Public method to access loadMilestones for testing.
-     */
-    public void testLoadMilestones() {
-        loadMilestones();
-    }
-
-    /**
-     * Public method to access loadMeetings for testing.
+     * For testing purposes.
      */
     public void testLoadMeetings() {
         loadMeetings();
     }
-
-    /**
-     * Public method to access createDateCellFactory for testing.
-     * 
-     * @param <T> the type parameter
-     * @return the date cell factory
-     */
-    public <T> Callback<TableColumn<T, LocalDate>, TableCell<T, LocalDate>> testCreateDateCellFactory() {
-        return createDateCellFactory();
-    }
-
-    /**
-     * Public method to access showErrorAlert for testing.
-     * 
-     * @param title   the title
-     * @param message the message
-     */
-    public void testShowErrorAlert(String title, String message) {
-        showErrorAlert(title, message);
-    }
-
-    /**
-     * Public method to access showInfoAlert for testing.
-     * 
-     * @param title   the title
-     * @param message the message
-     */
-    public void testShowInfoAlert(String title, String message) {
-        showInfoAlert(title, message);
-    }
-
-    /**
-     * Public method to access showNotImplementedAlert for testing.
-     * 
-     * @param feature the feature
-     */
-    public void testShowNotImplementedAlert(String feature) {
-        showNotImplementedAlert(feature);
-    }
-
-    /**
-     * Public method to access handleEditTask for testing.
-     * 
-     * @param task the task to edit
-     */
-    public void testHandleEditTask(Task task) {
-        handleEditTask(task);
-    }
-
-    /**
-     * Public method to access handleEditMilestone for testing.
-     * 
-     * @param milestone the milestone to edit
-     */
-    public void testHandleEditMilestone(Milestone milestone) {
-        handleEditMilestone(milestone);
-    }
-
-    /**
-     * Public method to access handleEditMeeting for testing.
-     * 
-     * @param meeting the meeting to edit
-     */
-    public void testHandleEditMeeting(Meeting meeting) {
-        handleEditMeeting(meeting);
-    }
-
 }
