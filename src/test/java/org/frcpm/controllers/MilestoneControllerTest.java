@@ -27,8 +27,8 @@ public class MilestoneControllerTest {
     // Controller to test
     private MilestoneController milestoneController;
 
-    // Test ViewModel - not using mockito
-    private TestMilestoneViewModel testViewModel;
+    // Mock ViewModel
+    private MockMilestoneViewModel mockViewModel;
 
     // UI components
     private TextField nameField;
@@ -83,13 +83,13 @@ public class MilestoneControllerTest {
         testMilestone.setId(1L);
         testMilestone.setDescription("Test milestone description");
 
-        // Create a new controller instance and test ViewModel
+        // Create a new controller instance
         milestoneController = new MilestoneController();
 
-        // Create test view model directly - not through inheritance
-        testViewModel = new TestMilestoneViewModel();
-        testViewModel.setMilestone(testMilestone);
-        testViewModel.setValid(true);
+        // Create mock view model
+        mockViewModel = new MockMilestoneViewModel();
+        mockViewModel.milestone = testMilestone;
+        mockViewModel.valid = true;
 
         // Reset command execution flags
         saveCommandExecuted = false;
@@ -101,11 +101,11 @@ public class MilestoneControllerTest {
         injectField("descriptionArea", descriptionArea);
         injectField("saveButton", saveButton);
         injectField("cancelButton", cancelButton);
-        injectField("viewModel", testViewModel);
+        injectField("viewModel", mockViewModel);
 
         // Manual button setup instead of calling initialize()
         saveButton.setOnAction(event -> {
-            if (testViewModel.isValid()) {
+            if (mockViewModel.isValid()) {
                 saveCommandExecuted = true;
             }
         });
@@ -121,8 +121,8 @@ public class MilestoneControllerTest {
         milestoneController.setNewMilestone(testProject);
 
         // Verify ViewModel state was changed
-        assertSame(testProject, testViewModel.getProject());
-        assertTrue(testViewModel.wasInitNewMilestoneCalled());
+        assertSame(testProject, mockViewModel.project);
+        assertTrue(mockViewModel.initNewMilestoneCalled);
     }
 
     @Test
@@ -131,7 +131,7 @@ public class MilestoneControllerTest {
         milestoneController.setMilestone(testMilestone);
 
         // Verify ViewModel state was changed
-        assertTrue(testViewModel.wasInitExistingMilestoneCalled());
+        assertTrue(mockViewModel.initExistingMilestoneCalled);
     }
 
     @Test
@@ -149,13 +149,13 @@ public class MilestoneControllerTest {
         MilestoneViewModel result = milestoneController.getViewModel();
 
         // Verify
-        assertEquals(testViewModel, result);
+        assertEquals(mockViewModel, result);
     }
 
     @Test
     public void testSaveButtonAction_Valid() {
         // Set up
-        testViewModel.setValid(true);
+        mockViewModel.valid = true;
 
         // Trigger the save button action
         saveButton.fire();
@@ -167,8 +167,8 @@ public class MilestoneControllerTest {
     @Test
     public void testSaveButtonAction_Invalid() {
         // Set up
-        testViewModel.setValid(false);
-        testViewModel.setErrorMessage("Test error message");
+        mockViewModel.valid = false;
+        mockViewModel.errorMsg = "Test error message";
 
         // Trigger the save button action
         saveButton.fire();
@@ -196,28 +196,36 @@ public class MilestoneControllerTest {
     }
 
     /**
-     * Test implementation of MilestoneViewModel to avoid using Mockito.
-     * This is a direct implementation instead of extending MilestoneViewModel
-     * to avoid initialization issues.
+     * Mock implementation of MilestoneViewModel for testing.
+     * This is a complete mock, not an extension of the actual class.
      */
-    private class TestMilestoneViewModel extends MilestoneViewModel {
-        private boolean initNewMilestoneCalled = false;
-        private boolean initExistingMilestoneCalled = false;
-        private boolean valid = true;
-        private Project project;
-        private Milestone milestone;
-        private final StringProperty nameProperty = new SimpleStringProperty();
-        private final ObjectProperty<LocalDate> dateProperty = new SimpleObjectProperty<>();
-        private final StringProperty descriptionProperty = new SimpleStringProperty();
-        private final StringProperty errorMessageProperty = new SimpleStringProperty();
-        private final Command saveCommand = new Command(() -> {
-        }, () -> true);
+    private static class MockMilestoneViewModel extends MilestoneViewModel {
+        // Track method calls
+        boolean initNewMilestoneCalled = false;
+        boolean initExistingMilestoneCalled = false;
 
-        public TestMilestoneViewModel() {
-            // Create a no-op constructor that doesn't call super()
-            // to avoid initialization errors
+        // Properties
+        boolean valid = true;
+        Project project;
+        Milestone milestone;
+        String errorMsg;
+
+        // Properties that will be accessed by the controller
+        private StringProperty nameProp = new SimpleStringProperty("");
+        private ObjectProperty<LocalDate> dateProp = new SimpleObjectProperty<>(LocalDate.now());
+        private StringProperty descProp = new SimpleStringProperty("");
+        private StringProperty errorProp = new SimpleStringProperty("");
+
+        // Command used by the controller
+        private Command saveCmd = new Command(() -> {
+        }, () -> valid);
+
+        // No-argument constructor
+        public MockMilestoneViewModel() {
+            // Does not call super() to avoid validation issues
         }
 
+        // Override all necessary methods from MilestoneViewModel
         @Override
         public void initNewMilestone(Project project) {
             this.project = project;
@@ -232,17 +240,17 @@ public class MilestoneControllerTest {
 
         @Override
         public StringProperty nameProperty() {
-            return nameProperty;
+            return nameProp;
         }
 
         @Override
         public ObjectProperty<LocalDate> dateProperty() {
-            return dateProperty;
+            return dateProp;
         }
 
         @Override
         public StringProperty descriptionProperty() {
-            return descriptionProperty;
+            return descProp;
         }
 
         @Override
@@ -250,27 +258,19 @@ public class MilestoneControllerTest {
             return valid;
         }
 
-        public void setValid(boolean valid) {
-            this.valid = valid;
-        }
-
         @Override
         public StringProperty errorMessageProperty() {
-            return errorMessageProperty;
+            return errorProp;
         }
 
         @Override
         public String getErrorMessage() {
-            return errorMessageProperty.get();
-        }
-
-        public void setErrorMessage(String message) {
-            errorMessageProperty.set(message);
+            return errorMsg;
         }
 
         @Override
         public Command getSaveCommand() {
-            return saveCommand;
+            return saveCmd;
         }
 
         @Override
@@ -278,25 +278,14 @@ public class MilestoneControllerTest {
             return milestone;
         }
 
-        public void setMilestone(Milestone milestone) {
-            this.milestone = milestone;
-        }
-
         @Override
         public Project getProject() {
             return project;
         }
 
-        public void setProject(Project project) {
-            this.project = project;
-        }
-
-        public boolean wasInitNewMilestoneCalled() {
-            return initNewMilestoneCalled;
-        }
-
-        public boolean wasInitExistingMilestoneCalled() {
-            return initExistingMilestoneCalled;
+        @Override
+        public boolean isDirty() {
+            return false;
         }
     }
 }
