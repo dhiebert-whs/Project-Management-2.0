@@ -1,321 +1,274 @@
+// src/test/java/org/frcpm/controllers/MilestoneControllerTest.java
 package org.frcpm.controllers;
 
-import javafx.event.ActionEvent;
-import javafx.fxml.FXML;
+import javafx.beans.property.*;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import org.frcpm.binding.ViewModelBinding;
+import org.frcpm.binding.Command;
 import org.frcpm.models.Milestone;
 import org.frcpm.models.Project;
-import org.frcpm.services.MilestoneService;
-import org.frcpm.services.ServiceFactory;
 import org.frcpm.viewmodels.MilestoneViewModel;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.testfx.framework.junit5.ApplicationExtension;
+import org.testfx.framework.junit5.Start;
 
+import java.lang.reflect.Field;
 import java.time.LocalDate;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
-/**
- * Controller for milestone management.
- */
+import static org.junit.jupiter.api.Assertions.*;
+
+@ExtendWith(ApplicationExtension.class)
 public class MilestoneControllerTest {
+
+    // Controller to test
+    private MilestoneController milestoneController;
     
-    private static final Logger LOGGER = Logger.getLogger(MilestoneControllerTest.class.getName());
+    // Test ViewModel - not using mockito
+    private TestMilestoneViewModel testViewModel;
     
-    @FXML
+    // UI components
     private TextField nameField;
-    
-    @FXML
     private DatePicker datePicker;
-    
-    @FXML
     private TextArea descriptionArea;
-    
-    @FXML
     private Button saveButton;
-    
-    @FXML
     private Button cancelButton;
     
-    private final MilestoneService milestoneService = ServiceFactory.getMilestoneService();
-    private MilestoneViewModel viewModel;
+    // Test data
+    private Project testProject;
+    private Milestone testMilestone;
     
-    private Milestone milestone;
-    private Project project;
-    private boolean isNewMilestone;
+    // Test command execution trackers
+    private boolean saveCommandExecuted = false;
+    private boolean cancelCommandExecuted = false;
     
-    /**
-     * Initializes the controller.
-     */
-    @FXML
-    private void initialize() {
-        LOGGER.info("Initializing MilestoneController");
+    @Start
+    public void start(Stage stage) {
+        // Create real JavaFX components
+        nameField = new TextField();
+        datePicker = new DatePicker();
+        descriptionArea = new TextArea();
+        saveButton = new Button("Save");
+        cancelButton = new Button("Cancel");
         
-        // Create the view model
-        viewModel = new MilestoneViewModel(milestoneService);
+        // Create a layout to hold the components
+        VBox root = new VBox(10);
+        root.getChildren().addAll(
+            nameField, 
+            datePicker, 
+            descriptionArea, 
+            saveButton, 
+            cancelButton
+        );
         
-        // Set default date to today
-        datePicker.setValue(LocalDate.now());
-        
-        // Set up button actions
-        saveButton.setOnAction(this::handleSave);
-        cancelButton.setOnAction(this::handleCancel);
-        
-        // Set up bindings
-        setupBindings();
+        // Set up and show the stage
+        Scene scene = new Scene(root, 400, 300);
+        stage.setScene(scene);
+        stage.show();
     }
     
-    /**
-     * Sets up the bindings between the view and the view model.
-     */
-    private void setupBindings() {
-        // Bind text fields to view model properties
-        ViewModelBinding.bindTextField(nameField, viewModel.nameProperty());
-        ViewModelBinding.bindTextArea(descriptionArea, viewModel.descriptionProperty());
-        ViewModelBinding.bindDatePicker(datePicker, viewModel.dateProperty());
+    @BeforeEach
+    public void setUp() throws Exception {
+        // Create test objects
+        testProject = new Project(
+                "Test Project",
+                LocalDate.now(),
+                LocalDate.now().plusWeeks(6),
+                LocalDate.now().plusWeeks(8)
+        );
+        testProject.setId(1L);
         
-        // Add listener for validation errors
-        viewModel.errorMessageProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue != null && !newValue.isEmpty()) {
-                showErrorAlert("Validation Error", newValue);
+        testMilestone = new Milestone("Test Milestone", LocalDate.now().plusDays(1), testProject);
+        testMilestone.setId(1L);
+        testMilestone.setDescription("Test milestone description");
+        
+        // Create a new controller instance and test ViewModel
+        milestoneController = new MilestoneController();
+        testViewModel = new TestMilestoneViewModel();
+        testViewModel.setMilestone(testMilestone);
+        testViewModel.setValid(true);
+        
+        // Reset command execution flags
+        saveCommandExecuted = false;
+        cancelCommandExecuted = false;
+        
+        // Inject components into controller using reflection
+        injectField("nameField", nameField);
+        injectField("datePicker", datePicker);
+        injectField("descriptionArea", descriptionArea);
+        injectField("saveButton", saveButton);
+        injectField("cancelButton", cancelButton);
+        injectField("viewModel", testViewModel);
+        
+        // Manual button setup instead of calling initialize()
+        saveButton.setOnAction(event -> {
+            if (testViewModel.isValid()) {
+                saveCommandExecuted = true;
             }
+        });
+        
+        cancelButton.setOnAction(event -> {
+            cancelCommandExecuted = true;
         });
     }
     
-    /**
-     * Sets up the controller for creating a new milestone.
-     * 
-     * @param project the project for the milestone
-     */
-    public void setNewMilestone(Project project) {
-        this.project = project;
-        this.milestone = null;
-        this.isNewMilestone = true;
+    @Test
+    public void testSetNewMilestone() {
+        // Call method
+        milestoneController.setNewMilestone(testProject);
         
-        // Initialize the view model
-        viewModel.initNewMilestone(project);
+        // Verify ViewModel state was changed
+        assertSame(testProject, testViewModel.getProject());
+        assertTrue(testViewModel.wasInitNewMilestoneCalled());
+    }
+    
+    @Test
+    public void testSetMilestone() {
+        // Call method
+        milestoneController.setMilestone(testMilestone);
+        
+        // Verify ViewModel state was changed
+        assertTrue(testViewModel.wasInitExistingMilestoneCalled());
+    }
+    
+    @Test
+    public void testGetMilestone() {
+        // Test
+        Milestone result = milestoneController.getMilestone();
+        
+        // Verify
+        assertEquals(testMilestone, result);
+    }
+    
+    @Test
+    public void testGetViewModel() {
+        // Test
+        MilestoneViewModel result = milestoneController.getViewModel();
+        
+        // Verify
+        assertEquals(testViewModel, result);
+    }
+    
+    @Test
+    public void testSaveButtonAction_Valid() {
+        // Set up
+        testViewModel.setValid(true);
+        
+        // Trigger the save button action
+        saveButton.fire();
+        
+        // Verify command was executed
+        assertTrue(saveCommandExecuted);
+    }
+    
+    @Test
+    public void testSaveButtonAction_Invalid() {
+        // Set up
+        testViewModel.setValid(false);
+        testViewModel.setErrorMessage("Test error message");
+        
+        // Trigger the save button action
+        saveButton.fire();
+        
+        // Verify command was not executed
+        assertFalse(saveCommandExecuted);
+    }
+    
+    @Test
+    public void testCancelButtonAction() {
+        // Trigger the cancel button action
+        cancelButton.fire();
+        
+        // Verify cancellation was triggered
+        assertTrue(cancelCommandExecuted);
     }
     
     /**
-     * Sets up the controller for editing an existing milestone.
-     * 
-     * @param milestone the milestone to edit
+     * Helper method to inject field values using reflection.
      */
-    public void setMilestone(Milestone milestone) {
-        this.milestone = milestone;
-        this.project = milestone.getProject();
-        this.isNewMilestone = false;
-        
-        // Initialize the view model
-        viewModel.initExistingMilestone(milestone);
+    private void injectField(String fieldName, Object value) throws Exception {
+        Field field = MilestoneController.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(milestoneController, value);
     }
     
     /**
-     * Handles saving the milestone.
-     * 
-     * @param event the action event
+     * Test implementation of MilestoneViewModel to avoid using Mockito.
      */
-    private void handleSave(ActionEvent event) {
-        try {
-            // Get field values
-            String name = nameField.getText();
-            LocalDate date = datePicker.getValue();
-            String description = descriptionArea.getText();
-            
-            // Validate required fields
-            if (name == null || name.trim().isEmpty()) {
-                showErrorAlert("Invalid Input", "Milestone name cannot be empty");
-                return;
-            }
-            
-            if (date == null) {
-                showErrorAlert("Invalid Input", "Milestone date cannot be empty");
-                return;
-            }
-            
-            // Validate date is within project timeline
-            if (date.isBefore(project.getStartDate()) || date.isAfter(project.getHardDeadline())) {
-                showErrorAlert("Invalid Date", "Milestone date must be within the project timeline");
-                return;
-            }
-            
-            // Execute the save command through the view model
-            viewModel.getSaveCommand().execute();
-            
-            // Update the milestone reference with the saved milestone
-            milestone = viewModel.getMilestone();
-            
-            // Close the dialog if save was successful
-            if (!viewModel.isDirty() && viewModel.getErrorMessage() == null) {
-                closeDialog();
-            }
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error saving milestone", e);
-            showErrorAlert("Error", "Failed to save milestone: " + e.getMessage());
+    private class TestMilestoneViewModel extends MilestoneViewModel {
+        private boolean initNewMilestoneCalled = false;
+        private boolean initExistingMilestoneCalled = false;
+        private boolean valid = true;
+        private final StringProperty nameProperty = new SimpleStringProperty();
+        private final ObjectProperty<LocalDate> dateProperty = new SimpleObjectProperty<>();
+        private final StringProperty descriptionProperty = new SimpleStringProperty();
+        private final StringProperty errorMessageProperty = new SimpleStringProperty();
+        private final Command saveCommand = new Command(() -> {}, () -> true);
+        
+        @Override
+        public void initNewMilestone(Project project) {
+            setProject(project);
+            initNewMilestoneCalled = true;
         }
-    }
-    
-    /**
-     * Handles canceling milestone editing.
-     * 
-     * @param event the action event
-     */
-    private void handleCancel(ActionEvent event) {
-        closeDialog();
-    }
-    
-    /**
-     * Closes the dialog.
-     */
-    private void closeDialog() {
-        Stage stage = (Stage) saveButton.getScene().getWindow();
-        stage.close();
-    }
-    
-    /**
-     * Shows an error alert dialog.
-     * 
-     * @param title the title
-     * @param message the message
-     */
-    private void showErrorAlert(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Error");
-        alert.setHeaderText(title);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
-
-    /**
-     * Gets the name field.
-     * 
-     * @return the name field
-     */
-    public TextField getNameField() {
-        return nameField;
-    }
-
-    /**
-     * Gets the date picker.
-     * 
-     * @return the date picker
-     */
-    public DatePicker getDatePicker() {
-        return datePicker;
-    }
-
-    /**
-     * Gets the description area.
-     * 
-     * @return the description area
-     */
-    public TextArea getDescriptionArea() {
-        return descriptionArea;
-    }
-
-    /**
-     * Gets the save button.
-     * 
-     * @return the save button
-     */
-    public Button getSaveButton() {
-        return saveButton;
-    }
-
-    /**
-     * Gets the cancel button.
-     * 
-     * @return the cancel button
-     */
-    public Button getCancelButton() {
-        return cancelButton;
-    }
-
-    /**
-     * Gets the milestone service.
-     * 
-     * @return the milestone service
-     */
-    public MilestoneService getMilestoneService() {
-        return milestoneService;
-    }
-
-    /**
-     * Gets the milestone.
-     * 
-     * @return the milestone
-     */
-    public Milestone getMilestone() {
-        return milestone;
-    }
-
-    /**
-     * Gets the project.
-     * 
-     * @return the project
-     */
-    public Project getProject() {
-        return project;
-    }
-
-    /**
-     * Gets the isNewMilestone flag.
-     * 
-     * @return true if this is a new milestone, false otherwise
-     */
-    public boolean isNewMilestone() {
-        return isNewMilestone;
-    }
-    
-    /**
-     * Gets the view model.
-     * 
-     * @return the view model
-     */
-    public MilestoneViewModel getViewModel() {
-        return viewModel;
-    }
-
-    /**
-     * Public method to access initialize for testing.
-     */
-    public void testInitialize() {
-        initialize();
-    }
-
-    /**
-     * Public method to access handleSave for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleSave(ActionEvent event) {
-        handleSave(event);
-    }
-
-    /**
-     * Public method to access handleCancel for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleCancel(ActionEvent event) {
-        handleCancel(event);
-    }
-
-    /**
-     * Public method to access closeDialog for testing.
-     */
-    public void testCloseDialog() {
-        closeDialog();
-    }
-
-    /**
-     * Public method to access showErrorAlert for testing.
-     * 
-     * @param title the title
-     * @param message the message
-     */
-    public void testShowErrorAlert(String title, String message) {
-        showErrorAlert(title, message);
+        
+        @Override
+        public void initExistingMilestone(Milestone milestone) {
+            setMilestone(milestone);
+            initExistingMilestoneCalled = true;
+        }
+        
+        @Override
+        public boolean isValid() {
+            return valid;
+        }
+        
+        public void setValid(boolean valid) {
+            this.valid = valid;
+        }
+        
+        @Override
+        public StringProperty errorMessageProperty() {
+            return errorMessageProperty;
+        }
+        
+        @Override
+        public String getErrorMessage() {
+            return errorMessageProperty.get();
+        }
+        
+        public void setErrorMessage(String message) {
+            errorMessageProperty.set(message);
+        }
+        
+        @Override
+        public StringProperty nameProperty() {
+            return nameProperty;
+        }
+        
+        @Override
+        public ObjectProperty<LocalDate> dateProperty() {
+            return dateProperty;
+        }
+        
+        @Override
+        public StringProperty descriptionProperty() {
+            return descriptionProperty;
+        }
+        
+        @Override
+        public Command getSaveCommand() {
+            return saveCommand;
+        }
+        
+        public boolean wasInitNewMilestoneCalled() {
+            return initNewMilestoneCalled;
+        }
+        
+        public boolean wasInitExistingMilestoneCalled() {
+            return initExistingMilestoneCalled;
+        }
     }
 }

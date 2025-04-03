@@ -433,11 +433,8 @@ public class ProjectController {
         }
     }
 
-    /**
-     * Handles adding a new milestone.
-     * 
-     * @param event the action event
-     */
+
+
     @FXML
     public void handleAddMilestone(ActionEvent event) {
         try {
@@ -453,7 +450,7 @@ public class ProjectController {
             dialogStage.setScene(new Scene(dialogView));
 
             // Get the controller
-            MilestoneControllerTest controller = loader.getController();
+            MilestoneController controller = loader.getController();
             controller.setNewMilestone(project);
 
             // Show the dialog and wait for result
@@ -468,11 +465,6 @@ public class ProjectController {
         }
     }
 
-    /**
-     * Handles editing a milestone.
-     * 
-     * @param milestone the milestone to edit
-     */
     public void handleEditMilestone(Milestone milestone) {
         if (milestone == null) {
             return;
@@ -491,7 +483,7 @@ public class ProjectController {
             dialogStage.setScene(new Scene(dialogView));
 
             // Get the controller
-            MilestoneControllerTest controller = loader.getController();
+            MilestoneController controller = loader.getController();
             controller.setMilestone(milestone);
 
             // Show the dialog and wait for result
