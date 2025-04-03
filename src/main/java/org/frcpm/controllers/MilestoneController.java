@@ -4,10 +4,12 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
+import org.frcpm.binding.ViewModelBinding;
 import org.frcpm.models.Milestone;
 import org.frcpm.models.Project;
 import org.frcpm.services.MilestoneService;
 import org.frcpm.services.ServiceFactory;
+import org.frcpm.viewmodels.MilestoneViewModel;
 
 import java.time.LocalDate;
 import java.util.logging.Level;
@@ -36,6 +38,7 @@ public class MilestoneController {
     private Button cancelButton;
     
     private final MilestoneService milestoneService = ServiceFactory.getMilestoneService();
+    private MilestoneViewModel viewModel;
     
     private Milestone milestone;
     private Project project;
@@ -48,12 +51,35 @@ public class MilestoneController {
     private void initialize() {
         LOGGER.info("Initializing MilestoneController");
         
+        // Create the view model
+        viewModel = new MilestoneViewModel(milestoneService);
+        
         // Set default date to today
         datePicker.setValue(LocalDate.now());
         
         // Set up button actions
         saveButton.setOnAction(this::handleSave);
         cancelButton.setOnAction(this::handleCancel);
+        
+        // Set up bindings
+        setupBindings();
+    }
+    
+    /**
+     * Sets up the bindings between the view and the view model.
+     */
+    private void setupBindings() {
+        // Bind text fields to view model properties
+        ViewModelBinding.bindTextField(nameField, viewModel.nameProperty());
+        ViewModelBinding.bindTextArea(descriptionArea, viewModel.descriptionProperty());
+        ViewModelBinding.bindDatePicker(datePicker, viewModel.dateProperty());
+        
+        // Add listener for validation errors
+        viewModel.errorMessageProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null && !newValue.isEmpty()) {
+                showErrorAlert("Validation Error", newValue);
+            }
+        });
     }
     
     /**
@@ -66,10 +92,8 @@ public class MilestoneController {
         this.milestone = null;
         this.isNewMilestone = true;
         
-        // Clear fields
-        nameField.setText("");
-        datePicker.setValue(LocalDate.now());
-        descriptionArea.setText("");
+        // Initialize the view model
+        viewModel.initNewMilestone(project);
     }
     
     /**
@@ -82,10 +106,8 @@ public class MilestoneController {
         this.project = milestone.getProject();
         this.isNewMilestone = false;
         
-        // Set field values
-        nameField.setText(milestone.getName());
-        datePicker.setValue(milestone.getDate());
-        descriptionArea.setText(milestone.getDescription());
+        // Initialize the view model
+        viewModel.initExistingMilestone(milestone);
     }
     
     /**
@@ -117,17 +139,16 @@ public class MilestoneController {
                 return;
             }
             
-            if (isNewMilestone) {
-                // Create new milestone
-                milestone = milestoneService.createMilestone(name, date, project.getId(), description);
-            } else {
-                // Update existing milestone
-                milestone = milestoneService.updateMilestoneDate(milestone.getId(), date);
-                milestone = milestoneService.updateDescription(milestone.getId(), description);
-            }
+            // Execute the save command through the view model
+            viewModel.getSaveCommand().execute();
             
-            // Close the dialog
-            closeDialog();
+            // Update the milestone reference with the saved milestone
+            milestone = viewModel.getMilestone();
+            
+            // Close the dialog if save was successful
+            if (!viewModel.isDirty() && viewModel.getErrorMessage() == null) {
+                closeDialog();
+            }
             
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error saving milestone", e);
@@ -143,8 +164,6 @@ public class MilestoneController {
     private void handleCancel(ActionEvent event) {
         closeDialog();
     }
-    
-
     
     /**
      * Closes the dialog.
@@ -247,6 +266,15 @@ public class MilestoneController {
      */
     public boolean isNewMilestone() {
         return isNewMilestone;
+    }
+    
+    /**
+     * Gets the view model.
+     * 
+     * @return the view model
+     */
+    public MilestoneViewModel getViewModel() {
+        return viewModel;
     }
 
     /**
