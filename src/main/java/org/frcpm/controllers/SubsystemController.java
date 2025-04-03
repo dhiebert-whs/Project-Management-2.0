@@ -3,15 +3,21 @@ package org.frcpm.controllers;
 import javafx.beans.binding.Bindings;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.frcpm.binding.ViewModelBinding;
 import org.frcpm.models.Subteam;
+import org.frcpm.models.Project;
 import org.frcpm.models.Subsystem;
 import org.frcpm.models.Task;
 import org.frcpm.viewmodels.SubsystemViewModel;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.logging.Level;
@@ -92,7 +98,7 @@ public class SubsystemController {
 
         // Initialize responsible subteam combo box
         responsibleSubteamComboBox.setItems(viewModel.getAvailableSubteams());
-        
+
         // Set up tasks table columns
         setupTasksTable();
 
@@ -105,7 +111,7 @@ public class SubsystemController {
      */
     private void setupTasksTable() {
         taskTitleColumn.setCellValueFactory(new PropertyValueFactory<>("title"));
-        
+
         taskProgressColumn.setCellValueFactory(new PropertyValueFactory<>("progress"));
         taskProgressColumn.setCellFactory(column -> new TableCell<Task, Integer>() {
             @Override
@@ -123,7 +129,7 @@ public class SubsystemController {
                 }
             }
         });
-        
+
         taskDueDateColumn.setCellValueFactory(new PropertyValueFactory<>("endDate"));
         taskDueDateColumn.setCellFactory(column -> new TableCell<Task, LocalDate>() {
             @Override
@@ -136,7 +142,7 @@ public class SubsystemController {
                 }
             }
         });
-        
+
         // Set up double-click handler
         tasksTable.setRowFactory(tv -> {
             TableRow<Task> row = new TableRow<>();
@@ -156,14 +162,14 @@ public class SubsystemController {
         // Bind text fields
         ViewModelBinding.bindTextField(nameField, viewModel.subsystemNameProperty());
         ViewModelBinding.bindTextArea(descriptionArea, viewModel.subsystemDescriptionProperty());
-        
+
         // Bind combo boxes
         ViewModelBinding.bindComboBox(statusComboBox, viewModel.statusProperty());
         ViewModelBinding.bindComboBox(responsibleSubteamComboBox, viewModel.responsibleSubteamProperty());
-        
+
         // Bind table items
         tasksTable.setItems(viewModel.getTasks());
-        
+
         // Bind summary fields
         totalTasksLabel.textProperty().bind(Bindings.convert(viewModel.totalTasksProperty()));
         completedTasksLabel.textProperty().bind(Bindings.convert(viewModel.completedTasksProperty()));
@@ -171,16 +177,16 @@ public class SubsystemController {
                 Bindings.format("%.1f%%", viewModel.completionPercentageProperty()));
         completionProgressBar.progressProperty().bind(
                 viewModel.completionPercentageProperty().divide(100.0));
-        
+
         // Bind buttons
         ViewModelBinding.bindCommandButton(saveButton, viewModel.getSaveCommand());
-        
+
         // Handle cancel button
         cancelButton.setOnAction(event -> closeDialog());
-        
+
         // Handle add task button
         addTaskButton.setOnAction(event -> handleAddTask());
-        
+
         // Handle view task button
         viewTaskButton.setOnAction(event -> {
             Task selectedTask = tasksTable.getSelectionModel().getSelectedItem();
@@ -188,7 +194,7 @@ public class SubsystemController {
                 handleViewTask(selectedTask);
             }
         });
-        
+
         // Disable view task button when no task is selected
         viewTaskButton.disableProperty().bind(
                 tasksTable.getSelectionModel().selectedItemProperty().isNull());
@@ -220,12 +226,44 @@ public class SubsystemController {
                 MainController mainController = MainController.getInstance();
                 if (mainController != null) {
                     mainController.showTaskDialog(null, subsystem);
-                    
+
                     // Reload tasks
                     viewModel.getLoadTasksCommand().execute();
                 } else {
-                    LOGGER.warning("MainController instance is null");
-                    showErrorAlert("Error", "Cannot access main controller");
+                    // Alternative for when MainController instance isn't available
+                    // This is needed for tests or when controller hierarchy isn't set up
+                    LOGGER.warning("MainController instance is null - opening task dialog directly");
+
+                    try {
+                        // Load the task dialog directly
+                        FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/TaskView.fxml"));
+                        Parent dialogView = loader.load();
+
+                        // Create the dialog
+                        Stage dialogStage = new Stage();
+                        dialogStage.setTitle("New Task");
+                        dialogStage.initModality(Modality.WINDOW_MODAL);
+                        dialogStage.initOwner(saveButton.getScene().getWindow());
+                        dialogStage.setScene(new Scene(dialogView));
+
+                        // Get the controller
+                        TaskController controller = loader.getController();
+
+                        // For direct loading, we need to handle null project gracefully
+                        Project dummyProject = new Project("Temporary Project", LocalDate.now(),
+                                LocalDate.now().plusWeeks(6), LocalDate.now().plusWeeks(8));
+
+                        controller.initNewTask(new Task("", dummyProject, subsystem));
+
+                        // Show the dialog
+                        dialogStage.showAndWait();
+
+                        // Reload tasks
+                        viewModel.getLoadTasksCommand().execute();
+                    } catch (IOException e) {
+                        LOGGER.log(Level.SEVERE, "Error loading task dialog directly", e);
+                        showErrorAlert("Error", "Failed to open task dialog: " + e.getMessage());
+                    }
                 }
             } catch (Exception e) {
                 LOGGER.log(Level.SEVERE, "Error showing task dialog", e);
@@ -246,12 +284,38 @@ public class SubsystemController {
             MainController mainController = MainController.getInstance();
             if (mainController != null) {
                 mainController.showTaskDialog(task, null);
-                
+
                 // Reload tasks
                 viewModel.getLoadTasksCommand().execute();
             } else {
-                LOGGER.warning("MainController instance is null");
-                showErrorAlert("Error", "Cannot access main controller");
+                // Alternative for when MainController instance isn't available
+                LOGGER.warning("MainController instance is null - opening task dialog directly");
+
+                try {
+                    // Load the task dialog directly
+                    FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/TaskView.fxml"));
+                    Parent dialogView = loader.load();
+
+                    // Create the dialog
+                    Stage dialogStage = new Stage();
+                    dialogStage.setTitle("Edit Task");
+                    dialogStage.initModality(Modality.WINDOW_MODAL);
+                    dialogStage.initOwner(saveButton.getScene().getWindow());
+                    dialogStage.setScene(new Scene(dialogView));
+
+                    // Get the controller
+                    TaskController controller = loader.getController();
+                    controller.initExistingTask(task);
+
+                    // Show the dialog
+                    dialogStage.showAndWait();
+
+                    // Reload tasks
+                    viewModel.getLoadTasksCommand().execute();
+                } catch (IOException e) {
+                    LOGGER.log(Level.SEVERE, "Error loading task dialog directly", e);
+                    showErrorAlert("Error", "Failed to open task dialog: " + e.getMessage());
+                }
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error showing task dialog", e);

@@ -26,6 +26,8 @@ import javafx.util.Callback;
 
 import org.frcpm.models.Meeting;
 import org.frcpm.models.Project;
+import org.frcpm.models.Subsystem;
+import org.frcpm.models.Task;
 import org.frcpm.services.ProjectService;
 import org.frcpm.services.ServiceFactory;
 import org.frcpm.utils.ShortcutManager;
@@ -101,6 +103,9 @@ public class MainController {
     private void initialize() {
         LOGGER.info("Initializing MainController");
 
+        // Set this instance as the singleton
+        setInstance();
+
         // Set up the table columns
         projectNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         projectStartColumn.setCellValueFactory(new PropertyValueFactory<>("startDate"));
@@ -139,45 +144,6 @@ public class MainController {
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error loading projects", e);
             showErrorAlert("Error Loading Projects", "Failed to load projects from the database.");
-        }
-    }
-
-    /**
-     * Handles opening a project.
-     * 
-     * @param project the project to open
-     */
-    private void handleOpenProject(Project project) {
-        if (project == null) {
-            return;
-        }
-
-        try {
-            // Load the project view
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/ProjectView.fxml"));
-            Parent projectView = loader.load();
-
-            // Get the controller and set the project
-            ProjectController controller = loader.getController();
-            controller.setProject(project);
-
-            // Set the project view in the project tab
-            projectTab.setContent(projectView);
-            projectTab.setText(project.getName());
-            projectTab.setDisable(false);
-
-            // Switch to the project tab
-            TabPane tabPane = projectTab.getTabPane();
-            tabPane.getSelectionModel().select(projectTab);
-
-            // Enable project-specific menu items
-            Menu projectMenu = getMenuById("projectMenu");
-            if (projectMenu != null) {
-                projectMenu.setDisable(false);
-            }
-        } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Error loading project view", e);
-            showErrorAlert("Error Opening Project", "Failed to open the project view.");
         }
     }
 
@@ -264,9 +230,57 @@ public class MainController {
 
     // ---- File Menu Handlers ----
 
+    /**
+     * Handles opening a project.
+     * This overloaded version is used from UI event handlers.
+     * 
+     * @param event the action event
+     */
     @FXML
     private void handleOpenProject(ActionEvent event) {
+        // Implementation for the menu action
+        // This would typically show a file chooser dialog
         showNotImplementedAlert("Open Project");
+    }
+
+    /**
+     * Handles opening a project.
+     * This overloaded version is used when a project is already selected.
+     * 
+     * @param project the project to open
+     */
+    private void handleOpenProject(Project project) {
+        if (project == null) {
+            return;
+        }
+
+        try {
+            // Load the project view
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/ProjectView.fxml"));
+            Parent projectView = loader.load();
+
+            // Get the controller and set the project
+            ProjectController controller = loader.getController();
+            controller.setProject(project);
+
+            // Set the project view in the project tab
+            projectTab.setContent(projectView);
+            projectTab.setText(project.getName());
+            projectTab.setDisable(false);
+
+            // Switch to the project tab
+            TabPane tabPane = projectTab.getTabPane();
+            tabPane.getSelectionModel().select(projectTab);
+
+            // Enable project-specific menu items
+            Menu projectMenu = getMenuById("projectMenu");
+            if (projectMenu != null) {
+                projectMenu.setDisable(false);
+            }
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Error loading project view", e);
+            showErrorAlert("Error Opening Project", "Failed to open the project view.");
+        }
     }
 
     @FXML
@@ -1003,5 +1017,162 @@ public class MainController {
      */
     public void testHandleAbout(ActionEvent event) {
         handleAbout(event);
+    }
+
+    // Singleton instance
+    private static MainController instance;
+
+    /**
+     * Gets the singleton instance of the MainController.
+     * 
+     * @return the singleton instance
+     */
+    public static MainController getInstance() {
+        return instance;
+    }
+
+    /**
+     * Sets the singleton instance of the MainController.
+     * This should be called after the controller is initialized.
+     */
+    public void setInstance() {
+        instance = this;
+    }
+
+    /**
+     * Shows the task dialog for creating or editing a task.
+     * 
+     * @param task      the task to edit, or null to create a new task
+     * @param subsystem the subsystem for a new task, or null if editing an existing
+     *                  task
+     */
+    public void showTaskDialog(Task task, Subsystem subsystem) {
+        try {
+            // Load the task dialog
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/TaskView.fxml"));
+            Parent dialogView = loader.load();
+
+            // Create the dialog
+            Stage dialogStage = new Stage();
+            dialogStage.setTitle(task == null ? "New Task" : "Edit Task");
+            dialogStage.initModality(Modality.WINDOW_MODAL);
+            dialogStage.initOwner(projectsTable.getScene().getWindow());
+            dialogStage.setScene(new Scene(dialogView));
+
+            // Get the controller
+            TaskController controller = loader.getController();
+
+            // Initialize controller based on whether we're creating or editing
+            if (task != null) {
+                controller.initExistingTask(task);
+            } else if (subsystem != null) {
+                // For a new task, we need the current project
+                Project currentProject = null;
+                if (projectTab != null && !projectTab.isDisable()) {
+                    Node content = projectTab.getContent();
+                    if (content != null) {
+                        // Try to get the project controller
+                        ProjectController projectController = (ProjectController) content.getProperties()
+                                .get("controller");
+                        if (projectController != null) {
+                            currentProject = projectController.getProject();
+                        }
+                    }
+                }
+
+                if (currentProject == null) {
+                    // If we can't determine the current project, show an error
+                    showErrorAlert("Error", "No active project found.");
+                    return;
+                }
+
+                controller.initNewTask(new Task("", currentProject, subsystem));
+            } else {
+                // Both task and subsystem are null - invalid state
+                showErrorAlert("Error", "Invalid parameters for task dialog.");
+                return;
+            }
+
+            // Show the dialog
+            dialogStage.showAndWait();
+
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Error loading task dialog", e);
+            showErrorAlert("Error", "Failed to open task dialog: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Shows the subsystem dialog for creating or editing a subsystem.
+     * 
+     * @param subsystem the subsystem to edit, or null to create a new subsystem
+     */
+    public void showSubsystemDialog(Subsystem subsystem) {
+        try {
+            // Load the subsystem dialog
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/SubsystemView.fxml"));
+            Parent dialogView = loader.load();
+
+            // Create the dialog
+            Stage dialogStage = new Stage();
+            dialogStage.setTitle(subsystem == null ? "New Subsystem" : "Edit Subsystem");
+            dialogStage.initModality(Modality.WINDOW_MODAL);
+            dialogStage.initOwner(projectsTable.getScene().getWindow());
+            dialogStage.setScene(new Scene(dialogView));
+
+            // Get the controller
+            SubsystemController controller = loader.getController();
+
+            // Initialize controller based on whether we're creating or editing
+            if (subsystem != null) {
+                controller.initExistingSubsystem(subsystem);
+            } else {
+                controller.initNewSubsystem();
+            }
+
+            // Show the dialog
+            dialogStage.showAndWait();
+
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Error loading subsystem dialog", e);
+            showErrorAlert("Error", "Failed to open subsystem dialog: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Handles the menu action for managing subsystems.
+     * 
+     * @param event the action event
+     */
+    @FXML
+    private void handleSubsystems(ActionEvent event) {
+        try {
+            // Load the subsystem management view
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/SubsystemManagementView.fxml"));
+            Parent subsystemView = loader.load();
+
+            // Create the dialog
+            Stage dialogStage = new Stage();
+            dialogStage.setTitle("Subsystem Management");
+            dialogStage.initModality(Modality.WINDOW_MODAL);
+            dialogStage.initOwner(((Node) event.getSource()).getScene().getWindow());
+            dialogStage.setScene(new Scene(subsystemView));
+
+            // Show the dialog
+            dialogStage.showAndWait();
+
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Error loading subsystem management view", e);
+            showErrorAlert("Error", "Failed to open subsystem management.");
+        }
+    }
+
+    /**
+     * Public method to access handleSubsystems for testing.
+     * 
+     * @param event the action event
+     */
+    public void testHandleSubsystems(ActionEvent event) {
+        handleSubsystems(event);
     }
 }
