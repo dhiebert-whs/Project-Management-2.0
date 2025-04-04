@@ -1,41 +1,86 @@
 package org.frcpm.controllers;
 
+import javafx.application.Platform;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseButton;
 import javafx.stage.Stage;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.testfx.framework.junit5.ApplicationExtension;
-import org.testfx.framework.junit5.Start;
+import javafx.stage.Window;
+import org.junit.jupiter.api.AfterEach;
+import org.testfx.api.FxToolkit;
+import org.testfx.framework.junit5.ApplicationTest;
+import org.testfx.util.WaitForAsyncUtils;
+
+import java.util.concurrent.TimeoutException;
 
 /**
- * Base class for JavaFX tests that handles toolkit initialization.
+ * Base class for JavaFX test classes.
+ * Extends ApplicationTest to provide JavaFX testing capabilities.
  */
-@ExtendWith(ApplicationExtension.class)
-public abstract class BaseJavaFXTest {
-
+public abstract class BaseJavaFXTest extends ApplicationTest {
+    
     /**
-     * Sets up the test environment for headless operation.
-     * This is run once before all tests in the class.
+     * Cleanup after each test method.
      */
-    @BeforeAll
-    public static void setupHeadless() {
-        System.setProperty("java.awt.headless", "true");
-        System.setProperty("testfx.robot", "glass");
-        System.setProperty("testfx.headless", "true");
-        System.setProperty("prism.order", "sw");
-        System.setProperty("prism.text", "t2k");
-        System.setProperty("glass.platform", "Monocle");
-        System.setProperty("monocle.platform", "Headless");
+    @AfterEach
+    public void tearDown() throws TimeoutException {
+        // Release all keys and buttons
+        release(new KeyCode[]{});
+        release(new MouseButton[]{});
+        // Close all windows
+        FxToolkit.cleanupStages();
+        // Wait for any pending JavaFX events to be processed
+        WaitForAsyncUtils.waitForFxEvents();
     }
-
+    
     /**
-     * This method will be overridden by subclasses to set up the 
-     * JavaFX environment before each test.
+     * Runs the specified action on the JavaFX application thread and waits for completion.
      * 
-     * @param stage the primary stage for this test
+     * @param action the action to run
      */
-    @Start
-    public void start(Stage stage) {
-        // This method is required by TestFX
-        // Individual test classes can override this method to configure the stage
+    protected void runOnFxThread(Runnable action) {
+        if (Platform.isFxApplicationThread()) {
+            action.run();
+        } else {
+            Platform.runLater(action);
+            WaitForAsyncUtils.waitForFxEvents();
+        }
+    }
+    
+    /**
+     * Gets a node from a scene with the specified ID.
+     * 
+     * @param <T> the node type
+     * @param scene the scene
+     * @param nodeId the node ID
+     * @return the node
+     */
+    @SuppressWarnings("unchecked")
+    protected <T extends Node> T getNodeById(Scene scene, String nodeId) {
+        return (T) scene.lookup("#" + nodeId);
+    }
+    
+    /**
+     * Gets a node from a parent with the specified ID.
+     * 
+     * @param <T> the node type
+     * @param parent the parent
+     * @param nodeId the node ID
+     * @return the node
+     */
+    @SuppressWarnings("unchecked")
+    protected <T extends Node> T getNodeById(Parent parent, String nodeId) {
+        return (T) parent.lookup("#" + nodeId);
+    }
+    
+    /**
+     * Gets the current window.
+     * 
+     * @return the window
+     */
+    protected Window getCurrentWindow() {
+        return targetWindow();
     }
 }

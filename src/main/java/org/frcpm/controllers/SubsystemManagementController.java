@@ -1,9 +1,8 @@
 package org.frcpm.controllers;
 
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -12,19 +11,18 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import org.frcpm.binding.ViewModelBinding;
 import org.frcpm.models.Subsystem;
 import org.frcpm.models.Task;
-import org.frcpm.services.ServiceFactory;
-import org.frcpm.services.SubsystemService;
-import org.frcpm.services.TaskService;
+import org.frcpm.viewmodels.SubsystemManagementViewModel;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * Controller for managing subsystems in the FRC Project Management System.
+ * Follows MVVM pattern by delegating business logic to the ViewModel.
  */
 public class SubsystemManagementController {
 
@@ -60,9 +58,8 @@ public class SubsystemManagementController {
     @FXML
     private Button closeButton;
 
-    private final SubsystemService subsystemService = ServiceFactory.getSubsystemService();
-    private final TaskService taskService = ServiceFactory.getTaskService();
-    private final ObservableList<Subsystem> subsystemList = FXCollections.observableArrayList();
+    // ViewModel
+    private final SubsystemManagementViewModel viewModel = new SubsystemManagementViewModel();
 
     /**
      * Initializes the controller.
@@ -73,6 +70,19 @@ public class SubsystemManagementController {
         LOGGER.info("Initializing SubsystemManagementController");
 
         // Set up the table columns
+        setupTableColumns();
+        
+        // Set up bindings
+        setupBindings();
+        
+        // Set up event handlers
+        setupEventHandlers();
+    }
+    
+    /**
+     * Sets up the table columns with cell factories and value factories.
+     */
+    private void setupTableColumns() {
         nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         
         statusColumn.setCellValueFactory(new PropertyValueFactory<>("status"));
@@ -99,18 +109,13 @@ public class SubsystemManagementController {
         
         tasksColumn.setCellValueFactory(cellData -> {
             Subsystem subsystem = cellData.getValue();
-            List<Task> tasks = taskService.findBySubsystem(subsystem);
-            return new SimpleObjectProperty<>(tasks.size());
+            int taskCount = viewModel.getTaskCount(subsystem);
+            return new SimpleObjectProperty<>(taskCount);
         });
         
         completionColumn.setCellValueFactory(cellData -> {
             Subsystem subsystem = cellData.getValue();
-            List<Task> tasks = taskService.findBySubsystem(subsystem);
-            if (tasks.isEmpty()) {
-                return new SimpleObjectProperty<>(0.0);
-            }
-            long completed = tasks.stream().filter(Task::isCompleted).count();
-            double percentage = (double) completed / tasks.size() * 100.0;
+            double percentage = viewModel.getCompletionPercentage(subsystem);
             return new SimpleObjectProperty<>(percentage);
         });
         
@@ -129,19 +134,40 @@ public class SubsystemManagementController {
                 }
             }
         });
-
-        // Set up button handlers
-        addSubsystemButton.setOnAction(event -> handleAddSubsystem());
-        editSubsystemButton.setOnAction(event -> handleEditSubsystem());
-        deleteSubsystemButton.setOnAction(event -> handleDeleteSubsystem());
+    }
+    
+    /**
+     * Sets up bindings between UI elements and ViewModel properties.
+     */
+    private void setupBindings() {
+        // Bind the table to the ViewModel's subsystems list
+        subsystemsTable.setItems(viewModel.getSubsystems());
+        
+        // Bind the selected subsystem
+        subsystemsTable.getSelectionModel().selectedItemProperty().addListener(
+            (obs, oldValue, newValue) -> viewModel.setSelectedSubsystem(newValue));
+        
+        // Bind button states to commands
+        ViewModelBinding.bindCommandButton(addSubsystemButton, viewModel.getAddSubsystemCommand());
+        ViewModelBinding.bindCommandButton(editSubsystemButton, viewModel.getEditSubsystemCommand());
+        ViewModelBinding.bindCommandButton(deleteSubsystemButton, viewModel.getDeleteSubsystemCommand());
+        
+        // Listen for error messages
+        viewModel.errorMessageProperty().addListener((obs, oldValue, newValue) -> {
+            if (newValue != null && !newValue.isEmpty()) {
+                showErrorAlert("Error", newValue);
+                viewModel.errorMessageProperty().set("");
+            }
+        });
+    }
+    
+    /**
+     * Sets up event handlers for UI interactions.
+     */
+    private void setupEventHandlers() {
+        // Set up close button action
         closeButton.setOnAction(event -> closeDialog());
-
-        // Disable edit and delete buttons when no subsystem is selected
-        editSubsystemButton.disableProperty().bind(
-                subsystemsTable.getSelectionModel().selectedItemProperty().isNull());
-        deleteSubsystemButton.disableProperty().bind(
-                subsystemsTable.getSelectionModel().selectedItemProperty().isNull());
-
+        
         // Set up double-click handler for editing
         subsystemsTable.setRowFactory(tv -> {
             TableRow<Subsystem> row = new TableRow<>();
@@ -152,23 +178,10 @@ public class SubsystemManagementController {
             });
             return row;
         });
-
-        // Load subsystems
-        loadSubsystems();
-    }
-
-    /**
-     * Loads subsystems from the database.
-     */
-    private void loadSubsystems() {
-        try {
-            List<Subsystem> subsystems = subsystemService.findAll();
-            subsystemList.setAll(subsystems);
-            subsystemsTable.setItems(subsystemList);
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error loading subsystems", e);
-            showErrorAlert("Error", "Failed to load subsystems: " + e.getMessage());
-        }
+        
+        // Override command handlers for dialog interactions
+        addSubsystemButton.setOnAction(event -> handleAddSubsystem());
+        editSubsystemButton.setOnAction(event -> handleEditSubsystem());
     }
 
     /**
@@ -178,7 +191,7 @@ public class SubsystemManagementController {
         MainController mainController = MainController.getInstance();
         if (mainController != null) {
             mainController.showSubsystemDialog(null);
-            loadSubsystems(); // Refresh the list
+            viewModel.getLoadSubsystemsCommand().execute();
         } else {
             openSubsystemDialog(null);
         }
@@ -188,12 +201,12 @@ public class SubsystemManagementController {
      * Handles editing the selected subsystem.
      */
     private void handleEditSubsystem() {
-        Subsystem selectedSubsystem = subsystemsTable.getSelectionModel().getSelectedItem();
+        Subsystem selectedSubsystem = viewModel.getSelectedSubsystem();
         if (selectedSubsystem != null) {
             MainController mainController = MainController.getInstance();
             if (mainController != null) {
                 mainController.showSubsystemDialog(selectedSubsystem);
-                loadSubsystems(); // Refresh the list
+                viewModel.getLoadSubsystemsCommand().execute();
             } else {
                 openSubsystemDialog(selectedSubsystem);
             }
@@ -232,45 +245,11 @@ public class SubsystemManagementController {
             dialogStage.showAndWait();
             
             // Refresh the subsystems list
-            loadSubsystems();
+            viewModel.getLoadSubsystemsCommand().execute();
 
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Error loading subsystem dialog", e);
             showErrorAlert("Error", "Failed to open subsystem dialog: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Handles deleting the selected subsystem.
-     */
-    private void handleDeleteSubsystem() {
-        Subsystem selectedSubsystem = subsystemsTable.getSelectionModel().getSelectedItem();
-        if (selectedSubsystem == null) {
-            return;
-        }
-
-        // Check if the subsystem has tasks
-        List<Task> tasks = taskService.findBySubsystem(selectedSubsystem);
-        if (!tasks.isEmpty()) {
-            showErrorAlert("Cannot Delete", 
-                "Cannot delete a subsystem that has tasks. Reassign or delete the tasks first.");
-            return;
-        }
-
-        // Ask for confirmation
-        Alert confirmDialog = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmDialog.setTitle("Confirm Delete");
-        confirmDialog.setHeaderText("Delete " + selectedSubsystem.getName());
-        confirmDialog.setContentText("Are you sure you want to delete this subsystem?");
-        
-        if (confirmDialog.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
-            try {
-                subsystemService.deleteById(selectedSubsystem.getId());
-                subsystemList.remove(selectedSubsystem);
-            } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "Error deleting subsystem", e);
-                showErrorAlert("Error", "Failed to delete subsystem: " + e.getMessage());
-            }
         }
     }
 
@@ -298,5 +277,15 @@ public class SubsystemManagementController {
         alert.setHeaderText(title);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+    
+    /**
+     * Gets the ViewModel for this controller.
+     * Primarily used for testing.
+     * 
+     * @return the ViewModel
+     */
+    public SubsystemManagementViewModel getViewModel() {
+        return viewModel;
     }
 }
