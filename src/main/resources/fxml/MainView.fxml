@@ -18,6 +18,7 @@
                             <MenuItem text="New Project" onAction="#handleNewProject" accelerator="Ctrl+N"/>
                             <MenuItem text="Open Project" onAction="#handleOpenProject" accelerator="Ctrl+O"/>
                             <MenuItem text="Close Project" onAction="#handleCloseProject" accelerator="Ctrl+W" disable="true"/>
+                            <!--MenuItem text="Delete Project" onAction="#handleDeleteProject" disable="true"/-->
                             <SeparatorMenuItem />
                             <MenuItem text="Save" onAction="#handleSave" accelerator="Ctrl+S" disable="true"/>
                             <MenuItem text="Save As..." onAction="#handleSaveAs" accelerator="Ctrl+Shift+S" disable="true"/>
