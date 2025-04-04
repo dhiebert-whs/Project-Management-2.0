@@ -1,0 +1,2 @@
+- [] add archieve/delete project option
+- [] expand fields on create project dialog

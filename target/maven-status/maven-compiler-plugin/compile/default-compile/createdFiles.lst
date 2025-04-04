@@ -53,6 +53,7 @@ org\frcpm\controllers\SubsystemManagementController$1.class
 org\frcpm\services\impl\TaskServiceImpl.class
 org\frcpm\services\MeetingService.class
 org\frcpm\viewmodels\TeamViewModel.class
+org\frcpm\viewmodels\MainViewModel.class
 org\frcpm\repositories\impl\ComponentRepositoryImpl.class
 org\frcpm\viewmodels\BaseViewModel.class
 org\frcpm\services\impl\MeetingServiceImpl.class
