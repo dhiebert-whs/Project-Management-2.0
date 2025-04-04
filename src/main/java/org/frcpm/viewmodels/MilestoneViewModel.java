@@ -15,7 +15,7 @@ import java.util.logging.Logger;
 
 /**
  * ViewModel for milestone management in the FRC Project Management System.
- * Follows the MVVM pattern to handle milestone data and operations.
+ * Enhanced version with improved command handling for full MVVM implementation.
  */
 public class MilestoneViewModel extends BaseViewModel {
     
@@ -37,6 +37,9 @@ public class MilestoneViewModel extends BaseViewModel {
     private final Command saveCommand;
     private final Command cancelCommand;
     
+    // Close dialog action
+    private Runnable closeDialogAction;
+    
     /**
      * Creates a new MilestoneViewModel with default services.
      */
@@ -55,7 +58,11 @@ public class MilestoneViewModel extends BaseViewModel {
         
         // Create commands
         saveCommand = new Command(this::save, this::isValid);
-        cancelCommand = new Command(() -> {});
+        cancelCommand = new Command(() -> {
+            if (closeDialogAction != null) {
+                closeDialogAction.run();
+            }
+        });
         
         // Set up validation listeners
         name.addListener((observable, oldValue, newValue) -> validate());
@@ -63,10 +70,21 @@ public class MilestoneViewModel extends BaseViewModel {
         project.addListener((observable, oldValue, newValue) -> validate());
         
         // Set up dirty flag listeners
+        name.addListener((observable, oldValue, newValue) -> setDirty(true));
         description.addListener((observable, oldValue, newValue) -> setDirty(true));
+        date.addListener((observable, oldValue, newValue) -> setDirty(true));
         
         // Initial validation
         validate();
+    }
+    
+    /**
+     * Sets the action to be executed when the cancel command is executed.
+     * 
+     * @param closeDialogAction the action to close the dialog
+     */
+    public void setCloseDialogAction(Runnable closeDialogAction) {
+        this.closeDialogAction = closeDialogAction;
     }
     
     /**
@@ -116,8 +134,9 @@ public class MilestoneViewModel extends BaseViewModel {
     /**
      * Validates the milestone data.
      * Sets the valid property and error message.
+     * Made public for testing purposes.
      */
-    private void validate() {
+    public void validate() {
         List<String> errors = new ArrayList<>();
         
         // Check required fields
@@ -175,13 +194,28 @@ public class MilestoneViewModel extends BaseViewModel {
                 );
             } else {
                 // Update existing milestone
-                savedMilestone = milestoneService.updateMilestoneDate(
-                    milestone.get().getId(),
-                    date.get()
-                );
+                Milestone existingMilestone = milestone.get();
+                
+                // First update the name if needed
+                if (!name.get().equals(existingMilestone.getName())) {
+                    existingMilestone.setName(name.get());
+                    existingMilestone = milestoneService.save(existingMilestone);
+                }
+                
+                // Update date if needed
+                if (!date.get().equals(existingMilestone.getDate())) {
+                    savedMilestone = milestoneService.updateMilestoneDate(
+                        existingMilestone.getId(),
+                        date.get()
+                    );
+                } else {
+                    savedMilestone = existingMilestone;
+                }
                 
                 // Update description if needed
-                if (!description.get().equals(savedMilestone.getDescription())) {
+                if (description.get() != null && 
+                    (savedMilestone.getDescription() == null || 
+                     !description.get().equals(savedMilestone.getDescription()))) {
                     savedMilestone = milestoneService.updateDescription(
                         savedMilestone.getId(),
                         description.get()

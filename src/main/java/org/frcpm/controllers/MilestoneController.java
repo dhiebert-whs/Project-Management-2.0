@@ -1,22 +1,20 @@
 package org.frcpm.controllers;
 
-import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
+import org.frcpm.binding.Command;
 import org.frcpm.binding.ViewModelBinding;
 import org.frcpm.models.Milestone;
 import org.frcpm.models.Project;
-import org.frcpm.services.MilestoneService;
-import org.frcpm.services.ServiceFactory;
 import org.frcpm.viewmodels.MilestoneViewModel;
 
-import java.time.LocalDate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * Controller for milestone management.
+ * Fully implements MVVM pattern with proper bindings.
  */
 public class MilestoneController {
     
@@ -37,12 +35,8 @@ public class MilestoneController {
     @FXML
     private Button cancelButton;
     
-    private final MilestoneService milestoneService = ServiceFactory.getMilestoneService();
+    // ViewModel
     private MilestoneViewModel viewModel;
-    
-    private Milestone milestone;
-    private Project project;
-    private boolean isNewMilestone;
     
     /**
      * Initializes the controller.
@@ -52,17 +46,17 @@ public class MilestoneController {
         LOGGER.info("Initializing MilestoneController");
         
         // Create the view model
-        viewModel = new MilestoneViewModel(milestoneService);
-        
-        // Set default date to today
-        datePicker.setValue(LocalDate.now());
-        
-        // Set up button actions
-        saveButton.setOnAction(this::handleSave);
-        cancelButton.setOnAction(this::handleCancel);
+        viewModel = new MilestoneViewModel();
         
         // Set up bindings
         setupBindings();
+        
+        // Set up validation error listener
+        viewModel.errorMessageProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null && !newValue.isEmpty()) {
+                showErrorAlert("Validation Error", newValue);
+            }
+        });
     }
     
     /**
@@ -74,12 +68,12 @@ public class MilestoneController {
         ViewModelBinding.bindTextArea(descriptionArea, viewModel.descriptionProperty());
         ViewModelBinding.bindDatePicker(datePicker, viewModel.dateProperty());
         
-        // Add listener for validation errors
-        viewModel.errorMessageProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue != null && !newValue.isEmpty()) {
-                showErrorAlert("Validation Error", newValue);
-            }
-        });
+        // Set close dialog action
+        viewModel.setCloseDialogAction(this::closeDialog);
+        
+        // Bind buttons to commands
+        ViewModelBinding.bindCommandButton(saveButton, viewModel.getSaveCommand());
+        ViewModelBinding.bindCommandButton(cancelButton, viewModel.getCancelCommand());
     }
     
     /**
@@ -88,12 +82,11 @@ public class MilestoneController {
      * @param project the project for the milestone
      */
     public void setNewMilestone(Project project) {
-        this.project = project;
-        this.milestone = null;
-        this.isNewMilestone = true;
-        
-        // Initialize the view model
+        // Initialize the view model for a new milestone
         viewModel.initNewMilestone(project);
+        
+        // Set up save success listener to close dialog when save succeeds
+        setupSaveSuccessListener();
     }
     
     /**
@@ -102,67 +95,24 @@ public class MilestoneController {
      * @param milestone the milestone to edit
      */
     public void setMilestone(Milestone milestone) {
-        this.milestone = milestone;
-        this.project = milestone.getProject();
-        this.isNewMilestone = false;
-        
-        // Initialize the view model
+        // Initialize the view model with the existing milestone
         viewModel.initExistingMilestone(milestone);
+        
+        // Set up save success listener to close dialog when save succeeds
+        setupSaveSuccessListener();
     }
     
     /**
-     * Handles saving the milestone.
-     * 
-     * @param event the action event
+     * Sets up a listener to close the dialog when save is successful.
      */
-    private void handleSave(ActionEvent event) {
-        try {
-            // Get field values
-            String name = nameField.getText();
-            LocalDate date = datePicker.getValue();
-            String description = descriptionArea.getText();
-            
-            // Validate required fields
-            if (name == null || name.trim().isEmpty()) {
-                showErrorAlert("Invalid Input", "Milestone name cannot be empty");
-                return;
-            }
-            
-            if (date == null) {
-                showErrorAlert("Invalid Input", "Milestone date cannot be empty");
-                return;
-            }
-            
-            // Validate date is within project timeline
-            if (date.isBefore(project.getStartDate()) || date.isAfter(project.getHardDeadline())) {
-                showErrorAlert("Invalid Date", "Milestone date must be within the project timeline");
-                return;
-            }
-            
-            // Execute the save command through the view model
-            viewModel.getSaveCommand().execute();
-            
-            // Update the milestone reference with the saved milestone
-            milestone = viewModel.getMilestone();
-            
-            // Close the dialog if save was successful
-            if (!viewModel.isDirty() && viewModel.getErrorMessage() == null) {
+    private void setupSaveSuccessListener() {
+        // Listen for successful save (dirty flag cleared and no error message)
+        viewModel.dirtyProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue && viewModel.getErrorMessage() == null) {
+                // Save was successful, close the dialog
                 closeDialog();
             }
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error saving milestone", e);
-            showErrorAlert("Error", "Failed to save milestone: " + e.getMessage());
-        }
-    }
-    
-    /**
-     * Handles canceling milestone editing.
-     * 
-     * @param event the action event
-     */
-    private void handleCancel(ActionEvent event) {
-        closeDialog();
+        });
     }
     
     /**
@@ -233,30 +183,21 @@ public class MilestoneController {
     }
 
     /**
-     * Gets the milestone service.
-     * 
-     * @return the milestone service
-     */
-    public MilestoneService getMilestoneService() {
-        return milestoneService;
-    }
-
-    /**
      * Gets the milestone.
      * 
-     * @return the milestone
+     * @return the milestone from the view model
      */
     public Milestone getMilestone() {
-        return milestone;
+        return viewModel.getMilestone();
     }
 
     /**
      * Gets the project.
      * 
-     * @return the project
+     * @return the project from the view model
      */
     public Project getProject() {
-        return project;
+        return viewModel.getProject();
     }
 
     /**
@@ -265,7 +206,7 @@ public class MilestoneController {
      * @return true if this is a new milestone, false otherwise
      */
     public boolean isNewMilestone() {
-        return isNewMilestone;
+        return viewModel.isNewMilestone();
     }
     
     /**
@@ -282,40 +223,5 @@ public class MilestoneController {
      */
     public void testInitialize() {
         initialize();
-    }
-
-    /**
-     * Public method to access handleSave for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleSave(ActionEvent event) {
-        handleSave(event);
-    }
-
-    /**
-     * Public method to access handleCancel for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleCancel(ActionEvent event) {
-        handleCancel(event);
-    }
-
-    /**
-     * Public method to access closeDialog for testing.
-     */
-    public void testCloseDialog() {
-        closeDialog();
-    }
-
-    /**
-     * Public method to access showErrorAlert for testing.
-     * 
-     * @param title the title
-     * @param message the message
-     */
-    public void testShowErrorAlert(String title, String message) {
-        showErrorAlert(title, message);
     }
 }
