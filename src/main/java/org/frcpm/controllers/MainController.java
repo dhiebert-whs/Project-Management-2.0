@@ -1,41 +1,27 @@
 package org.frcpm.controllers;
 
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
-import javafx.scene.control.ChoiceDialog;
-import javafx.scene.control.Menu;
-import javafx.scene.control.MenuBar;
-import javafx.scene.control.Tab;
-import javafx.scene.control.TabPane;
-import javafx.scene.control.TableCell;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableRow;
-import javafx.scene.control.TableView;
+import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Callback;
-
+import org.frcpm.binding.ViewModelBinding;
 import org.frcpm.models.Meeting;
 import org.frcpm.models.Project;
 import org.frcpm.models.Subsystem;
 import org.frcpm.models.Task;
-import org.frcpm.services.ProjectService;
 import org.frcpm.services.ServiceFactory;
-import org.frcpm.utils.ShortcutManager;
+import org.frcpm.viewmodels.MainViewModel;
 
 import java.io.File;
 import java.io.IOException;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -43,13 +29,14 @@ import java.util.logging.Logger;
 
 /**
  * Controller for the main application view.
+ * Follows the MVVM pattern by delegating business logic to the MainViewModel.
  */
 public class MainController {
 
     private static final Logger LOGGER = Logger.getLogger(MainController.class.getName());
-    private final ShortcutManager shortcutManager = new ShortcutManager();
-    private final ProjectService projectService = ServiceFactory.getProjectService();
-    private ObservableList<Project> projectList = FXCollections.observableArrayList();
+    
+    // MainViewModel
+    private final MainViewModel viewModel = new MainViewModel();
 
     @FXML
     private TableView<Project> projectsTable;
@@ -71,29 +58,9 @@ public class MainController {
 
     @FXML
     private Menu recentProjectsMenu;
-
-    /**
-     * Helper method to create a date cell factory that works with any entity type.
-     * This allows us to reuse the same formatting logic across different table
-     * columns.
-     * 
-     * @param <T> the entity type for the table row
-     * @return a callback that creates properly formatted date cells
-     */
-    private <T> Callback<TableColumn<T, LocalDate>, TableCell<T, LocalDate>> createDateCellFactory() {
-        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
-        return column -> new TableCell<T, LocalDate>() {
-            @Override
-            protected void updateItem(LocalDate date, boolean empty) {
-                super.updateItem(date, empty);
-                if (empty || date == null) {
-                    setText(null);
-                } else {
-                    setText(date.format(dateFormatter));
-                }
-            }
-        };
-    }
+    
+    @FXML
+    private Menu projectMenu;
 
     /**
      * Initializes the controller. This method is automatically called after the
@@ -101,12 +68,41 @@ public class MainController {
      */
     @FXML
     private void initialize() {
-        LOGGER.info("Initializing MainController");
+        LOGGER.info("Initializing MainController with MVVM pattern");
 
         // Set this instance as the singleton
         setInstance();
 
-        // Set up the table columns
+        // Set up table columns
+        setupTableColumns();
+        
+        // Bind the table to the ViewModel's project list
+        projectsTable.setItems(viewModel.getProjectList());
+        
+        // Bind selected project
+        projectsTable.getSelectionModel().selectedItemProperty().addListener(
+            (obs, oldValue, newValue) -> viewModel.setSelectedProject(newValue));
+        
+        // Bind project tab properties
+        projectTab.disableProperty().bind(viewModel.projectTabDisabledProperty());
+        projectTab.textProperty().bind(viewModel.projectTabTitleProperty());
+        
+        // Bind error message to show alerts
+        viewModel.errorMessageProperty().addListener((obs, oldValue, newValue) -> {
+            if (newValue != null && !newValue.isEmpty()) {
+                showErrorAlert("Error", newValue);
+                viewModel.errorMessageProperty().set("");
+            }
+        });
+        
+        // Set up row double-click handler
+        setupTableRowHandler();
+    }
+
+    /**
+     * Sets up the table columns.
+     */
+    private void setupTableColumns() {
         projectNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         projectStartColumn.setCellValueFactory(new PropertyValueFactory<>("startDate"));
         projectGoalColumn.setCellValueFactory(new PropertyValueFactory<>("goalEndDate"));
@@ -116,8 +112,12 @@ public class MainController {
         projectStartColumn.setCellFactory(createDateCellFactory());
         projectGoalColumn.setCellFactory(createDateCellFactory());
         projectDeadlineColumn.setCellFactory(createDateCellFactory());
-
-        // Set up row double-click handler
+    }
+    
+    /**
+     * Sets up the double-click handler for table rows.
+     */
+    private void setupTableRowHandler() {
         projectsTable.setRowFactory(tv -> {
             TableRow<Project> row = new TableRow<>();
             row.setOnMouseClicked(event -> {
@@ -128,27 +128,82 @@ public class MainController {
             });
             return row;
         });
-
-        // Load project data
-        loadProjects();
     }
 
     /**
-     * Loads projects from the database into the table.
+     * Helper method to create a date cell factory that works with any entity type.
+     * 
+     * @param <T> the entity type for the table row
+     * @return a callback that creates properly formatted date cells
      */
-    private void loadProjects() {
+    private <T> Callback<TableColumn<T, LocalDate>, TableCell<T, LocalDate>> createDateCellFactory() {
+        return column -> new TableCell<T, LocalDate>() {
+            @Override
+            protected void updateItem(LocalDate date, boolean empty) {
+                super.updateItem(date, empty);
+                if (empty || date == null) {
+                    setText(null);
+                } else {
+                    setText(viewModel.formatDate(date));
+                }
+            }
+        };
+    }
+
+    /**
+     * Handles opening a project.
+     * This overloaded version is used when a project is already selected.
+     * 
+     * @param project the project to open
+     */
+    private void handleOpenProject(Project project) {
+        if (project == null) {
+            return;
+        }
+
         try {
-            List<Project> projects = projectService.findAll();
-            projectList.setAll(projects);
-            projectsTable.setItems(projectList);
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error loading projects", e);
-            showErrorAlert("Error Loading Projects", "Failed to load projects from the database.");
+            // Pass the project to the ViewModel
+            viewModel.openProject(project);
+            
+            // Load the project view
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/ProjectView.fxml"));
+            Parent projectView = loader.load();
+
+            // Get the controller and set the project
+            ProjectController controller = loader.getController();
+            controller.setProject(project);
+
+            // Set the project view in the project tab
+            projectTab.setContent(projectView);
+
+            // Enable project-specific menu items
+            if (projectMenu != null) {
+                projectMenu.setDisable(false);
+            }
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Error loading project view", e);
+            showErrorAlert("Error Opening Project", "Failed to open the project view.");
         }
     }
 
+    /**
+     * Sets up the scene with shortcuts after the scene is loaded.
+     * This method should be called after the scene is set for the controller.
+     */
+    public void setupShortcuts() {
+        LOGGER.info("Setting up shortcuts");
+        viewModel.getShortcutManager().setScene(projectsTable.getScene());
+    }
+
+    // ---- File Menu Handlers ----
+
+    /**
+     * Handles creating a new project.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleNewProject(ActionEvent event) {
+    private void handleNewProject(javafx.event.ActionEvent event) {
         try {
             // Load the new project dialog
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/NewProjectDialog.fxml"));
@@ -172,7 +227,7 @@ public class MainController {
             Project newProject = controller.getCreatedProject();
             if (newProject != null) {
                 // Reload the projects and open the new one
-                loadProjects();
+                viewModel.loadProjects();
                 handleOpenProject(newProject);
             }
         } catch (IOException e) {
@@ -181,55 +236,6 @@ public class MainController {
         }
     }
 
-    // Helper method to find a menu by ID
-    private Menu getMenuById(String menuId) {
-        Scene scene = projectsTable.getScene();
-        if (scene == null) {
-            return null;
-        }
-
-        MenuBar menuBar = (MenuBar) scene.lookup(".menu-bar");
-        if (menuBar == null) {
-            return null;
-        }
-
-        for (Menu menu : menuBar.getMenus()) {
-            if (menuId.equals(menu.getId())) {
-                return menu;
-            }
-        }
-
-        return null;
-    }
-
-    // Alert helper methods
-    private void showErrorAlert(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Error");
-        alert.setHeaderText(title);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
-
-    private void showInfoAlert(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Information");
-        alert.setHeaderText(title);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
-
-    /**
-     * Sets up the scene with shortcuts after the scene is loaded.
-     * This method should be called after the scene is set for the controller.
-     */
-    public void setupShortcuts() {
-        // This will be implemented in Phase 2
-        LOGGER.info("Setting up shortcuts");
-    }
-
-    // ---- File Menu Handlers ----
-
     /**
      * Handles opening a project.
      * This overloaded version is used from UI event handlers.
@@ -237,69 +243,49 @@ public class MainController {
      * @param event the action event
      */
     @FXML
-    private void handleOpenProject(ActionEvent event) {
+    private void handleOpenProject(javafx.event.ActionEvent event) {
         // Implementation for the menu action
         // This would typically show a file chooser dialog
         showNotImplementedAlert("Open Project");
     }
 
     /**
-     * Handles opening a project.
-     * This overloaded version is used when a project is already selected.
+     * Handles closing the current project.
      * 
-     * @param project the project to open
+     * @param event the action event
      */
-    private void handleOpenProject(Project project) {
-        if (project == null) {
-            return;
-        }
-
-        try {
-            // Load the project view
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/ProjectView.fxml"));
-            Parent projectView = loader.load();
-
-            // Get the controller and set the project
-            ProjectController controller = loader.getController();
-            controller.setProject(project);
-
-            // Set the project view in the project tab
-            projectTab.setContent(projectView);
-            projectTab.setText(project.getName());
-            projectTab.setDisable(false);
-
-            // Switch to the project tab
-            TabPane tabPane = projectTab.getTabPane();
-            tabPane.getSelectionModel().select(projectTab);
-
-            // Enable project-specific menu items
-            Menu projectMenu = getMenuById("projectMenu");
-            if (projectMenu != null) {
-                projectMenu.setDisable(false);
-            }
-        } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Error loading project view", e);
-            showErrorAlert("Error Opening Project", "Failed to open the project view.");
-        }
+    @FXML
+    private void handleCloseProject(javafx.event.ActionEvent event) {
+        viewModel.handleCloseProject();
     }
 
+    /**
+     * Handles saving the current project.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleCloseProject(ActionEvent event) {
-        showNotImplementedAlert("Close Project");
+    private void handleSave(javafx.event.ActionEvent event) {
+        viewModel.handleSave();
     }
 
+    /**
+     * Handles saving the current project with a new name.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleSave(ActionEvent event) {
-        showNotImplementedAlert("Save Project");
+    private void handleSaveAs(javafx.event.ActionEvent event) {
+        viewModel.handleSaveAs();
     }
 
+    /**
+     * Handles importing a project from a file.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleSaveAs(ActionEvent event) {
-        showNotImplementedAlert("Save Project As");
-    }
-
-    @FXML
-    private void handleImportProject(ActionEvent event) {
+    private void handleImportProject(javafx.event.ActionEvent event) {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Import Project File");
         fileChooser.getExtensionFilters().add(
@@ -307,121 +293,225 @@ public class MainController {
 
         File selectedFile = fileChooser.showOpenDialog(projectsTable.getScene().getWindow());
         if (selectedFile != null) {
-            showNotImplementedAlert("Import Project from " + selectedFile.getName());
+            viewModel.importProject(selectedFile);
         }
     }
 
+    /**
+     * Handles exporting the current project to a file.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleExportProject(ActionEvent event) {
-        showNotImplementedAlert("Export Project");
+    private void handleExportProject(javafx.event.ActionEvent event) {
+        viewModel.handleExportProject();
     }
 
+    /**
+     * Handles exiting the application.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleExit(ActionEvent event) {
-        System.exit(0);
+    private void handleExit(javafx.event.ActionEvent event) {
+        viewModel.handleExit();
     }
 
     // ---- Edit Menu Handlers ----
 
+    /**
+     * Handles the undo action.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleUndo(ActionEvent event) {
-        showNotImplementedAlert("Undo");
+    private void handleUndo(javafx.event.ActionEvent event) {
+        viewModel.handleUndo();
     }
 
+    /**
+     * Handles the redo action.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleRedo(ActionEvent event) {
-        showNotImplementedAlert("Redo");
+    private void handleRedo(javafx.event.ActionEvent event) {
+        viewModel.handleRedo();
     }
 
+    /**
+     * Handles the cut action.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleCut(ActionEvent event) {
-        showNotImplementedAlert("Cut");
+    private void handleCut(javafx.event.ActionEvent event) {
+        viewModel.handleCut();
     }
 
+    /**
+     * Handles the copy action.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleCopy(ActionEvent event) {
-        showNotImplementedAlert("Copy");
+    private void handleCopy(javafx.event.ActionEvent event) {
+        viewModel.handleCopy();
     }
 
+    /**
+     * Handles the paste action.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handlePaste(ActionEvent event) {
-        showNotImplementedAlert("Paste");
+    private void handlePaste(javafx.event.ActionEvent event) {
+        viewModel.handlePaste();
     }
 
+    /**
+     * Handles the delete action.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleDelete(ActionEvent event) {
-        showNotImplementedAlert("Delete");
+    private void handleDelete(javafx.event.ActionEvent event) {
+        viewModel.handleDelete();
     }
 
+    /**
+     * Handles the select all action.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleSelectAll(ActionEvent event) {
-        showNotImplementedAlert("Select All");
+    private void handleSelectAll(javafx.event.ActionEvent event) {
+        viewModel.handleSelectAll();
     }
 
+    /**
+     * Handles the find action.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleFind(ActionEvent event) {
-        showNotImplementedAlert("Find");
+    private void handleFind(javafx.event.ActionEvent event) {
+        viewModel.handleFind();
     }
 
     // ---- View Menu Handlers ----
 
+    /**
+     * Handles switching to the dashboard view.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleViewDashboard(ActionEvent event) {
-        // Dashboard is the default view
-        LOGGER.info("Switching to Dashboard view");
+    private void handleViewDashboard(javafx.event.ActionEvent event) {
+        viewModel.handleViewDashboard();
     }
 
+    /**
+     * Handles switching to the Gantt chart view.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleViewGantt(ActionEvent event) {
-        showNotImplementedAlert("Gantt Chart View");
+    private void handleViewGantt(javafx.event.ActionEvent event) {
+        viewModel.handleViewGantt();
     }
 
+    /**
+     * Handles switching to the calendar view.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleViewCalendar(ActionEvent event) {
-        showNotImplementedAlert("Calendar View");
+    private void handleViewCalendar(javafx.event.ActionEvent event) {
+        viewModel.handleViewCalendar();
     }
 
+    /**
+     * Handles switching to the daily view.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleViewDaily(ActionEvent event) {
-        showNotImplementedAlert("Daily View");
+    private void handleViewDaily(javafx.event.ActionEvent event) {
+        viewModel.handleViewDaily();
     }
 
+    /**
+     * Handles refreshing the current view.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleRefresh(ActionEvent event) {
-        showNotImplementedAlert("Refresh View");
+    private void handleRefresh(javafx.event.ActionEvent event) {
+        viewModel.handleRefresh();
     }
 
     // ---- Project Menu Handlers ----
 
+    /**
+     * Handles showing the project properties dialog.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleProjectProperties(ActionEvent event) {
-        showNotImplementedAlert("Project Properties");
+    private void handleProjectProperties(javafx.event.ActionEvent event) {
+        viewModel.handleProjectProperties();
     }
 
+    /**
+     * Handles adding a milestone to the current project.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleAddMilestone(ActionEvent event) {
-        showNotImplementedAlert("Add Milestone");
+    private void handleAddMilestone(javafx.event.ActionEvent event) {
+        viewModel.handleAddMilestone();
     }
 
+    /**
+     * Handles scheduling a meeting for the current project.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleScheduleMeeting(ActionEvent event) {
-        showNotImplementedAlert("Schedule Meeting");
+    private void handleScheduleMeeting(javafx.event.ActionEvent event) {
+        viewModel.handleScheduleMeeting();
     }
 
+    /**
+     * Handles adding a task to the current project.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleAddTask(ActionEvent event) {
-        showNotImplementedAlert("Add Task");
+    private void handleAddTask(javafx.event.ActionEvent event) {
+        viewModel.handleAddTask();
     }
 
+    /**
+     * Handles showing project statistics.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleProjectStatistics(ActionEvent event) {
-        showNotImplementedAlert("Project Statistics");
+    private void handleProjectStatistics(javafx.event.ActionEvent event) {
+        viewModel.handleProjectStatistics();
     }
 
     // ---- Team Menu Handlers ----
 
+    /**
+     * Handles showing the subteams dialog.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleSubteams(ActionEvent event) {
+    private void handleSubteams(javafx.event.ActionEvent event) {
         try {
             // Load the team management view
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/TeamView.fxml"));
@@ -443,14 +533,24 @@ public class MainController {
         }
     }
 
+    /**
+     * Handles showing the members dialog.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleMembers(ActionEvent event) {
+    private void handleMembers(javafx.event.ActionEvent event) {
         // We can reuse the same view as handleSubteams, but select the members tab
         handleSubteams(event);
     }
 
+    /**
+     * Handles taking attendance for a meeting.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleTakeAttendance(ActionEvent event) {
+    private void handleTakeAttendance(javafx.event.ActionEvent event) {
         // First, select a meeting
         List<Meeting> meetings = ServiceFactory.getMeetingService().findByDateAfter(LocalDate.now().minusDays(7));
 
@@ -498,20 +598,63 @@ public class MainController {
         }
     }
 
+    /**
+     * Handles showing the attendance history dialog.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleAttendanceHistory(ActionEvent event) {
-        showNotImplementedAlert("Attendance History");
+    private void handleAttendanceHistory(javafx.event.ActionEvent event) {
+        viewModel.handleAttendanceHistory();
+    }
+
+    /**
+     * Handles showing the subsystems dialog.
+     * 
+     * @param event the action event
+     */
+    @FXML
+    private void handleSubsystems(javafx.event.ActionEvent event) {
+        try {
+            // Load the subsystem management view
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/SubsystemManagementView.fxml"));
+            Parent subsystemView = loader.load();
+
+            // Create the dialog
+            Stage dialogStage = new Stage();
+            dialogStage.setTitle("Subsystem Management");
+            dialogStage.initModality(Modality.WINDOW_MODAL);
+            dialogStage.initOwner(((Node) event.getSource()).getScene().getWindow());
+            dialogStage.setScene(new Scene(subsystemView));
+
+            // Show the dialog
+            dialogStage.showAndWait();
+
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Error loading subsystem management view", e);
+            showErrorAlert("Error", "Failed to open subsystem management.");
+        }
     }
 
     // ---- Tools Menu Handlers ----
 
+    /**
+     * Handles showing the settings dialog.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleSettings(ActionEvent event) {
-        showNotImplementedAlert("Settings");
+    private void handleSettings(javafx.event.ActionEvent event) {
+        viewModel.handleSettings();
     }
 
+    /**
+     * Handles showing the database management dialog.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleDatabaseManagement(ActionEvent event) {
+    private void handleDatabaseManagement(javafx.event.ActionEvent event) {
         try {
             // Load the FXML
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/DatabaseMigrationView.fxml"));
@@ -541,13 +684,23 @@ public class MainController {
 
     // ---- Help Menu Handlers ----
 
+    /**
+     * Handles showing the user guide.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleUserGuide(ActionEvent event) {
-        showNotImplementedAlert("User Guide");
+    private void handleUserGuide(javafx.event.ActionEvent event) {
+        viewModel.handleUserGuide();
     }
 
+    /**
+     * Handles showing the about dialog.
+     * 
+     * @param event the action event
+     */
     @FXML
-    private void handleAbout(ActionEvent event) {
+    private void handleAbout(javafx.event.ActionEvent event) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("About");
         alert.setHeaderText("FRC Project Management System");
@@ -567,456 +720,32 @@ public class MainController {
         alert.showAndWait();
     }
 
-    // Add these getters to MainController.java
-
     /**
-     * Gets the projects table.
-     * 
-     * @return the projects table
-     */
-    public TableView<Project> getProjectsTable() {
-        return projectsTable;
-    }
-
-    /**
-     * Gets the project name column.
-     * 
-     * @return the project name column
-     */
-    public TableColumn<Project, String> getProjectNameColumn() {
-        return projectNameColumn;
-    }
-
-    /**
-     * Gets the project start column.
-     * 
-     * @return the project start column
-     */
-    public TableColumn<Project, LocalDate> getProjectStartColumn() {
-        return projectStartColumn;
-    }
-
-    /**
-     * Gets the project goal column.
-     * 
-     * @return the project goal column
-     */
-    public TableColumn<Project, LocalDate> getProjectGoalColumn() {
-        return projectGoalColumn;
-    }
-
-    /**
-     * Gets the project deadline column.
-     * 
-     * @return the project deadline column
-     */
-    public TableColumn<Project, LocalDate> getProjectDeadlineColumn() {
-        return projectDeadlineColumn;
-    }
-
-    /**
-     * Gets the project tab.
-     * 
-     * @return the project tab
-     */
-    public Tab getProjectTab() {
-        return projectTab;
-    }
-
-    /**
-     * Gets the recent projects menu.
-     * 
-     * @return the recent projects menu
-     */
-    public Menu getRecentProjectsMenu() {
-        return recentProjectsMenu;
-    }
-
-    /**
-     * Gets the project list.
-     * 
-     * @return the project list
-     */
-    public ObservableList<Project> getProjectList() {
-        return projectList;
-    }
-
-    /**
-     * Public method to access initialize for testing.
-     */
-    public void testInitialize() {
-        initialize();
-    }
-
-    /**
-     * Public method to access loadProjects for testing.
-     */
-    public void testLoadProjects() {
-        loadProjects();
-    }
-
-    /**
-     * Public method to access handleOpenProject for testing.
-     * 
-     * @param project the project to open
-     */
-    public void testHandleOpenProject(Project project) {
-        handleOpenProject(project);
-    }
-
-    /**
-     * Public method to access getMenuById for testing.
-     * 
-     * @param menuId the menu ID
-     * @return the menu
-     */
-    public Menu testGetMenuById(String menuId) {
-        return getMenuById(menuId);
-    }
-
-    /**
-     * Public method to access showErrorAlert for testing.
+     * Helper method to show an error alert dialog.
      * 
      * @param title   the title
      * @param message the message
      */
-    public void testShowErrorAlert(String title, String message) {
-        showErrorAlert(title, message);
+    private void showErrorAlert(String title, String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Error");
+        alert.setHeaderText(title);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 
     /**
-     * Public method to access showInfoAlert for testing.
+     * Helper method to show an information alert dialog.
      * 
      * @param title   the title
      * @param message the message
      */
-    public void testShowInfoAlert(String title, String message) {
-        showInfoAlert(title, message);
-    }
-
-    /**
-     * Public method to access showNotImplementedAlert for testing.
-     * 
-     * @param feature the feature
-     */
-    public void testShowNotImplementedAlert(String feature) {
-        showNotImplementedAlert(feature);
-    }
-
-    /**
-     * Public method to access createDateCellFactory for testing.
-     * 
-     * @param <T> the type parameter
-     * @return the cell factory
-     */
-    public <T> Callback<TableColumn<T, LocalDate>, TableCell<T, LocalDate>> testCreateDateCellFactory() {
-        return createDateCellFactory();
-    }
-
-    /**
-     * Public method to access handleNewProject for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleNewProject(ActionEvent event) {
-        handleNewProject(event);
-    }
-
-    /**
-     * Public method to access handleOpenProject for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleOpenProject(ActionEvent event) {
-        handleOpenProject(event);
-    }
-
-    /**
-     * Public method to access handleCloseProject for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleCloseProject(ActionEvent event) {
-        handleCloseProject(event);
-    }
-
-    /**
-     * Public method to access handleSave for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleSave(ActionEvent event) {
-        handleSave(event);
-    }
-
-    /**
-     * Public method to access handleSaveAs for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleSaveAs(ActionEvent event) {
-        handleSaveAs(event);
-    }
-
-    /**
-     * Public method to access handleImportProject for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleImportProject(ActionEvent event) {
-        handleImportProject(event);
-    }
-
-    /**
-     * Public method to access handleExportProject for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleExportProject(ActionEvent event) {
-        handleExportProject(event);
-    }
-
-    /**
-     * Public method to access handleExit for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleExit(ActionEvent event) {
-        handleExit(event);
-    }
-
-    /**
-     * Public method to access handleUndo for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleUndo(ActionEvent event) {
-        handleUndo(event);
-    }
-
-    /**
-     * Public method to access handleRedo for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleRedo(ActionEvent event) {
-        handleRedo(event);
-    }
-
-    /**
-     * Public method to access handleCut for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleCut(ActionEvent event) {
-        handleCut(event);
-    }
-
-    /**
-     * Public method to access handleCopy for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleCopy(ActionEvent event) {
-        handleCopy(event);
-    }
-
-    /**
-     * Public method to access handlePaste for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandlePaste(ActionEvent event) {
-        handlePaste(event);
-    }
-
-    /**
-     * Public method to access handleDelete for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleDelete(ActionEvent event) {
-        handleDelete(event);
-    }
-
-    /**
-     * Public method to access handleSelectAll for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleSelectAll(ActionEvent event) {
-        handleSelectAll(event);
-    }
-
-    /**
-     * Public method to access handleFind for testing.a
-     * 
-     * @param event the action event
-     */
-    public void testHandleFind(ActionEvent event) {
-        handleFind(event);
-    }
-
-    /**
-     * Public method to access handleViewDashboard for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleViewDashboard(ActionEvent event) {
-        handleViewDashboard(event);
-    }
-
-    /**
-     * Public method to access handleViewGantt for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleViewGantt(ActionEvent event) {
-        handleViewGantt(event);
-    }
-
-    /**
-     * Public method to access handleViewCalendar for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleViewCalendar(ActionEvent event) {
-        handleViewCalendar(event);
-    }
-
-    /**
-     * Public method to access handleViewDaily for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleViewDaily(ActionEvent event) {
-        handleViewDaily(event);
-    }
-
-    /**
-     * Public method to access handleRefresh for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleRefresh(ActionEvent event) {
-        handleRefresh(event);
-    }
-
-    /**
-     * Public method to access handleProjectProperties for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleProjectProperties(ActionEvent event) {
-        handleProjectProperties(event);
-    }
-
-    /**
-     * Public method to access handleAddMilestone for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleAddMilestone(ActionEvent event) {
-        handleAddMilestone(event);
-    }
-
-    /**
-     * Public method to access handleScheduleMeeting for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleScheduleMeeting(ActionEvent event) {
-        handleScheduleMeeting(event);
-    }
-
-    /**
-     * Public method to access handleAddTask for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleAddTask(ActionEvent event) {
-        handleAddTask(event);
-    }
-
-    /**
-     * Public method to access handleProjectStatistics for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleProjectStatistics(ActionEvent event) {
-        handleProjectStatistics(event);
-    }
-
-    /**
-     * Public method to access handleSubteams for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleSubteams(ActionEvent event) {
-        handleSubteams(event);
-    }
-
-    /**
-     * Public method to access handleMembers for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleMembers(ActionEvent event) {
-        handleMembers(event);
-    }
-
-    /**
-     * Public method to access handleTakeAttendance for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleTakeAttendance(ActionEvent event) {
-        handleTakeAttendance(event);
-    }
-
-    /**
-     * Public method to access handleAttendanceHistory for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleAttendanceHistory(ActionEvent event) {
-        handleAttendanceHistory(event);
-    }
-
-    /**
-     * Public method to access handleSettings for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleSettings(ActionEvent event) {
-        handleSettings(event);
-    }
-
-    /**
-     * Public method to access handleDatabaseManagement for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleDatabaseManagement(ActionEvent event) {
-        handleDatabaseManagement(event);
-    }
-
-    /**
-     * Public method to access handleUserGuide for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleUserGuide(ActionEvent event) {
-        handleUserGuide(event);
-    }
-
-    /**
-     * Public method to access handleAbout for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleAbout(ActionEvent event) {
-        handleAbout(event);
+    private void showInfoAlert(String title, String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Information");
+        alert.setHeaderText(title);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 
     // Singleton instance
@@ -1035,7 +764,7 @@ public class MainController {
      * Sets the singleton instance of the MainController.
      * This should be called after the controller is initialized.
      */
-    public void setInstance() {
+    private void setInstance() {
         instance = this;
     }
 
@@ -1067,19 +796,8 @@ public class MainController {
                 controller.initExistingTask(task);
             } else if (subsystem != null) {
                 // For a new task, we need the current project
-                Project currentProject = null;
-                if (projectTab != null && !projectTab.isDisable()) {
-                    Node content = projectTab.getContent();
-                    if (content != null) {
-                        // Try to get the project controller
-                        ProjectController projectController = (ProjectController) content.getProperties()
-                                .get("controller");
-                        if (projectController != null) {
-                            currentProject = projectController.getProject();
-                        }
-                    }
-                }
-
+                Project currentProject = viewModel.getSelectedProject();
+                
                 if (currentProject == null) {
                     // If we can't determine the current project, show an error
                     showErrorAlert("Error", "No active project found.");
@@ -1140,39 +858,45 @@ public class MainController {
     }
 
     /**
-     * Handles the menu action for managing subsystems.
+     * Gets the view model.
      * 
-     * @param event the action event
+     * @return the view model
      */
-    @FXML
-    private void handleSubsystems(ActionEvent event) {
-        try {
-            // Load the subsystem management view
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/SubsystemManagementView.fxml"));
-            Parent subsystemView = loader.load();
-
-            // Create the dialog
-            Stage dialogStage = new Stage();
-            dialogStage.setTitle("Subsystem Management");
-            dialogStage.initModality(Modality.WINDOW_MODAL);
-            dialogStage.initOwner(((Node) event.getSource()).getScene().getWindow());
-            dialogStage.setScene(new Scene(subsystemView));
-
-            // Show the dialog
-            dialogStage.showAndWait();
-
-        } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Error loading subsystem management view", e);
-            showErrorAlert("Error", "Failed to open subsystem management.");
-        }
+    public MainViewModel getViewModel() {
+        return viewModel;
     }
 
-    /**
-     * Public method to access handleSubsystems for testing.
-     * 
-     * @param event the action event
-     */
-    public void testHandleSubsystems(ActionEvent event) {
-        handleSubsystems(event);
+    // Getter methods for UI components (for testing)
+    
+    public TableView<Project> getProjectsTable() {
+        return projectsTable;
+    }
+
+    public TableColumn<Project, String> getProjectNameColumn() {
+        return projectNameColumn;
+    }
+    
+    public TableColumn<Project, LocalDate> getProjectStartColumn() {
+        return projectStartColumn;
+    }
+    
+    public TableColumn<Project, LocalDate> getProjectGoalColumn() {
+        return projectGoalColumn;
+    }
+    
+    public TableColumn<Project, LocalDate> getProjectDeadlineColumn() {
+        return projectDeadlineColumn;
+    }
+    
+    public Tab getProjectTab() {
+        return projectTab;
+    }
+    
+    public Menu getRecentProjectsMenu() {
+        return recentProjectsMenu;
+    }
+    
+    public Menu getProjectMenu() {
+        return projectMenu;
     }
 }
