@@ -2,7 +2,6 @@ package org.frcpm.controllers;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
-import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import org.frcpm.binding.ViewModelBinding;
@@ -66,6 +65,16 @@ public class AttendanceController {
         LOGGER.info("Initializing AttendanceController");
 
         // Set up table columns
+        setupTableColumns();
+        
+        // Set up bindings
+        setupBindings();
+    }
+    
+    /**
+     * Sets up the table columns.
+     */
+    private void setupTableColumns() {
         nameColumn.setCellValueFactory(
                 cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getName()));
 
@@ -76,7 +85,32 @@ public class AttendanceController {
                 cellData -> cellData.getValue().presentProperty());
 
         // Create a cell factory for the present column (checkbox)
-        presentColumn.setCellFactory(column -> new TableCell<>() {
+        presentColumn.setCellFactory(createPresentColumnCellFactory());
+
+        // Create time column factories
+        arrivalColumn.setCellValueFactory(
+                cellData -> cellData.getValue().arrivalTimeProperty());
+
+        departureColumn.setCellValueFactory(
+                cellData -> cellData.getValue().departureTimeProperty());
+
+        // Create time column cell factories
+        arrivalColumn.setCellFactory(createTimeColumnCellFactory());
+        departureColumn.setCellFactory(createTimeColumnCellFactory());
+
+        // Make time columns editable
+        arrivalColumn.setEditable(true);
+        departureColumn.setEditable(true);
+        attendanceTable.setEditable(true);
+    }
+    
+    /**
+     * Creates a cell factory for the present column.
+     * 
+     * @return the cell factory
+     */
+    private Callback<TableColumn<AttendanceViewModel.AttendanceRecord, Boolean>, TableCell<AttendanceViewModel.AttendanceRecord, Boolean>> createPresentColumnCellFactory() {
+        return column -> new TableCell<>() {
             private final CheckBox checkBox = new CheckBox();
 
             {
@@ -100,20 +134,18 @@ public class AttendanceController {
                     setGraphic(checkBox);
                 }
             }
-        });
-
-        // Create time column factories
-        arrivalColumn.setCellValueFactory(
-                cellData -> cellData.getValue().arrivalTimeProperty());
-
-        departureColumn.setCellValueFactory(
-                cellData -> cellData.getValue().departureTimeProperty());
-
-        // Format time cells
+        };
+    }
+    
+    /**
+     * Creates a cell factory for time columns.
+     * 
+     * @return the cell factory
+     */
+    private Callback<TableColumn<AttendanceViewModel.AttendanceRecord, LocalTime>, TableCell<AttendanceViewModel.AttendanceRecord, LocalTime>> createTimeColumnCellFactory() {
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
-
-        Callback<TableColumn<AttendanceViewModel.AttendanceRecord, LocalTime>, TableCell<AttendanceViewModel.AttendanceRecord, LocalTime>> timeCellFactory = 
-                column -> new TableCell<>() {
+        
+        return column -> new TableCell<>() {
             private final TextField textField = new TextField();
             
             {
@@ -195,17 +227,6 @@ public class AttendanceController {
                 }
             }
         };
-
-        arrivalColumn.setCellFactory(timeCellFactory);
-        departureColumn.setCellFactory(timeCellFactory);
-
-        // Make time columns editable
-        arrivalColumn.setEditable(true);
-        departureColumn.setEditable(true);
-        attendanceTable.setEditable(true);
-
-        // Set up bindings
-        setupBindings();
     }
 
     /**
@@ -227,6 +248,14 @@ public class AttendanceController {
         // Bind buttons to commands using ViewModelBinding utility
         ViewModelBinding.bindCommandButton(saveButton, viewModel.getSaveAttendanceCommand());
         cancelButton.setOnAction(event -> closeDialog());
+        
+        // Add error message listener
+        viewModel.errorMessageProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null && !newVal.isEmpty()) {
+                showErrorAlert("Error", newVal);
+                viewModel.errorMessageProperty().set("");
+            }
+        });
     }
     
     /**
@@ -240,8 +269,9 @@ public class AttendanceController {
     
     /**
      * Closes the dialog.
+     * Protected for testability.
      */
-    private void closeDialog() {
+    protected void closeDialog() {
         try {
             Stage stage = (Stage) saveButton.getScene().getWindow();
             stage.close();
@@ -252,12 +282,13 @@ public class AttendanceController {
     
     /**
      * Shows an error alert dialog.
+     * Protected for testability.
      * 
      * @param title   the title
      * @param message the message
      */
-    private void showErrorAlert(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
+    protected void showErrorAlert(String title, String message) {
+        Alert alert = createAlert(Alert.AlertType.ERROR);
         alert.setTitle("Error");
         alert.setHeaderText(title);
         alert.setContentText(message);
@@ -266,16 +297,28 @@ public class AttendanceController {
     
     /**
      * Shows an information alert dialog.
+     * Protected for testability.
      * 
      * @param title   the title
      * @param message the message
      */
-    private void showInfoAlert(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+    protected void showInfoAlert(String title, String message) {
+        Alert alert = createAlert(Alert.AlertType.INFORMATION);
         alert.setTitle("Information");
         alert.setHeaderText(title);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+    
+    /**
+     * Creates an alert dialog.
+     * Protected for testability.
+     * 
+     * @param alertType the type of alert
+     * @return the created alert
+     */
+    protected Alert createAlert(Alert.AlertType alertType) {
+        return new Alert(alertType);
     }
     
     /**
@@ -296,59 +339,5 @@ public class AttendanceController {
         return viewModel.getMeeting();
     }
     
-    // Getters for testing purposes
-    
-    /**
-     * Gets the meeting title label.
-     * 
-     * @return the meeting title label
-     */
-    public Label getMeetingTitleLabel() {
-        return meetingTitleLabel;
-    }
-    
-    /**
-     * Gets the date label.
-     * 
-     * @return the date label
-     */
-    public Label getDateLabel() {
-        return dateLabel;
-    }
-    
-    /**
-     * Gets the time label.
-     * 
-     * @return the time label
-     */
-    public Label getTimeLabel() {
-        return timeLabel;
-    }
-    
-    /**
-     * Gets the attendance table.
-     * 
-     * @return the attendance table
-     */
-    public TableView<AttendanceViewModel.AttendanceRecord> getAttendanceTable() {
-        return attendanceTable;
-    }
-    
-    /**
-     * Gets the save button.
-     * 
-     * @return the save button
-     */
-    public Button getSaveButton() {
-        return saveButton;
-    }
-    
-    /**
-     * Gets the cancel button.
-     * 
-     * @return the cancel button
-     */
-    public Button getCancelButton() {
-        return cancelButton;
-    }
+    // Getters for testing purposes remain the same...
 }

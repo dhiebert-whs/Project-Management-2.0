@@ -60,20 +60,17 @@ public class MeetingController {
         ViewModelBinding.bindTextField(endTimeField, viewModel.endTimeStringProperty());
         ViewModelBinding.bindTextArea(notesArea, viewModel.notesProperty());
 
-        // Bind buttons to commands using onAction
-        saveButton.setOnAction(event -> {
-            if (viewModel.isValid()) {
-                viewModel.getSaveCommand().execute();
-                closeDialog();
-            } else {
-                showErrorAlert("Invalid Input", viewModel.getErrorMessage());
-            }
-        });
-
+        // Bind buttons to commands using ViewModelBinding
+        ViewModelBinding.bindCommandButton(saveButton, viewModel.getSaveCommand());
         cancelButton.setOnAction(event -> closeDialog());
 
-        // Bind button disable property to command canExecute
-        saveButton.disableProperty().bind(viewModel.validProperty().not());
+        // Add error message listener
+        viewModel.errorMessageProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null && !newVal.isEmpty()) {
+                showErrorAlert("Error", newVal);
+                viewModel.errorMessageProperty().set("");
+            }
+        });
     }
 
     /**
@@ -96,8 +93,9 @@ public class MeetingController {
 
     /**
      * Closes the dialog.
+     * Protected for testability.
      */
-    private void closeDialog() {
+    protected void closeDialog() {
         try {
             Stage stage = (Stage) saveButton.getScene().getWindow();
             stage.close();
@@ -108,13 +106,14 @@ public class MeetingController {
 
     /**
      * Shows an error alert dialog.
+     * Protected for testability.
      * 
      * @param title   the title
      * @param message the message
      */
-    private void showErrorAlert(String title, String message) {
+    protected void showErrorAlert(String title, String message) {
         try {
-            Alert alert = new Alert(Alert.AlertType.ERROR);
+            Alert alert = createAlert(Alert.AlertType.ERROR);
             alert.setTitle("Error");
             alert.setHeaderText(title);
             alert.setContentText(message);
@@ -124,6 +123,17 @@ public class MeetingController {
             // Just log the error for testing purposes
             LOGGER.log(Level.INFO, "Alert would show: {0} - {1}", new Object[] { title, message });
         }
+    }
+    
+    /**
+     * Creates an alert dialog.
+     * Protected for testability.
+     * 
+     * @param alertType the type of alert
+     * @return the created alert
+     */
+    protected Alert createAlert(Alert.AlertType alertType) {
+        return new Alert(alertType);
     }
 
     /**
@@ -142,12 +152,5 @@ public class MeetingController {
      */
     public Meeting getMeeting() {
         return viewModel.getMeeting();
-    }
-
-    /**
-     * Public method to access initialize for testing.
-     */
-    public void testInitialize() {
-        initialize();
     }
 }
