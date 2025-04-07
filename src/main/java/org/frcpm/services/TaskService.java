@@ -107,4 +107,13 @@ public interface TaskService extends Service<Task, Long> {
      * @return a list of tasks due within the specified days
      */
     List<Task> getTasksDueSoon(Long projectId, int days);
+
+    /**
+     * Updates the required components for a task.
+     * 
+     * @param taskId the task ID
+     * @param componentIds the component IDs to set as required
+     * @return the updated task, or null if not found
+     */
+    Task updateRequiredComponents(Long taskId, Set<Long> componentIds);
 }
