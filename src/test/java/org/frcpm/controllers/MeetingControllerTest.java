@@ -1,10 +1,8 @@
 package org.frcpm.controllers;
 
-import javafx.beans.property.*;
-import javafx.scene.Scene;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.scene.control.*;
-import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
 import org.frcpm.binding.Command;
 import org.frcpm.models.Meeting;
 import org.frcpm.models.Project;
@@ -12,276 +10,144 @@ import org.frcpm.viewmodels.MeetingViewModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.mockito.Spy;
 import org.testfx.framework.junit5.ApplicationExtension;
-import org.testfx.framework.junit5.Start;
 
-import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
+/**
+ * Tests for the MeetingController class with MVVM pattern.
+ */
 @ExtendWith(ApplicationExtension.class)
-public class MeetingControllerTest {
+public class MeetingControllerTest extends BaseJavaFXTest {
 
-    // Controller to test
-    private MeetingController meetingController;
+    @Spy
+    private MeetingController controller;
 
-    // Test ViewModel - not using mockito
-    private TestMeetingViewModel testViewModel;
+    @Mock
+    private MeetingViewModel mockViewModel;
 
-    // UI components
-    private DatePicker datePicker;
-    private TextField startTimeField;
-    private TextField endTimeField;
-    private TextArea notesArea;
-    private Button saveButton;
-    private Button cancelButton;
+    @Mock
+    private Meeting mockMeeting;
 
-    // Test data
-    private Project testProject;
-    private Meeting testMeeting;
+    @Mock
+    private Project mockProject;
 
-    // Test command execution trackers
-    private boolean saveCommandExecuted = false;
-    private boolean cancelCommandExecuted = false;
-
-    @Start
-    public void start(Stage stage) {
-        // Create real JavaFX components
-        datePicker = new DatePicker();
-        startTimeField = new TextField();
-        endTimeField = new TextField();
-        notesArea = new TextArea();
-        saveButton = new Button("Save");
-        cancelButton = new Button("Cancel");
-
-        // Create a layout to hold the components
-        VBox root = new VBox(10);
-        root.getChildren().addAll(
-                datePicker,
-                startTimeField,
-                endTimeField,
-                notesArea,
-                saveButton,
-                cancelButton);
-
-        // Set up and show the stage
-        Scene scene = new Scene(root, 400, 300);
-        stage.setScene(scene);
-        stage.show();
-    }
+    @Mock
+    private Command mockSaveCommand;
 
     @BeforeEach
-    public void setUp() throws Exception {
-        // Create test objects
-        testProject = new Project(
-                "Test Project",
-                LocalDate.now(),
-                LocalDate.now().plusWeeks(6),
-                LocalDate.now().plusWeeks(8));
-        testProject.setId(1L);
+    public void setUp() {
+        MockitoAnnotations.openMocks(this);
 
-        testMeeting = new Meeting(
-                LocalDate.now().plusDays(1),
-                LocalTime.of(18, 0),
-                LocalTime.of(20, 0),
-                testProject);
-        testMeeting.setId(1L);
-        testMeeting.setNotes("Test meeting notes");
+        // Set up mocks
+        when(mockMeeting.getDate()).thenReturn(LocalDate.now());
+        when(mockMeeting.getStartTime()).thenReturn(LocalTime.of(16, 0));
+        when(mockMeeting.getEndTime()).thenReturn(LocalTime.of(18, 0));
+        when(mockMeeting.getProject()).thenReturn(mockProject);
 
-        // Create a new controller instance and test ViewModel
-        meetingController = new MeetingController();
-        testViewModel = new TestMeetingViewModel();
-        testViewModel.setMeeting(testMeeting);
-        testViewModel.setValid(true);
+        // Set up ViewModel mocks
+        when(mockViewModel.dateProperty()).thenReturn(new SimpleObjectProperty<>(LocalDate.now()));
+        when(mockViewModel.startTimeStringProperty()).thenReturn(new SimpleStringProperty("16:00"));
+        when(mockViewModel.endTimeStringProperty()).thenReturn(new SimpleStringProperty("18:00"));
+        when(mockViewModel.notesProperty()).thenReturn(new SimpleStringProperty(""));
+        when(mockViewModel.errorMessageProperty()).thenReturn(new SimpleStringProperty());
+        when(mockViewModel.getSaveCommand()).thenReturn(mockSaveCommand);
+        when(mockViewModel.getMeeting()).thenReturn(mockMeeting);
 
-        // Reset command execution flags
-        saveCommandExecuted = false;
-        cancelCommandExecuted = false;
+        // Inject fields into controller using reflection
+        try {
+            java.lang.reflect.Field viewModelField = MeetingController.class.getDeclaredField("viewModel");
+            viewModelField.setAccessible(true);
+            viewModelField.set(controller, mockViewModel);
 
-        // Inject components into controller using reflection
-        injectField("datePicker", datePicker);
-        injectField("startTimeField", startTimeField);
-        injectField("endTimeField", endTimeField);
-        injectField("notesArea", notesArea);
-        injectField("saveButton", saveButton);
-        injectField("cancelButton", cancelButton);
-        injectField("viewModel", testViewModel);
+            // Inject necessary JavaFX components
+            java.lang.reflect.Field datePickerField = MeetingController.class.getDeclaredField("datePicker");
+            datePickerField.setAccessible(true);
+            datePickerField.set(controller, new DatePicker());
 
-        // Manual button setup instead of calling initialize()
-        saveButton.setOnAction(event -> {
-            if (testViewModel.isValid()) {
-                saveCommandExecuted = true;
-            }
-        });
+            java.lang.reflect.Field startTimeField = MeetingController.class.getDeclaredField("startTimeField");
+            startTimeField.setAccessible(true);
+            startTimeField.set(controller, new TextField());
 
-        cancelButton.setOnAction(event -> {
-            cancelCommandExecuted = true;
-        });
+            java.lang.reflect.Field endTimeField = MeetingController.class.getDeclaredField("endTimeField");
+            endTimeField.setAccessible(true);
+            endTimeField.set(controller, new TextField());
+
+            java.lang.reflect.Field notesAreaField = MeetingController.class.getDeclaredField("notesArea");
+            notesAreaField.setAccessible(true);
+            notesAreaField.set(controller, new TextArea());
+
+            java.lang.reflect.Field saveButtonField = MeetingController.class.getDeclaredField("saveButton");
+            saveButtonField.setAccessible(true);
+            saveButtonField.set(controller, new Button());
+
+            java.lang.reflect.Field cancelButtonField = MeetingController.class.getDeclaredField("cancelButton");
+            cancelButtonField.setAccessible(true);
+            cancelButtonField.set(controller, new Button());
+
+        } catch (Exception e) {
+            fail("Failed to set up controller: " + e.getMessage());
+        }
     }
 
     @Test
     public void testSetNewMeeting() {
-        // Call method
-        meetingController.setNewMeeting(testProject);
+        // Act
+        controller.setNewMeeting(mockProject);
 
-        // Verify ViewModel state was changed
-        assertSame(testProject, testViewModel.getProject());
-        assertTrue(testViewModel.wasInitNewMeetingCalled());
+        // Assert
+        verify(mockViewModel).initNewMeeting(mockProject);
     }
 
     @Test
     public void testSetMeeting() {
-        // Call method
-        meetingController.setMeeting(testMeeting);
+        // Act
+        controller.setMeeting(mockMeeting);
 
-        // Verify ViewModel state was changed
-        assertTrue(testViewModel.wasInitExistingMeetingCalled());
-    }
-
-    @Test
-    public void testGetMeeting() {
-        // Test
-        Meeting result = meetingController.getMeeting();
-
-        // Verify
-        assertEquals(testMeeting, result);
+        // Assert
+        verify(mockViewModel).initExistingMeeting(mockMeeting);
     }
 
     @Test
     public void testGetViewModel() {
-        // Test
-        MeetingViewModel result = meetingController.getViewModel();
+        // Act
+        MeetingViewModel result = controller.getViewModel();
 
-        // Verify
-        assertEquals(testViewModel, result);
+        // Assert
+        assertEquals(mockViewModel, result);
     }
 
     @Test
-    public void testSaveButtonAction_Valid() {
-        // Set up
-        testViewModel.setValid(true);
+    public void testGetMeeting() {
+        // Act
+        Meeting result = controller.getMeeting();
 
-        // Trigger the save button action
-        saveButton.fire();
-
-        // Verify command was executed
-        assertTrue(saveCommandExecuted);
+        // Assert
+        assertEquals(mockMeeting, result);
+        verify(mockViewModel).getMeeting();
     }
 
     @Test
-    public void testSaveButtonAction_Invalid() {
-        // Set up
-        testViewModel.setValid(false);
-        testViewModel.setErrorMessage("Test error message");
+    public void testShowErrorAlert() {
+        // Arrange
+        Alert mockAlert = mock(Alert.class);
+        doReturn(mockAlert).when(controller).createAlert(any());
 
-        // Trigger the save button action
-        saveButton.fire();
+        // Act
+        controller.showErrorAlert("Test Title", "Test Message");
 
-        // Verify command was not executed
-        assertFalse(saveCommandExecuted);
-    }
-
-    @Test
-    public void testCancelButtonAction() {
-        // Trigger the cancel button action
-        cancelButton.fire();
-
-        // Verify cancellation was triggered
-        assertTrue(cancelCommandExecuted);
-    }
-
-    /**
-     * Helper method to inject field values using reflection.
-     */
-    private void injectField(String fieldName, Object value) throws Exception {
-        Field field = MeetingController.class.getDeclaredField(fieldName);
-        field.setAccessible(true);
-        field.set(meetingController, value);
-    }
-
-    /**
-     * Test implementation of MeetingViewModel to avoid using Mockito.
-     */
-    private class TestMeetingViewModel extends MeetingViewModel {
-        private boolean initNewMeetingCalled = false;
-        private boolean initExistingMeetingCalled = false;
-        private boolean valid = true;
-        private final ObjectProperty<LocalDate> dateProperty = new SimpleObjectProperty<>();
-        private final StringProperty startTimeProperty = new SimpleStringProperty();
-        private final StringProperty endTimeProperty = new SimpleStringProperty();
-        private final StringProperty notesProperty = new SimpleStringProperty();
-        private final StringProperty errorMessageProperty = new SimpleStringProperty();
-        private final Command saveCommand = new Command(() -> {
-        }, () -> true);
-
-        @Override
-        public void initNewMeeting(Project project) {
-            setProject(project);
-            initNewMeetingCalled = true;
-        }
-
-        @Override
-        public void initExistingMeeting(Meeting meeting) {
-            setMeeting(meeting);
-            initExistingMeetingCalled = true;
-        }
-
-        @Override
-        public boolean isValid() {
-            return valid;
-        }
-
-        public void setValid(boolean valid) {
-            this.valid = valid;
-        }
-
-        @Override
-        public StringProperty errorMessageProperty() {
-            return errorMessageProperty;
-        }
-
-        @Override
-        public String getErrorMessage() {
-            return errorMessageProperty.get();
-        }
-
-        public void setErrorMessage(String message) {
-            errorMessageProperty.set(message);
-        }
-
-        @Override
-        public ObjectProperty<LocalDate> dateProperty() {
-            return dateProperty;
-        }
-
-        @Override
-        public StringProperty startTimeStringProperty() {
-            return startTimeProperty;
-        }
-
-        @Override
-        public StringProperty endTimeStringProperty() {
-            return endTimeProperty;
-        }
-
-        @Override
-        public StringProperty notesProperty() {
-            return notesProperty;
-        }
-
-        @Override
-        public Command getSaveCommand() {
-            return saveCommand;
-        }
-
-        public boolean wasInitNewMeetingCalled() {
-            return initNewMeetingCalled;
-        }
-
-        public boolean wasInitExistingMeetingCalled() {
-            return initExistingMeetingCalled;
-        }
+        // Assert
+        verify(mockAlert).setTitle("Error");
+        verify(mockAlert).setHeaderText("Test Title");
+        verify(mockAlert).setContentText("Test Message");
+        verify(mockAlert).showAndWait();
     }
 }

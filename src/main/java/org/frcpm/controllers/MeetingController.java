@@ -124,7 +124,7 @@ public class MeetingController {
             LOGGER.log(Level.INFO, "Alert would show: {0} - {1}", new Object[] { title, message });
         }
     }
-    
+
     /**
      * Creates an alert dialog.
      * Protected for testability.

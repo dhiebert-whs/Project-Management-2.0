@@ -2,6 +2,7 @@ package org.frcpm.controllers;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import org.frcpm.binding.ViewModelBinding;
@@ -21,6 +22,7 @@ public class AttendanceController {
 
     private static final Logger LOGGER = Logger.getLogger(AttendanceController.class.getName());
 
+    // FXML UI components
     @FXML
     private Label meetingTitleLabel;
 
@@ -66,15 +68,16 @@ public class AttendanceController {
 
         // Set up table columns
         setupTableColumns();
-        
+
         // Set up bindings
         setupBindings();
     }
-    
+
     /**
      * Sets up the table columns.
      */
     private void setupTableColumns() {
+        // Set up column cell value factories
         nameColumn.setCellValueFactory(
                 cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getName()));
 
@@ -85,32 +88,7 @@ public class AttendanceController {
                 cellData -> cellData.getValue().presentProperty());
 
         // Create a cell factory for the present column (checkbox)
-        presentColumn.setCellFactory(createPresentColumnCellFactory());
-
-        // Create time column factories
-        arrivalColumn.setCellValueFactory(
-                cellData -> cellData.getValue().arrivalTimeProperty());
-
-        departureColumn.setCellValueFactory(
-                cellData -> cellData.getValue().departureTimeProperty());
-
-        // Create time column cell factories
-        arrivalColumn.setCellFactory(createTimeColumnCellFactory());
-        departureColumn.setCellFactory(createTimeColumnCellFactory());
-
-        // Make time columns editable
-        arrivalColumn.setEditable(true);
-        departureColumn.setEditable(true);
-        attendanceTable.setEditable(true);
-    }
-    
-    /**
-     * Creates a cell factory for the present column.
-     * 
-     * @return the cell factory
-     */
-    private Callback<TableColumn<AttendanceViewModel.AttendanceRecord, Boolean>, TableCell<AttendanceViewModel.AttendanceRecord, Boolean>> createPresentColumnCellFactory() {
-        return column -> new TableCell<>() {
+        presentColumn.setCellFactory(column -> new TableCell<>() {
             private final CheckBox checkBox = new CheckBox();
 
             {
@@ -134,20 +112,20 @@ public class AttendanceController {
                     setGraphic(checkBox);
                 }
             }
-        };
-    }
-    
-    /**
-     * Creates a cell factory for time columns.
-     * 
-     * @return the cell factory
-     */
-    private Callback<TableColumn<AttendanceViewModel.AttendanceRecord, LocalTime>, TableCell<AttendanceViewModel.AttendanceRecord, LocalTime>> createTimeColumnCellFactory() {
+        });
+
+        // Set up time columns
+        arrivalColumn.setCellValueFactory(
+                cellData -> cellData.getValue().arrivalTimeProperty());
+
+        departureColumn.setCellValueFactory(
+                cellData -> cellData.getValue().departureTimeProperty());
+
+        // Format time columns with the same cell factory
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
-        
-        return column -> new TableCell<>() {
+        Callback<TableColumn<AttendanceViewModel.AttendanceRecord, LocalTime>, TableCell<AttendanceViewModel.AttendanceRecord, LocalTime>> timeCellFactory = column -> new TableCell<>() {
             private final TextField textField = new TextField();
-            
+
             {
                 // Configure text field for editing
                 textField.setOnAction(event -> commitEdit(parseTime(textField.getText())));
@@ -157,7 +135,7 @@ public class AttendanceController {
                     }
                 });
             }
-            
+
             @Override
             protected void updateItem(LocalTime time, boolean empty) {
                 super.updateItem(time, empty);
@@ -175,7 +153,7 @@ public class AttendanceController {
                     setGraphic(null);
                 }
             }
-            
+
             @Override
             public void startEdit() {
                 super.startEdit();
@@ -186,7 +164,7 @@ public class AttendanceController {
                     textField.requestFocus();
                 }
             }
-            
+
             @Override
             public void cancelEdit() {
                 super.cancelEdit();
@@ -197,15 +175,15 @@ public class AttendanceController {
                 }
                 setGraphic(null);
             }
-            
+
             @Override
             public void commitEdit(LocalTime newValue) {
                 super.commitEdit(newValue);
-                
+
                 if (getTableRow() != null && getTableRow().getItem() != null) {
-                    AttendanceViewModel.AttendanceRecord record = 
-                            (AttendanceViewModel.AttendanceRecord) getTableRow().getItem();
-                    
+                    AttendanceViewModel.AttendanceRecord record = (AttendanceViewModel.AttendanceRecord) getTableRow()
+                            .getItem();
+
                     if (getTableColumn() == arrivalColumn) {
                         record.setArrivalTime(newValue);
                     } else if (getTableColumn() == departureColumn) {
@@ -213,12 +191,12 @@ public class AttendanceController {
                     }
                 }
             }
-            
+
             private LocalTime parseTime(String text) {
                 if (text == null || text.trim().isEmpty()) {
                     return null;
                 }
-                
+
                 try {
                     return LocalTime.parse(text, timeFormatter);
                 } catch (DateTimeParseException e) {
@@ -227,6 +205,14 @@ public class AttendanceController {
                 }
             }
         };
+
+        arrivalColumn.setCellFactory(timeCellFactory);
+        departureColumn.setCellFactory(timeCellFactory);
+
+        // Make time columns editable
+        arrivalColumn.setEditable(true);
+        departureColumn.setEditable(true);
+        attendanceTable.setEditable(true);
     }
 
     /**
@@ -237,18 +223,18 @@ public class AttendanceController {
         meetingTitleLabel.textProperty().bind(viewModel.meetingTitleProperty());
         dateLabel.textProperty().bind(viewModel.meetingDateProperty());
         timeLabel.textProperty().bind(viewModel.meetingTimeProperty());
-        
+
         // Bind table items
         attendanceTable.setItems(viewModel.getAttendanceRecords());
-        
+
         // Bind selected record
         attendanceTable.getSelectionModel().selectedItemProperty().addListener(
-            (observable, oldValue, newValue) -> viewModel.setSelectedRecord(newValue));
-            
+                (observable, oldValue, newValue) -> viewModel.setSelectedRecord(newValue));
+
         // Bind buttons to commands using ViewModelBinding utility
         ViewModelBinding.bindCommandButton(saveButton, viewModel.getSaveAttendanceCommand());
         cancelButton.setOnAction(event -> closeDialog());
-        
+
         // Add error message listener
         viewModel.errorMessageProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null && !newVal.isEmpty()) {
@@ -257,7 +243,7 @@ public class AttendanceController {
             }
         });
     }
-    
+
     /**
      * Sets the meeting for attendance tracking.
      * 
@@ -266,7 +252,7 @@ public class AttendanceController {
     public void setMeeting(Meeting meeting) {
         viewModel.initWithMeeting(meeting);
     }
-    
+
     /**
      * Closes the dialog.
      * Protected for testability.
@@ -279,7 +265,7 @@ public class AttendanceController {
             LOGGER.log(Level.SEVERE, "Error closing dialog", e);
         }
     }
-    
+
     /**
      * Shows an error alert dialog.
      * Protected for testability.
@@ -294,7 +280,7 @@ public class AttendanceController {
         alert.setContentText(message);
         alert.showAndWait();
     }
-    
+
     /**
      * Shows an information alert dialog.
      * Protected for testability.
@@ -309,7 +295,7 @@ public class AttendanceController {
         alert.setContentText(message);
         alert.showAndWait();
     }
-    
+
     /**
      * Creates an alert dialog.
      * Protected for testability.
@@ -320,7 +306,7 @@ public class AttendanceController {
     protected Alert createAlert(Alert.AlertType alertType) {
         return new Alert(alertType);
     }
-    
+
     /**
      * Gets the ViewModel.
      * 
@@ -329,7 +315,7 @@ public class AttendanceController {
     public AttendanceViewModel getViewModel() {
         return viewModel;
     }
-    
+
     /**
      * Gets the meeting from the ViewModel.
      * 
@@ -338,6 +324,29 @@ public class AttendanceController {
     public Meeting getMeeting() {
         return viewModel.getMeeting();
     }
-    
-    // Getters for testing purposes remain the same...
+
+    // Getters for testing purposes remain the same
+    public Label getMeetingTitleLabel() {
+        return meetingTitleLabel;
+    }
+
+    public Label getDateLabel() {
+        return dateLabel;
+    }
+
+    public Label getTimeLabel() {
+        return timeLabel;
+    }
+
+    public TableView<AttendanceViewModel.AttendanceRecord> getAttendanceTable() {
+        return attendanceTable;
+    }
+
+    public Button getSaveButton() {
+        return saveButton;
+    }
+
+    public Button getCancelButton() {
+        return cancelButton;
+    }
 }
