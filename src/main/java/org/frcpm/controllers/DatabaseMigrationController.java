@@ -1,26 +1,25 @@
 package org.frcpm.controllers;
 
-import javafx.application.Platform;
-import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import org.frcpm.utils.DatabaseMigrationUtil;
+import org.frcpm.binding.ViewModelBinding;
+import org.frcpm.viewmodels.DatabaseMigrationViewModel;
 
 import java.io.File;
-import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * Controller for the database migration dialog.
+ * Follows the MVVM pattern by delegating business logic to the DatabaseMigrationViewModel.
  */
 public class DatabaseMigrationController {
     
     private static final Logger LOGGER = Logger.getLogger(DatabaseMigrationController.class.getName());
     
+    // View components
     @FXML
     private TextField sourceDbPathField;
     
@@ -48,25 +47,62 @@ public class DatabaseMigrationController {
     @FXML
     private ListView<String> errorListView;
     
+    // Dialog stage
     private Stage dialogStage;
+    
+    // ViewModel
+    private final DatabaseMigrationViewModel viewModel = new DatabaseMigrationViewModel();
     
     /**
      * Initializes the controller.
      */
     @FXML
     private void initialize() {
-        // Hide error box initially
-        errorBox.setVisible(false);
-        errorBox.setManaged(false);
+        LOGGER.info("Initializing DatabaseMigrationController with MVVM pattern");
         
-        // Initialize progress
-        progressBar.setProgress(0);
-        progressLabel.setText("Ready");
+        // Set up bindings between view and view model
+        setupBindings();
         
         // Set up event handlers
         browseButton.setOnAction(event -> handleBrowseSourceDb());
-        migrateButton.setOnAction(event -> handleMigrate());
+    }
+    
+    /**
+     * Sets up the bindings between the view and the view model.
+     */
+    private void setupBindings() {
+        // Bind text fields to view model properties
+        ViewModelBinding.bindTextField(sourceDbPathField, viewModel.sourceDbPathProperty());
+        
+        // Bind progress indicators
+        progressBar.progressProperty().bind(viewModel.progressValueProperty());
+        progressLabel.textProperty().bind(viewModel.progressTextProperty());
+        
+        // Bind log text area
+        logTextArea.textProperty().bind(viewModel.logTextProperty());
+        
+        // Bind error box
+        errorBox.visibleProperty().bind(viewModel.errorBoxVisibleProperty());
+        errorBox.managedProperty().bind(viewModel.errorBoxVisibleProperty());
+        errorListView.setItems(viewModel.getErrorList());
+        
+        // Bind button states
+        migrateButton.disableProperty().bind(viewModel.migrateButtonDisabledProperty());
+        closeButton.disableProperty().bind(viewModel.closeButtonDisabledProperty());
+        
+        // Bind command buttons
+        ViewModelBinding.bindCommandButton(migrateButton, viewModel.getMigrateCommand());
+        
+        // Set up close button action (handled by controller)
         closeButton.setOnAction(event -> dialogStage.close());
+        
+        // Bind error message property
+        viewModel.errorMessageProperty().addListener((obs, oldValue, newValue) -> {
+            if (newValue != null && !newValue.isEmpty()) {
+                showAlert(Alert.AlertType.ERROR, "Error", newValue);
+                viewModel.errorMessageProperty().set("");
+            }
+        });
     }
     
     /**
@@ -76,102 +112,28 @@ public class DatabaseMigrationController {
      */
     public void setDialogStage(Stage dialogStage) {
         this.dialogStage = dialogStage;
-        
-        // Disable close button initially
-        closeButton.setDisable(true);
     }
     
     /**
      * Handles browsing for the source database file.
      */
     private void handleBrowseSourceDb() {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Select SQLite Database");
-        fileChooser.getExtensionFilters().add(
-            new FileChooser.ExtensionFilter("SQLite Database", "*.db", "*.sqlite", "*.sqlite3")
-        );
-        
-        File file = fileChooser.showOpenDialog(dialogStage);
+        File file = showFileChooserDialog(dialogStage);
         if (file != null) {
-            sourceDbPathField.setText(file.getAbsolutePath());
-            migrateButton.setDisable(false);
+            viewModel.setSourceDbPath(file.getAbsolutePath());
         }
     }
     
     /**
-     * Handles the migration process.
-     */
-    private void handleMigrate() {
-        String sourceDbPath = sourceDbPathField.getText();
-        if (sourceDbPath == null || sourceDbPath.isEmpty()) {
-            showAlert(Alert.AlertType.ERROR, "Error", "Source database path cannot be empty");
-            return;
-        }
-        
-        // Disable UI controls during migration
-        sourceDbPathField.setDisable(true);
-        browseButton.setDisable(true);
-        migrateButton.setDisable(true);
-        
-        // Clear log and error list
-        logTextArea.clear();
-        errorListView.getItems().clear();
-        errorBox.setVisible(false);
-        errorBox.setManaged(false);
-        
-        // Create and start migration task
-        MigrationTask migrationTask = new MigrationTask(sourceDbPath);
-        
-        // Set up progress tracking
-        progressBar.progressProperty().bind(migrationTask.progressProperty());
-        
-        // Set up task completion handling
-        migrationTask.setOnSucceeded(event -> {
-            Boolean success = migrationTask.getValue();
-            if (success != null && success) {
-                progressLabel.setText("Migration completed successfully");
-                logMessage("Migration completed successfully");
-            } else {
-                progressLabel.setText("Migration completed with errors");
-                logMessage("Migration completed with errors");
-                
-                // Display errors
-                List<String> errors = migrationTask.getMigrationErrors();
-                if (errors != null && !errors.isEmpty()) {
-                    errorListView.getItems().addAll(errors);
-                    errorBox.setVisible(true);
-                    errorBox.setManaged(true);
-                }
-            }
-            
-            // Enable close button
-            closeButton.setDisable(false);
-        });
-        
-        migrationTask.setOnFailed(event -> {
-            progressLabel.setText("Migration failed");
-            logMessage("Migration failed: " + migrationTask.getException().getMessage());
-            
-            // Enable close button
-            closeButton.setDisable(false);
-        });
-        
-        // Start the task
-        Thread thread = new Thread(migrationTask);
-        thread.setDaemon(true);
-        thread.start();
-    }
-    
-    /**
-     * Logs a message to the log text area.
+     * Shows a file chooser dialog.
+     * This method is protected to allow overriding in tests.
      * 
-     * @param message the message to log
+     * @param ownerStage the owner stage
+     * @return the selected file, or null if cancelled
      */
-    private void logMessage(String message) {
-        Platform.runLater(() -> {
-            logTextArea.appendText(message + "\n");
-            logTextArea.setScrollTop(Double.MAX_VALUE); // Scroll to bottom
-        });
+    protected File showFileChooserDialog(Stage ownerStage) {
+        FileChooser fileChooser = createFileChooser();
+        return fileChooser.showOpenDialog(ownerStage);
     }
     
     /**
@@ -182,7 +144,7 @@ public class DatabaseMigrationController {
      * @param message the message
      */
     private void showAlert(Alert.AlertType alertType, String title, String message) {
-        Alert alert = new Alert(alertType);
+        Alert alert = createAlert(alertType);
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(message);
@@ -190,64 +152,33 @@ public class DatabaseMigrationController {
     }
     
     /**
-     * Task for performing the database migration in a background thread.
+     * Creates a FileChooser for selecting database files.
+     * This method is protected for testing purposes.
+     * 
+     * @return a configured FileChooser
      */
-    private class MigrationTask extends Task<Boolean> {
-        
-        private final String sourceDbPath;
-        private final DatabaseMigrationUtil migrationUtil;
-        private List<String> migrationErrors;
-        
-        public MigrationTask(String sourceDbPath) {
-            this.sourceDbPath = sourceDbPath;
-            this.migrationUtil = new DatabaseMigrationUtil();
-        }
-        
-        @Override
-        protected Boolean call() throws Exception {
-            try {
-                logMessage("Starting migration from: " + sourceDbPath);
-                
-                // Start migration
-                boolean success = migrationUtil.migrateFromSqlite(sourceDbPath);
-                
-                // Get errors
-                migrationErrors = migrationUtil.getMigrationErrors();
-                
-                return success;
-            } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "Error during migration", e);
-                logMessage("Error during migration: " + e.getMessage());
-                throw e;
-            }
-        }
-        
-        /**
-         * Gets the migration errors.
-         * 
-         * @return the migration errors
-         */
-        public List<String> getMigrationErrors() {
-            return migrationErrors;
-        }
-        
-        @Override
-        protected void updateProgress(double workDone, double max) {
-            super.updateProgress(workDone, max);
-            
-            // Update progress label
-            Platform.runLater(() -> {
-                double percentage = workDone / max * 100;
-                progressLabel.setText(String.format("%.1f%%", percentage));
-                
-                // Log progress updates at 10% intervals
-                if (Math.floor(percentage) % 10 == 0) {
-                    logMessage(String.format("Migration progress: %.1f%%", percentage));
-                }
-            });
-        }
+    protected FileChooser createFileChooser() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Select SQLite Database");
+        fileChooser.getExtensionFilters().add(
+            new FileChooser.ExtensionFilter("SQLite Database", "*.db", "*.sqlite", "*.sqlite3")
+        );
+        return fileChooser;
     }
-
+    
+    /**
+     * Creates an Alert dialog.
+     * This method is protected for testing purposes.
+     * 
+     * @param alertType the type of alert to create
+     * @return the created alert
+     */
+    protected Alert createAlert(Alert.AlertType alertType) {
+        return new Alert(alertType);
+    }
+    
+    // Getters for testing
+    
     /**
      * Gets the source database path field.
      * 
@@ -256,7 +187,7 @@ public class DatabaseMigrationController {
     public TextField getSourceDbPathField() {
         return sourceDbPathField;
     }
-
+    
     /**
      * Gets the browse button.
      * 
@@ -265,7 +196,7 @@ public class DatabaseMigrationController {
     public Button getBrowseButton() {
         return browseButton;
     }
-
+    
     /**
      * Gets the migrate button.
      * 
@@ -274,7 +205,7 @@ public class DatabaseMigrationController {
     public Button getMigrateButton() {
         return migrateButton;
     }
-
+    
     /**
      * Gets the progress bar.
      * 
@@ -283,7 +214,7 @@ public class DatabaseMigrationController {
     public ProgressBar getProgressBar() {
         return progressBar;
     }
-
+    
     /**
      * Gets the progress label.
      * 
@@ -292,7 +223,7 @@ public class DatabaseMigrationController {
     public Label getProgressLabel() {
         return progressLabel;
     }
-
+    
     /**
      * Gets the log text area.
      * 
@@ -301,7 +232,7 @@ public class DatabaseMigrationController {
     public TextArea getLogTextArea() {
         return logTextArea;
     }
-
+    
     /**
      * Gets the close button.
      * 
@@ -310,7 +241,7 @@ public class DatabaseMigrationController {
     public Button getCloseButton() {
         return closeButton;
     }
-
+    
     /**
      * Gets the error box.
      * 
@@ -319,7 +250,7 @@ public class DatabaseMigrationController {
     public VBox getErrorBox() {
         return errorBox;
     }
-
+    
     /**
      * Gets the error list view.
      * 
@@ -328,7 +259,7 @@ public class DatabaseMigrationController {
     public ListView<String> getErrorListView() {
         return errorListView;
     }
-
+    
     /**
      * Gets the dialog stage.
      * 
@@ -337,30 +268,25 @@ public class DatabaseMigrationController {
     public Stage getDialogStage() {
         return dialogStage;
     }
-
+    
+    /**
+     * Gets the view model.
+     * 
+     * @return the view model
+     */
+    public DatabaseMigrationViewModel getViewModel() {
+        return viewModel;
+    }
+    
+    // Public methods for testing
+    
     /**
      * Public method to access handleBrowseSourceDb for testing.
      */
     public void testHandleBrowseSourceDb() {
         handleBrowseSourceDb();
     }
-
-    /**
-     * Public method to access handleMigrate for testing.
-     */
-    public void testHandleMigrate() {
-        handleMigrate();
-    }
-
-    /**
-     * Public method to access logMessage for testing.
-     * 
-     * @param message the message to log
-     */
-    public void testLogMessage(String message) {
-        logMessage(message);
-    }
-
+    
     /**
      * Public method to access showAlert for testing.
      * 
@@ -370,15 +296,5 @@ public class DatabaseMigrationController {
      */
     public void testShowAlert(Alert.AlertType alertType, String title, String message) {
         showAlert(alertType, title, message);
-    }
-
-    /**
-     * Public method to access MigrationTask constructor for testing.
-     * 
-     * @param sourceDbPath the source database path
-     * @return the migration task
-     */
-    public MigrationTask testCreateMigrationTask(String sourceDbPath) {
-        return new MigrationTask(sourceDbPath);
     }
 }
