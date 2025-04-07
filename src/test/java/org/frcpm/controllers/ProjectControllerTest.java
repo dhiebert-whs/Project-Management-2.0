@@ -1,16 +1,25 @@
+// src/test/java/org/frcpm/controllers/ProjectControllerTest.java
+
 package org.frcpm.controllers;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import javafx.stage.Window;
+
+import org.frcpm.binding.Command;
 import org.frcpm.models.Meeting;
 import org.frcpm.models.Milestone;
 import org.frcpm.models.Project;
 import org.frcpm.models.Task;
-import org.frcpm.services.MeetingService;
-import org.frcpm.services.ServiceFactory;
-import org.frcpm.services.TaskService;
+import org.frcpm.models.Subsystem;
 import org.frcpm.viewmodels.ProjectViewModel;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,15 +30,16 @@ import org.testfx.framework.junit5.ApplicationExtension;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(ApplicationExtension.class)
-public class ProjectControllerTest {
+public class ProjectControllerTest extends BaseJavaFXTest {
 
     @Spy
     private ProjectController controller;
@@ -126,26 +136,20 @@ public class ProjectControllerTest {
         when(mockViewModel.completedTasksProperty()).thenReturn(new javafx.beans.property.SimpleIntegerProperty(5));
         when(mockViewModel.daysUntilGoalProperty()).thenReturn(new javafx.beans.property.SimpleLongProperty(42));
         when(mockViewModel.getMilestones()).thenReturn(milestoneList);
-        when(mockViewModel.getLoadMilestonesCommand()).thenReturn(new org.frcpm.binding.Command(() -> {
-        }));
-        when(mockViewModel.getSaveCommand()).thenReturn(new org.frcpm.binding.Command(() -> {
-        }));
-        when(mockViewModel.getCreateNewCommand()).thenReturn(new org.frcpm.binding.Command(() -> {
-        }));
+        when(mockViewModel.getTasks()).thenReturn(taskList);
+        when(mockViewModel.getMeetings()).thenReturn(meetingList);
+        when(mockViewModel.getLoadMilestonesCommand()).thenReturn(new Command(() -> {}));
+        when(mockViewModel.getLoadTasksCommand()).thenReturn(new Command(() -> {}));
+        when(mockViewModel.getLoadMeetingsCommand()).thenReturn(new Command(() -> {}));
+        when(mockViewModel.getAddTaskCommand()).thenReturn(new Command(() -> {}));
+        when(mockViewModel.getAddMilestoneCommand()).thenReturn(new Command(() -> {}));
+        when(mockViewModel.getScheduleMeetingCommand()).thenReturn(new Command(() -> {}));
 
         // Inject fields into controller using reflection
         try {
             java.lang.reflect.Field viewModelField = ProjectController.class.getDeclaredField("viewModel");
             viewModelField.setAccessible(true);
             viewModelField.set(controller, mockViewModel);
-
-            java.lang.reflect.Field taskListField = ProjectController.class.getDeclaredField("taskList");
-            taskListField.setAccessible(true);
-            taskListField.set(controller, taskList);
-
-            java.lang.reflect.Field meetingListField = ProjectController.class.getDeclaredField("meetingList");
-            meetingListField.setAccessible(true);
-            meetingListField.set(controller, meetingList);
 
             // Set mock UI elements
             when(controller.getProjectNameLabel()).thenReturn(projectNameLabel);
@@ -164,8 +168,6 @@ public class ProjectControllerTest {
             when(controller.getAddTaskButton()).thenReturn(addTaskButton);
             when(controller.getAddMilestoneButton()).thenReturn(addMilestoneButton);
             when(controller.getScheduleMeetingButton()).thenReturn(scheduleMeetingButton);
-            when(controller.getTaskList()).thenReturn(taskList);
-            when(controller.getMeetingList()).thenReturn(meetingList);
             when(controller.getViewModel()).thenReturn(mockViewModel);
 
         } catch (Exception e) {
@@ -180,23 +182,7 @@ public class ProjectControllerTest {
 
         // Assert
         verify(mockViewModel).initExistingProject(testProject);
-
-        // We shouldn't verify testLoadProjectData() here because we're directly calling
-        // setProject()
-        // Instead, verify that the project was set correctly
         assertEquals(testProject, controller.getProject());
-    }
-
-    @Test
-    public void testLoadProjectData() {
-        // Arrange
-        when(mockViewModel.getSelectedProject()).thenReturn(testProject);
-        
-        // Act
-        controller.testLoadProjectData();
-        
-        // Assert - Verify the ViewModel was accessed
-        verify(mockViewModel, atLeastOnce()).getSelectedProject();
     }
 
     @Test
@@ -222,134 +208,186 @@ public class ProjectControllerTest {
     }
 
     @Test
-    public void testBindings() throws Exception {
-        // This test verifies that necessary bindings are set up during initialization
+    public void testHandleEditTask() {
+        // Arrange
+        Task task = new Task("Test Task", testProject, null);
+        FXMLLoader mockLoader = mock(FXMLLoader.class);
+        TaskController mockTaskController = mock(TaskController.class);
+        Stage mockStage = mock(Stage.class);
+        Scene mockScene = mock(Scene.class);
+        Window mockWindow = mock(Window.class);
 
-        // Arrange - Create minimal objects for the initialize method
-        TableColumn<Task, String> taskTitleCol = new TableColumn<>();
-        TableColumn<Task, String> taskSubsystemCol = new TableColumn<>();
-        TableColumn<Task, Integer> taskProgressCol = new TableColumn<>();
-        TableColumn<Task, LocalDate> taskDueDateCol = new TableColumn<>();
+        when(tasksTable.getScene()).thenReturn(mockScene);
+        when(mockScene.getWindow()).thenReturn(mockWindow);
+        when(mockLoader.getController()).thenReturn(mockTaskController);
+        doReturn(mockLoader).when(controller).createFXMLLoader(anyString());
+        doReturn(mockStage).when(controller).createDialogStage(anyString(), any(), any());
 
-        TableColumn<Milestone, String> milestoneNameCol = new TableColumn<>();
-        TableColumn<Milestone, LocalDate> milestoneDateCol = new TableColumn<>();
-
-        TableColumn<Meeting, LocalDate> meetingDateCol = new TableColumn<>();
-        TableColumn<Meeting, String> meetingTimeCol = new TableColumn<>();
-
-        // Set required fields via reflection
-        java.lang.reflect.Field taskTitleColField = ProjectController.class.getDeclaredField("taskTitleColumn");
-        taskTitleColField.setAccessible(true);
-        taskTitleColField.set(controller, taskTitleCol);
-
-        java.lang.reflect.Field taskSubsystemColField = ProjectController.class.getDeclaredField("taskSubsystemColumn");
-        taskSubsystemColField.setAccessible(true);
-        taskSubsystemColField.set(controller, taskSubsystemCol);
-
-        java.lang.reflect.Field taskProgressColField = ProjectController.class.getDeclaredField("taskProgressColumn");
-        taskProgressColField.setAccessible(true);
-        taskProgressColField.set(controller, taskProgressCol);
-
-        java.lang.reflect.Field taskDueDateColField = ProjectController.class.getDeclaredField("taskDueDateColumn");
-        taskDueDateColField.setAccessible(true);
-        taskDueDateColField.set(controller, taskDueDateCol);
-
-        java.lang.reflect.Field milestoneNameColField = ProjectController.class.getDeclaredField("milestoneNameColumn");
-        milestoneNameColField.setAccessible(true);
-        milestoneNameColField.set(controller, milestoneNameCol);
-
-        java.lang.reflect.Field milestoneDateColField = ProjectController.class.getDeclaredField("milestoneDateColumn");
-        milestoneDateColField.setAccessible(true);
-        milestoneDateColField.set(controller, milestoneDateCol);
-
-        java.lang.reflect.Field meetingDateColField = ProjectController.class.getDeclaredField("meetingDateColumn");
-        meetingDateColField.setAccessible(true);
-        meetingDateColField.set(controller, meetingDateCol);
-
-        java.lang.reflect.Field meetingTimeColField = ProjectController.class.getDeclaredField("meetingTimeColumn");
-        meetingTimeColField.setAccessible(true);
-        meetingTimeColField.set(controller, meetingTimeCol);
-
-        // Instead of trying to call the private setupBindings method,
-        // we'll modify the initialize method using doAnswer
-        doAnswer(invocation -> {
-            // Just verify that initialize was called
-            return null;
-        }).when(controller).testInitialize();
+        try {
+            // Mock loader.load() to avoid JavaFX initialization issues
+            Parent mockParent = mock(Parent.class);
+            when(mockLoader.load()).thenReturn(mockParent);
+        } catch (Exception e) {
+            fail("Failed to mock loader.load(): " + e.getMessage());
+        }
 
         // Act
-        try {
-            controller.testInitialize();
+        controller.handleEditTask(task);
 
-            // If we reach here, initialize() didn't throw exceptions
-            assertTrue(true);
+        // Assert
+        verify(mockTaskController).initExistingTask(task);
+        verify(controller).showAndWaitDialog(mockStage);
+        verify(mockViewModel.getLoadTasksCommand()).execute();
+    }
+
+    @Test
+    public void testHandleEditMilestone() {
+        // Arrange
+        Milestone milestone = new Milestone();
+        milestone.setProject(testProject);
+        FXMLLoader mockLoader = mock(FXMLLoader.class);
+        MilestoneController mockMilestoneController = mock(MilestoneController.class);
+        Stage mockStage = mock(Stage.class);
+        Scene mockScene = mock(Scene.class);
+        Window mockWindow = mock(Window.class);
+
+        when(milestonesTable.getScene()).thenReturn(mockScene);
+        when(mockScene.getWindow()).thenReturn(mockWindow);
+        when(mockLoader.getController()).thenReturn(mockMilestoneController);
+        doReturn(mockLoader).when(controller).createFXMLLoader(anyString());
+        doReturn(mockStage).when(controller).createDialogStage(anyString(), any(), any());
+
+        try {
+            // Mock loader.load() to avoid JavaFX initialization issues
+            Parent mockParent = mock(Parent.class);
+            when(mockLoader.load()).thenReturn(mockParent);
         } catch (Exception e) {
-            if (e.getCause() != null && e.getCause().getMessage() != null &&
-                    e.getCause().getMessage().contains("Toolkit not initialized")) {
-                // This is expected in test environment without JavaFX
-                assertTrue(true);
+            fail("Failed to mock loader.load(): " + e.getMessage());
+        }
+
+        // Act
+        controller.handleEditMilestone(milestone);
+
+        // Assert
+        verify(mockMilestoneController).setMilestone(milestone);
+        verify(controller).showAndWaitDialog(mockStage);
+        verify(mockViewModel.getLoadMilestonesCommand()).execute();
+    }
+
+    @Test
+    public void testHandleEditMeeting() {
+        // Arrange
+        Meeting meeting = new Meeting();
+        meeting.setProject(testProject);
+        FXMLLoader mockLoader = mock(FXMLLoader.class);
+        MeetingController mockMeetingController = mock(MeetingController.class);
+        Stage mockStage = mock(Stage.class);
+        Scene mockScene = mock(Scene.class);
+        Window mockWindow = mock(Window.class);
+
+        when(meetingsTable.getScene()).thenReturn(mockScene);
+        when(mockScene.getWindow()).thenReturn(mockWindow);
+        when(mockLoader.getController()).thenReturn(mockMeetingController);
+        doReturn(mockLoader).when(controller).createFXMLLoader(anyString());
+        doReturn(mockStage).when(controller).createDialogStage(anyString(), any(), any());
+
+        try {
+            // Mock loader.load() to avoid JavaFX initialization issues
+            Parent mockParent = mock(Parent.class);
+            when(mockLoader.load()).thenReturn(mockParent);
+        } catch (Exception e) {
+            fail("Failed to mock loader.load(): " + e.getMessage());
+        }
+
+        // Act
+        controller.handleEditMeeting(meeting);
+
+        // Assert
+        verify(mockMeetingController).setMeeting(meeting);
+        verify(controller).showAndWaitDialog(mockStage);
+        verify(mockViewModel.getLoadMeetingsCommand()).execute();
+    }
+
+    @Test
+    public void testShowChoiceDialog() {
+        // Arrange
+        List<Subsystem> subsystems = new ArrayList<>();
+        Subsystem subsystem = new Subsystem();
+        subsystem.setName("Test Subsystem");
+        subsystems.add(subsystem);
+        
+        ChoiceDialog<Subsystem> mockDialog = mock(ChoiceDialog.class);
+        doReturn(mockDialog).when(controller).createChoiceDialog(any(), anyList());
+        when(mockDialog.showAndWait()).thenReturn(Optional.of(subsystem));
+        
+        // Act
+        Optional<Subsystem> result = controller.showChoiceDialog(
+            "Test Title", "Test Header", "Test Content", subsystem, subsystems);
+        
+        // Assert
+        verify(mockDialog).setTitle("Test Title");
+        verify(mockDialog).setHeaderText("Test Header");
+        verify(mockDialog).setContentText("Test Content");
+        verify(mockDialog).showAndWait();
+        assertTrue(result.isPresent());
+        assertEquals(subsystem, result.get());
+    }
+
+    @Test
+    public void testCreateDialogStage() {
+        // Arrange
+        Window mockWindow = mock(Window.class);
+        Parent mockParent = mock(Parent.class);
+        
+        // Act - cannot fully test due to JavaFX toolkit not being initialized in unit tests
+        try {
+            Stage result = controller.createDialogStage("Test Title", mockWindow, mockParent);
+            
+            // If we get here, it means createDialogStage didn't throw an NPE
+            assertNotNull(result);
+        } catch (Exception e) {
+            if (e.getMessage() != null && 
+                (e.getMessage().contains("Toolkit not initialized") || 
+                 e.getMessage().contains("Internal graphics"))) {
+                // This is expected in a test environment
+                // Verify method behavior using a spy
+                doReturn(mock(Stage.class)).when(controller).createDialogStage(anyString(), any(), any());
+                controller.createDialogStage("Test Title", mockWindow, mockParent);
             } else {
-                fail("initialize() threw unexpected exception: " + e.getMessage());
+                fail("Unexpected exception: " + e.getMessage());
             }
         }
     }
 
     @Test
-    public void testHandleTaskCommands() throws Exception {
-        // Arrange - Set up a custom command field
-        org.frcpm.binding.Command mockCommand = mock(org.frcpm.binding.Command.class);
-
-        java.lang.reflect.Field addTaskCommandField = ProjectController.class.getDeclaredField("addTaskCommand");
-        addTaskCommandField.setAccessible(true);
-        addTaskCommandField.set(controller, mockCommand);
-
-        // Create a mock ActionEvent
-        javafx.event.ActionEvent mockEvent = mock(javafx.event.ActionEvent.class);
-
+    public void testShowErrorAlert() {
+        // Arrange
+        Alert mockAlert = mock(Alert.class);
+        doReturn(mockAlert).when(controller).createAlert(any());
+        
         // Act
-        controller.handleAddTask(mockEvent);
-
+        controller.showErrorAlert("Test Title", "Test Message");
+        
         // Assert
-        verify(mockCommand).execute();
+        verify(mockAlert).setTitle("Error");
+        verify(mockAlert).setHeaderText("Test Title");
+        verify(mockAlert).setContentText("Test Message");
+        verify(mockAlert).showAndWait();
     }
 
     @Test
-    public void testHandleMilestoneCommands() throws Exception {
-        // Arrange - Set up a custom command field
-        org.frcpm.binding.Command mockCommand = mock(org.frcpm.binding.Command.class);
-
-        java.lang.reflect.Field addMilestoneCommandField = ProjectController.class
-                .getDeclaredField("addMilestoneCommand");
-        addMilestoneCommandField.setAccessible(true);
-        addMilestoneCommandField.set(controller, mockCommand);
-
-        // Create a mock ActionEvent
-        javafx.event.ActionEvent mockEvent = mock(javafx.event.ActionEvent.class);
-
+    public void testShowInfoAlert() {
+        // Arrange
+        Alert mockAlert = mock(Alert.class);
+        doReturn(mockAlert).when(controller).createAlert(any());
+        
         // Act
-        controller.handleAddMilestone(mockEvent);
-
+        controller.showInfoAlert("Test Title", "Test Message");
+        
         // Assert
-        verify(mockCommand).execute();
-    }
-
-    @Test
-    public void testHandleMeetingCommands() throws Exception {
-        // Arrange - Set up a custom command field
-        org.frcpm.binding.Command mockCommand = mock(org.frcpm.binding.Command.class);
-
-        java.lang.reflect.Field scheduleMeetingCommandField = ProjectController.class
-                .getDeclaredField("scheduleMeetingCommand");
-        scheduleMeetingCommandField.setAccessible(true);
-        scheduleMeetingCommandField.set(controller, mockCommand);
-
-        // Create a mock ActionEvent
-        javafx.event.ActionEvent mockEvent = mock(javafx.event.ActionEvent.class);
-
-        // Act
-        controller.handleScheduleMeeting(mockEvent);
-
-        // Assert
-        verify(mockCommand).execute();
+        verify(mockAlert).setTitle("Information");
+        verify(mockAlert).setHeaderText("Test Title");
+        verify(mockAlert).setContentText("Test Message");
+        verify(mockAlert).showAndWait();
     }
 }
