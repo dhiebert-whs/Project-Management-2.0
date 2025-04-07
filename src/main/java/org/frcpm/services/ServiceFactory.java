@@ -98,4 +98,13 @@ public class ServiceFactory {
     public static MilestoneService getMilestoneService() {
         return milestoneService;
     }
+
+    /**
+     * Gets the dialog service.
+     * 
+     * @return the dialog service
+     */
+    public static DialogService getDialogService() {
+        return new JavaFXDialogService();
+}
 }
