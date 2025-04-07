@@ -25,14 +25,14 @@ import java.util.logging.Logger;
  * ViewModel for the Task view.
  */
 public class TaskViewModel extends BaseViewModel {
-    
+
     private static final Logger LOGGER = Logger.getLogger(TaskViewModel.class.getName());
-    
+
     // Services
     private final TaskService taskService;
     private final TeamMemberService teamMemberService;
     private final ComponentService componentService;
-    
+
     // Observable properties
     private final StringProperty title = new SimpleStringProperty();
     private final StringProperty description = new SimpleStringProperty();
@@ -48,12 +48,15 @@ public class TaskViewModel extends BaseViewModel {
     private final ObjectProperty<Task> task = new SimpleObjectProperty<>();
     private final BooleanProperty isNewTask = new SimpleBooleanProperty(true);
     private final BooleanProperty valid = new SimpleBooleanProperty(false);
-    
+    private final ObjectProperty<TeamMember> selectedMember = new SimpleObjectProperty<>();
+    private final ObjectProperty<Component> selectedComponent = new SimpleObjectProperty<>();
+    private final ObjectProperty<Task> selectedDependency = new SimpleObjectProperty<>();
+
     // Observable collections
     private final ObservableList<TeamMember> assignedMembers = FXCollections.observableArrayList();
     private final ObservableList<Task> preDependencies = FXCollections.observableArrayList();
     private final ObservableList<Component> requiredComponents = FXCollections.observableArrayList();
-    
+
     // Commands
     private final Command saveCommand;
     private final Command cancelCommand;
@@ -63,42 +66,42 @@ public class TaskViewModel extends BaseViewModel {
     private final Command removeDependencyCommand;
     private final Command addComponentCommand;
     private final Command removeComponentCommand;
-    
+
     /**
      * Creates a new TaskViewModel with default services.
      */
     public TaskViewModel() {
         this(
-            ServiceFactory.getTaskService(),
-            ServiceFactory.getTeamMemberService(),
-            ServiceFactory.getComponentService()
-        );
+                ServiceFactory.getTaskService(),
+                ServiceFactory.getTeamMemberService(),
+                ServiceFactory.getComponentService());
     }
-    
+
     /**
      * Creates a new TaskViewModel with the specified services.
      * This constructor is mainly used for testing.
      * 
-     * @param taskService the task service
+     * @param taskService       the task service
      * @param teamMemberService the team member service
-     * @param componentService the component service
+     * @param componentService  the component service
      */
-    public TaskViewModel(TaskService taskService, TeamMemberService teamMemberService, 
-                         ComponentService componentService) {
+    public TaskViewModel(TaskService taskService, TeamMemberService teamMemberService,
+            ComponentService componentService) {
         this.taskService = taskService;
         this.teamMemberService = teamMemberService;
         this.componentService = componentService;
-        
+
         // Create commands
         saveCommand = new Command(this::save, this::isValid);
-        cancelCommand = new Command(() -> {});
+        cancelCommand = new Command(() -> {
+        });
         addMemberCommand = new Command(this::addMember);
         removeMemberCommand = new Command(this::removeMember, this::canRemoveMember);
         addDependencyCommand = new Command(this::addDependency);
         removeDependencyCommand = new Command(this::removeDependency, this::canRemoveDependency);
         addComponentCommand = new Command(this::addComponent);
         removeComponentCommand = new Command(this::removeComponent, this::canRemoveComponent);
-        
+
         // Set up validation listeners
         title.addListener((observable, oldValue, newValue) -> validate());
         project.addListener((observable, oldValue, newValue) -> validate());
@@ -106,27 +109,29 @@ public class TaskViewModel extends BaseViewModel {
         estimatedHours.addListener((observable, oldValue, newValue) -> validate());
         startDate.addListener((observable, oldValue, newValue) -> validate());
         endDate.addListener((observable, oldValue, newValue) -> validate());
-        
+
         // Property change listeners for dirty flag
         description.addListener((observable, oldValue, newValue) -> setDirty(true));
         priority.addListener((observable, oldValue, newValue) -> setDirty(true));
         progress.addListener((observable, oldValue, newValue) -> setDirty(true));
         completed.addListener((observable, oldValue, newValue) -> setDirty(true));
         actualHours.addListener((observable, oldValue, newValue) -> setDirty(true));
-        
+
         // Collection change listeners
-        assignedMembers.addListener((javafx.collections.ListChangeListener.Change<? extends TeamMember> c) -> setDirty(true));
+        assignedMembers
+                .addListener((javafx.collections.ListChangeListener.Change<? extends TeamMember> c) -> setDirty(true));
         preDependencies.addListener((javafx.collections.ListChangeListener.Change<? extends Task> c) -> setDirty(true));
-        requiredComponents.addListener((javafx.collections.ListChangeListener.Change<? extends Component> c) -> setDirty(true));
-        
+        requiredComponents
+                .addListener((javafx.collections.ListChangeListener.Change<? extends Component> c) -> setDirty(true));
+
         // Initial validation
         validate();
     }
-    
+
     /**
      * Sets up the ViewModel for creating a new task.
      * 
-     * @param project the project for the task
+     * @param project   the project for the task
      * @param subsystem the subsystem for the task
      */
     public void initNewTask(Project project, Subsystem subsystem) {
@@ -134,7 +139,7 @@ public class TaskViewModel extends BaseViewModel {
         this.subsystem.set(subsystem);
         task.set(null);
         isNewTask.set(true);
-        
+
         // Set default values
         title.set("");
         description.set("");
@@ -145,17 +150,17 @@ public class TaskViewModel extends BaseViewModel {
         startDate.set(LocalDate.now());
         endDate.set(null);
         completed.set(false);
-        
+
         // Clear collections
         assignedMembers.clear();
         preDependencies.clear();
         requiredComponents.clear();
-        
+
         // Clear dirty flag and validate
         setDirty(false);
         validate();
     }
-    
+
     /**
      * Sets up the ViewModel for editing an existing task.
      * 
@@ -165,83 +170,83 @@ public class TaskViewModel extends BaseViewModel {
         if (task == null) {
             throw new IllegalArgumentException("Task cannot be null");
         }
-        
+
         this.task.set(task);
         project.set(task.getProject());
         subsystem.set(task.getSubsystem());
         isNewTask.set(false);
-        
+
         // Set field values from task
         title.set(task.getTitle());
         description.set(task.getDescription() != null ? task.getDescription() : "");
-        
+
         Duration estimated = task.getEstimatedDuration();
         estimatedHours.set(estimated != null ? estimated.toMinutes() / 60.0 : 1.0);
-        
+
         Duration actual = task.getActualDuration();
         actualHours.set(actual != null ? actual.toMinutes() / 60.0 : 0.0);
-        
+
         priority.set(task.getPriority() != null ? task.getPriority() : Task.Priority.MEDIUM);
         progress.set(task.getProgress());
         startDate.set(task.getStartDate());
         endDate.set(task.getEndDate());
         completed.set(task.isCompleted());
-        
+
         // Set collections
         assignedMembers.clear();
         if (task.getAssignedTo() != null) {
             assignedMembers.addAll(task.getAssignedTo());
         }
-        
+
         preDependencies.clear();
         if (task.getPreDependencies() != null) {
             preDependencies.addAll(task.getPreDependencies());
         }
-        
+
         requiredComponents.clear();
         if (task.getRequiredComponents() != null) {
             requiredComponents.addAll(task.getRequiredComponents());
         }
-        
+
         // Clear dirty flag and validate
         setDirty(false);
         validate();
     }
-    
+
     /**
      * Validates the task data.
      * Sets the valid property and error message.
      */
     private void validate() {
         List<String> errors = new ArrayList<>();
-        
+
         // Check required fields
         if (title.get() == null || title.get().trim().isEmpty()) {
             errors.add("Task title cannot be empty");
         }
-        
+
         if (project.get() == null) {
             errors.add("Project cannot be null");
         }
-        
+
         if (subsystem.get() == null) {
             errors.add("Subsystem cannot be null");
         }
-        
+
         if (estimatedHours.get() <= 0) {
             errors.add("Estimated hours must be positive");
         }
-        
+
         // Check dates
         if (startDate.get() == null) {
             errors.add("Start date cannot be empty");
         }
-        
-        if (startDate.get() != null && endDate.get() != null && 
-            endDate.get().isBefore(startDate.get())) {
+
+        if (startDate.get() != null && endDate.get() != null &&
+                endDate.get().isBefore(startDate.get())) {
             errors.add("End date cannot be before start date");
         }
-        
+
         // Update valid property and error message
         valid.set(errors.isEmpty());
         if (!errors.isEmpty()) {
@@ -250,248 +255,248 @@ public class TaskViewModel extends BaseViewModel {
             clearErrorMessage();
         }
     }
-    
- /**
- * Saves the task.
- * Called when the save command is executed.
- */
-private void save() {
-    if (!valid.get()) {
-        return;
-    }
-    
-    try {
-        Task savedTask;
-        if (isNewTask.get()) {
-            // Create new task
-            savedTask = taskService.createTask(
-                title.get(),
-                project.get(),
-                subsystem.get(),
-                estimatedHours.get(),
-                priority.get(),
-                startDate.get(),
-                endDate.get()
-            );
-            savedTask.setDescription(description.get());
-            
-            // Save again to update description
-            savedTask = taskService.save(savedTask);
-            
-            // Only handle members if there are any to assign
-            if (!assignedMembers.isEmpty()) {
-                Set<TeamMember> members = new HashSet<>(assignedMembers);
-                savedTask = taskService.assignMembers(savedTask.getId(), members);
-            }
-            
-            // Only handle dependencies if there are any
-            if (!preDependencies.isEmpty()) {
-                for (Task dependency : preDependencies) {
-                    if (dependency.getId() != null) {
-                        taskService.addDependency(savedTask.getId(), dependency.getId());
+
+    /**
+     * Saves the task.
+     * Called when the save command is executed.
+     */
+    private void save() {
+        if (!valid.get()) {
+            return;
+        }
+
+        try {
+            Task savedTask;
+            if (isNewTask.get()) {
+                // Create new task
+                savedTask = taskService.createTask(
+                        title.get(),
+                        project.get(),
+                        subsystem.get(),
+                        estimatedHours.get(),
+                        priority.get(),
+                        startDate.get(),
+                        endDate.get());
+                savedTask.setDescription(description.get());
+
+                // Save again to update description
+                savedTask = taskService.save(savedTask);
+
+                // Only handle members if there are any to assign
+                if (!assignedMembers.isEmpty()) {
+                    Set<TeamMember> members = new HashSet<>(assignedMembers);
+                    savedTask = taskService.assignMembers(savedTask.getId(), members);
+                }
+
+                // Only handle dependencies if there are any
+                if (!preDependencies.isEmpty()) {
+                    for (Task dependency : preDependencies) {
+                        if (dependency.getId() != null) {
+                            taskService.addDependency(savedTask.getId(), dependency.getId());
+                        }
                     }
                 }
-            }
-            
-            // Only handle components if there are any
-            if (!requiredComponents.isEmpty()) {
-                for (Component component : requiredComponents) {
-                    savedTask.addRequiredComponent(component);
-                }
-            }
-            
-            // Final save to ensure all changes are persisted
-            savedTask = taskService.save(savedTask);
-            
-        } else {
-            // Update existing task
-            Task existingTask = task.get();
-            existingTask.setTitle(title.get());
-            existingTask.setDescription(description.get());
-            existingTask.setEstimatedDuration(Duration.ofMinutes((long)(estimatedHours.get() * 60)));
-            
-            if (actualHours.get() > 0) {
-                existingTask.setActualDuration(Duration.ofMinutes((long)(actualHours.get() * 60)));
-            }
-            
-            existingTask.setPriority(priority.get());
-            existingTask.setStartDate(startDate.get());
-            existingTask.setEndDate(endDate.get());
-            
-            // Update progress and completion status
-            savedTask = taskService.updateTaskProgress(
-                existingTask.getId(),
-                progress.get(),
-                completed.get()
-            );
-            
-            // Only handle members if there are any to assign
-            if (!assignedMembers.isEmpty()) {
-                Set<TeamMember> members = new HashSet<>(assignedMembers);
-                savedTask = taskService.assignMembers(savedTask.getId(), members);
-            }
-            
-            // Only handle dependencies if there are any to add
-            if (!preDependencies.isEmpty()) {
-                for (Task dependency : preDependencies) {
-                    if (dependency.getId() != null && 
-                        !task.get().getPreDependencies().contains(dependency)) {
-                        taskService.addDependency(savedTask.getId(), dependency.getId());
-                    }
-                }
-            }
-            
-            // Only handle components if there are any to add
-            if (!requiredComponents.isEmpty()) {
-                for (Component component : requiredComponents) {
-                    if (!task.get().getRequiredComponents().contains(component)) {
+
+                // Only handle components if there are any
+                if (!requiredComponents.isEmpty()) {
+                    for (Component component : requiredComponents) {
                         savedTask.addRequiredComponent(component);
                     }
                 }
+
+                // Final save to ensure all changes are persisted
+                savedTask = taskService.save(savedTask);
+
+            } else {
+                // Update existing task
+                Task existingTask = task.get();
+                existingTask.setTitle(title.get());
+                existingTask.setDescription(description.get());
+                existingTask.setEstimatedDuration(Duration.ofMinutes((long) (estimatedHours.get() * 60)));
+
+                if (actualHours.get() > 0) {
+                    existingTask.setActualDuration(Duration.ofMinutes((long) (actualHours.get() * 60)));
+                }
+
+                existingTask.setPriority(priority.get());
+                existingTask.setStartDate(startDate.get());
+                existingTask.setEndDate(endDate.get());
+
+                // Update progress and completion status
+                savedTask = taskService.updateTaskProgress(
+                        existingTask.getId(),
+                        progress.get(),
+                        completed.get());
+
+                // Only handle members if there are any to assign
+                if (!assignedMembers.isEmpty()) {
+                    Set<TeamMember> members = new HashSet<>(assignedMembers);
+                    savedTask = taskService.assignMembers(savedTask.getId(), members);
+                }
+
+                // Only handle dependencies if there are any to add
+                if (!preDependencies.isEmpty()) {
+                    for (Task dependency : preDependencies) {
+                        if (dependency.getId() != null &&
+                                !task.get().getPreDependencies().contains(dependency)) {
+                            taskService.addDependency(savedTask.getId(), dependency.getId());
+                        }
+                    }
+                }
+
+                // Only handle components if there are any to add
+                if (!requiredComponents.isEmpty()) {
+                    for (Component component : requiredComponents) {
+                        if (!task.get().getRequiredComponents().contains(component)) {
+                            savedTask.addRequiredComponent(component);
+                        }
+                    }
+                }
+
+                // Final save to ensure all changes are persisted
+                savedTask = taskService.save(savedTask);
             }
-            
-            // Final save to ensure all changes are persisted
-            savedTask = taskService.save(savedTask);
+
+            // Update task property with saved task
+            task.set(savedTask);
+
+            // Clear dirty flag
+            setDirty(false);
+
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error saving task", e);
+            String errorMsg = e.getMessage();
+            if (errorMsg == null || errorMsg.isEmpty()) {
+                errorMsg = "Unknown error occurred while saving task";
+            }
+            setErrorMessage("Failed to save task: " + errorMsg);
+            valid.set(false);
         }
-        
-        // Update task property with saved task
-        task.set(savedTask);
-        
-        // Clear dirty flag
-        setDirty(false);
-        
-    } catch (Exception e) {
-        LOGGER.log(Level.SEVERE, "Error saving task", e);
-        String errorMsg = e.getMessage();
-        if (errorMsg == null || errorMsg.isEmpty()) {
-            errorMsg = "Unknown error occurred while saving task";
-        }
-        setErrorMessage("Failed to save task: " + errorMsg);
-        valid.set(false);
     }
-}
-    
+
     // Helper methods for commands
-    
+
     private void addMember() {
         // This is just a placeholder - in the actual implementation,
         // this would open a dialog to select a team member
         // For now, we'll assume the selected member is passed externally
     }
-    
+
     public void addMember(TeamMember member) {
         if (member != null && !assignedMembers.contains(member)) {
             assignedMembers.add(member);
         }
     }
-    
+
     private void removeMember() {
         // This is just a placeholder - in the actual implementation,
         // this would remove the selected member
         // For now, we'll assume the selected member is passed externally
     }
-    
+
     public void removeMember(TeamMember member) {
         assignedMembers.remove(member);
     }
-    
+
     private boolean canRemoveMember() {
         // Check if there's a selected member to remove
         return !assignedMembers.isEmpty();
     }
-    
+
     private void addDependency() {
         // Placeholder for adding a dependency
     }
-    
- /**
- * Adds a dependency to the task.
- * 
- * @param dependency the dependency to add
- */
-public void addDependency(Task dependency) {
-    if (dependency == null) {
-        return;
-    }
-    
-    // Prevent adding itself as a dependency
-    if (task.get() != null && task.get().equals(dependency)) {
-        setErrorMessage("Cannot add task as a dependency to itself");
-        return;
-    }
-    
-    // Prevent adding a dependency that already exists
-    if (preDependencies.contains(dependency)) {
-        return;
-    }
-    
-    // Prevent circular dependencies
-    if (task.get() != null) {
-        // Direct circular dependency - task depends on dependency, which already depends on task
-        if (dependency.getPostDependencies().contains(task.get())) {
-            setErrorMessage("Adding this dependency would create a circular dependency");
+
+    /**
+     * Adds a dependency to the task.
+     * 
+     * @param dependency the dependency to add
+     */
+    public void addDependency(Task dependency) {
+        if (dependency == null) {
             return;
         }
-        
-        // Check for potential indirect circular dependencies
-        for (Task transitiveTask : dependency.getPreDependencies()) {
-            if (transitiveTask.equals(task.get())) {
+
+        // Prevent adding itself as a dependency
+        if (task.get() != null && task.get().equals(dependency)) {
+            setErrorMessage("Cannot add task as a dependency to itself");
+            return;
+        }
+
+        // Prevent adding a dependency that already exists
+        if (preDependencies.contains(dependency)) {
+            return;
+        }
+
+        // Prevent circular dependencies
+        if (task.get() != null) {
+            // Direct circular dependency - task depends on dependency, which already
+            // depends on task
+            if (dependency.getPostDependencies().contains(task.get())) {
                 setErrorMessage("Adding this dependency would create a circular dependency");
                 return;
             }
+
+            // Check for potential indirect circular dependencies
+            for (Task transitiveTask : dependency.getPreDependencies()) {
+                if (transitiveTask.equals(task.get())) {
+                    setErrorMessage("Adding this dependency would create a circular dependency");
+                    return;
+                }
+            }
         }
+
+        preDependencies.add(dependency);
     }
-    
-    preDependencies.add(dependency);
-}
-    
+
     private boolean wouldCreateCircularDependency(Task dependency) {
-        // Basic implementation - in a real application, you'd want to do a proper graph traversal
+        // Basic implementation - in a real application, you'd want to do a proper graph
+        // traversal
         for (Task subDependency : dependency.getPreDependencies()) {
-            if (subDependency.equals(task.get()) || 
-                subDependency.getPreDependencies().contains(task.get())) {
+            if (subDependency.equals(task.get()) ||
+                    subDependency.getPreDependencies().contains(task.get())) {
                 return true;
             }
         }
         return false;
     }
-    
+
     private void removeDependency() {
         // Placeholder for removing a dependency
     }
-    
+
     public void removeDependency(Task dependency) {
         preDependencies.remove(dependency);
     }
-    
+
     private boolean canRemoveDependency() {
         return !preDependencies.isEmpty();
     }
-    
+
     private void addComponent() {
         // Placeholder for adding a component
     }
-    
+
     public void addComponent(Component component) {
         if (component != null && !requiredComponents.contains(component)) {
             requiredComponents.add(component);
         }
     }
-    
+
     private void removeComponent() {
         // Placeholder for removing a component
     }
-    
+
     public void removeComponent(Component component) {
         requiredComponents.remove(component);
     }
-    
+
     private boolean canRemoveComponent() {
         return !requiredComponents.isEmpty();
     }
-    
+
     // Property getters and accessors
-    
+
     /**
      * Gets whether the input is valid.
      * 
@@ -500,7 +505,7 @@ public void addDependency(Task dependency) {
     public boolean isValid() {
         return valid.get();
     }
-    
+
     /**
      * Gets the valid property.
      * 
@@ -509,7 +514,7 @@ public void addDependency(Task dependency) {
     public BooleanProperty validProperty() {
         return valid;
     }
-    
+
     /**
      * Gets the save command.
      * 
@@ -518,7 +523,7 @@ public void addDependency(Task dependency) {
     public Command getSaveCommand() {
         return saveCommand;
     }
-    
+
     /**
      * Gets the cancel command.
      * 
@@ -527,7 +532,7 @@ public void addDependency(Task dependency) {
     public Command getCancelCommand() {
         return cancelCommand;
     }
-    
+
     /**
      * Gets the add member command.
      * 
@@ -536,7 +541,7 @@ public void addDependency(Task dependency) {
     public Command getAddMemberCommand() {
         return addMemberCommand;
     }
-    
+
     /**
      * Gets the remove member command.
      * 
@@ -545,7 +550,7 @@ public void addDependency(Task dependency) {
     public Command getRemoveMemberCommand() {
         return removeMemberCommand;
     }
-    
+
     /**
      * Gets the add dependency command.
      * 
@@ -554,7 +559,7 @@ public void addDependency(Task dependency) {
     public Command getAddDependencyCommand() {
         return addDependencyCommand;
     }
-    
+
     /**
      * Gets the remove dependency command.
      * 
@@ -563,7 +568,7 @@ public void addDependency(Task dependency) {
     public Command getRemoveDependencyCommand() {
         return removeDependencyCommand;
     }
-    
+
     /**
      * Gets the add component command.
      * 
@@ -572,7 +577,7 @@ public void addDependency(Task dependency) {
     public Command getAddComponentCommand() {
         return addComponentCommand;
     }
-    
+
     /**
      * Gets the remove component command.
      * 
@@ -581,7 +586,7 @@ public void addDependency(Task dependency) {
     public Command getRemoveComponentCommand() {
         return removeComponentCommand;
     }
-    
+
     /**
      * Gets the task.
      * 
@@ -590,7 +595,7 @@ public void addDependency(Task dependency) {
     public Task getTask() {
         return task.get();
     }
-    
+
     /**
      * Gets the task property.
      * 
@@ -599,7 +604,7 @@ public void addDependency(Task dependency) {
     public ObjectProperty<Task> taskProperty() {
         return task;
     }
-    
+
     /**
      * Gets the new task flag.
      * 
@@ -608,7 +613,7 @@ public void addDependency(Task dependency) {
     public boolean isNewTask() {
         return isNewTask.get();
     }
-    
+
     /**
      * Gets the new task property.
      * 
@@ -617,7 +622,7 @@ public void addDependency(Task dependency) {
     public BooleanProperty isNewTaskProperty() {
         return isNewTask;
     }
-    
+
     /**
      * Gets the assigned members.
      * 
@@ -626,7 +631,7 @@ public void addDependency(Task dependency) {
     public ObservableList<TeamMember> getAssignedMembers() {
         return assignedMembers;
     }
-    
+
     /**
      * Gets the pre-dependencies.
      * 
@@ -635,7 +640,7 @@ public void addDependency(Task dependency) {
     public ObservableList<Task> getPreDependencies() {
         return preDependencies;
     }
-    
+
     /**
      * Gets the required components.
      * 
@@ -644,172 +649,253 @@ public void addDependency(Task dependency) {
     public ObservableList<Component> getRequiredComponents() {
         return requiredComponents;
     }
-    
+
     // Title property accessors
     public StringProperty titleProperty() {
         return title;
     }
-    
+
     public String getTitle() {
         return title.get();
     }
-    
+
     public void setTitle(String value) {
         title.set(value);
     }
-    
+
     // Description property accessors
     public StringProperty descriptionProperty() {
         return description;
     }
-    
+
     public String getDescription() {
         return description.get();
     }
-    
+
     public void setDescription(String value) {
         description.set(value);
     }
-    
+
     // Estimated hours property accessors
     public DoubleProperty estimatedHoursProperty() {
         return estimatedHours;
     }
-    
+
     public double getEstimatedHours() {
         return estimatedHours.get();
     }
-    
+
     public void setEstimatedHours(double value) {
         estimatedHours.set(value);
     }
-    
+
     // Actual hours property accessors
     public DoubleProperty actualHoursProperty() {
         return actualHours;
     }
-    
+
     public double getActualHours() {
         return actualHours.get();
     }
-    
+
     public void setActualHours(double value) {
         actualHours.set(value);
     }
-    
+
     // Priority property accessors
     public ObjectProperty<Task.Priority> priorityProperty() {
         return priority;
     }
-    
+
     public Task.Priority getPriority() {
         return priority.get();
     }
-    
+
     public void setPriority(Task.Priority value) {
         priority.set(value);
     }
-    
+
     // Progress property accessors
     public IntegerProperty progressProperty() {
         return progress;
     }
-    
+
     public int getProgress() {
         return progress.get();
     }
-    
+
     public void setProgress(int value) {
         // Ensure progress is between 0 and 100
         int clampedValue = Math.max(0, Math.min(100, value));
         progress.set(clampedValue);
-        
+
         // If progress is 100%, set completed to true
         if (clampedValue == 100) {
             completed.set(true);
         }
     }
-    
+
     // Start date property accessors
     public ObjectProperty<LocalDate> startDateProperty() {
         return startDate;
     }
-    
+
     public LocalDate getStartDate() {
         return startDate.get();
     }
-    
+
     public void setStartDate(LocalDate value) {
         startDate.set(value);
     }
-    
+
     // End date property accessors
     public ObjectProperty<LocalDate> endDateProperty() {
         return endDate;
     }
-    
+
     public LocalDate getEndDate() {
         return endDate.get();
     }
-    
+
     public void setEndDate(LocalDate value) {
         endDate.set(value);
     }
-    
+
     // Completed property accessors
     public BooleanProperty completedProperty() {
         return completed;
     }
-    
+
     public boolean isCompleted() {
         return completed.get();
     }
-    
+
     public void setCompleted(boolean value) {
         completed.set(value);
-        
+
         // If marking as completed, set progress to 100%
         if (value) {
             progress.set(100);
         }
     }
-    
+
     // Project property accessors
     public ObjectProperty<Project> projectProperty() {
         return project;
     }
-    
+
     public Project getProject() {
         return project.get();
     }
-    
+
     public void setProject(Project value) {
         project.set(value);
     }
-    
+
     // Subsystem property accessors
     public ObjectProperty<Subsystem> subsystemProperty() {
         return subsystem;
     }
-    
+
     public Subsystem getSubsystem() {
         return subsystem.get();
     }
-    
+
     public void setSubsystem(Subsystem value) {
         subsystem.set(value);
     }
-    
+
     // Additional setters
     public void setTask(Task value) {
         task.set(value);
     }
-    
+
     public void setIsNewTask(boolean value) {
         isNewTask.set(value);
     }
-    
+
     public void setValid(boolean value) {
         valid.set(value);
+    }
+
+    /**
+     * Gets the selected team member.
+     * 
+     * @return the selected team member
+     */
+    public TeamMember getSelectedMember() {
+        return selectedMember.get();
+    }
+
+    /**
+     * Sets the selected team member.
+     * 
+     * @param member the team member to select
+     */
+    public void setSelectedMember(TeamMember member) {
+        selectedMember.set(member);
+    }
+
+    /**
+     * Gets the selected team member property.
+     * 
+     * @return the selected team member property
+     */
+    public ObjectProperty<TeamMember> selectedMemberProperty() {
+        return selectedMember;
+    }
+
+    /**
+     * Gets the selected component.
+     * 
+     * @return the selected component
+     */
+    public Component getSelectedComponent() {
+        return selectedComponent.get();
+    }
+
+    /**
+     * Sets the selected component.
+     * 
+     * @param component the component to select
+     */
+    public void setSelectedComponent(Component component) {
+        selectedComponent.set(component);
+    }
+
+    /**
+     * Gets the selected component property.
+     * 
+     * @return the selected component property
+     */
+    public ObjectProperty<Component> selectedComponentProperty() {
+        return selectedComponent;
+    }
+
+    /**
+     * Gets the selected dependency task.
+     * 
+     * @return the selected dependency task
+     */
+    public Task getSelectedDependency() {
+        return selectedDependency.get();
+    }
+
+    /**
+     * Sets the selected dependency task.
+     * 
+     * @param dependency the dependency task to select
+     */
+    public void setSelectedDependency(Task dependency) {
+        selectedDependency.set(dependency);
+    }
+
+    /**
+     * Gets the selected dependency task property.
+     * 
+     * @return the selected dependency task property
+     */
+    public ObjectProperty<Task> selectedDependencyProperty() {
+        return selectedDependency;
     }
 }

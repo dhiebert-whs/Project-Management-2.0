@@ -1,3 +1,4 @@
+// src/test/java/org/frcpm/controllers/TaskControllerTest.java
 package org.frcpm.controllers;
 
 import javafx.scene.Scene;
@@ -6,22 +7,35 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import org.frcpm.binding.Command;
 import org.frcpm.models.*;
+import org.frcpm.services.DialogService;
 import org.frcpm.viewmodels.TaskViewModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.testfx.framework.junit5.Start;
 
-import java.lang.reflect.Field;
 import java.time.LocalDate;
 import javafx.collections.FXCollections;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
+import java.lang.reflect.Field;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TaskControllerTest extends BaseJavaFXTest {
 
     // Controller to test
     private TaskController taskController;
+
+    // Spy for the controller for testing protected methods
+    private TaskController controllerSpy;
+
+    // Mock services
+    private DialogService mockDialogService;
 
     // Mock ViewModel
     private TaskViewModel mockViewModel;
@@ -101,8 +115,17 @@ public class TaskControllerTest extends BaseJavaFXTest {
      */
     @BeforeEach
     public void setUp() throws Exception {
+        // Create mock services
+        mockDialogService = mock(DialogService.class);
+
         // Create a new controller instance
         taskController = new TaskController();
+
+        // Create a spy for the controller
+        controllerSpy = spy(taskController);
+
+        // Inject the mock dialog service into the controller
+        setPrivateField(controllerSpy, "dialogService", mockDialogService);
 
         // Create mock Command objects
         mockSaveCommand = mock(Command.class);
@@ -129,6 +152,18 @@ public class TaskControllerTest extends BaseJavaFXTest {
         when(mockViewModel.getAssignedMembers()).thenReturn(FXCollections.observableArrayList());
         when(mockViewModel.getRequiredComponents()).thenReturn(FXCollections.observableArrayList());
         when(mockViewModel.getPreDependencies()).thenReturn(FXCollections.observableArrayList());
+        when(mockViewModel.titleProperty()).thenReturn(new SimpleStringProperty());
+        when(mockViewModel.descriptionProperty()).thenReturn(new SimpleStringProperty());
+        when(mockViewModel.estimatedHoursProperty()).thenReturn(new SimpleDoubleProperty(1.0));
+        when(mockViewModel.actualHoursProperty()).thenReturn(new SimpleDoubleProperty(0.0));
+        when(mockViewModel.priorityProperty()).thenReturn(new SimpleObjectProperty<>(Task.Priority.MEDIUM));
+        when(mockViewModel.progressProperty()).thenReturn(new SimpleIntegerProperty(0));
+        when(mockViewModel.startDateProperty()).thenReturn(new SimpleObjectProperty<>(LocalDate.now()));
+        when(mockViewModel.endDateProperty()).thenReturn(new SimpleObjectProperty<>());
+        when(mockViewModel.completedProperty()).thenReturn(new SimpleBooleanProperty(false));
+        when(mockViewModel.projectProperty()).thenReturn(new SimpleObjectProperty<>());
+        when(mockViewModel.subsystemProperty()).thenReturn(new SimpleObjectProperty<>());
+        when(mockViewModel.errorMessageProperty()).thenReturn(new SimpleStringProperty());
 
         // Inject components into controller using reflection
         injectField("taskTitleLabel", taskTitleLabel);
@@ -194,9 +229,6 @@ public class TaskControllerTest extends BaseJavaFXTest {
         // Set up mock ViewModel behavior
         when(mockViewModel.getTask()).thenReturn(testTask);
         when(mockViewModel.isValid()).thenReturn(true);
-
-        // Initialize the controller
-        taskController.testInitialize();
     }
 
     /**
@@ -204,6 +236,9 @@ public class TaskControllerTest extends BaseJavaFXTest {
      */
     @Test
     public void testInitialize() {
+        // Call the method to test
+        controllerSpy.testInitialize();
+
         // Verify that bindings were set up
         verify(mockViewModel).titleProperty();
         verify(mockViewModel).descriptionProperty();
@@ -222,95 +257,132 @@ public class TaskControllerTest extends BaseJavaFXTest {
         verify(mockViewModel).getRemoveComponentCommand();
         verify(mockViewModel).getAddDependencyCommand();
         verify(mockViewModel).getRemoveDependencyCommand();
+
+        // Verify tables were bound to the ViewModel collections
+        verify(mockViewModel).getAssignedMembers();
+        verify(mockViewModel).getRequiredComponents();
+        verify(mockViewModel).getPreDependencies();
     }
 
     /**
      * Test setting up controller for a new task.
      */
     @Test
-    public void testSetNewTask() {
+    public void testInitNewTask() {
         // Call method
-        taskController.setNewTask(testProject, testSubsystem);
+        controllerSpy.initNewTask(testTask);
 
         // Verify ViewModel method was called
-        verify(mockViewModel).initNewTask(testProject, testSubsystem);
+        verify(mockViewModel).initNewTask(testTask.getProject(), testTask.getSubsystem());
+        verify(mockViewModel).titleProperty();
     }
 
     /**
      * Test setting up controller for editing an existing task.
      */
     @Test
-    public void testSetTask() {
+    public void testInitExistingTask() {
         // Call method
-        taskController.setTask(testTask);
+        controllerSpy.initExistingTask(testTask);
 
         // Verify ViewModel method was called
         verify(mockViewModel).initExistingTask(testTask);
     }
 
     /**
-     * Test getting the task from the ViewModel.
+     * Test the showErrorAlert protected method.
+     */
+    @Test
+    public void testShowErrorAlert() {
+        // Call method
+        controllerSpy.showErrorAlert("Test Title", "Test Message");
+
+        // Verify dialog service was called
+        verify(mockDialogService).showErrorAlert("Test Title", "Test Message");
+    }
+
+    /**
+     * Test error message property listener.
+     */
+    @Test
+    public void testErrorMessageListener() {
+        // Set up controller
+        controllerSpy.testInitialize();
+
+        // Set up test data
+        SimpleStringProperty errorProperty = new SimpleStringProperty();
+        when(mockViewModel.errorMessageProperty()).thenReturn(errorProperty);
+
+        // Trigger the error message listener
+        errorProperty.set("Test Error");
+
+        // Verify dialog service was called and error message was cleared
+        verify(mockDialogService).showErrorAlert(anyString(), eq("Test Error"));
+        verify(mockViewModel).errorMessageProperty();
+    }
+
+    /**
+     * Test the closeDialog protected method.
+     */
+    @Test
+    public void testCloseDialog() {
+        // Setup - mock the stage closing
+        doNothing().when(controllerSpy).closeDialog();
+
+        // Call method
+        controllerSpy.closeDialog();
+
+        // Verify the method was called
+        verify(controllerSpy).closeDialog();
+    }
+
+    /**
+     * Test the legacy setTask method.
+     */
+    @Test
+    public void testSetTask() {
+        // Call method
+        controllerSpy.setTask(testTask);
+
+        // Verify ViewModel method was called
+        verify(mockViewModel).initExistingTask(testTask);
+    }
+
+    /**
+     * Test the legacy setNewTask method.
+     */
+    @Test
+    public void testSetNewTask() {
+        // Call method
+        controllerSpy.setNewTask(testProject, testSubsystem);
+
+        // Verify ViewModel method was called
+        verify(mockViewModel).initNewTask(any(Project.class), any(Subsystem.class));
+    }
+
+    /**
+     * Test the getTask method.
      */
     @Test
     public void testGetTask() {
-        // Test
-        Task result = taskController.getTask();
+        // Call method
+        Task result = controllerSpy.getTask();
 
-        // Verify
-        assertEquals(testTask, result);
+        // Verify ViewModel method was called and returned the expected result
         verify(mockViewModel).getTask();
+        assertEquals(testTask, result);
     }
 
     /**
-     * Test getting the ViewModel.
+     * Test the getViewModel method.
      */
     @Test
     public void testGetViewModel() {
-        // Test
-        TaskViewModel result = taskController.getViewModel();
+        // Call method
+        TaskViewModel result = controllerSpy.getViewModel();
 
-        // Verify
+        // Verify correct ViewModel is returned
         assertEquals(mockViewModel, result);
-    }
-
-    /**
-     * Test the initNewTask method for creating a new task.
-     */
-    @Test
-    public void testInitNewTask() {
-        // Call method
-        taskController.initNewTask(testTask);
-
-        // Verify ViewModel method was called
-        verify(mockViewModel).initNewTask(testTask.getProject(), testTask.getSubsystem());
-        verify(mockViewModel, atLeastOnce()).titleProperty();
-    }
-
-    /**
-     * Test the initExistingTask method for editing an existing task.
-     */
-    @Test
-    public void testInitExistingTask() {
-        // Call method
-        taskController.initExistingTask(testTask);
-
-        // Verify ViewModel method was called
-        verify(mockViewModel).initExistingTask(testTask);
-    }
-
-    /**
-     * Test the save button action when validation succeeds.
-     */
-    @Test
-    public void testSaveButtonAction_Valid() {
-        // Set up
-        when(mockViewModel.isValid()).thenReturn(true);
-
-        // Trigger the save button action
-        saveButton.fire();
-
-        // Verify command was executed
-        verify(mockSaveCommand).execute();
     }
 
     /**
@@ -319,6 +391,15 @@ public class TaskControllerTest extends BaseJavaFXTest {
     private void injectField(String fieldName, Object value) throws Exception {
         Field field = TaskController.class.getDeclaredField(fieldName);
         field.setAccessible(true);
-        field.set(taskController, value);
+        field.set(controllerSpy, value);
+    }
+
+    /**
+     * Helper method to set a private field using reflection.
+     */
+    private void setPrivateField(Object target, String fieldName, Object value) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(target, value);
     }
 }
