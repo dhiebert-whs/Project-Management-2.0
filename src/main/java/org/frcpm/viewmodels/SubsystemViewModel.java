@@ -41,6 +41,7 @@ public class SubsystemViewModel extends BaseViewModel {
     private final ObservableList<Subteam> availableSubteams = FXCollections.observableArrayList();
     private final BooleanProperty isNewSubsystem = new SimpleBooleanProperty(true);
     private final BooleanProperty valid = new SimpleBooleanProperty(false);
+    private final ObjectProperty<Task> selectedTask = new SimpleObjectProperty<>();
     
     // Subsystem summary properties
     private final IntegerProperty totalTasks = new SimpleIntegerProperty(0);
@@ -55,6 +56,8 @@ public class SubsystemViewModel extends BaseViewModel {
     private final Command loadTasksCommand;
     private final Command loadSubteamsCommand;
     private final Command updateStatusCommand;
+    private final Command viewTaskCommand;
+    private final Command addTaskCommand;
     
     /**
      * Creates a new SubsystemViewModel with default services.
@@ -88,6 +91,8 @@ public class SubsystemViewModel extends BaseViewModel {
         loadTasksCommand = new Command(this::loadTasks, this::canLoadTasks);
         loadSubteamsCommand = new Command(this::loadSubteams);
         updateStatusCommand = new Command(this::updateStatus, this::canUpdateStatus);
+        viewTaskCommand = new Command(this::viewTask, this::canViewTask);
+        addTaskCommand = new Command(this::addTask, this::canAddTask);
         
         // Set up validation listeners
         subsystemName.addListener((observable, oldValue, newValue) -> validate());
@@ -599,5 +604,68 @@ public class SubsystemViewModel extends BaseViewModel {
     
     public double getCompletionPercentage() {
         return completionPercentage.get();
+    }
+
+    /**
+     * Gets or sets the selected task.
+     */
+    public Task getSelectedTask() {
+        return selectedTask.get();
+    }
+
+    public void setSelectedTask(Task task) {
+        selectedTask.set(task);
+    }
+
+    public ObjectProperty<Task> selectedTaskProperty() {
+        return selectedTask;
+    }
+
+    /**
+     * Gets the view task command.
+     * The view task command is executed when the user wants to view/edit a task.
+     */
+    public Command getViewTaskCommand() {
+        return viewTaskCommand;
+    }
+
+    /**
+     * Gets the add task command.
+     * The add task command is executed when the user wants to add a new task.
+     */
+    public Command getAddTaskCommand() {
+        return addTaskCommand;
+    }
+
+    /**
+     * Views the selected task.
+     * This is a placeholder for the dialog handler in the controller.
+     */
+    private void viewTask() {
+        // Placeholder - dialog will be handled by controller
+        LOGGER.info("View task command executed");
+    }
+
+    /**
+     * Adds a new task.
+     * This is a placeholder for the dialog handler in the controller.
+     */
+    private void addTask() {
+        // Placeholder - dialog will be handled by controller
+        LOGGER.info("Add task command executed");
+    }
+
+    /**
+     * Checks if the view task command can be executed.
+     */
+    private boolean canViewTask() {
+        return selectedTask.get() != null;
+    }
+
+    /**
+     * Checks if the add task command can be executed.
+     */
+    private boolean canAddTask() {
+        return selectedSubsystem.get() != null;
     }
 }

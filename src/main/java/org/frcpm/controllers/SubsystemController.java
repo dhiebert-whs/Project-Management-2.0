@@ -1,3 +1,4 @@
+// src/main/java/org/frcpm/controllers/SubsystemController.java
 package org.frcpm.controllers;
 
 import javafx.beans.binding.Bindings;
@@ -10,11 +11,14 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 import org.frcpm.binding.ViewModelBinding;
 import org.frcpm.models.Subteam;
 import org.frcpm.models.Project;
 import org.frcpm.models.Subsystem;
 import org.frcpm.models.Task;
+import org.frcpm.services.DialogService;
+import org.frcpm.services.ServiceFactory;
 import org.frcpm.viewmodels.SubsystemViewModel;
 
 import java.io.IOException;
@@ -84,6 +88,9 @@ public class SubsystemController {
 
     // ViewModel
     private final SubsystemViewModel viewModel = new SubsystemViewModel();
+    
+    // Dialog service
+    private DialogService dialogService = ServiceFactory.getDialogService();
 
     /**
      * Initializes the controller.
@@ -180,24 +187,27 @@ public class SubsystemController {
 
         // Bind buttons
         ViewModelBinding.bindCommandButton(saveButton, viewModel.getSaveCommand());
+        ViewModelBinding.bindCommandButton(addTaskButton, viewModel.getAddTaskCommand());
+        ViewModelBinding.bindCommandButton(viewTaskButton, viewModel.getViewTaskCommand());
 
         // Handle cancel button
         cancelButton.setOnAction(event -> closeDialog());
 
-        // Handle add task button
-        addTaskButton.setOnAction(event -> handleAddTask());
-
-        // Handle view task button
-        viewTaskButton.setOnAction(event -> {
-            Task selectedTask = tasksTable.getSelectionModel().getSelectedItem();
-            if (selectedTask != null) {
-                handleViewTask(selectedTask);
-            }
-        });
-
         // Disable view task button when no task is selected
         viewTaskButton.disableProperty().bind(
                 tasksTable.getSelectionModel().selectedItemProperty().isNull());
+                
+        // Task selection listener
+        tasksTable.getSelectionModel().selectedItemProperty().addListener(
+            (obs, oldValue, newValue) -> viewModel.setSelectedTask(newValue));
+            
+        // Error message listener
+        viewModel.errorMessageProperty().addListener((obs, oldValue, newValue) -> {
+            if (newValue != null && !newValue.isEmpty()) {
+                showErrorAlert("Error", newValue);
+                viewModel.errorMessageProperty().set("");
+            }
+        });
     }
 
     /**
@@ -217,64 +227,6 @@ public class SubsystemController {
     }
 
     /**
-     * Handles adding a new task to the subsystem.
-     */
-    private void handleAddTask() {
-        Subsystem subsystem = viewModel.getSelectedSubsystem();
-        if (subsystem != null) {
-            try {
-                MainController mainController = MainController.getInstance();
-                if (mainController != null) {
-                    mainController.showTaskDialog(null, subsystem);
-
-                    // Reload tasks
-                    viewModel.getLoadTasksCommand().execute();
-                } else {
-                    // Alternative for when MainController instance isn't available
-                    // This is needed for tests or when controller hierarchy isn't set up
-                    LOGGER.warning("MainController instance is null - opening task dialog directly");
-
-                    try {
-                        // Load the task dialog directly
-                        FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/TaskView.fxml"));
-                        Parent dialogView = loader.load();
-
-                        // Create the dialog
-                        Stage dialogStage = new Stage();
-                        dialogStage.setTitle("New Task");
-                        dialogStage.initModality(Modality.WINDOW_MODAL);
-                        dialogStage.initOwner(saveButton.getScene().getWindow());
-                        dialogStage.setScene(new Scene(dialogView));
-
-                        // Get the controller
-                        TaskController controller = loader.getController();
-
-                        // For direct loading, we need to handle null project gracefully
-                        Project dummyProject = new Project("Temporary Project", LocalDate.now(),
-                                LocalDate.now().plusWeeks(6), LocalDate.now().plusWeeks(8));
-
-                        controller.initNewTask(new Task("", dummyProject, subsystem));
-
-                        // Show the dialog
-                        dialogStage.showAndWait();
-
-                        // Reload tasks
-                        viewModel.getLoadTasksCommand().execute();
-                    } catch (IOException e) {
-                        LOGGER.log(Level.SEVERE, "Error loading task dialog directly", e);
-                        showErrorAlert("Error", "Failed to open task dialog: " + e.getMessage());
-                    }
-                }
-            } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "Error showing task dialog", e);
-                showErrorAlert("Error", "Failed to open task dialog: " + e.getMessage());
-            }
-        } else {
-            showErrorAlert("Error", "No subsystem selected");
-        }
-    }
-
-    /**
      * Handles viewing/editing a task.
      * 
      * @param task the task to view/edit
@@ -289,44 +241,48 @@ public class SubsystemController {
                 viewModel.getLoadTasksCommand().execute();
             } else {
                 // Alternative for when MainController instance isn't available
-                LOGGER.warning("MainController instance is null - opening task dialog directly");
-
-                try {
-                    // Load the task dialog directly
-                    FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/TaskView.fxml"));
-                    Parent dialogView = loader.load();
-
-                    // Create the dialog
-                    Stage dialogStage = new Stage();
-                    dialogStage.setTitle("Edit Task");
-                    dialogStage.initModality(Modality.WINDOW_MODAL);
-                    dialogStage.initOwner(saveButton.getScene().getWindow());
-                    dialogStage.setScene(new Scene(dialogView));
-
-                    // Get the controller
-                    TaskController controller = loader.getController();
-                    controller.initExistingTask(task);
-
-                    // Show the dialog
-                    dialogStage.showAndWait();
-
-                    // Reload tasks
-                    viewModel.getLoadTasksCommand().execute();
-                } catch (IOException e) {
-                    LOGGER.log(Level.SEVERE, "Error loading task dialog directly", e);
-                    showErrorAlert("Error", "Failed to open task dialog: " + e.getMessage());
-                }
+                openTaskDialogDirectly(task);
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error showing task dialog", e);
             showErrorAlert("Error", "Failed to open task dialog: " + e.getMessage());
         }
     }
+    
+    /**
+     * Opens the task dialog directly when MainController is not available.
+     * 
+     * @param task the task to edit
+     */
+    private void openTaskDialogDirectly(Task task) {
+        try {
+            // Load the task dialog
+            FXMLLoader loader = createFXMLLoader("/fxml/TaskView.fxml");
+            Parent dialogView = loader.load();
+
+            // Create the dialog
+            Stage dialogStage = createDialogStage("Edit Task", saveButton.getScene().getWindow(), dialogView);
+
+            // Get the controller
+            TaskController controller = loader.getController();
+            controller.initExistingTask(task);
+
+            // Show the dialog
+            showAndWaitDialog(dialogStage);
+
+            // Reload tasks
+            viewModel.getLoadTasksCommand().execute();
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Error loading task dialog directly", e);
+            showErrorAlert("Error", "Failed to open task dialog: " + e.getMessage());
+        }
+    }
 
     /**
      * Closes the dialog.
+     * Protected for testability.
      */
-    private void closeDialog() {
+    protected void closeDialog() {
         try {
             Stage stage = (Stage) cancelButton.getScene().getWindow();
             stage.close();
@@ -337,16 +293,62 @@ public class SubsystemController {
 
     /**
      * Shows an error alert dialog.
+     * Protected for testability.
      * 
      * @param title   the title
      * @param message the message
      */
-    private void showErrorAlert(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Error");
-        alert.setHeaderText(title);
-        alert.setContentText(message);
-        alert.showAndWait();
+    protected void showErrorAlert(String title, String message) {
+        dialogService.showErrorAlert(title, message);
+    }
+    
+    /**
+     * Creates an FXML loader.
+     * Protected for testability.
+     * 
+     * @param fxmlPath the path to the FXML file
+     * @return the FXMLLoader
+     */
+    protected FXMLLoader createFXMLLoader(String fxmlPath) {
+        return new FXMLLoader(getClass().getResource(fxmlPath));
+    }
+    
+    /**
+     * Creates a dialog stage.
+     * Protected for testability.
+     * 
+     * @param title the dialog title
+     * @param owner the owner window
+     * @param content the dialog content
+     * @return the created Stage
+     */
+    protected Stage createDialogStage(String title, Window owner, Parent content) {
+        Stage dialogStage = new Stage();
+        dialogStage.setTitle(title);
+        dialogStage.initModality(Modality.WINDOW_MODAL);
+        dialogStage.initOwner(owner);
+        dialogStage.setScene(new Scene(content));
+        return dialogStage;
+    }
+    
+    /**
+     * Shows a dialog and waits for it to be closed.
+     * Protected for testability.
+     * 
+     * @param dialogStage the dialog stage to show
+     */
+    protected void showAndWaitDialog(Stage dialogStage) {
+        dialogStage.showAndWait();
+    }
+    
+    /**
+     * Sets the DialogService for this controller.
+     * This method is primarily used for testing to inject mock services.
+     * 
+     * @param dialogService the dialog service to use
+     */
+    public void setDialogService(DialogService dialogService) {
+        this.dialogService = dialogService;
     }
 
     /**

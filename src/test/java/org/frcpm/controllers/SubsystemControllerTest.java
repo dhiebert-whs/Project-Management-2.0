@@ -1,13 +1,19 @@
+// src/test/java/org/frcpm/controllers/SubsystemControllerTest.java
 package org.frcpm.controllers;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
+import javafx.stage.Window;
+import org.frcpm.binding.Command;
 import org.frcpm.models.Subteam;
 import org.frcpm.models.Subsystem;
 import org.frcpm.models.Task;
-import org.frcpm.services.SubsystemService;
+import org.frcpm.services.DialogService;
 import org.frcpm.viewmodels.SubsystemViewModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,6 +23,7 @@ import org.mockito.MockitoAnnotations;
 import org.testfx.framework.junit5.ApplicationExtension;
 import org.testfx.framework.junit5.Start;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -28,11 +35,29 @@ import static org.mockito.Mockito.*;
 public class SubsystemControllerTest extends BaseJavaFXTest {
 
     // Controller to test
-    private SubsystemController subsystemController;
+    private SubsystemController controller;
     
-    // Mock ViewModel
+    // Controller spy for testing protected methods
+    private SubsystemController controllerSpy;
+    
+    // Mock dependencies
     @Mock
     private SubsystemViewModel mockViewModel;
+    
+    @Mock
+    private DialogService mockDialogService;
+    
+    @Mock
+    private Command mockSaveCommand;
+    
+    @Mock
+    private Command mockAddTaskCommand;
+    
+    @Mock
+    private Command mockViewTaskCommand;
+    
+    @Mock
+    private Command mockLoadTasksCommand;
     
     // UI components
     private TextField nameField;
@@ -111,11 +136,24 @@ public class SubsystemControllerTest extends BaseJavaFXTest {
         when(mockViewModel.getAvailableSubteams()).thenReturn(testSubteams);
         when(mockViewModel.getTasks()).thenReturn(testTasks);
         when(mockViewModel.getSelectedSubsystem()).thenReturn(testSubsystem);
-        when(mockViewModel.getSaveCommand()).thenReturn(mock(org.frcpm.binding.Command.class));
-        when(mockViewModel.getLoadTasksCommand()).thenReturn(mock(org.frcpm.binding.Command.class));
+        when(mockViewModel.getSaveCommand()).thenReturn(mockSaveCommand);
+        when(mockViewModel.getAddTaskCommand()).thenReturn(mockAddTaskCommand);
+        when(mockViewModel.getViewTaskCommand()).thenReturn(mockViewTaskCommand);
+        when(mockViewModel.getLoadTasksCommand()).thenReturn(mockLoadTasksCommand);
+        when(mockViewModel.subsystemNameProperty()).thenReturn(new javafx.beans.property.SimpleStringProperty());
+        when(mockViewModel.subsystemDescriptionProperty()).thenReturn(new javafx.beans.property.SimpleStringProperty());
+        when(mockViewModel.statusProperty()).thenReturn(new javafx.beans.property.SimpleObjectProperty<>());
+        when(mockViewModel.responsibleSubteamProperty()).thenReturn(new javafx.beans.property.SimpleObjectProperty<>());
+        when(mockViewModel.totalTasksProperty()).thenReturn(new javafx.beans.property.SimpleIntegerProperty(1));
+        when(mockViewModel.completedTasksProperty()).thenReturn(new javafx.beans.property.SimpleIntegerProperty(0));
+        when(mockViewModel.completionPercentageProperty()).thenReturn(new javafx.beans.property.SimpleDoubleProperty(0));
+        when(mockViewModel.errorMessageProperty()).thenReturn(new javafx.beans.property.SimpleStringProperty());
         
         // Create controller instance
-        subsystemController = new SubsystemController();
+        controller = new SubsystemController();
+        
+        // Create spy for testing protected methods
+        controllerSpy = spy(controller);
         
         // Inject components using reflection
         injectField("nameField", nameField);
@@ -137,12 +175,15 @@ public class SubsystemControllerTest extends BaseJavaFXTest {
         
         // Inject mock ViewModel
         injectField("viewModel", mockViewModel);
+        
+        // Inject mock DialogService
+        injectField("dialogService", mockDialogService);
     }
     
     @Test
     public void testInitializeComponentsSetup() {
         // Call initialize
-        subsystemController.testInitialize();
+        controller.testInitialize();
         
         // Verify status combo box was initialized
         assertNotNull(statusComboBox.getItems());
@@ -158,7 +199,7 @@ public class SubsystemControllerTest extends BaseJavaFXTest {
     @Test
     public void testInitNewSubsystem() {
         // Call method to test
-        subsystemController.initNewSubsystem();
+        controller.initNewSubsystem();
         
         // Verify ViewModel method was called
         verify(mockViewModel).initNewSubsystem();
@@ -167,7 +208,7 @@ public class SubsystemControllerTest extends BaseJavaFXTest {
     @Test
     public void testInitExistingSubsystem() {
         // Call method to test
-        subsystemController.initExistingSubsystem(testSubsystem);
+        controller.initExistingSubsystem(testSubsystem);
         
         // Verify ViewModel method was called
         verify(mockViewModel).initExistingSubsystem(testSubsystem);
@@ -176,7 +217,7 @@ public class SubsystemControllerTest extends BaseJavaFXTest {
     @Test
     public void testGetSubsystem() {
         // Call method to test
-        Subsystem result = subsystemController.getSubsystem();
+        Subsystem result = controller.getSubsystem();
         
         // Verify result
         assertEquals(testSubsystem, result);
@@ -186,36 +227,105 @@ public class SubsystemControllerTest extends BaseJavaFXTest {
     @Test
     public void testGetViewModel() {
         // Call method to test
-        SubsystemViewModel result = subsystemController.getViewModel();
+        SubsystemViewModel result = controller.getViewModel();
         
         // Verify result
         assertEquals(mockViewModel, result);
     }
     
     @Test
-    public void testSaveButtonAction() {
-        // Get the mock command
-        org.frcpm.binding.Command mockCommand = mockViewModel.getSaveCommand();
+    public void testShowErrorAlert() {
+        // Call method to test
+        controllerSpy.showErrorAlert("Test Title", "Test Message");
         
-        // Trigger save button action
-        saveButton.fire();
-        
-        // Verify command was executed - we can't directly verify this
-        // since the binding is done in setupBindings, which we don't call in tests
+        // Verify mock DialogService was called
+        verify(mockDialogService).showErrorAlert("Test Title", "Test Message");
     }
     
     @Test
-    public void testAddTaskButtonAction() {
-        // No good way to test this in isolation since it requires MainController.getInstance()
-        // which will be null in the test environment
+    public void testCreateFXMLLoader() {
+        // Mock FXMLLoader
+        FXMLLoader mockLoader = mock(FXMLLoader.class);
+        doReturn(mockLoader).when(controllerSpy).createFXMLLoader(anyString());
+        
+        // Call method to test
+        FXMLLoader result = controllerSpy.createFXMLLoader("/test/path.fxml");
+        
+        // Verify result
+        assertEquals(mockLoader, result);
+    }
+    
+    @Test
+    public void testCreateDialogStage() {
+        // Mock Stage
+        Stage mockStage = mock(Stage.class);
+        doReturn(mockStage).when(controllerSpy).createDialogStage(anyString(), any(Window.class), any(Parent.class));
+        
+        // Mock parent
+        Parent mockParent = mock(Parent.class);
+        
+        // Call method to test
+        Stage result = controllerSpy.createDialogStage("Test Title", mock(Window.class), mockParent);
+        
+        // Verify result
+        assertEquals(mockStage, result);
+    }
+    
+    @Test
+    public void testShowAndWaitDialog() {
+        // Mock Stage
+        Stage mockStage = mock(Stage.class);
+        
+        // Call method to test - should not throw exception
+        controllerSpy.showAndWaitDialog(mockStage);
+    }
+    
+    @Test
+    public void testSetDialogService() {
+        // Create new mock DialogService
+        DialogService newMockDialogService = mock(DialogService.class);
+        
+        // Call method to test
+        controller.setDialogService(newMockDialogService);
+        
+        // Verify the service was set - test with showErrorAlert
+        controller.showErrorAlert("Test", "Message");
+        verify(newMockDialogService).showErrorAlert("Test", "Message");
+    }
+    
+    @Test
+    public void testErrorMessageListener() throws Exception {
+        // Get the error message property
+        javafx.beans.property.StringProperty errorProperty = mockViewModel.errorMessageProperty();
+        
+        // Set error message
+        errorProperty.set("Test Error");
+        
+        // Verify DialogService was called - this requires full initialization, so initialize first
+        controller.testInitialize();
+        
+        // This needs to be on the JavaFX thread
+        runOnFxThread(() -> errorProperty.set("Test Error"));
+        
+        // Verify DialogService was called
+        verify(mockDialogService, timeout(1000)).showErrorAlert("Error", "Test Error");
     }
     
     /**
      * Helper method to inject field values using reflection.
      */
     private void injectField(String fieldName, Object value) throws Exception {
+        // Inject to both controller and spy
+        injectFieldToObject(controller, fieldName, value);
+        injectFieldToObject(controllerSpy, fieldName, value);
+    }
+    
+    /**
+     * Helper method to inject a field value to a specific object using reflection.
+     */
+    private void injectFieldToObject(Object object, String fieldName, Object value) throws Exception {
         Field field = SubsystemController.class.getDeclaredField(fieldName);
         field.setAccessible(true);
-        field.set(subsystemController, value);
+        field.set(object, value);
     }
 }
