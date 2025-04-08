@@ -13,6 +13,8 @@ import org.frcpm.services.ServiceFactory;
 import org.frcpm.services.TeamMemberService;
 
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -26,6 +28,7 @@ import java.util.logging.Logger;
 public class AttendanceViewModel extends BaseViewModel {
     
     private static final Logger LOGGER = Logger.getLogger(AttendanceViewModel.class.getName());
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
     
     // Services
     private final AttendanceService attendanceService;
@@ -210,7 +213,7 @@ public class AttendanceViewModel extends BaseViewModel {
     /**
      * Loads attendance data for the current meeting.
      */
-    private void loadAttendanceData() {
+    public void loadAttendanceData() {
         Meeting currentMeeting = meeting.get();
         if (currentMeeting == null) {
             return;
@@ -252,7 +255,7 @@ public class AttendanceViewModel extends BaseViewModel {
     /**
      * Saves attendance data for all team members.
      */
-    private void saveAttendance() {
+    public void saveAttendance() {
         Meeting currentMeeting = meeting.get();
         if (currentMeeting == null) {
             return;
@@ -337,6 +340,73 @@ public class AttendanceViewModel extends BaseViewModel {
      */
     public void initWithMeeting(Meeting meeting) {
         this.meeting.set(meeting);
+    }
+    
+    /**
+     * Parses a time string into a LocalTime object.
+     * 
+     * @param text the time string to parse
+     * @return the parsed time, or null if invalid
+     */
+    public LocalTime parseTime(String text) {
+        if (text == null || text.trim().isEmpty()) {
+            return null;
+        }
+
+        try {
+            return LocalTime.parse(text, TIME_FORMATTER);
+        } catch (DateTimeParseException e) {
+            LOGGER.log(Level.WARNING, "Invalid time format: {0}", text);
+            setErrorMessage("Invalid time format. Please use HH:MM format (e.g., 14:30)");
+            return null;
+        }
+    }
+    
+    /**
+     * Formats a LocalTime object to a string.
+     * 
+     * @param time the time to format
+     * @return the formatted time string
+     */
+    public String formatTime(LocalTime time) {
+        if (time == null) {
+            return "";
+        }
+        return time.format(TIME_FORMATTER);
+    }
+    
+    /**
+     * Updates a record's arrival and departure times.
+     * 
+     * @param record the record to update
+     * @param arrivalTime the new arrival time
+     * @param departureTime the new departure time
+     */
+    public void updateRecordTimes(AttendanceRecord record, LocalTime arrivalTime, LocalTime departureTime) {
+        if (record != null) {
+            if (validateTimes(arrivalTime, departureTime)) {
+                record.setArrivalTime(arrivalTime);
+                record.setDepartureTime(departureTime);
+                setDirty(true);
+            }
+        }
+    }
+    
+    /**
+     * Validates that departure time is after arrival time.
+     * 
+     * @param arrivalTime the arrival time
+     * @param departureTime the departure time
+     * @return true if valid, false otherwise
+     */
+    private boolean validateTimes(LocalTime arrivalTime, LocalTime departureTime) {
+        if (arrivalTime != null && departureTime != null) {
+            if (departureTime.isBefore(arrivalTime)) {
+                setErrorMessage("Departure time cannot be before arrival time");
+                return false;
+            }
+        }
+        return true;
     }
     
     /**
