@@ -139,11 +139,39 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
         return save(task);
     }
 
-    // TODO: need to implement Task updateRequiredComponents
     @Override
     public Task updateRequiredComponents(Long taskId, Set<Long> componentIds) {
-        return null;
-    };
+        if (taskId == null) {
+            throw new IllegalArgumentException("Task ID cannot be null");
+        }
+
+        Task task = findById(taskId);
+        if (task == null) {
+            LOGGER.log(Level.WARNING, "Task not found with ID: {0}", taskId);
+            return null;
+        }
+
+        // Clear existing component relationships
+        task.getRequiredComponents().clear();
+
+        // Add new component relationships if componentIds is not null or empty
+        if (componentIds != null && !componentIds.isEmpty()) {
+            // Get component repository to find components by their IDs
+            var componentRepository = RepositoryFactory.getComponentRepository();
+
+            for (Long componentId : componentIds) {
+                var componentOpt = componentRepository.findById(componentId);
+                if (componentOpt.isPresent()) {
+                    task.addRequiredComponent(componentOpt.get());
+                } else {
+                    LOGGER.log(Level.WARNING, "Component not found with ID: {0}", componentId);
+                }
+            }
+        }
+
+        // Save the updated task
+        return save(task);
+    }
 
     @Override
     public boolean addDependency(Long taskId, Long dependencyId) {
