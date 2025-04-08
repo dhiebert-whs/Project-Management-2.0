@@ -11,7 +11,6 @@ import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Callback;
-import org.frcpm.binding.ViewModelBinding;
 import org.frcpm.models.Meeting;
 import org.frcpm.models.Project;
 import org.frcpm.models.Subsystem;

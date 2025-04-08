@@ -6,7 +6,6 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.Stage;
 import javafx.util.Callback;
-import javafx.util.StringConverter;
 import org.frcpm.binding.ViewModelBinding;
 import org.frcpm.models.Component;
 import org.frcpm.models.Task;
