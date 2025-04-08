@@ -12,12 +12,12 @@ import org.frcpm.services.ServiceFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * ViewModel for team management in the FRC Project Management System.
+ * Standardized implementation following MVVM pattern.
  */
 public class TeamViewModel extends BaseViewModel {
     
@@ -55,13 +55,13 @@ public class TeamViewModel extends BaseViewModel {
     private final Command saveMemberCommand;
     private final Command createNewMemberCommand;
     private final Command deleteMemberCommand;
-    private final Command loadMembersCommand;
+    private final Command editMemberCommand;
     
     // Commands for subteams
     private final Command saveSubteamCommand;
     private final Command createNewSubteamCommand;
     private final Command deleteSubteamCommand;
-    private final Command loadSubteamsCommand;
+    private final Command editSubteamCommand;
     private final Command loadSubteamMembersCommand;
     
     /**
@@ -86,13 +86,13 @@ public class TeamViewModel extends BaseViewModel {
         saveMemberCommand = new Command(this::saveMember, this::canSaveMember);
         createNewMemberCommand = new Command(this::createNewMember);
         deleteMemberCommand = new Command(this::deleteMember, this::canDeleteMember);
-        loadMembersCommand = new Command(this::loadMembers);
+        editMemberCommand = new Command(this::editMember, this::canEditMember);
         
         // Create commands for subteams
         saveSubteamCommand = new Command(this::saveSubteam, this::canSaveSubteam);
         createNewSubteamCommand = new Command(this::createNewSubteam);
         deleteSubteamCommand = new Command(this::deleteSubteam, this::canDeleteSubteam);
-        loadSubteamsCommand = new Command(this::loadSubteams);
+        editSubteamCommand = new Command(this::editSubteam, this::canEditSubteam);
         loadSubteamMembersCommand = new Command(this::loadSubteamMembers, this::canLoadSubteamMembers);
         
         // Set up validation listeners for member
@@ -198,6 +198,9 @@ public class TeamViewModel extends BaseViewModel {
     }
     
     /**
+     * Loads the list of team members.
+     */
+/**
      * Loads the list of team members.
      */
     private void loadMembers() {
@@ -405,7 +408,6 @@ public class TeamViewModel extends BaseViewModel {
                     memberIsLeader.get()
                 );
                 
-                
                 // Update additional fields
                 if (memberPhone.get() != null && !memberPhone.get().isEmpty()) {
                     member = teamMemberService.updateContactInfo(
@@ -480,6 +482,17 @@ public class TeamViewModel extends BaseViewModel {
      */
     private void createNewMember() {
         initNewMember();
+    }
+    
+    /**
+     * Edits a team member.
+     * Called when the edit member command is executed.
+     */
+    private void editMember() {
+        TeamMember member = selectedMember.get();
+        if (member != null) {
+            initExistingMember(member);
+        }
     }
     
     /**
@@ -574,6 +587,17 @@ public class TeamViewModel extends BaseViewModel {
     }
     
     /**
+     * Edits a subteam.
+     * Called when the edit subteam command is executed.
+     */
+    private void editSubteam() {
+        Subteam subteam = selectedSubteam.get();
+        if (subteam != null) {
+            initExistingSubteam(subteam);
+        }
+    }
+    
+    /**
      * Deletes the selected subteam.
      * Called when the delete subteam command is executed.
      */
@@ -621,6 +645,15 @@ public class TeamViewModel extends BaseViewModel {
     }
     
     /**
+     * Checks if the edit member command can be executed.
+     * 
+     * @return true if a member is selected, false otherwise
+     */
+    private boolean canEditMember() {
+        return selectedMember.get() != null;
+    }
+    
+    /**
      * Checks if the save subteam command can be executed.
      * 
      * @return true if the subteam form is valid, false otherwise
@@ -635,6 +668,15 @@ public class TeamViewModel extends BaseViewModel {
      * @return true if a subteam is selected, false otherwise
      */
     private boolean canDeleteSubteam() {
+        return selectedSubteam.get() != null;
+    }
+    
+    /**
+     * Checks if the edit subteam command can be executed.
+     * 
+     * @return true if a subteam is selected, false otherwise
+     */
+    private boolean canEditSubteam() {
         return selectedSubteam.get() != null;
     }
     
@@ -745,8 +787,8 @@ public class TeamViewModel extends BaseViewModel {
         return deleteMemberCommand;
     }
     
-    public Command getLoadMembersCommand() {
-        return loadMembersCommand;
+    public Command getEditMemberCommand() {
+        return editMemberCommand;
     }
     
     public Command getSaveSubteamCommand() {
@@ -761,8 +803,8 @@ public class TeamViewModel extends BaseViewModel {
         return deleteSubteamCommand;
     }
     
-    public Command getLoadSubteamsCommand() {
-        return loadSubteamsCommand;
+    public Command getEditSubteamCommand() {
+        return editSubteamCommand;
     }
     
     public Command getLoadSubteamMembersCommand() {
@@ -897,5 +939,13 @@ public class TeamViewModel extends BaseViewModel {
     
     public boolean isSubteamValid() {
         return subteamValid.get();
+    }
+    
+    /**
+     * Clears the error message.
+     * Public method to be accessed by the controller.
+     */
+    public void clearErrorMessage() {
+        errorMessageProperty().set("");
     }
 }

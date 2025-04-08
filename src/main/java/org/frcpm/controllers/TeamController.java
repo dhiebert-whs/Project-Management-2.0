@@ -10,6 +10,8 @@ import javafx.stage.Stage;
 import org.frcpm.binding.ViewModelBinding;
 import org.frcpm.models.Subteam;
 import org.frcpm.models.TeamMember;
+import org.frcpm.services.DialogService;
+import org.frcpm.services.ServiceFactory;
 import org.frcpm.viewmodels.TeamViewModel;
 
 import java.util.Optional;
@@ -18,12 +20,13 @@ import java.util.logging.Logger;
 
 /**
  * Controller for team management functionality.
- * Refactored to use MVVM architecture.
+ * Standardized to use MVVM architecture.
  */
 public class TeamController {
 
     private static final Logger LOGGER = Logger.getLogger(TeamController.class.getName());
 
+    // FXML UI components
     @FXML
     private TabPane tabPane;
 
@@ -78,48 +81,84 @@ public class TeamController {
     private Button deleteSubteamButton;
 
     // ViewModel for data and business logic
-    private TeamViewModel viewModel;
+    private final TeamViewModel viewModel = new TeamViewModel();
+    
+    // Dialog service for UI interactions
+    private final DialogService dialogService = ServiceFactory.getDialogService();
 
     /**
      * Initializes the controller.
+     * This method is automatically called after the FXML file has been loaded.
      */
     @FXML
     private void initialize() {
         LOGGER.info("Initializing TeamController");
 
-        // Create ViewModel
-        viewModel = new TeamViewModel();
-
-        // Initialize Members Table
+        // Initialize tables
         setupMembersTable();
-
-        // Initialize Subteams Table
         setupSubteamsTable();
+        
+        // Set up bindings
+        setupBindings();
+        
+        // Set up row selection handlers
+        setupSelectionHandlers();
+        
+        // Set up row double-click handlers
+        setupRowFactories();
 
+        // Set initial selection
+        if (!viewModel.getMembers().isEmpty()) {
+            membersTable.getSelectionModel().select(0);
+        }
+        
+        if (!viewModel.getSubteams().isEmpty()) {
+            subteamsTable.getSelectionModel().select(0);
+        }
+    }
+
+    /**
+     * Sets up bindings between UI controls and ViewModel properties.
+     */
+    private void setupBindings() {
+        // Bind tables to the ViewModel's ObservableLists
+        membersTable.setItems(viewModel.getMembers());
+        subteamsTable.setItems(viewModel.getSubteams());
+        
         // Bind buttons to commands
         ViewModelBinding.bindCommandButton(addMemberButton, viewModel.getCreateNewMemberCommand());
-        ViewModelBinding.bindCommandButton(editMemberButton, viewModel.getLoadMembersCommand());
+        ViewModelBinding.bindCommandButton(editMemberButton, viewModel.getEditMemberCommand());
         ViewModelBinding.bindCommandButton(deleteMemberButton, viewModel.getDeleteMemberCommand());
 
         ViewModelBinding.bindCommandButton(addSubteamButton, viewModel.getCreateNewSubteamCommand());
-        ViewModelBinding.bindCommandButton(editSubteamButton, viewModel.getLoadSubteamsCommand());
+        ViewModelBinding.bindCommandButton(editSubteamButton, viewModel.getEditSubteamCommand());
         ViewModelBinding.bindCommandButton(deleteSubteamButton, viewModel.getDeleteSubteamCommand());
 
         // Bind error messages
         viewModel.errorMessageProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue != null && !newValue.isEmpty()) {
                 showErrorAlert("Error", newValue);
-                viewModel.errorMessageProperty().set("");
+                viewModel.clearErrorMessage();
             }
         });
-
+    }
+    
+    /**
+     * Sets up selection handlers for tables.
+     */
+    private void setupSelectionHandlers() {
         // Set up row selection handlers
         membersTable.getSelectionModel().selectedItemProperty().addListener(
                 (observable, oldValue, newValue) -> viewModel.setSelectedMember(newValue));
 
         subteamsTable.getSelectionModel().selectedItemProperty().addListener(
                 (observable, oldValue, newValue) -> viewModel.setSelectedSubteam(newValue));
-
+    }
+    
+    /**
+     * Sets up row factories for double-click handling.
+     */
+    private void setupRowFactories() {
         // Set up row double-click handlers
         membersTable.setRowFactory(tv -> {
             TableRow<TeamMember> row = new TableRow<>();
@@ -140,19 +179,6 @@ public class TeamController {
             });
             return row;
         });
-
-        // Bind the tables to the ViewModel's ObservableLists
-        membersTable.setItems(viewModel.getMembers());
-        subteamsTable.setItems(viewModel.getSubteams());
-
-        // Set initial selection
-        if (!viewModel.getMembers().isEmpty()) {
-            membersTable.getSelectionModel().select(0);
-        }
-        
-        if (!viewModel.getSubteams().isEmpty()) {
-            subteamsTable.getSelectionModel().select(0);
-        }
     }
 
     /**
@@ -213,22 +239,20 @@ public class TeamController {
      * Handles adding a new team member.
      */
     @FXML
-    private void handleAddMember() {
+    public void handleAddMember() {
         // Prepare the ViewModel for a new member
         viewModel.initNewMember();
         
         // Create and show the dialog
         Dialog<TeamMember> dialog = createMemberDialog();
-        Optional<TeamMember> result = dialog.showAndWait();
-        
-        // No need to handle the result as it's done in the dialog
+        showAndWaitDialog(dialog);
     }
 
     /**
      * Handles editing a team member.
      */
     @FXML
-    private void handleEditMember() {
+    public void handleEditMember() {
         TeamMember selectedMember = membersTable.getSelectionModel().getSelectedItem();
         if (selectedMember == null) {
             showErrorAlert("No Selection", "Please select a team member to edit");
@@ -240,16 +264,14 @@ public class TeamController {
         
         // Create and show the dialog
         Dialog<TeamMember> dialog = createMemberDialog();
-        Optional<TeamMember> result = dialog.showAndWait();
-        
-        // No need to handle the result as it's done in the dialog
+        showAndWaitDialog(dialog);
     }
 
     /**
      * Handles deleting a team member.
      */
     @FXML
-    private void handleDeleteMember() {
+    public void handleDeleteMember() {
         TeamMember selectedMember = membersTable.getSelectionModel().getSelectedItem();
         if (selectedMember == null) {
             showErrorAlert("No Selection", "Please select a team member to delete");
@@ -257,14 +279,12 @@ public class TeamController {
         }
 
         // Ask for confirmation
-        Alert confirmDialog = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmDialog.setTitle("Confirm Delete");
-        confirmDialog.setHeaderText("Delete Team Member");
-        confirmDialog.setContentText("Are you sure you want to delete " +
-                selectedMember.getFullName() + "?");
-
-        Optional<ButtonType> result = confirmDialog.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
+        boolean confirmed = showConfirmationAlert(
+            "Delete Team Member", 
+            "Are you sure you want to delete " + selectedMember.getFullName() + "?"
+        );
+        
+        if (confirmed) {
             try {
                 // Execute the delete command
                 viewModel.setSelectedMember(selectedMember);
@@ -282,22 +302,20 @@ public class TeamController {
      * Handles adding a new subteam.
      */
     @FXML
-    private void handleAddSubteam() {
+    public void handleAddSubteam() {
         // Prepare the ViewModel for a new subteam
         viewModel.initNewSubteam();
         
         // Create and show the dialog
         Dialog<Subteam> dialog = createSubteamDialog();
-        Optional<Subteam> result = dialog.showAndWait();
-        
-        // No need to handle the result as it's done in the dialog
+        showAndWaitDialog(dialog);
     }
 
     /**
      * Handles editing a subteam.
      */
     @FXML
-    private void handleEditSubteam() {
+    public void handleEditSubteam() {
         Subteam selectedSubteam = subteamsTable.getSelectionModel().getSelectedItem();
         if (selectedSubteam == null) {
             showErrorAlert("No Selection", "Please select a subteam to edit");
@@ -309,16 +327,14 @@ public class TeamController {
         
         // Create and show the dialog
         Dialog<Subteam> dialog = createSubteamDialog();
-        Optional<Subteam> result = dialog.showAndWait();
-        
-        // No need to handle the result as it's done in the dialog
+        showAndWaitDialog(dialog);
     }
 
     /**
      * Handles deleting a subteam.
      */
     @FXML
-    private void handleDeleteSubteam() {
+    public void handleDeleteSubteam() {
         Subteam selectedSubteam = subteamsTable.getSelectionModel().getSelectedItem();
         if (selectedSubteam == null) {
             showErrorAlert("No Selection", "Please select a subteam to delete");
@@ -326,14 +342,12 @@ public class TeamController {
         }
 
         // Ask for confirmation
-        Alert confirmDialog = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmDialog.setTitle("Confirm Delete");
-        confirmDialog.setHeaderText("Delete Subteam");
-        confirmDialog.setContentText("Are you sure you want to delete " +
-                selectedSubteam.getName() + "?");
-
-        Optional<ButtonType> result = confirmDialog.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
+        boolean confirmed = showConfirmationAlert(
+            "Delete Subteam", 
+            "Are you sure you want to delete " + selectedSubteam.getName() + "?"
+        );
+        
+        if (confirmed) {
             try {
                 // Execute the delete command
                 viewModel.setSelectedSubteam(selectedSubteam);
@@ -349,10 +363,11 @@ public class TeamController {
 
     /**
      * Creates a dialog for adding or editing a team member.
+     * Protected for testability.
      * 
      * @return the dialog
      */
-    private Dialog<TeamMember> createMemberDialog() {
+    protected Dialog<TeamMember> createMemberDialog() {
         // Create the dialog
         Dialog<TeamMember> dialog = new Dialog<>();
         dialog.setTitle(viewModel.isNewMember() ? "Add Team Member" : "Edit Team Member");
@@ -449,10 +464,11 @@ public class TeamController {
 
     /**
      * Creates a dialog for adding or editing a subteam.
+     * Protected for testability.
      * 
      * @return the dialog
      */
-    private Dialog<Subteam> createSubteamDialog() {
+    protected Dialog<Subteam> createSubteamDialog() {
         // Create the dialog
         Dialog<Subteam> dialog = new Dialog<>();
         dialog.setTitle(viewModel.isNewSubteam() ? "Add Subteam" : "Edit Subteam");
@@ -540,10 +556,22 @@ public class TeamController {
     }
 
     /**
+     * Shows a dialog and waits for it to be closed.
+     * Protected for testability.
+     * 
+     * @param <T> the type of the dialog result
+     * @param dialog the dialog to show
+     * @return an Optional containing the dialog result
+     */
+    protected <T> Optional<T> showAndWaitDialog(Dialog<T> dialog) {
+        return dialog.showAndWait();
+    }
+
+    /**
      * Handles closing the window.
      */
     @FXML
-    private void handleClose() {
+    public void handleClose() {
         // Get the stage from any UI element
         Stage stage = (Stage) tabPane.getScene().getWindow();
         stage.close();
@@ -551,39 +579,73 @@ public class TeamController {
 
     /**
      * Shows an error alert dialog.
+     * Protected for testability.
      * 
      * @param title   the title
      * @param message the message
      */
-    private void showErrorAlert(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Error");
-        alert.setHeaderText(title);
-        alert.setContentText(message);
-        alert.showAndWait();
+    protected void showErrorAlert(String title, String message) {
+        dialogService.showErrorAlert(title, message);
     }
 
     /**
      * Shows an information alert dialog.
+     * Protected for testability.
      * 
      * @param title   the title
      * @param message the message
      */
-    private void showInfoAlert(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Information");
-        alert.setHeaderText(title);
-        alert.setContentText(message);
-        alert.showAndWait();
+    protected void showInfoAlert(String title, String message) {
+        dialogService.showInfoAlert(title, message);
+    }
+    
+    /**
+     * Shows a confirmation alert dialog.
+     * Protected for testability.
+     * 
+     * @param title the title
+     * @param message the message
+     * @return true if confirmed, false otherwise
+     */
+    protected boolean showConfirmationAlert(String title, String message) {
+        return dialogService.showConfirmationAlert(title, message);
     }
 
     /**
-     * For testing purposes only.
-     * Allows test classes to access the ViewModel.
+     * Gets the ViewModel.
+     * For testing purposes.
      * 
      * @return the ViewModel
      */
     TeamViewModel getViewModel() {
         return viewModel;
+    }
+
+    /**
+     * Gets the currently selected team member.
+     * This method exists to facilitate testing.
+     * 
+     * @return the selected team member
+     */
+    protected TeamMember getSelectedTeamMember() {
+        return membersTable.getSelectionModel().getSelectedItem();
+    }
+
+    /**
+     * Gets the currently selected subteam.
+     * This method exists to facilitate testing.
+     * 
+     * @return the selected subteam
+     */
+    protected Subteam getSelectedSubteam() {
+        return subteamsTable.getSelectionModel().getSelectedItem();
+    }
+
+    /**
+     * Initialize method for testing purposes.
+     * This method allows tests to call initialize explicitly.
+     */
+    public void testInitialize() {
+        initialize();
     }
 }
