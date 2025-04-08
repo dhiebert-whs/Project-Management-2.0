@@ -45,7 +45,6 @@ org\frcpm\config\DatabaseConfig.class
 org\frcpm\services\impl\GanttDataServiceImpl.class
 org\frcpm\repositories\specific\ComponentRepository.class
 org\frcpm\services\impl\SubteamServiceImpl.class
-org\frcpm\controllers\AttendanceController$1.class
 org\frcpm\repositories\impl\MeetingRepositoryImpl.class
 org\frcpm\services\impl\SubsystemServiceImpl.class
 org\frcpm\controllers\MilestoneController.class
@@ -58,7 +57,6 @@ org\frcpm\viewmodels\SubsystemManagementViewModel.class
 org\frcpm\repositories\specific\ProjectRepository.class
 org\frcpm\viewmodels\AttendanceViewModel$AttendanceRecord.class
 org\frcpm\viewmodels\DailyViewModel.class
-org\frcpm\controllers\AttendanceController$2.class
 org\frcpm\services\VisualizationService.class
 org\frcpm\models\Subsystem.class
 org\frcpm\repositories\impl\MilestoneRepositoryImpl.class
