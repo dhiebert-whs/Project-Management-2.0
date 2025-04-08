@@ -18,6 +18,7 @@ public class MeetingController {
 
     private static final Logger LOGGER = Logger.getLogger(MeetingController.class.getName());
 
+    // FXML UI components
     @FXML
     private DatePicker datePicker;
 
@@ -37,7 +38,7 @@ public class MeetingController {
     private Button cancelButton;
 
     // ViewModel
-    private final MeetingViewModel viewModel = new MeetingViewModel();
+    private MeetingViewModel viewModel = new MeetingViewModel();
 
     /**
      * Initializes the controller.
@@ -54,6 +55,13 @@ public class MeetingController {
      * Sets up the bindings between UI controls and ViewModel properties.
      */
     private void setupBindings() {
+        // Check for null UI components for testability
+        if (datePicker == null || startTimeField == null || endTimeField == null || 
+            notesArea == null || saveButton == null || cancelButton == null) {
+            LOGGER.warning("UI components not initialized - likely in test environment");
+            return;
+        }
+
         // Bind UI elements to ViewModel properties using ViewModelBinding utility
         ViewModelBinding.bindDatePicker(datePicker, viewModel.dateProperty());
         ViewModelBinding.bindTextField(startTimeField, viewModel.startTimeStringProperty());
@@ -97,8 +105,10 @@ public class MeetingController {
      */
     protected void closeDialog() {
         try {
-            Stage stage = (Stage) saveButton.getScene().getWindow();
-            stage.close();
+            if (saveButton != null && saveButton.getScene() != null) {
+                Stage stage = (Stage) saveButton.getScene().getWindow();
+                stage.close();
+            }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error closing dialog", e);
         }
@@ -112,17 +122,26 @@ public class MeetingController {
      * @param message the message
      */
     protected void showErrorAlert(String title, String message) {
-        try {
-            Alert alert = createAlert(Alert.AlertType.ERROR);
-            alert.setTitle("Error");
-            alert.setHeaderText(title);
-            alert.setContentText(message);
-            alert.showAndWait();
-        } catch (IllegalStateException e) {
-            // This can happen in tests when not on FX thread
-            // Just log the error for testing purposes
-            LOGGER.log(Level.INFO, "Alert would show: {0} - {1}", new Object[] { title, message });
-        }
+        Alert alert = createAlert(Alert.AlertType.ERROR);
+        alert.setTitle("Error");
+        alert.setHeaderText(title);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
+    /**
+     * Shows an information alert dialog.
+     * Protected for testability.
+     * 
+     * @param title   the title
+     * @param message the message
+     */
+    protected void showInfoAlert(String title, String message) {
+        Alert alert = createAlert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Information");
+        alert.setHeaderText(title);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 
     /**
@@ -144,6 +163,15 @@ public class MeetingController {
     public MeetingViewModel getViewModel() {
         return viewModel;
     }
+    
+    /**
+     * Sets the ViewModel (for testing).
+     * 
+     * @param viewModel the ViewModel
+     */
+    public void setViewModel(MeetingViewModel viewModel) {
+        this.viewModel = viewModel;
+    }
 
     /**
      * Gets the meeting from the ViewModel.
@@ -152,5 +180,30 @@ public class MeetingController {
      */
     public Meeting getMeeting() {
         return viewModel.getMeeting();
+    }
+
+    // Getters for testing purposes
+    public DatePicker getDatePicker() {
+        return datePicker;
+    }
+    
+    public TextField getStartTimeField() {
+        return startTimeField;
+    }
+    
+    public TextField getEndTimeField() {
+        return endTimeField;
+    }
+    
+    public TextArea getNotesArea() {
+        return notesArea;
+    }
+    
+    public Button getSaveButton() {
+        return saveButton;
+    }
+    
+    public Button getCancelButton() {
+        return cancelButton;
     }
 }

@@ -9,6 +9,7 @@ import org.frcpm.services.ServiceFactory;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,12 +20,13 @@ import java.util.logging.Logger;
  * ViewModel for the Meeting view.
  */
 public class MeetingViewModel extends BaseViewModel {
-    
+
     private static final Logger LOGGER = Logger.getLogger(MeetingViewModel.class.getName());
-    
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
+
     // Services
     private final MeetingService meetingService;
-    
+
     // Observable properties
     private final ObjectProperty<LocalDate> date = new SimpleObjectProperty<>();
     private final StringProperty startTimeString = new SimpleStringProperty();
@@ -34,18 +36,18 @@ public class MeetingViewModel extends BaseViewModel {
     private final ObjectProperty<Meeting> meeting = new SimpleObjectProperty<>();
     private final BooleanProperty isNewMeeting = new SimpleBooleanProperty(true);
     private final BooleanProperty valid = new SimpleBooleanProperty(false);
-     
+
     // Commands
     private final Command saveCommand;
     private final Command cancelCommand;
-    
+
     /**
      * Creates a new MeetingViewModel.
      */
     public MeetingViewModel() {
         this(ServiceFactory.getMeetingService());
     }
-    
+
     /**
      * Creates a new MeetingViewModel with the specified service.
      * This constructor is mainly used for testing.
@@ -54,26 +56,27 @@ public class MeetingViewModel extends BaseViewModel {
      */
     public MeetingViewModel(MeetingService meetingService) {
         this.meetingService = meetingService;
-        
+
         // Create commands
         saveCommand = new Command(this::save, this::isValid);
-        cancelCommand = new Command(() -> {});
-        
+        cancelCommand = new Command(() -> {
+        });
+
         // Set up default values
         date.set(LocalDate.now());
         startTimeString.set("16:00");
         endTimeString.set("18:00");
-        
+
         // Set up validation listeners
         date.addListener((observable, oldValue, newValue) -> validate());
         startTimeString.addListener((observable, oldValue, newValue) -> validate());
         endTimeString.addListener((observable, oldValue, newValue) -> validate());
         notes.addListener((observable, oldValue, newValue) -> setDirty(true));
-        
+
         // Initial validation
         validate();
     }
-    
+
     /**
      * Sets up the ViewModel for creating a new meeting.
      * 
@@ -83,18 +86,18 @@ public class MeetingViewModel extends BaseViewModel {
         this.project.set(project);
         meeting.set(null);
         isNewMeeting.set(true);
-        
+
         // Set default values
         date.set(LocalDate.now());
         startTimeString.set("16:00");
         endTimeString.set("18:00");
         notes.set("");
-        
+
         // Clear dirty flag and validate
         setDirty(false);
         validate();
     }
-    
+
     /**
      * Sets up the ViewModel for editing an existing meeting.
      * 
@@ -104,30 +107,30 @@ public class MeetingViewModel extends BaseViewModel {
         this.meeting.set(meeting);
         project.set(meeting.getProject());
         isNewMeeting.set(false);
-        
+
         // Set field values from meeting
         date.set(meeting.getDate());
-        startTimeString.set(meeting.getStartTime().toString());
-        endTimeString.set(meeting.getEndTime().toString());
+        startTimeString.set(formatTime(meeting.getStartTime()));
+        endTimeString.set(formatTime(meeting.getEndTime()));
         notes.set(meeting.getNotes());
-        
+
         // Clear dirty flag and validate
         setDirty(false);
         validate();
     }
-    
+
     /**
      * Validates the meeting data.
      * Sets the valid property and error message.
      */
     private void validate() {
         List<String> errors = new ArrayList<>();
-        
+
         // Check required fields
         if (date.get() == null) {
             errors.add("Meeting date cannot be empty");
         }
-        
+
         if (startTimeString.get() == null || startTimeString.get().trim().isEmpty()) {
             errors.add("Start time cannot be empty");
         } else {
@@ -137,7 +140,7 @@ public class MeetingViewModel extends BaseViewModel {
                 errors.add("Start time format should be HH:MM");
             }
         }
-        
+
         if (endTimeString.get() == null || endTimeString.get().trim().isEmpty()) {
             errors.add("End time cannot be empty");
         } else {
@@ -147,19 +150,20 @@ public class MeetingViewModel extends BaseViewModel {
                 errors.add("End time format should be HH:MM");
             }
         }
-        
+
         // If times are valid, check if end time is after start time
         try {
-            LocalTime startTime = LocalTime.parse(startTimeString.get());
-            LocalTime endTime = LocalTime.parse(endTimeString.get());
-            
-            if (endTime.isBefore(startTime) || endTime.equals(startTime)) {
+            LocalTime startTime = parseTime(startTimeString.get());
+            LocalTime endTime = parseTime(endTimeString.get());
+
+            if (startTime != null && endTime != null &&
+                    (endTime.isBefore(startTime) || endTime.equals(startTime))) {
                 errors.add("End time must be after start time");
             }
         } catch (DateTimeParseException ignored) {
             // Ignore - already handled above
         }
-        
+
         // Update valid property and error message
         valid.set(errors.isEmpty());
         if (!errors.isEmpty()) {
@@ -168,7 +172,7 @@ public class MeetingViewModel extends BaseViewModel {
             clearErrorMessage();
         }
     }
-    
+
     /**
      * Saves the meeting.
      * Called when the save command is executed.
@@ -177,40 +181,71 @@ public class MeetingViewModel extends BaseViewModel {
         if (!valid.get()) {
             return;
         }
-        
+
         try {
             LocalDate meetingDate = date.get();
-            LocalTime startTime = LocalTime.parse(startTimeString.get());
-            LocalTime endTime = LocalTime.parse(endTimeString.get());
+            LocalTime startTime = parseTime(startTimeString.get());
+            LocalTime endTime = parseTime(endTimeString.get());
             String meetingNotes = notes.get();
-            
+
             Meeting savedMeeting;
             if (isNewMeeting.get()) {
                 // Create new meeting
                 savedMeeting = meetingService.createMeeting(
-                    meetingDate, startTime, endTime, project.get().getId(), meetingNotes);
+                        meetingDate, startTime, endTime, project.get().getId(), meetingNotes);
             } else {
                 // Update existing meeting
                 savedMeeting = meetingService.updateMeetingDateTime(
-                    meeting.get().getId(), meetingDate, startTime, endTime);
+                        meeting.get().getId(), meetingDate, startTime, endTime);
                 savedMeeting = meetingService.updateNotes(savedMeeting.getId(), meetingNotes);
             }
-            
+
             // Update meeting property with saved meeting
             meeting.set(savedMeeting);
-            
+
             // Clear dirty flag
             setDirty(false);
-            
+
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error saving meeting", e);
             setErrorMessage("Failed to save meeting: " + e.getMessage());
-            valid.set(false);
         }
     }
-    
+
+    /**
+     * Parses a time string into a LocalTime object.
+     * 
+     * @param text the time string to parse
+     * @return the parsed time, or null if invalid
+     */
+    public LocalTime parseTime(String text) {
+        if (text == null || text.trim().isEmpty()) {
+            return null;
+        }
+
+        try {
+            return LocalTime.parse(text, TIME_FORMATTER);
+        } catch (DateTimeParseException e) {
+            LOGGER.log(Level.WARNING, "Invalid time format: {0}", text);
+            return null;
+        }
+    }
+
+    /**
+     * Formats a LocalTime object to a string.
+     * 
+     * @param time the time to format
+     * @return the formatted time string
+     */
+    public String formatTime(LocalTime time) {
+        if (time == null) {
+            return "";
+        }
+        return time.format(TIME_FORMATTER);
+    }
+
     // Property getters
-    
+
     /**
      * Gets whether the input is valid.
      * 
@@ -219,7 +254,7 @@ public class MeetingViewModel extends BaseViewModel {
     public boolean isValid() {
         return valid.get();
     }
-    
+
     /**
      * Gets the valid property.
      * 
@@ -228,8 +263,7 @@ public class MeetingViewModel extends BaseViewModel {
     public BooleanProperty validProperty() {
         return valid;
     }
-   
-    
+
     /**
      * Gets the save command.
      * 
@@ -238,7 +272,7 @@ public class MeetingViewModel extends BaseViewModel {
     public Command getSaveCommand() {
         return saveCommand;
     }
-    
+
     /**
      * Gets the cancel command.
      * 
@@ -247,7 +281,7 @@ public class MeetingViewModel extends BaseViewModel {
     public Command getCancelCommand() {
         return cancelCommand;
     }
-    
+
     /**
      * Gets the meeting.
      * 
@@ -256,7 +290,7 @@ public class MeetingViewModel extends BaseViewModel {
     public Meeting getMeeting() {
         return meeting.get();
     }
-    
+
     /**
      * Gets the meeting property.
      * 
@@ -265,7 +299,7 @@ public class MeetingViewModel extends BaseViewModel {
     public ObjectProperty<Meeting> meetingProperty() {
         return meeting;
     }
-    
+
     /**
      * Gets the new meeting flag.
      * 
@@ -274,7 +308,7 @@ public class MeetingViewModel extends BaseViewModel {
     public boolean isNewMeeting() {
         return isNewMeeting.get();
     }
-    
+
     /**
      * Gets the new meeting property.
      * 

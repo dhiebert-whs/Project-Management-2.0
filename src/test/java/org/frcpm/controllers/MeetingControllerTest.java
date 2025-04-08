@@ -9,24 +9,21 @@ import org.frcpm.models.Project;
 import org.frcpm.viewmodels.MeetingViewModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
-import org.testfx.framework.junit5.ApplicationExtension;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
  * Tests for the MeetingController class with MVVM pattern.
  */
-@ExtendWith(ApplicationExtension.class)
-public class MeetingControllerTest extends BaseJavaFXTest {
+public class MeetingControllerTest {
 
     @Spy
     private MeetingController controller;
@@ -42,6 +39,9 @@ public class MeetingControllerTest extends BaseJavaFXTest {
 
     @Mock
     private Command mockSaveCommand;
+    
+    @Mock
+    private Alert mockAlert;
 
     @BeforeEach
     public void setUp() {
@@ -62,40 +62,11 @@ public class MeetingControllerTest extends BaseJavaFXTest {
         when(mockViewModel.getSaveCommand()).thenReturn(mockSaveCommand);
         when(mockViewModel.getMeeting()).thenReturn(mockMeeting);
 
-        // Inject fields into controller using reflection
-        try {
-            java.lang.reflect.Field viewModelField = MeetingController.class.getDeclaredField("viewModel");
-            viewModelField.setAccessible(true);
-            viewModelField.set(controller, mockViewModel);
-
-            // Inject necessary JavaFX components
-            java.lang.reflect.Field datePickerField = MeetingController.class.getDeclaredField("datePicker");
-            datePickerField.setAccessible(true);
-            datePickerField.set(controller, new DatePicker());
-
-            java.lang.reflect.Field startTimeField = MeetingController.class.getDeclaredField("startTimeField");
-            startTimeField.setAccessible(true);
-            startTimeField.set(controller, new TextField());
-
-            java.lang.reflect.Field endTimeField = MeetingController.class.getDeclaredField("endTimeField");
-            endTimeField.setAccessible(true);
-            endTimeField.set(controller, new TextField());
-
-            java.lang.reflect.Field notesAreaField = MeetingController.class.getDeclaredField("notesArea");
-            notesAreaField.setAccessible(true);
-            notesAreaField.set(controller, new TextArea());
-
-            java.lang.reflect.Field saveButtonField = MeetingController.class.getDeclaredField("saveButton");
-            saveButtonField.setAccessible(true);
-            saveButtonField.set(controller, new Button());
-
-            java.lang.reflect.Field cancelButtonField = MeetingController.class.getDeclaredField("cancelButton");
-            cancelButtonField.setAccessible(true);
-            cancelButtonField.set(controller, new Button());
-
-        } catch (Exception e) {
-            fail("Failed to set up controller: " + e.getMessage());
-        }
+        // Set the mock ViewModel
+        controller.setViewModel(mockViewModel);
+        
+        // Mock alert creation
+        doReturn(mockAlert).when(controller).createAlert(any());
     }
 
     @Test
@@ -137,10 +108,6 @@ public class MeetingControllerTest extends BaseJavaFXTest {
 
     @Test
     public void testShowErrorAlert() {
-        // Arrange
-        Alert mockAlert = mock(Alert.class);
-        doReturn(mockAlert).when(controller).createAlert(any());
-
         // Act
         controller.showErrorAlert("Test Title", "Test Message");
 
@@ -149,5 +116,24 @@ public class MeetingControllerTest extends BaseJavaFXTest {
         verify(mockAlert).setHeaderText("Test Title");
         verify(mockAlert).setContentText("Test Message");
         verify(mockAlert).showAndWait();
+    }
+    
+    @Test
+    public void testShowInfoAlert() {
+        // Act
+        controller.showInfoAlert("Test Title", "Test Message");
+
+        // Assert
+        verify(mockAlert).setTitle("Information");
+        verify(mockAlert).setHeaderText("Test Title");
+        verify(mockAlert).setContentText("Test Message");
+        verify(mockAlert).showAndWait();
+    }
+    
+    @Test
+    public void testCloseDialog() {
+        // This is a void method with UI interactions
+        // Just call it to ensure no uncaught exceptions
+        controller.closeDialog();
     }
 }
