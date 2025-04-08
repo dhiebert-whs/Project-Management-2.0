@@ -1,5 +1,4 @@
-// Path: src/main/java/org/frcpm/viewmodels/TaskViewModel.java
-
+// src/main/java/org/frcpm/viewmodels/TaskViewModel.java
 package org.frcpm.viewmodels;
 
 import javafx.beans.property.*;
@@ -124,6 +123,9 @@ public class TaskViewModel extends BaseViewModel {
         requiredComponents
                 .addListener((javafx.collections.ListChangeListener.Change<? extends Component> c) -> setDirty(true));
 
+        // Set default date
+        startDate.set(LocalDate.now());
+        
         // Initial validation
         validate();
     }
@@ -379,7 +381,6 @@ public class TaskViewModel extends BaseViewModel {
     private void addMember() {
         // This is just a placeholder - in the actual implementation,
         // this would open a dialog to select a team member
-        // For now, we'll assume the selected member is passed externally
     }
 
     public void addMember(TeamMember member) {
@@ -389,9 +390,9 @@ public class TaskViewModel extends BaseViewModel {
     }
 
     private void removeMember() {
-        // This is just a placeholder - in the actual implementation,
-        // this would remove the selected member
-        // For now, we'll assume the selected member is passed externally
+        if (selectedMember.get() != null) {
+            assignedMembers.remove(selectedMember.get());
+        }
     }
 
     public void removeMember(TeamMember member) {
@@ -399,19 +400,13 @@ public class TaskViewModel extends BaseViewModel {
     }
 
     private boolean canRemoveMember() {
-        // Check if there's a selected member to remove
-        return !assignedMembers.isEmpty();
+        return selectedMember.get() != null;
     }
 
     private void addDependency() {
         // Placeholder for adding a dependency
     }
 
-    /**
-     * Adds a dependency to the task.
-     * 
-     * @param dependency the dependency to add
-     */
     public void addDependency(Task dependency) {
         if (dependency == null) {
             return;
@@ -449,20 +444,10 @@ public class TaskViewModel extends BaseViewModel {
         preDependencies.add(dependency);
     }
 
-    private boolean wouldCreateCircularDependency(Task dependency) {
-        // Basic implementation - in a real application, you'd want to do a proper graph
-        // traversal
-        for (Task subDependency : dependency.getPreDependencies()) {
-            if (subDependency.equals(task.get()) ||
-                    subDependency.getPreDependencies().contains(task.get())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     private void removeDependency() {
-        // Placeholder for removing a dependency
+        if (selectedDependency.get() != null) {
+            preDependencies.remove(selectedDependency.get());
+        }
     }
 
     public void removeDependency(Task dependency) {
@@ -470,7 +455,7 @@ public class TaskViewModel extends BaseViewModel {
     }
 
     private boolean canRemoveDependency() {
-        return !preDependencies.isEmpty();
+        return selectedDependency.get() != null;
     }
 
     private void addComponent() {
@@ -484,7 +469,9 @@ public class TaskViewModel extends BaseViewModel {
     }
 
     private void removeComponent() {
-        // Placeholder for removing a component
+        if (selectedComponent.get() != null) {
+            requiredComponents.remove(selectedComponent.get());
+        }
     }
 
     public void removeComponent(Component component) {
@@ -492,7 +479,7 @@ public class TaskViewModel extends BaseViewModel {
     }
 
     private boolean canRemoveComponent() {
-        return !requiredComponents.isEmpty();
+        return selectedComponent.get() != null;
     }
 
     // Property getters and accessors
