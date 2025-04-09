@@ -1,0 +1,54 @@
+-------------------------------------------------------------------------------
+Test set: org.frcpm.services.TaskServiceTest
+-------------------------------------------------------------------------------
+Tests run: 10, Failures: 0, Errors: 4, Skipped: 0, Time elapsed: 1.053 s <<< FAILURE! -- in org.frcpm.services.TaskServiceTest
+org.frcpm.services.TaskServiceTest.testRemoveDependency -- Time elapsed: 0.139 s <<< ERROR!
+org.hibernate.LazyInitializationException: failed to lazily initialize a collection of role: org.frcpm.models.Task.postDependencies: could not initialize proxy - no Session
+	at org.hibernate.collection.spi.AbstractPersistentCollection.throwLazyInitializationException(AbstractPersistentCollection.java:634)
+	at org.hibernate.collection.spi.AbstractPersistentCollection.withTemporarySessionIfNeeded(AbstractPersistentCollection.java:217)
+	at org.hibernate.collection.spi.AbstractPersistentCollection.readElementExistence(AbstractPersistentCollection.java:335)
+	at org.hibernate.collection.spi.PersistentSet.contains(PersistentSet.java:158)
+	at org.frcpm.services.impl.TaskServiceImpl.hasDependencyPath(TaskServiceImpl.java:266)
+	at org.frcpm.services.impl.TaskServiceImpl.addDependency(TaskServiceImpl.java:195)
+	at org.frcpm.services.TaskServiceTest.testRemoveDependency(TaskServiceTest.java:244)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.TaskServiceTest.testFindByAssignedMember -- Time elapsed: 0.158 s <<< ERROR!
+org.hibernate.LazyInitializationException: failed to lazily initialize a collection of role: org.frcpm.models.Task.assignedTo: could not initialize proxy - no Session
+	at org.hibernate.collection.spi.AbstractPersistentCollection.throwLazyInitializationException(AbstractPersistentCollection.java:634)
+	at org.hibernate.collection.spi.AbstractPersistentCollection.withTemporarySessionIfNeeded(AbstractPersistentCollection.java:217)
+	at org.hibernate.collection.spi.AbstractPersistentCollection.initialize(AbstractPersistentCollection.java:613)
+	at org.hibernate.collection.spi.PersistentSet.clear(PersistentSet.java:287)
+	at org.frcpm.services.impl.TaskServiceImpl.assignMembers(TaskServiceImpl.java:130)
+	at org.frcpm.services.TaskServiceTest.testFindByAssignedMember(TaskServiceTest.java:334)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.TaskServiceTest.testAssignMembers -- Time elapsed: 0.140 s <<< ERROR!
+org.hibernate.LazyInitializationException: failed to lazily initialize a collection of role: org.frcpm.models.Task.assignedTo: could not initialize proxy - no Session
+	at org.hibernate.collection.spi.AbstractPersistentCollection.throwLazyInitializationException(AbstractPersistentCollection.java:634)
+	at org.hibernate.collection.spi.AbstractPersistentCollection.withTemporarySessionIfNeeded(AbstractPersistentCollection.java:217)
+	at org.hibernate.collection.spi.AbstractPersistentCollection.initialize(AbstractPersistentCollection.java:613)
+	at org.hibernate.collection.spi.PersistentSet.clear(PersistentSet.java:287)
+	at org.frcpm.services.impl.TaskServiceImpl.assignMembers(TaskServiceImpl.java:130)
+	at org.frcpm.services.TaskServiceTest.testAssignMembers(TaskServiceTest.java:164)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.TaskServiceTest.testAddDependency -- Time elapsed: 0.073 s <<< ERROR!
+org.hibernate.LazyInitializationException: failed to lazily initialize a collection of role: org.frcpm.models.Task.postDependencies: could not initialize proxy - no Session
+	at org.hibernate.collection.spi.AbstractPersistentCollection.throwLazyInitializationException(AbstractPersistentCollection.java:634)
+	at org.hibernate.collection.spi.AbstractPersistentCollection.withTemporarySessionIfNeeded(AbstractPersistentCollection.java:217)
+	at org.hibernate.collection.spi.AbstractPersistentCollection.readElementExistence(AbstractPersistentCollection.java:335)
+	at org.hibernate.collection.spi.PersistentSet.contains(PersistentSet.java:158)
+	at org.frcpm.services.impl.TaskServiceImpl.hasDependencyPath(TaskServiceImpl.java:266)
+	at org.frcpm.services.impl.TaskServiceImpl.addDependency(TaskServiceImpl.java:195)
+	at org.frcpm.services.TaskServiceTest.testAddDependency(TaskServiceTest.java:203)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+

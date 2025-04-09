@@ -1,0 +1,28 @@
+-------------------------------------------------------------------------------
+Test set: org.frcpm.controllers.TaskControllerTest
+-------------------------------------------------------------------------------
+Tests run: 12, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.176 s <<< FAILURE! -- in org.frcpm.controllers.TaskControllerTest
+org.frcpm.controllers.TaskControllerTest.testErrorMessageListener -- Time elapsed: 0.006 s <<< FAILURE!
+Wanted but not invoked:
+controller.showErrorAlert(
+    <any string>,
+    "Test Error"
+);
+-> at org.frcpm.controllers.TaskController.showErrorAlert(TaskController.java:263)
+
+However, there were exactly 2 interactions with this mock:
+controller.setViewModel(mockViewModel);
+-> at org.frcpm.controllers.TaskControllerTest.setUp(TaskControllerTest.java:109)
+
+controller.setDialogService(
+    mockDialogService
+);
+-> at org.frcpm.controllers.TaskControllerTest.setUp(TaskControllerTest.java:110)
+
+
+	at org.frcpm.controllers.TaskController.showErrorAlert(TaskController.java:263)
+	at org.frcpm.controllers.TaskControllerTest.testErrorMessageListener(TaskControllerTest.java:195)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+

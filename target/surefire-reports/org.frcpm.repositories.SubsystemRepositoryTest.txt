@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.frcpm.repositories.SubsystemRepositoryTest
+-------------------------------------------------------------------------------
+Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.603 s -- in org.frcpm.repositories.SubsystemRepositoryTest

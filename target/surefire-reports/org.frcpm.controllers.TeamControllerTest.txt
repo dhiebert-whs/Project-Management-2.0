@@ -1,0 +1,163 @@
+-------------------------------------------------------------------------------
+Test set: org.frcpm.controllers.TeamControllerTest
+-------------------------------------------------------------------------------
+Tests run: 19, Failures: 7, Errors: 2, Skipped: 0, Time elapsed: 13.74 s <<< FAILURE! -- in org.frcpm.controllers.TeamControllerTest
+org.frcpm.controllers.TeamControllerTest.testHandleDeleteSubteam_WithSelection_Cancelled -- Time elapsed: 0.835 s <<< FAILURE!
+Wanted but not invoked:
+mockDialogService.showConfirmationAlert(
+    "Delete Subteam",
+    <any string>
+);
+-> at org.frcpm.controllers.TeamControllerTest.testHandleDeleteSubteam_WithSelection_Cancelled(TeamControllerTest.java:383)
+
+However, there was exactly 1 interaction with this mock:
+mockDialogService.showErrorAlert(
+    "No Selection",
+    "Please select a subteam to delete"
+);
+-> at org.frcpm.controllers.TeamController.showErrorAlert(TeamController.java:588)
+
+
+	at org.frcpm.controllers.TeamControllerTest.testHandleDeleteSubteam_WithSelection_Cancelled(TeamControllerTest.java:383)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.controllers.TeamControllerTest.testHandleEditMember_WithSelection -- Time elapsed: 0.764 s <<< FAILURE!
+Wanted but not invoked:
+mockViewModel.initExistingMember(
+    Mock for TeamMember, hashCode: 856397318
+);
+-> at org.frcpm.viewmodels.TeamViewModel.initExistingMember(TeamViewModel.java:278)
+Actually, there were zero interactions with this mock.
+
+	at org.frcpm.viewmodels.TeamViewModel.initExistingMember(TeamViewModel.java:278)
+	at org.frcpm.controllers.TeamControllerTest.testHandleEditMember_WithSelection(TeamControllerTest.java:245)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.controllers.TeamControllerTest.testCreateMemberDialog -- Time elapsed: 0.719 s <<< ERROR!
+java.lang.IllegalStateException: Not on FX application thread; currentThread = main
+	at com.sun.javafx.tk.Toolkit.checkFxUserThread(Toolkit.java:294)
+	at com.sun.javafx.tk.quantum.QuantumToolkit.checkFxUserThread(QuantumToolkit.java:475)
+	at javafx.stage.Stage.<init>(Stage.java:258)
+	at javafx.stage.Stage.<init>(Stage.java:244)
+	at javafx.scene.control.HeavyweightDialog$1.<init>(HeavyweightDialog.java:52)
+	at javafx.scene.control.HeavyweightDialog.<init>(HeavyweightDialog.java:52)
+	at javafx.scene.control.Dialog.<init>(Dialog.java:253)
+	at org.frcpm.controllers.TeamController.createMemberDialog(TeamController.java:372)
+	at org.frcpm.controllers.TeamControllerTest.testCreateMemberDialog(TeamControllerTest.java:405)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.controllers.TeamControllerTest.testInitialize -- Time elapsed: 0.716 s <<< FAILURE!
+org.mockito.exceptions.verification.TooManyActualInvocations: 
+
+mockViewModel.getMembers();
+Wanted 1 time:
+-> at org.frcpm.viewmodels.TeamViewModel.getMembers(TeamViewModel.java:731)
+But was 2 times:
+-> at org.frcpm.controllers.TeamController.setupBindings(TeamController.java:125)
+-> at org.frcpm.controllers.TeamController.initialize(TeamController.java:111)
+
+
+	at org.frcpm.viewmodels.TeamViewModel.getMembers(TeamViewModel.java:731)
+	at org.frcpm.controllers.TeamControllerTest.testInitialize(TeamControllerTest.java:213)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.controllers.TeamControllerTest.testHandleDeleteMember_WithSelection_Confirmed -- Time elapsed: 0.706 s <<< FAILURE!
+Wanted but not invoked:
+mockDialogService.showConfirmationAlert(
+    "Delete Team Member",
+    <any string>
+);
+-> at org.frcpm.controllers.TeamControllerTest.testHandleDeleteMember_WithSelection_Confirmed(TeamControllerTest.java:274)
+
+However, there was exactly 1 interaction with this mock:
+mockDialogService.showErrorAlert(
+    "No Selection",
+    "Please select a team member to delete"
+);
+-> at org.frcpm.controllers.TeamController.showErrorAlert(TeamController.java:588)
+
+
+	at org.frcpm.controllers.TeamControllerTest.testHandleDeleteMember_WithSelection_Confirmed(TeamControllerTest.java:274)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.controllers.TeamControllerTest.testCreateSubteamDialog -- Time elapsed: 0.704 s <<< ERROR!
+java.lang.IllegalStateException: Not on FX application thread; currentThread = main
+	at com.sun.javafx.tk.Toolkit.checkFxUserThread(Toolkit.java:294)
+	at com.sun.javafx.tk.quantum.QuantumToolkit.checkFxUserThread(QuantumToolkit.java:475)
+	at javafx.stage.Stage.<init>(Stage.java:258)
+	at javafx.stage.Stage.<init>(Stage.java:244)
+	at javafx.scene.control.HeavyweightDialog$1.<init>(HeavyweightDialog.java:52)
+	at javafx.scene.control.HeavyweightDialog.<init>(HeavyweightDialog.java:52)
+	at javafx.scene.control.Dialog.<init>(Dialog.java:253)
+	at org.frcpm.controllers.TeamController.createSubteamDialog(TeamController.java:473)
+	at org.frcpm.controllers.TeamControllerTest.testCreateSubteamDialog(TeamControllerTest.java:426)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.controllers.TeamControllerTest.testHandleDeleteSubteam_WithSelection_Confirmed -- Time elapsed: 0.710 s <<< FAILURE!
+Wanted but not invoked:
+mockDialogService.showConfirmationAlert(
+    "Delete Subteam",
+    <any string>
+);
+-> at org.frcpm.controllers.TeamControllerTest.testHandleDeleteSubteam_WithSelection_Confirmed(TeamControllerTest.java:366)
+
+However, there was exactly 1 interaction with this mock:
+mockDialogService.showErrorAlert(
+    "No Selection",
+    "Please select a subteam to delete"
+);
+-> at org.frcpm.controllers.TeamController.showErrorAlert(TeamController.java:588)
+
+
+	at org.frcpm.controllers.TeamControllerTest.testHandleDeleteSubteam_WithSelection_Confirmed(TeamControllerTest.java:366)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.controllers.TeamControllerTest.testHandleEditSubteam_WithSelection -- Time elapsed: 0.718 s <<< FAILURE!
+Wanted but not invoked:
+mockViewModel.initExistingSubteam(
+    Mock for Subteam, hashCode: 646855274
+);
+-> at org.frcpm.viewmodels.TeamViewModel.initExistingSubteam(TeamViewModel.java:348)
+Actually, there were zero interactions with this mock.
+
+	at org.frcpm.viewmodels.TeamViewModel.initExistingSubteam(TeamViewModel.java:348)
+	at org.frcpm.controllers.TeamControllerTest.testHandleEditSubteam_WithSelection(TeamControllerTest.java:337)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.controllers.TeamControllerTest.testHandleDeleteMember_WithSelection_Cancelled -- Time elapsed: 0.685 s <<< FAILURE!
+Wanted but not invoked:
+mockDialogService.showConfirmationAlert(
+    "Delete Team Member",
+    <any string>
+);
+-> at org.frcpm.controllers.TeamControllerTest.testHandleDeleteMember_WithSelection_Cancelled(TeamControllerTest.java:291)
+
+However, there was exactly 1 interaction with this mock:
+mockDialogService.showErrorAlert(
+    "No Selection",
+    "Please select a team member to delete"
+);
+-> at org.frcpm.controllers.TeamController.showErrorAlert(TeamController.java:588)
+
+
+	at org.frcpm.controllers.TeamControllerTest.testHandleDeleteMember_WithSelection_Cancelled(TeamControllerTest.java:291)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+

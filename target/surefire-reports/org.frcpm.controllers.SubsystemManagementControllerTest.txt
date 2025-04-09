@@ -1,0 +1,20 @@
+-------------------------------------------------------------------------------
+Test set: org.frcpm.controllers.SubsystemManagementControllerTest
+-------------------------------------------------------------------------------
+Tests run: 8, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 5.764 s <<< FAILURE! -- in org.frcpm.controllers.SubsystemManagementControllerTest
+org.frcpm.controllers.SubsystemManagementControllerTest.testInitialize -- Time elapsed: 0.728 s <<< FAILURE!
+Wanted but not invoked:
+mockViewModel.getAddSubsystemCommand();
+-> at org.frcpm.viewmodels.SubsystemManagementViewModel.getAddSubsystemCommand(SubsystemManagementViewModel.java:228)
+
+However, there was exactly 1 interaction with this mock:
+mockViewModel.getSubsystems();
+-> at org.frcpm.controllers.SubsystemManagementControllerTest.testInitialize(SubsystemManagementControllerTest.java:190)
+
+
+	at org.frcpm.viewmodels.SubsystemManagementViewModel.getAddSubsystemCommand(SubsystemManagementViewModel.java:228)
+	at org.frcpm.controllers.SubsystemManagementControllerTest.testInitialize(SubsystemManagementControllerTest.java:194)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
