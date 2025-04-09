@@ -1,3 +1,4 @@
+// src/main/java/org/frcpm/viewmodels/ComponentManagementViewModel.java
 package org.frcpm.viewmodels;
 
 import javafx.collections.FXCollections;
@@ -11,7 +12,7 @@ import org.frcpm.services.ServiceFactory;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
+
 
 /**
  * ViewModel for the Component Management view.
@@ -254,5 +255,14 @@ public class ComponentManagementViewModel extends BaseViewModel {
      */
     public ComponentFilter getCurrentFilter() {
         return currentFilter;
+    }
+    
+    /**
+     * Clears the error message.
+     * This overrides the protected method in BaseViewModel to make it public.
+     */
+    @Override
+    public void clearErrorMessage() {
+        super.clearErrorMessage();
     }
 }
