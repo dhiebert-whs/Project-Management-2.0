@@ -3,13 +3,11 @@ package org.frcpm.controllers;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
-import org.frcpm.binding.Command;
 import org.frcpm.binding.ViewModelBinding;
 import org.frcpm.models.Milestone;
 import org.frcpm.models.Project;
 import org.frcpm.viewmodels.MilestoneViewModel;
 
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**

@@ -26,30 +26,30 @@ import java.util.logging.Logger;
  * Follows the MVVM pattern to handle attendance tracking functionality.
  */
 public class AttendanceViewModel extends BaseViewModel {
-    
+
     private static final Logger LOGGER = Logger.getLogger(AttendanceViewModel.class.getName());
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
-    
+
     // Services
     private final AttendanceService attendanceService;
     private final TeamMemberService teamMemberService;
     private final MeetingService meetingService;
-    
+
     // Meeting properties
     private final ObjectProperty<Meeting> meeting = new SimpleObjectProperty<>();
     private final StringProperty meetingTitle = new SimpleStringProperty("");
     private final StringProperty meetingDate = new SimpleStringProperty("");
     private final StringProperty meetingTime = new SimpleStringProperty("");
-    
+
     // Attendance records
     private final ObservableList<AttendanceRecord> attendanceRecords = FXCollections.observableArrayList();
     private final ObjectProperty<AttendanceRecord> selectedRecord = new SimpleObjectProperty<>();
-    
+
     // Commands
     private final Command saveAttendanceCommand;
     private final Command cancelCommand;
     private final Command loadAttendanceCommand;
-    
+
     /**
      * Represents an attendance record in the UI.
      */
@@ -63,13 +63,13 @@ public class AttendanceViewModel extends BaseViewModel {
         public AttendanceRecord(TeamMember teamMember, Attendance attendance) {
             this.teamMember = teamMember;
             this.attendance = attendance;
-            
+
             if (attendance != null) {
                 present.set(attendance.isPresent());
                 arrivalTime.set(attendance.getArrivalTime());
                 departureTime.set(attendance.getDepartureTime());
             }
-            
+
             // Add listener to set default times when present is checked
             present.addListener((observable, oldValue, newValue) -> {
                 if (newValue && arrivalTime.get() == null && teamMember != null) {
@@ -137,29 +137,29 @@ public class AttendanceViewModel extends BaseViewModel {
         }
 
         public String getSubteam() {
-            return teamMember != null && teamMember.getSubteam() != null 
-                ? teamMember.getSubteam().getName() : "";
+            return teamMember != null && teamMember.getSubteam() != null
+                    ? teamMember.getSubteam().getName()
+                    : "";
         }
     }
-    
+
     /**
      * Creates a new AttendanceViewModel with default services.
      */
     public AttendanceViewModel() {
         this(
-            ServiceFactory.getAttendanceService(),
-            ServiceFactory.getTeamMemberService(),
-            ServiceFactory.getMeetingService()
-        );
+                ServiceFactory.getAttendanceService(),
+                ServiceFactory.getTeamMemberService(),
+                ServiceFactory.getMeetingService());
     }
-    
+
     /**
      * Creates a new AttendanceViewModel with the specified services.
      * This constructor is mainly used for testing.
      * 
      * @param attendanceService the attendance service
      * @param teamMemberService the team member service
-     * @param meetingService the meeting service
+     * @param meetingService    the meeting service
      */
     public AttendanceViewModel(
             AttendanceService attendanceService,
@@ -168,12 +168,13 @@ public class AttendanceViewModel extends BaseViewModel {
         this.attendanceService = attendanceService;
         this.teamMemberService = teamMemberService;
         this.meetingService = meetingService;
-        
+
         // Create commands
         saveAttendanceCommand = new Command(this::saveAttendance, this::canSaveAttendance);
-        cancelCommand = new Command(() -> {});
+        cancelCommand = new Command(() -> {
+        });
         loadAttendanceCommand = new Command(this::loadAttendanceData, this::canLoadAttendanceData);
-        
+
         // Set up listeners
         meeting.addListener((observable, oldValue, newValue) -> {
             if (newValue != null) {
@@ -184,12 +185,12 @@ public class AttendanceViewModel extends BaseViewModel {
                 attendanceRecords.clear();
             }
         });
-        
+
         selectedRecord.addListener((observable, oldValue, newValue) -> {
             setDirty(true);
         });
     }
-    
+
     /**
      * Updates the meeting information displayed in the UI.
      * 
@@ -200,7 +201,7 @@ public class AttendanceViewModel extends BaseViewModel {
         meetingDate.set(meeting.getDate().toString());
         meetingTime.set(meeting.getStartTime() + " - " + meeting.getEndTime());
     }
-    
+
     /**
      * Clears the meeting information displayed in the UI.
      */
@@ -209,7 +210,7 @@ public class AttendanceViewModel extends BaseViewModel {
         meetingDate.set("");
         meetingTime.set("");
     }
-    
+
     /**
      * Loads attendance data for the current meeting.
      */
@@ -218,40 +219,39 @@ public class AttendanceViewModel extends BaseViewModel {
         if (currentMeeting == null) {
             return;
         }
-        
+
         try {
             // Load team members and attendance records
             List<TeamMember> teamMembers = teamMemberService.findAll();
             List<Attendance> attendances = attendanceService.findByMeeting(currentMeeting);
-            
+
             // Clear previous records
             attendanceRecords.clear();
-            
+
             // Create attendance records for each team member
             for (TeamMember member : teamMembers) {
                 // Find existing attendance record for this member
                 Optional<Attendance> attendance = attendances.stream()
-                    .filter(a -> a.getMember().getId().equals(member.getId()))
-                    .findFirst();
-                
+                        .filter(a -> a.getMember().getId().equals(member.getId()))
+                        .findFirst();
+
                 // Create a record for this member
                 AttendanceRecord record = new AttendanceRecord(
-                    member, 
-                    attendance.orElse(null)
-                );
-                
+                        member,
+                        attendance.orElse(null));
+
                 attendanceRecords.add(record);
             }
-            
+
             // Clear dirty flag
             setDirty(false);
-            
+
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error loading attendance data", e);
             setErrorMessage("Failed to load attendance data: " + e.getMessage());
         }
     }
-    
+
     /**
      * Saves attendance data for all team members.
      */
@@ -260,61 +260,58 @@ public class AttendanceViewModel extends BaseViewModel {
         if (currentMeeting == null) {
             return;
         }
-        
+
         try {
             // Process each attendance record
             for (AttendanceRecord record : attendanceRecords) {
                 TeamMember member = record.getTeamMember();
                 boolean present = record.isPresent();
-                
+
                 if (member == null) {
                     continue;
                 }
-                
+
                 Attendance attendance = record.getAttendance();
-                
+
                 if (present) {
                     // Create or update the attendance record
                     if (attendance == null) {
                         // Create new attendance
                         attendance = attendanceService.createAttendance(
-                            currentMeeting.getId(), 
-                            member.getId(), 
-                            true
-                        );
+                                currentMeeting.getId(),
+                                member.getId(),
+                                true);
                         record.setAttendance(attendance);
                     }
-                    
+
                     // Update times
                     attendance = attendanceService.updateAttendance(
-                        attendance.getId(),
-                        true,
-                        record.getArrivalTime(),
-                        record.getDepartureTime()
-                    );
+                            attendance.getId(),
+                            true,
+                            record.getArrivalTime(),
+                            record.getDepartureTime());
                     record.setAttendance(attendance);
-                    
+
                 } else if (attendance != null) {
                     // Update existing record to mark as absent
                     attendance = attendanceService.updateAttendance(
-                        attendance.getId(),
-                        false,
-                        null,
-                        null
-                    );
+                            attendance.getId(),
+                            false,
+                            null,
+                            null);
                     record.setAttendance(attendance);
                 }
             }
-            
+
             // Clear dirty flag
             setDirty(false);
-            
+
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error saving attendance data", e);
             setErrorMessage("Failed to save attendance data: " + e.getMessage());
         }
     }
-    
+
     /**
      * Checks if attendance data can be loaded.
      * 
@@ -323,16 +320,17 @@ public class AttendanceViewModel extends BaseViewModel {
     private boolean canLoadAttendanceData() {
         return meeting.get() != null;
     }
-    
+
     /**
      * Checks if attendance data can be saved.
      * 
-     * @return true if a meeting is selected and there are attendance records, false otherwise
+     * @return true if a meeting is selected and there are attendance records, false
+     *         otherwise
      */
     private boolean canSaveAttendance() {
         return meeting.get() != null && !attendanceRecords.isEmpty();
     }
-    
+
     /**
      * Initializes the ViewModel with a meeting.
      * 
@@ -341,7 +339,7 @@ public class AttendanceViewModel extends BaseViewModel {
     public void initWithMeeting(Meeting meeting) {
         this.meeting.set(meeting);
     }
-    
+
     /**
      * Parses a time string into a LocalTime object.
      * 
@@ -361,7 +359,7 @@ public class AttendanceViewModel extends BaseViewModel {
             return null;
         }
     }
-    
+
     /**
      * Formats a LocalTime object to a string.
      * 
@@ -374,12 +372,12 @@ public class AttendanceViewModel extends BaseViewModel {
         }
         return time.format(TIME_FORMATTER);
     }
-    
+
     /**
      * Updates a record's arrival and departure times.
      * 
-     * @param record the record to update
-     * @param arrivalTime the new arrival time
+     * @param record        the record to update
+     * @param arrivalTime   the new arrival time
      * @param departureTime the new departure time
      */
     public void updateRecordTimes(AttendanceRecord record, LocalTime arrivalTime, LocalTime departureTime) {
@@ -391,11 +389,11 @@ public class AttendanceViewModel extends BaseViewModel {
             }
         }
     }
-    
+
     /**
      * Validates that departure time is after arrival time.
      * 
-     * @param arrivalTime the arrival time
+     * @param arrivalTime   the arrival time
      * @param departureTime the departure time
      * @return true if valid, false otherwise
      */
@@ -408,7 +406,7 @@ public class AttendanceViewModel extends BaseViewModel {
         }
         return true;
     }
-    
+
     /**
      * Gets a list of member IDs that are present at the meeting.
      * 
@@ -416,76 +414,76 @@ public class AttendanceViewModel extends BaseViewModel {
      */
     public List<Long> getPresentMemberIds() {
         List<Long> presentMemberIds = new ArrayList<>();
-        
+
         for (AttendanceRecord record : attendanceRecords) {
             if (record.isPresent() && record.getTeamMember() != null) {
                 presentMemberIds.add(record.getTeamMember().getId());
             }
         }
-        
+
         return presentMemberIds;
     }
-    
+
     // Property getters
-    
+
     public ObjectProperty<Meeting> meetingProperty() {
         return meeting;
     }
-    
+
     public Meeting getMeeting() {
         return meeting.get();
     }
-    
+
     public StringProperty meetingTitleProperty() {
         return meetingTitle;
     }
-    
+
     public String getMeetingTitle() {
         return meetingTitle.get();
     }
-    
+
     public StringProperty meetingDateProperty() {
         return meetingDate;
     }
-    
+
     public String getMeetingDate() {
         return meetingDate.get();
     }
-    
+
     public StringProperty meetingTimeProperty() {
         return meetingTime;
     }
-    
+
     public String getMeetingTime() {
         return meetingTime.get();
     }
-    
+
     public ObservableList<AttendanceRecord> getAttendanceRecords() {
         return attendanceRecords;
     }
-    
+
     public ObjectProperty<AttendanceRecord> selectedRecordProperty() {
         return selectedRecord;
     }
-    
+
     public AttendanceRecord getSelectedRecord() {
         return selectedRecord.get();
     }
-    
+
     public void setSelectedRecord(AttendanceRecord record) {
         selectedRecord.set(record);
     }
-    
+
     // Command getters
-    
+
     public Command getSaveAttendanceCommand() {
         return saveAttendanceCommand;
     }
-    
+
     public Command getCancelCommand() {
         return cancelCommand;
     }
-    
+
     public Command getLoadAttendanceCommand() {
         return loadAttendanceCommand;
     }

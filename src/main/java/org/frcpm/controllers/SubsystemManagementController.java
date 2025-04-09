@@ -1,6 +1,5 @@
 package org.frcpm.controllers;
 
-import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.fxml.FXML;
@@ -13,7 +12,6 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.frcpm.binding.ViewModelBinding;
 import org.frcpm.models.Subsystem;
-import org.frcpm.models.Task;
 import org.frcpm.viewmodels.SubsystemManagementViewModel;
 
 import java.io.IOException;

@@ -14,7 +14,6 @@ import javafx.stage.Stage;
 import javafx.stage.Window;
 import org.frcpm.binding.ViewModelBinding;
 import org.frcpm.models.Subteam;
-import org.frcpm.models.Project;
 import org.frcpm.models.Subsystem;
 import org.frcpm.models.Task;
 import org.frcpm.services.DialogService;

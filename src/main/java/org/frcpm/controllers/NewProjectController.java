@@ -7,7 +7,6 @@ import org.frcpm.binding.ViewModelBinding;
 import org.frcpm.models.Project;
 import org.frcpm.viewmodels.NewProjectViewModel;
 
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
