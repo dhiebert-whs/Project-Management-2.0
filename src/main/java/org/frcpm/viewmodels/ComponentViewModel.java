@@ -11,15 +11,13 @@ import org.frcpm.services.ServiceFactory;
 import org.frcpm.services.TaskService;
 
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 /**
  * ViewModel for the Component view.
  * Handles business logic for component creation and editing.
+ * Follows the standardized MVVM pattern.
  */
 public class ComponentViewModel extends BaseViewModel {
     
@@ -39,6 +37,8 @@ public class ComponentViewModel extends BaseViewModel {
     private final ObjectProperty<LocalDate> expectedDelivery = new SimpleObjectProperty<>();
     private final ObjectProperty<LocalDate> actualDelivery = new SimpleObjectProperty<>();
     private final BooleanProperty delivered = new SimpleBooleanProperty(false);
+    private final BooleanProperty isNewComponent = new SimpleBooleanProperty(true);
+    private final BooleanProperty valid = new SimpleBooleanProperty(false);
     
     // Collections
     private final ObservableList<Task> requiredForTasks = FXCollections.observableArrayList();
@@ -78,6 +78,9 @@ public class ComponentViewModel extends BaseViewModel {
         
         // Set up property listeners
         setupPropertyListeners();
+        
+        // Initial validation
+        validate();
     }
     
     /**
@@ -91,13 +94,24 @@ public class ComponentViewModel extends BaseViewModel {
             }
         });
         
-        // Mark as dirty when any property changes
-        name.addListener((obs, oldVal, newVal) -> setDirty(true));
+        // Set up validation listeners
+        name.addListener((obs, oldVal, newVal) -> {
+            setDirty(true);
+            validate();
+        });
+        
         partNumber.addListener((obs, oldVal, newVal) -> setDirty(true));
         description.addListener((obs, oldVal, newVal) -> setDirty(true));
         expectedDelivery.addListener((obs, oldVal, newVal) -> setDirty(true));
-        actualDelivery.addListener((obs, oldVal, newVal) -> setDirty(true));
-        delivered.addListener((obs, oldVal, newVal) -> setDirty(true));
+        actualDelivery.addListener((obs, oldVal, newVal) -> {
+            setDirty(true);
+            validate();
+        });
+        
+        delivered.addListener((obs, oldVal, newVal) -> {
+            setDirty(true);
+            validate();
+        });
     }
     
     /**
@@ -106,6 +120,7 @@ public class ComponentViewModel extends BaseViewModel {
     public void initNewComponent() {
         // Create a new component
         component = new Component();
+        isNewComponent.set(true);
         
         // Reset properties
         clearProperties();
@@ -115,6 +130,9 @@ public class ComponentViewModel extends BaseViewModel {
         
         // Not dirty initially
         setDirty(false);
+        
+        // Validate
+        validate();
     }
     
     /**
@@ -128,6 +146,7 @@ public class ComponentViewModel extends BaseViewModel {
         }
         
         this.component = component;
+        isNewComponent.set(false);
         
         // Set properties from component
         name.set(component.getName());
@@ -142,6 +161,9 @@ public class ComponentViewModel extends BaseViewModel {
         
         // Not dirty initially
         setDirty(false);
+        
+        // Validate
+        validate();
     }
     
     /**
@@ -161,7 +183,10 @@ public class ComponentViewModel extends BaseViewModel {
      */
     private void loadTasks() {
         try {
-            requiredForTasks.setAll(component.getRequiredForTasks());
+            requiredForTasks.clear();
+            if (component != null && component.getRequiredForTasks() != null) {
+                requiredForTasks.addAll(component.getRequiredForTasks());
+            }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error loading tasks for component", e);
             setErrorMessage("Failed to load tasks for component");
@@ -180,13 +205,33 @@ public class ComponentViewModel extends BaseViewModel {
         component.setDelivered(delivered.get());
     }
     
+    /**
+     * Validates the component data.
+     */
+    private void validate() {
+        // Name is required
+        boolean isValid = name.get() != null && !name.get().trim().isEmpty();
+        
+        // If delivered is true, actual delivery date should be set
+        if (delivered.get() && actualDelivery.get() == null) {
+            isValid = false;
+            setErrorMessage("Actual delivery date is required for delivered components");
+        } else if (!isValid) {
+            setErrorMessage("Component name is required");
+        } else {
+            clearErrorMessage();
+        }
+        
+        valid.set(isValid);
+    }
+    
     // Command actions
     
     /**
      * Saves the component.
      */
     private void save() {
-        if (!validate()) {
+        if (!valid.get()) {
             return;
         }
         
@@ -207,27 +252,6 @@ public class ComponentViewModel extends BaseViewModel {
     }
     
     /**
-     * Validates the component data.
-     * 
-     * @return true if the data is valid, false otherwise
-     */
-    private boolean validate() {
-        // Name is required
-        if (name.get() == null || name.get().trim().isEmpty()) {
-            setErrorMessage("Component name is required");
-            return false;
-        }
-        
-        // If delivered is true, actual delivery date should be set
-        if (delivered.get() && actualDelivery.get() == null) {
-            setErrorMessage("Actual delivery date is required for delivered components");
-            return false;
-        }
-        
-        return true;
-    }
-    
-    /**
      * Cancels the current operation.
      */
     private void cancel() {
@@ -239,7 +263,7 @@ public class ComponentViewModel extends BaseViewModel {
      */
     private void addTask() {
         // This would typically show a dialog to select a task
-        // For now, just log the action
+        // Actual implementation would be provided by the controller
         LOGGER.info("Add task action triggered");
     }
     
@@ -259,7 +283,6 @@ public class ComponentViewModel extends BaseViewModel {
             component.getRequiredForTasks().remove(selectedTask);
             
             // Update the task to remove this component
-            // Since we don't have a direct method in TaskService, we need to handle it here
             selectedTask.getRequiredComponents().remove(component);
             taskService.save(selectedTask);
             
@@ -280,7 +303,7 @@ public class ComponentViewModel extends BaseViewModel {
      * @return true if the component can be saved, false otherwise
      */
     private boolean canSave() {
-        return isDirty();
+        return isDirty() && valid.get();
     }
     
     /**
@@ -359,6 +382,42 @@ public class ComponentViewModel extends BaseViewModel {
     }
     
     /**
+     * Gets the isNewComponent property.
+     * 
+     * @return the isNewComponent property
+     */
+    public BooleanProperty isNewComponentProperty() {
+        return isNewComponent;
+    }
+    
+    /**
+     * Gets the valid property.
+     * 
+     * @return the valid property
+     */
+    public BooleanProperty validProperty() {
+        return valid;
+    }
+    
+    /**
+     * Gets whether this is a new component.
+     * 
+     * @return true if this is a new component, false otherwise
+     */
+    public boolean isNewComponent() {
+        return isNewComponent.get();
+    }
+    
+    /**
+     * Gets whether the component is valid.
+     * 
+     * @return true if the component is valid, false otherwise
+     */
+    public boolean isValid() {
+        return valid.get();
+    }
+    
+    /**
      * Gets the required for tasks list.
      * 
      * @return the required for tasks list
@@ -374,6 +433,15 @@ public class ComponentViewModel extends BaseViewModel {
      */
     public void setSelectedTask(Task task) {
         this.selectedTask = task;
+    }
+    
+    /**
+     * Gets the selected task.
+     * 
+     * @return the selected task
+     */
+    public Task getSelectedTask() {
+        return selectedTask;
     }
     
     /**
@@ -422,12 +490,11 @@ public class ComponentViewModel extends BaseViewModel {
     }
     
     /**
-     * Gets the selected task.
-     * This method is primarily used for testing.
-     * 
-     * @return the selected task
+     * Clears the error message.
+     * This overrides the protected method in BaseViewModel to make it public.
      */
-    public Task getSelectedTask() {
-        return selectedTask;
+    @Override
+    public void clearErrorMessage() {
+        super.clearErrorMessage();
     }
 }
