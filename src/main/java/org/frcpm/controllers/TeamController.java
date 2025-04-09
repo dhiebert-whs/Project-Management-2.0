@@ -81,10 +81,10 @@ public class TeamController {
     private Button deleteSubteamButton;
 
     // ViewModel for data and business logic
-    private final TeamViewModel viewModel = new TeamViewModel();
-    
+    private TeamViewModel viewModel = new TeamViewModel();
+
     // Dialog service for UI interactions
-    private final DialogService dialogService = ServiceFactory.getDialogService();
+    private DialogService dialogService = ServiceFactory.getDialogService();
 
     /**
      * Initializes the controller.
@@ -97,13 +97,13 @@ public class TeamController {
         // Initialize tables
         setupMembersTable();
         setupSubteamsTable();
-        
+
         // Set up bindings
         setupBindings();
-        
+
         // Set up row selection handlers
         setupSelectionHandlers();
-        
+
         // Set up row double-click handlers
         setupRowFactories();
 
@@ -111,7 +111,7 @@ public class TeamController {
         if (!viewModel.getMembers().isEmpty()) {
             membersTable.getSelectionModel().select(0);
         }
-        
+
         if (!viewModel.getSubteams().isEmpty()) {
             subteamsTable.getSelectionModel().select(0);
         }
@@ -124,7 +124,7 @@ public class TeamController {
         // Bind tables to the ViewModel's ObservableLists
         membersTable.setItems(viewModel.getMembers());
         subteamsTable.setItems(viewModel.getSubteams());
-        
+
         // Bind buttons to commands
         ViewModelBinding.bindCommandButton(addMemberButton, viewModel.getCreateNewMemberCommand());
         ViewModelBinding.bindCommandButton(editMemberButton, viewModel.getEditMemberCommand());
@@ -142,7 +142,7 @@ public class TeamController {
             }
         });
     }
-    
+
     /**
      * Sets up selection handlers for tables.
      */
@@ -154,7 +154,7 @@ public class TeamController {
         subteamsTable.getSelectionModel().selectedItemProperty().addListener(
                 (observable, oldValue, newValue) -> viewModel.setSelectedSubteam(newValue));
     }
-    
+
     /**
      * Sets up row factories for double-click handling.
      */
@@ -242,7 +242,7 @@ public class TeamController {
     public void handleAddMember() {
         // Prepare the ViewModel for a new member
         viewModel.initNewMember();
-        
+
         // Create and show the dialog
         Dialog<TeamMember> dialog = createMemberDialog();
         showAndWaitDialog(dialog);
@@ -261,7 +261,7 @@ public class TeamController {
 
         // Prepare the ViewModel for editing the selected member
         viewModel.initExistingMember(selectedMember);
-        
+
         // Create and show the dialog
         Dialog<TeamMember> dialog = createMemberDialog();
         showAndWaitDialog(dialog);
@@ -280,16 +280,15 @@ public class TeamController {
 
         // Ask for confirmation
         boolean confirmed = showConfirmationAlert(
-            "Delete Team Member", 
-            "Are you sure you want to delete " + selectedMember.getFullName() + "?"
-        );
-        
+                "Delete Team Member",
+                "Are you sure you want to delete " + selectedMember.getFullName() + "?");
+
         if (confirmed) {
             try {
                 // Execute the delete command
                 viewModel.setSelectedMember(selectedMember);
                 viewModel.getDeleteMemberCommand().execute();
-                
+
                 showInfoAlert("Member Deleted", "Team member deleted successfully");
             } catch (Exception e) {
                 LOGGER.log(Level.SEVERE, "Error deleting team member", e);
@@ -305,7 +304,7 @@ public class TeamController {
     public void handleAddSubteam() {
         // Prepare the ViewModel for a new subteam
         viewModel.initNewSubteam();
-        
+
         // Create and show the dialog
         Dialog<Subteam> dialog = createSubteamDialog();
         showAndWaitDialog(dialog);
@@ -324,7 +323,7 @@ public class TeamController {
 
         // Prepare the ViewModel for editing the selected subteam
         viewModel.initExistingSubteam(selectedSubteam);
-        
+
         // Create and show the dialog
         Dialog<Subteam> dialog = createSubteamDialog();
         showAndWaitDialog(dialog);
@@ -343,16 +342,15 @@ public class TeamController {
 
         // Ask for confirmation
         boolean confirmed = showConfirmationAlert(
-            "Delete Subteam", 
-            "Are you sure you want to delete " + selectedSubteam.getName() + "?"
-        );
-        
+                "Delete Subteam",
+                "Are you sure you want to delete " + selectedSubteam.getName() + "?");
+
         if (confirmed) {
             try {
                 // Execute the delete command
                 viewModel.setSelectedSubteam(selectedSubteam);
                 viewModel.getDeleteSubteamCommand().execute();
-                
+
                 showInfoAlert("Subteam Deleted", "Subteam deleted successfully");
             } catch (Exception e) {
                 LOGGER.log(Level.SEVERE, "Error deleting subteam", e);
@@ -505,7 +503,7 @@ public class TeamController {
         // Bind UI elements to ViewModel properties
         ViewModelBinding.bindTextField(nameField, viewModel.subteamNameProperty());
         ViewModelBinding.bindTextArea(specialtiesArea, viewModel.subteamSpecialtiesProperty());
-        
+
         // Custom binding for color picker
         String colorCode = viewModel.getSubteamColorCode();
         if (colorCode != null && !colorCode.isEmpty()) {
@@ -518,7 +516,7 @@ public class TeamController {
         } else {
             colorPicker.setValue(Color.BLUE);
         }
-        
+
         // Update color code when color picker changes
         colorPicker.valueProperty().addListener((observable, oldValue, newValue) -> {
             String webColor = String.format("#%02X%02X%02X",
@@ -559,7 +557,7 @@ public class TeamController {
      * Shows a dialog and waits for it to be closed.
      * Protected for testability.
      * 
-     * @param <T> the type of the dialog result
+     * @param <T>    the type of the dialog result
      * @param dialog the dialog to show
      * @return an Optional containing the dialog result
      */
@@ -598,12 +596,12 @@ public class TeamController {
     protected void showInfoAlert(String title, String message) {
         dialogService.showInfoAlert(title, message);
     }
-    
+
     /**
      * Shows a confirmation alert dialog.
      * Protected for testability.
      * 
-     * @param title the title
+     * @param title   the title
      * @param message the message
      * @return true if confirmed, false otherwise
      */
@@ -647,5 +645,25 @@ public class TeamController {
      */
     public void testInitialize() {
         initialize();
+    }
+
+    /**
+     * Sets the ViewModel.
+     * For testing purposes.
+     * 
+     * @param viewModel the ViewModel to set
+     */
+    public void setViewModel(TeamViewModel viewModel) {
+        this.viewModel = viewModel;
+    }
+
+    /**
+     * Sets the dialog service.
+     * For testing purposes.
+     * 
+     * @param dialogService the dialog service to set
+     */
+    public void setDialogService(DialogService dialogService) {
+        this.dialogService = dialogService;
     }
 }

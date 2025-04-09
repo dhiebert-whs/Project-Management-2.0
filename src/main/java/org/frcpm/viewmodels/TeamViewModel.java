@@ -52,16 +52,16 @@ public class TeamViewModel extends BaseViewModel {
     private final BooleanProperty subteamValid = new SimpleBooleanProperty(false);
     
     // Commands for team members
-    private final Command saveMemberCommand;
     private final Command createNewMemberCommand;
     private final Command deleteMemberCommand;
     private final Command editMemberCommand;
+    private final Command saveMemberCommand;
     
     // Commands for subteams
-    private final Command saveSubteamCommand;
     private final Command createNewSubteamCommand;
     private final Command deleteSubteamCommand;
     private final Command editSubteamCommand;
+    private final Command saveSubteamCommand;
     private final Command loadSubteamMembersCommand;
     
     /**
@@ -83,16 +83,16 @@ public class TeamViewModel extends BaseViewModel {
         this.subteamService = subteamService;
         
         // Create commands for team members
-        saveMemberCommand = new Command(this::saveMember, this::canSaveMember);
         createNewMemberCommand = new Command(this::createNewMember);
         deleteMemberCommand = new Command(this::deleteMember, this::canDeleteMember);
         editMemberCommand = new Command(this::editMember, this::canEditMember);
+        saveMemberCommand = new Command(this::saveMember, this::canSaveMember);
         
         // Create commands for subteams
-        saveSubteamCommand = new Command(this::saveSubteam, this::canSaveSubteam);
         createNewSubteamCommand = new Command(this::createNewSubteam);
         deleteSubteamCommand = new Command(this::deleteSubteam, this::canDeleteSubteam);
         editSubteamCommand = new Command(this::editSubteam, this::canEditSubteam);
+        saveSubteamCommand = new Command(this::saveSubteam, this::canSaveSubteam);
         loadSubteamMembersCommand = new Command(this::loadSubteamMembers, this::canLoadSubteamMembers);
         
         // Set up validation listeners for member
@@ -198,9 +198,6 @@ public class TeamViewModel extends BaseViewModel {
     }
     
     /**
-     * Loads the list of team members.
-     */
-/**
      * Loads the list of team members.
      */
     private void loadMembers() {
@@ -386,97 +383,6 @@ public class TeamViewModel extends BaseViewModel {
     }
     
     /**
-     * Saves the team member.
-     * Called when the save member command is executed.
-     */
-    private void saveMember() {
-        if (!memberValid.get()) {
-            return;
-        }
-        
-        try {
-            TeamMember member;
-            
-            if (isNewMember.get()) {
-                // Create new team member
-                member = teamMemberService.createTeamMember(
-                    memberUsername.get(),
-                    memberFirstName.get(),
-                    memberLastName.get(),
-                    memberEmail.get(),
-                    memberPhone.get(),
-                    memberIsLeader.get()
-                );
-                
-                // Update additional fields
-                if (memberPhone.get() != null && !memberPhone.get().isEmpty()) {
-                    member = teamMemberService.updateContactInfo(
-                        member.getId(),
-                        member.getEmail(),
-                        memberPhone.get()
-                    );
-                }
-                
-                // Add to members list
-                members.add(member);
-            } else {
-                // Update existing member
-                member = selectedMember.get();
-                
-                // Update name and leader status
-                member.setFirstName(memberFirstName.get());
-                member.setLastName(memberLastName.get());
-                member.setLeader(memberIsLeader.get());
-                member = teamMemberService.save(member);
-                
-                // Update contact info
-                member = teamMemberService.updateContactInfo(
-                    member.getId(),
-                    memberEmail.get(),
-                    memberPhone.get()
-                );
-                
-                // Update in members list
-                int index = members.indexOf(selectedMember.get());
-                if (index >= 0) {
-                    members.set(index, member);
-                }
-            }
-            
-            // Update skills
-            if (memberSkills.get() != null && !memberSkills.get().isEmpty()) {
-                member = teamMemberService.updateSkills(
-                    member.getId(),
-                    memberSkills.get()
-                );
-            }
-            
-            // Assign to subteam if one is selected
-            if (memberSubteam.get() != null) {
-                member = teamMemberService.assignToSubteam(
-                    member.getId(),
-                    memberSubteam.get().getId()
-                );
-            }
-            
-            // Update selected member
-            selectedMember.set(member);
-            
-            // Clear dirty flag
-            setDirty(false);
-            
-            // If member was added to the selected subteam, refresh the subteam members list
-            if (selectedSubteam.get() != null && selectedSubteam.get().equals(memberSubteam.get())) {
-                loadSubteamMembers();
-            }
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error saving team member", e);
-            setErrorMessage("Failed to save team member: " + e.getMessage());
-        }
-    }
-    
-    /**
      * Creates a new team member.
      * Called when the create new member command is executed.
      */
@@ -519,6 +425,144 @@ public class TeamViewModel extends BaseViewModel {
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error deleting team member", e);
             setErrorMessage("Failed to delete team member: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Saves the team member.
+     * Called when the save member command is executed.
+     */
+    private void saveMember() {
+        if (!memberValid.get()) {
+            return;
+        }
+        
+        try {
+            TeamMember member;
+            
+            if (isNewMember.get()) {
+                // Create new team member
+                member = teamMemberService.createTeamMember(
+                    memberUsername.get(),
+                    memberFirstName.get(),
+                    memberLastName.get(),
+                    memberEmail.get(),
+                    memberPhone.get(),
+                    memberIsLeader.get()
+                );
+                
+                // Update additional fields
+                if (memberSkills.get() != null && !memberSkills.get().isEmpty()) {
+                    member = teamMemberService.updateSkills(
+                        member.getId(),
+                        memberSkills.get()
+                    );
+                }
+                
+                // Add to members list
+                members.add(member);
+            } else {
+                // Update existing member
+                member = selectedMember.get();
+                
+                // Update name and leader status
+                member.setFirstName(memberFirstName.get());
+                member.setLastName(memberLastName.get());
+                member.setLeader(memberIsLeader.get());
+                member = teamMemberService.save(member);
+                
+                // Update contact info
+                member = teamMemberService.updateContactInfo(
+                    member.getId(),
+                    memberEmail.get(),
+                    memberPhone.get()
+                );
+                
+                // Update skills
+                if (memberSkills.get() != null && !memberSkills.get().isEmpty()) {
+                    member = teamMemberService.updateSkills(
+                        member.getId(),
+                        memberSkills.get()
+                    );
+                }
+                
+                // Update in members list
+                int index = members.indexOf(selectedMember.get());
+                if (index >= 0) {
+                    members.set(index, member);
+                }
+            }
+            
+            // Assign to subteam if one is selected
+            if (memberSubteam.get() != null) {
+                member = teamMemberService.assignToSubteam(
+                    member.getId(),
+                    memberSubteam.get().getId()
+                );
+            }
+            
+            // Update selected member
+            selectedMember.set(member);
+            
+            // Clear dirty flag
+            setDirty(false);
+            
+            // If member was added to the selected subteam, refresh the subteam members list
+            if (selectedSubteam.get() != null && selectedSubteam.get().equals(memberSubteam.get())) {
+                loadSubteamMembers();
+            }
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error saving team member", e);
+            setErrorMessage("Failed to save team member: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Creates a new subteam.
+     * Called when the create new subteam command is executed.
+     */
+    private void createNewSubteam() {
+        initNewSubteam();
+    }
+    
+    /**
+     * Edits a subteam.
+     * Called when the edit subteam command is executed.
+     */
+    private void editSubteam() {
+        Subteam subteam = selectedSubteam.get();
+        if (subteam != null) {
+            initExistingSubteam(subteam);
+        }
+    }
+    
+    /**
+     * Deletes the selected subteam.
+     * Called when the delete subteam command is executed.
+     */
+    private void deleteSubteam() {
+        try {
+            Subteam subteam = selectedSubteam.get();
+            if (subteam != null) {
+                // Check if the subteam has members
+                List<TeamMember> subteamMembers = teamMemberService.findBySubteam(subteam);
+                if (!subteamMembers.isEmpty()) {
+                    setErrorMessage("Cannot delete subteam that has members assigned to it. Reassign members first.");
+                    return;
+                }
+                
+                subteamService.deleteById(subteam.getId());
+                
+                // Remove from subteams list
+                subteams.remove(subteam);
+                
+                // Clear selection
+                selectedSubteam.set(null);
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error deleting subteam", e);
+            setErrorMessage("Failed to delete subteam: " + e.getMessage());
         }
     }
     
@@ -575,54 +619,6 @@ public class TeamViewModel extends BaseViewModel {
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error saving subteam", e);
             setErrorMessage("Failed to save subteam: " + e.getMessage());
-        }
-    }
-    
-    /**
-     * Creates a new subteam.
-     * Called when the create new subteam command is executed.
-     */
-    private void createNewSubteam() {
-        initNewSubteam();
-    }
-    
-    /**
-     * Edits a subteam.
-     * Called when the edit subteam command is executed.
-     */
-    private void editSubteam() {
-        Subteam subteam = selectedSubteam.get();
-        if (subteam != null) {
-            initExistingSubteam(subteam);
-        }
-    }
-    
-    /**
-     * Deletes the selected subteam.
-     * Called when the delete subteam command is executed.
-     */
-    private void deleteSubteam() {
-        try {
-            Subteam subteam = selectedSubteam.get();
-            if (subteam != null) {
-                // Check if the subteam has members
-                List<TeamMember> subteamMembers = teamMemberService.findBySubteam(subteam);
-                if (!subteamMembers.isEmpty()) {
-                    setErrorMessage("Cannot delete subteam that has members assigned to it. Reassign members first.");
-                    return;
-                }
-                
-                subteamService.deleteById(subteam.getId());
-                
-                // Remove from subteams list
-                subteams.remove(subteam);
-                
-                // Clear selection
-                selectedSubteam.set(null);
-            }
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error deleting subteam", e);
-            setErrorMessage("Failed to delete subteam: " + e.getMessage());
         }
     }
     
@@ -775,10 +771,6 @@ public class TeamViewModel extends BaseViewModel {
     
     // Command accessors
     
-    public Command getSaveMemberCommand() {
-        return saveMemberCommand;
-    }
-    
     public Command getCreateNewMemberCommand() {
         return createNewMemberCommand;
     }
@@ -791,8 +783,8 @@ public class TeamViewModel extends BaseViewModel {
         return editMemberCommand;
     }
     
-    public Command getSaveSubteamCommand() {
-        return saveSubteamCommand;
+    public Command getSaveMemberCommand() {
+        return saveMemberCommand;
     }
     
     public Command getCreateNewSubteamCommand() {
@@ -805,6 +797,10 @@ public class TeamViewModel extends BaseViewModel {
     
     public Command getEditSubteamCommand() {
         return editSubteamCommand;
+    }
+    
+    public Command getSaveSubteamCommand() {
+        return saveSubteamCommand;
     }
     
     public Command getLoadSubteamMembersCommand() {
@@ -889,10 +885,6 @@ public class TeamViewModel extends BaseViewModel {
         return isNewMember.get();
     }
     
-    public void setIsNewMember(boolean isNew) {
-        isNewMember.set(isNew);
-    }
-    
     public boolean isMemberValid() {
         return memberValid.get();
     }
@@ -931,10 +923,6 @@ public class TeamViewModel extends BaseViewModel {
     
     public boolean isNewSubteam() {
         return isNewSubteam.get();
-    }
-    
-    public void setIsNewSubteam(boolean isNew) {
-        isNewSubteam.set(isNew);
     }
     
     public boolean isSubteamValid() {
