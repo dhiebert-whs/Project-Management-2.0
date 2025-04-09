@@ -245,13 +245,34 @@ public class ProjectControllerTest {
 
     @Test
     public void testHandleEditMilestone() {
-        // Act
-        controller.handleEditMilestone(mockMilestone);
-
-        // Assert
-        verify(mockMilestoneController).setMilestone(mockMilestone);
-        verify(controller).showAndWaitDialog(mockStage);
-        verify(mockLoadMilestonesCommand).execute();
+        // Arrange
+        Milestone mockMilestone = mock(Milestone.class);
+        FXMLLoader mockLoader = mock(FXMLLoader.class);
+        Parent mockParent = mock(Parent.class);
+        Stage mockStage = mock(Stage.class);
+        MilestoneController mockMilestoneController = mock(MilestoneController.class);
+        
+        try {
+            // Mock the FXMLLoader behavior
+            doReturn(mockLoader).when(controller).createFXMLLoader(anyString());
+            when(mockLoader.load()).thenReturn(mockParent);
+            when(mockLoader.getController()).thenReturn(mockMilestoneController);
+            
+            // Mock the dialog behavior
+            doReturn(mockStage).when(controller).createDialogStage(anyString(), any(), any());
+            doNothing().when(controller).showAndWaitDialog(any(Stage.class));
+            
+            // Act
+            controller.handleEditMilestone(mockMilestone);
+            
+            // Assert
+            verify(mockLoader).load();
+            verify(mockMilestoneController).initExistingMilestone(mockMilestone); // Updated method name
+            verify(controller).showAndWaitDialog(mockStage);
+            verify(mockViewModel).getLoadMilestonesCommand();
+        } catch (IOException e) {
+            fail("Test should not throw exception: " + e.getMessage());
+        }
     }
 
     @Test

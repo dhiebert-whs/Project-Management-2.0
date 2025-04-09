@@ -333,11 +333,6 @@ public class ProjectController {
         }
     }
     
-    /**
-     * Handles editing a milestone.
-     * 
-     * @param milestone the milestone to edit
-     */
     public void handleEditMilestone(Milestone milestone) {
         if (milestone == null) {
             return;
@@ -353,7 +348,9 @@ public class ProjectController {
             
             // Get the controller
             MilestoneController controller = loader.getController();
-            controller.setMilestone(milestone);
+            
+            // Change this line from setMilestone to initExistingMilestone
+            controller.initExistingMilestone(milestone);
             
             // Show the dialog and wait for result
             showAndWaitDialog(dialogStage);
