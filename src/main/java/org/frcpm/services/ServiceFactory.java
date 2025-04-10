@@ -17,6 +17,9 @@ public class ServiceFactory {
     private static final MeetingService meetingService = new MeetingServiceImpl();
     private static final AttendanceService attendanceService = new AttendanceServiceImpl();
     private static final MilestoneService milestoneService = new MilestoneServiceImpl();
+    private static final GanttDataService ganttDataService = new GanttDataServiceImpl();
+    private static final WebViewBridgeService webViewBridgeService = new WebViewBridgeServiceImpl();
+
     
     /**
      * Gets the project service instance.
@@ -106,5 +109,23 @@ public class ServiceFactory {
      */
     public static DialogService getDialogService() {
         return new JavaFXDialogService();
-}
+    }
+
+    /**
+     * Gets the Gantt data service instance.
+     * 
+     * @return the Gantt data service
+     */
+    public static GanttDataService getGanttDataService() {
+        return ganttDataService;
+    }
+
+    /**
+     * Gets the WebView bridge service instance.
+     * 
+     * @return the WebView bridge service
+     */
+    public static WebViewBridgeService getWebViewBridgeService() {
+        return webViewBridgeService;
+    }
 }
