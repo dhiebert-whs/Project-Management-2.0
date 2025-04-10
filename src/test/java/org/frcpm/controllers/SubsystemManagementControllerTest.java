@@ -7,7 +7,6 @@ import javafx.collections.ObservableList;
 import javafx.scene.control.ButtonType;
 import javafx.stage.Stage;
 import org.frcpm.binding.Command;
-import org.frcpm.models.Subteam;
 import org.frcpm.models.Subsystem;
 import org.frcpm.services.DialogService;
 import org.frcpm.viewmodels.SubsystemManagementViewModel;

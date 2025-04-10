@@ -7,7 +7,6 @@ import javafx.stage.Stage;
 
 import org.frcpm.binding.Command;
 import org.frcpm.models.Project;
-import org.frcpm.utils.TestUtils;
 import org.frcpm.viewmodels.NewProjectViewModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

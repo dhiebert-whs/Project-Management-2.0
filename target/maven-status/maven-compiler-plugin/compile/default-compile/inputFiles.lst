@@ -12,6 +12,7 @@ C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\fr
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\controllers\MeetingController.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\controllers\MetricsController.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\controllers\MilestoneController.java
+C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\controllers\MilestoneManagementController.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\controllers\NewProjectController.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\controllers\ProjectController.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\controllers\SubsystemController.java
@@ -94,6 +95,7 @@ C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\fr
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\viewmodels\MainViewModel.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\viewmodels\MeetingViewModel.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\viewmodels\MetricsViewModel.java
+C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\viewmodels\MilestoneManagementViewModel.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\viewmodels\MilestoneViewModel.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\viewmodels\NewProjectViewModel.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\viewmodels\ProjectViewModel.java

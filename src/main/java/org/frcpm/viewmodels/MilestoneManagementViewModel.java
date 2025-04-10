@@ -1,7 +1,6 @@
 // src/main/java/org/frcpm/viewmodels/MilestoneManagementViewModel.java
 package org.frcpm.viewmodels;
 
-import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
@@ -11,7 +10,6 @@ import org.frcpm.models.Project;
 import org.frcpm.services.MilestoneService;
 import org.frcpm.services.ServiceFactory;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;

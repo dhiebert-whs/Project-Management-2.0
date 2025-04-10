@@ -1,6 +1,5 @@
 package org.frcpm.viewmodels;
 
-import org.frcpm.binding.Command;
 import org.frcpm.models.*;
 import org.frcpm.services.ComponentService;
 import org.frcpm.services.TaskService;

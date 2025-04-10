@@ -2,7 +2,6 @@
 
 package org.frcpm.viewmodels;
 
-import org.frcpm.binding.Command;
 import org.frcpm.models.Meeting;
 import org.frcpm.models.Project;
 import org.frcpm.services.MeetingService;
