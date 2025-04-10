@@ -23,20 +23,14 @@ public class MilestoneController {
     
     private static final Logger LOGGER = Logger.getLogger(MilestoneController.class.getName());
     
-    @FXML
-    private TextField nameField;
-    
-    @FXML
-    private DatePicker datePicker;
-    
-    @FXML
-    private TextArea descriptionArea;
-    
-    @FXML
-    private Button saveButton;
-    
-    @FXML
-    private Button cancelButton;
+    // FXML UI components
+    @FXML private TextField nameField;
+    @FXML private DatePicker datePicker;
+    @FXML private TextArea descriptionArea;
+    @FXML private Button saveButton;
+    @FXML private Button cancelButton;
+    @FXML private Label projectLabel;
+    @FXML private Label errorLabel;
     
     // ViewModel and services
     private MilestoneViewModel viewModel = new MilestoneViewModel();
@@ -50,8 +44,9 @@ public class MilestoneController {
     private void initialize() {
         LOGGER.info("Initializing MilestoneController");
         
+        // Comprehensive null check for all UI components
         if (nameField == null || datePicker == null || descriptionArea == null || 
-            saveButton == null || cancelButton == null) {
+            saveButton == null || cancelButton == null || projectLabel == null) {
             
             LOGGER.warning("UI components not initialized - likely in test environment");
             return;
@@ -70,23 +65,41 @@ public class MilestoneController {
      */
     protected void setupBindings() {
         if (nameField == null || datePicker == null || descriptionArea == null || 
-            saveButton == null || cancelButton == null) {
+            saveButton == null || cancelButton == null || projectLabel == null) {
             
             LOGGER.warning("UI components not initialized - likely in test environment");
             return;
         }
         
-        // Bind text fields to view model properties
-        ViewModelBinding.bindTextField(nameField, viewModel.nameProperty());
-        ViewModelBinding.bindTextArea(descriptionArea, viewModel.descriptionProperty());
-        ViewModelBinding.bindDatePicker(datePicker, viewModel.dateProperty());
-        
-        // Set close dialog action
-        viewModel.setCloseDialogAction(this::closeDialog);
-        
-        // Bind buttons to commands
-        ViewModelBinding.bindCommandButton(saveButton, viewModel.getSaveCommand());
-        ViewModelBinding.bindCommandButton(cancelButton, viewModel.getCancelCommand());
+        try {
+            // Bind text fields to view model properties
+            ViewModelBinding.bindTextField(nameField, viewModel.nameProperty());
+            ViewModelBinding.bindTextArea(descriptionArea, viewModel.descriptionProperty());
+            ViewModelBinding.bindDatePicker(datePicker, viewModel.dateProperty());
+            
+            // Bind project label
+            projectLabel.textProperty().bind(
+                javafx.beans.binding.Bindings.createStringBinding(
+                    () -> viewModel.getProject() != null ? viewModel.getProject().getName() : "",
+                    viewModel.projectProperty()
+                )
+            );
+            
+            // Set close dialog action
+            viewModel.setCloseDialogAction(this::closeDialog);
+            
+            // Bind buttons to commands
+            ViewModelBinding.bindCommandButton(saveButton, viewModel.getSaveCommand());
+            ViewModelBinding.bindCommandButton(cancelButton, viewModel.getCancelCommand());
+            
+            // Hide error label initially
+            if (errorLabel != null) {
+                errorLabel.setVisible(false);
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up bindings", e);
+            showErrorAlert("Setup Error", "Failed to initialize bindings: " + e.getMessage());
+        }
     }
     
     /**
@@ -99,12 +112,27 @@ public class MilestoneController {
             return;
         }
         
-        // Set up validation error listener
-        viewModel.errorMessageProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue != null && !newValue.isEmpty()) {
-                showErrorAlert("Validation Error", newValue);
-            }
-        });
+        try {
+            // Set up validation error listener
+            viewModel.errorMessageProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue != null && !newValue.isEmpty()) {
+                    // If we have an error label, use it
+                    if (errorLabel != null) {
+                        errorLabel.setText(newValue);
+                        errorLabel.setVisible(true);
+                    } else {
+                        // Fall back to dialog
+                        showErrorAlert("Validation Error", newValue);
+                    }
+                } else if (errorLabel != null) {
+                    // Hide error label when no error
+                    errorLabel.setVisible(false);
+                }
+            });
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up error listener", e);
+            showErrorAlert("Setup Error", "Failed to initialize error handling: " + e.getMessage());
+        }
     }
     
     /**
@@ -118,8 +146,13 @@ public class MilestoneController {
             return;
         }
         
-        // Initialize the view model for a new milestone
-        viewModel.initNewMilestone(project);
+        try {
+            // Initialize the view model for a new milestone
+            viewModel.initNewMilestone(project);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error initializing new milestone", e);
+            showErrorAlert("Initialization Error", "Failed to initialize new milestone: " + e.getMessage());
+        }
     }
     
     /**
@@ -133,8 +166,13 @@ public class MilestoneController {
             return;
         }
         
-        // Initialize the view model with the existing milestone
-        viewModel.initExistingMilestone(milestone);
+        try {
+            // Initialize the view model with the existing milestone
+            viewModel.initExistingMilestone(milestone);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error initializing existing milestone", e);
+            showErrorAlert("Initialization Error", "Failed to initialize milestone: " + e.getMessage());
+        }
     }
     
     /**
@@ -164,6 +202,22 @@ public class MilestoneController {
     protected void showErrorAlert(String title, String message) {
         try {
             dialogService.showErrorAlert(title, message);
+        } catch (Exception e) {
+            // This can happen in tests when not on FX thread
+            LOGGER.log(Level.INFO, "Alert would show: {0} - {1}", new Object[] { title, message });
+        }
+    }
+    
+    /**
+     * Shows an information alert dialog.
+     * Protected for testability.
+     * 
+     * @param title the title
+     * @param message the message
+     */
+    protected void showInfoAlert(String title, String message) {
+        try {
+            dialogService.showInfoAlert(title, message);
         } catch (Exception e) {
             // This can happen in tests when not on FX thread
             LOGGER.log(Level.INFO, "Alert would show: {0} - {1}", new Object[] { title, message });
@@ -214,6 +268,8 @@ public class MilestoneController {
      */
     public void setViewModel(MilestoneViewModel viewModel) {
         this.viewModel = viewModel;
+        setupBindings();
+        setupErrorListener();
     }
     
     /**

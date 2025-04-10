@@ -5,6 +5,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.scene.control.Label;
 import org.frcpm.binding.Command;
 import org.frcpm.models.Milestone;
 import org.frcpm.models.Project;
@@ -49,6 +50,12 @@ public class MilestoneControllerTest {
     @Mock
     private Command mockCancelCommand;
 
+    @Mock
+    private Runnable mockCloseAction;
+    
+    @Mock
+    private Label mockErrorLabel;
+
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);
@@ -62,14 +69,18 @@ public class MilestoneControllerTest {
         StringProperty descriptionProperty = new SimpleStringProperty();
         ObjectProperty<LocalDate> dateProperty = new SimpleObjectProperty<>(LocalDate.now());
         StringProperty errorProperty = new SimpleStringProperty();
+        ObjectProperty<Project> projectProperty = new SimpleObjectProperty<>(mockProject);
 
         when(mockViewModel.nameProperty()).thenReturn(nameProperty);
         when(mockViewModel.descriptionProperty()).thenReturn(descriptionProperty);
         when(mockViewModel.dateProperty()).thenReturn(dateProperty);
         when(mockViewModel.errorMessageProperty()).thenReturn(errorProperty);
+        when(mockViewModel.projectProperty()).thenReturn(projectProperty);
+        when(mockViewModel.getProject()).thenReturn(mockProject);
 
         // Set project and milestone properties
         when(mockProject.getId()).thenReturn(1L);
+        when(mockProject.getName()).thenReturn("Test Project");
         when(mockMilestone.getId()).thenReturn(1L);
         when(mockMilestone.getProject()).thenReturn(mockProject);
         
@@ -141,6 +152,15 @@ public class MilestoneControllerTest {
         // Assert
         verify(mockDialogService).showErrorAlert("Test Title", "Test Message");
     }
+    
+    @Test
+    public void testShowInfoAlert() {
+        // Act
+        controller.showInfoAlert("Test Title", "Test Message");
+
+        // Assert
+        verify(mockDialogService).showInfoAlert("Test Title", "Test Message");
+    }
 
     @Test
     public void testGetMilestone() {
@@ -191,6 +211,7 @@ public class MilestoneControllerTest {
     public void testSetViewModel() {
         // Arrange
         MilestoneViewModel newMockViewModel = mock(MilestoneViewModel.class);
+        when(newMockViewModel.errorMessageProperty()).thenReturn(new SimpleStringProperty());
 
         // Act
         controller.setViewModel(newMockViewModel);
@@ -210,5 +231,32 @@ public class MilestoneControllerTest {
         // Assert - verification through subsequent method calls
         controller.showErrorAlert("Test", "Test");
         verify(newMockDialogService).showErrorAlert("Test", "Test");
+    }
+    
+    @Test
+    public void testCloseDialog() {
+        // Set up the close action on the view model
+        doAnswer(invocation -> {
+            Runnable closeAction = invocation.getArgument(0);
+            closeAction.run();
+            return null;
+        }).when(mockViewModel).setCloseDialogAction(any());
+        
+        // Call the setupBindings method to set the close action
+        controller.setupBindings();
+        
+        // Assert that closeDialog was called
+        verify(controller).closeDialog();
+    }
+    
+    @Test
+    public void testExceptionHandlingInSetupBindings() {
+        // Set up a runtime exception when binding
+        doThrow(new RuntimeException("Test exception")).when(controller).setupBindings();
+        
+        // Act - this should not throw an exception due to try-catch
+        assertDoesNotThrow(() -> controller.setViewModel(mockViewModel));
+        
+        // Unfortunately we can't verify the showErrorAlert call here due to our spy setup
     }
 }
