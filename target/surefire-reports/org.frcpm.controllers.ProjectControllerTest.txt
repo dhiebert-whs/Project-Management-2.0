@@ -1,0 +1,116 @@
+-------------------------------------------------------------------------------
+Test set: org.frcpm.controllers.ProjectControllerTest
+-------------------------------------------------------------------------------
+Tests run: 19, Failures: 1, Errors: 4, Skipped: 0, Time elapsed: 0.574 s <<< FAILURE! -- in org.frcpm.controllers.ProjectControllerTest
+org.frcpm.controllers.ProjectControllerTest.testShowAndWaitDialog -- Time elapsed: 0.012 s <<< FAILURE!
+org.mockito.exceptions.verification.NeverWantedButInvoked: 
+
+mockStage.showAndWait();
+Never wanted here:
+-> at javafx.stage.Stage.showAndWait(Stage.java:448)
+But invoked here:
+-> at org.frcpm.controllers.ProjectController.showAndWaitDialog(ProjectController.java:455) with arguments: []
+
+	at javafx.stage.Stage.showAndWait(Stage.java:448)
+	at org.frcpm.controllers.ProjectControllerTest.testShowAndWaitDialog(ProjectControllerTest.java:397)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.controllers.ProjectControllerTest.testGetWindowFromComponent -- Time elapsed: 0.033 s <<< ERROR!
+java.lang.NoClassDefFoundError: Could not initialize class javafx.scene.control.Control$MockitoMock$r3FJfDFg
+	at jdk.internal.reflect.GeneratedSerializationConstructorAccessor3.newInstance(Unknown Source)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:486)
+	at org.objenesis.instantiator.sun.SunReflectionFactoryInstantiator.newInstance(SunReflectionFactoryInstantiator.java:48)
+	at org.objenesis.ObjenesisBase.newInstance(ObjenesisBase.java:73)
+	at org.mockito.internal.creation.instance.ObjenesisInstantiator.newInstance(ObjenesisInstantiator.java:22)
+	at org.mockito.internal.creation.bytebuddy.InlineDelegateByteBuddyMockMaker.doCreateMock(InlineDelegateByteBuddyMockMaker.java:394)
+	at org.mockito.internal.creation.bytebuddy.InlineDelegateByteBuddyMockMaker.createMock(InlineDelegateByteBuddyMockMaker.java:352)
+	at org.mockito.internal.creation.bytebuddy.InlineByteBuddyMockMaker.createMock(InlineByteBuddyMockMaker.java:56)
+	at org.mockito.internal.util.MockUtil.createMock(MockUtil.java:99)
+	at org.mockito.internal.MockitoCore.mock(MockitoCore.java:84)
+	at org.mockito.Mockito.mock(Mockito.java:2104)
+	at org.mockito.Mockito.mock(Mockito.java:2019)
+	at org.frcpm.controllers.ProjectControllerTest.testGetWindowFromComponent(ProjectControllerTest.java:425)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+Caused by: java.lang.ExceptionInInitializerError: Exception java.lang.NoClassDefFoundError: Could not initialize class javafx.scene.control.Control [in thread "main"]
+	at java.base/jdk.internal.misc.Unsafe.allocateInstance(Native Method)
+	at java.base/java.lang.invoke.DirectMethodHandle.allocateInstance(DirectMethodHandle.java:501)
+	at java.base/java.lang.invoke.MethodHandle.invokeWithArguments(MethodHandle.java:733)
+	at org.mockito.internal.util.reflection.InstrumentationMemberAccessor$Dispatcher$ByteBuddy$wo4Ruf4L.invokeWithArguments(Unknown Source)
+	at org.mockito.internal.util.reflection.InstrumentationMemberAccessor.lambda$newInstance$0(InstrumentationMemberAccessor.java:199)
+	at org.mockito.internal.creation.bytebuddy.InlineDelegateByteBuddyMockMaker.lambda$newInstance$4(InlineDelegateByteBuddyMockMaker.java:662)
+	at org.mockito.internal.util.reflection.InstrumentationMemberAccessor.newInstance(InstrumentationMemberAccessor.java:188)
+	at org.mockito.internal.util.reflection.ModuleMemberAccessor.newInstance(ModuleMemberAccessor.java:49)
+	at org.mockito.internal.creation.bytebuddy.InlineDelegateByteBuddyMockMaker.newInstance(InlineDelegateByteBuddyMockMaker.java:657)
+	at org.mockito.internal.creation.bytebuddy.InlineDelegateByteBuddyMockMaker.doCreateMock(InlineDelegateByteBuddyMockMaker.java:387)
+	... 10 more
+
+org.frcpm.controllers.ProjectControllerTest.testCreateAlert -- Time elapsed: 0.014 s <<< ERROR!
+java.lang.IllegalStateException: Not on FX application thread; currentThread = main
+	at com.sun.javafx.tk.Toolkit.checkFxUserThread(Toolkit.java:294)
+	at com.sun.javafx.tk.quantum.QuantumToolkit.checkFxUserThread(QuantumToolkit.java:475)
+	at javafx.stage.Stage.<init>(Stage.java:258)
+	at javafx.stage.Stage.<init>(Stage.java:244)
+	at javafx.scene.control.HeavyweightDialog$1.<init>(HeavyweightDialog.java:52)
+	at javafx.scene.control.HeavyweightDialog.<init>(HeavyweightDialog.java:52)
+	at javafx.scene.control.Dialog.<init>(Dialog.java:253)
+	at javafx.scene.control.Alert.<init>(Alert.java:247)
+	at javafx.scene.control.Alert.<init>(Alert.java:222)
+	at org.frcpm.controllers.ProjectController.createAlert(ProjectController.java:548)
+	at org.frcpm.controllers.ProjectControllerTest.testCreateAlert(ProjectControllerTest.java:414)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.controllers.ProjectControllerTest.testHandleEditMeeting -- Time elapsed: 0.008 s <<< ERROR!
+java.lang.ClassCastException: class org.frcpm.controllers.TaskController cannot be cast to class org.frcpm.controllers.MeetingController (org.frcpm.controllers.TaskController and org.frcpm.controllers.MeetingController are in unnamed module of loader 'app')
+	at org.frcpm.controllers.ProjectController.handleEditMeeting(ProjectController.java:386)
+	at org.frcpm.controllers.ProjectController.handleEditMeeting(ProjectController.java:373)
+	at org.frcpm.controllers.ProjectControllerTest.testHandleEditMeeting(ProjectControllerTest.java:281)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.controllers.ProjectControllerTest.testGetWindowFromComponentWithNulls -- Time elapsed: 0.009 s <<< ERROR!
+java.lang.NoClassDefFoundError: Could not initialize class javafx.scene.control.Control$MockitoMock$r3FJfDFg
+	at jdk.internal.reflect.GeneratedSerializationConstructorAccessor3.newInstance(Unknown Source)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:486)
+	at org.objenesis.instantiator.sun.SunReflectionFactoryInstantiator.newInstance(SunReflectionFactoryInstantiator.java:48)
+	at org.objenesis.ObjenesisBase.newInstance(ObjenesisBase.java:73)
+	at org.mockito.internal.creation.instance.ObjenesisInstantiator.newInstance(ObjenesisInstantiator.java:22)
+	at org.mockito.internal.creation.bytebuddy.InlineDelegateByteBuddyMockMaker.doCreateMock(InlineDelegateByteBuddyMockMaker.java:394)
+	at org.mockito.internal.creation.bytebuddy.InlineDelegateByteBuddyMockMaker.createMock(InlineDelegateByteBuddyMockMaker.java:352)
+	at org.mockito.internal.creation.bytebuddy.InlineByteBuddyMockMaker.createMock(InlineByteBuddyMockMaker.java:56)
+	at org.mockito.internal.util.MockUtil.createMock(MockUtil.java:99)
+	at org.mockito.internal.MockitoCore.mock(MockitoCore.java:84)
+	at org.mockito.Mockito.mock(Mockito.java:2104)
+	at org.mockito.Mockito.mock(Mockito.java:2019)
+	at org.frcpm.controllers.ProjectControllerTest.testGetWindowFromComponentWithNulls(ProjectControllerTest.java:443)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+Caused by: java.lang.ExceptionInInitializerError: Exception java.lang.NoClassDefFoundError: Could not initialize class javafx.scene.control.Control [in thread "main"]
+	at java.base/jdk.internal.misc.Unsafe.allocateInstance(Native Method)
+	at java.base/java.lang.invoke.DirectMethodHandle.allocateInstance(DirectMethodHandle.java:501)
+	at java.base/java.lang.invoke.MethodHandle.invokeWithArguments(MethodHandle.java:733)
+	at org.mockito.internal.util.reflection.InstrumentationMemberAccessor$Dispatcher$ByteBuddy$wo4Ruf4L.invokeWithArguments(Unknown Source)
+	at org.mockito.internal.util.reflection.InstrumentationMemberAccessor.lambda$newInstance$0(InstrumentationMemberAccessor.java:199)
+	at org.mockito.internal.creation.bytebuddy.InlineDelegateByteBuddyMockMaker.lambda$newInstance$4(InlineDelegateByteBuddyMockMaker.java:662)
+	at org.mockito.internal.util.reflection.InstrumentationMemberAccessor.newInstance(InstrumentationMemberAccessor.java:188)
+	at org.mockito.internal.util.reflection.ModuleMemberAccessor.newInstance(ModuleMemberAccessor.java:49)
+	at org.mockito.internal.creation.bytebuddy.InlineDelegateByteBuddyMockMaker.newInstance(InlineDelegateByteBuddyMockMaker.java:657)
+	at org.mockito.internal.creation.bytebuddy.InlineDelegateByteBuddyMockMaker.doCreateMock(InlineDelegateByteBuddyMockMaker.java:387)
+	at org.mockito.internal.creation.bytebuddy.InlineDelegateByteBuddyMockMaker.createMock(InlineDelegateByteBuddyMockMaker.java:352)
+	at org.mockito.internal.creation.bytebuddy.InlineByteBuddyMockMaker.createMock(InlineByteBuddyMockMaker.java:56)
+	at org.mockito.internal.util.MockUtil.createMock(MockUtil.java:99)
+	at org.mockito.internal.MockitoCore.mock(MockitoCore.java:84)
+	at org.mockito.Mockito.mock(Mockito.java:2104)
+	at org.mockito.Mockito.mock(Mockito.java:2019)
+	at org.frcpm.controllers.ProjectControllerTest.testGetWindowFromComponent(ProjectControllerTest.java:425)
+	... 3 more
+

@@ -1,0 +1,16 @@
+-------------------------------------------------------------------------------
+Test set: org.frcpm.services.ProjectServiceTest
+-------------------------------------------------------------------------------
+Tests run: 10, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.941 s <<< FAILURE! -- in org.frcpm.services.ProjectServiceTest
+org.frcpm.services.ProjectServiceTest.testProjectSummary -- Time elapsed: 0.099 s <<< ERROR!
+org.hibernate.LazyInitializationException: failed to lazily initialize a collection of role: org.frcpm.models.Project.milestones: could not initialize proxy - no Session
+	at org.hibernate.collection.spi.AbstractPersistentCollection.throwLazyInitializationException(AbstractPersistentCollection.java:634)
+	at org.hibernate.collection.spi.AbstractPersistentCollection.withTemporarySessionIfNeeded(AbstractPersistentCollection.java:217)
+	at org.hibernate.collection.spi.AbstractPersistentCollection.readSize(AbstractPersistentCollection.java:148)
+	at org.hibernate.collection.spi.PersistentBag.size(PersistentBag.java:353)
+	at org.frcpm.services.impl.ProjectServiceImpl.getProjectSummary(ProjectServiceImpl.java:147)
+	at org.frcpm.services.ProjectServiceTest.testProjectSummary(ProjectServiceTest.java:165)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
