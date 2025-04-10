@@ -71,6 +71,10 @@ public class SubsystemController {
     @FXML
     private ProgressBar completionProgressBar;
 
+    // Error display
+    @FXML
+    private Label errorLabel;
+
     // Buttons
     @FXML
     private Button saveButton;
@@ -107,14 +111,24 @@ public class SubsystemController {
             return;
         }
 
-        // Set up tasks table
-        setupTasksTable();
+        try {
+            // Set up tasks table
+            setupTasksTable();
 
-        // Set up bindings
-        setupBindings();
-        
-        // Set up error message listener
-        setupErrorListener();
+            // Set up bindings
+            setupBindings();
+            
+            // Set up error message listener
+            setupErrorListener();
+            
+            // Initialize status combo box if not already populated
+            if (statusComboBox.getItems().isEmpty()) {
+                statusComboBox.getItems().addAll(Subsystem.Status.values());
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error initializing controller", e);
+            showErrorAlert("Initialization Error", "Failed to initialize controller: " + e.getMessage());
+        }
     }
 
     /**
@@ -129,49 +143,54 @@ public class SubsystemController {
             return;
         }
 
-        taskTitleColumn.setCellValueFactory(new javafx.scene.control.cell.PropertyValueFactory<>("title"));
+        try {
+            taskTitleColumn.setCellValueFactory(new javafx.scene.control.cell.PropertyValueFactory<>("title"));
 
-        taskProgressColumn.setCellValueFactory(new javafx.scene.control.cell.PropertyValueFactory<>("progress"));
-        taskProgressColumn.setCellFactory(column -> new TableCell<Task, Integer>() {
-            @Override
-            protected void updateItem(Integer progress, boolean empty) {
-                super.updateItem(progress, empty);
-                if (empty || progress == null) {
-                    setText(null);
-                    setGraphic(null);
-                } else {
-                    // Create a progress bar for the cell
-                    ProgressBar pb = new ProgressBar(progress / 100.0);
-                    pb.setPrefWidth(80);
-                    setGraphic(pb);
-                    setText(progress + "%");
-                }
-            }
-        });
-
-        taskDueDateColumn.setCellValueFactory(new javafx.scene.control.cell.PropertyValueFactory<>("endDate"));
-        taskDueDateColumn.setCellFactory(column -> new TableCell<Task, LocalDate>() {
-            @Override
-            protected void updateItem(LocalDate date, boolean empty) {
-                super.updateItem(date, empty);
-                if (empty || date == null) {
-                    setText(null);
-                } else {
-                    setText(date.toString());
-                }
-            }
-        });
-
-        // Set up double-click handler
-        tasksTable.setRowFactory(tv -> {
-            TableRow<Task> row = new TableRow<>();
-            row.setOnMouseClicked(event -> {
-                if (event.getClickCount() == 2 && !row.isEmpty()) {
-                    handleViewTask(row.getItem());
+            taskProgressColumn.setCellValueFactory(new javafx.scene.control.cell.PropertyValueFactory<>("progress"));
+            taskProgressColumn.setCellFactory(column -> new TableCell<Task, Integer>() {
+                @Override
+                protected void updateItem(Integer progress, boolean empty) {
+                    super.updateItem(progress, empty);
+                    if (empty || progress == null) {
+                        setText(null);
+                        setGraphic(null);
+                    } else {
+                        // Create a progress bar for the cell
+                        ProgressBar pb = new ProgressBar(progress / 100.0);
+                        pb.setPrefWidth(80);
+                        setGraphic(pb);
+                        setText(progress + "%");
+                    }
                 }
             });
-            return row;
-        });
+
+            taskDueDateColumn.setCellValueFactory(new javafx.scene.control.cell.PropertyValueFactory<>("endDate"));
+            taskDueDateColumn.setCellFactory(column -> new TableCell<Task, LocalDate>() {
+                @Override
+                protected void updateItem(LocalDate date, boolean empty) {
+                    super.updateItem(date, empty);
+                    if (empty || date == null) {
+                        setText(null);
+                    } else {
+                        setText(date.toString());
+                    }
+                }
+            });
+
+            // Set up double-click handler
+            tasksTable.setRowFactory(tv -> {
+                TableRow<Task> row = new TableRow<>();
+                row.setOnMouseClicked(event -> {
+                    if (event.getClickCount() == 2 && !row.isEmpty()) {
+                        handleViewTask(row.getItem());
+                    }
+                });
+                return row;
+            });
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up tasks table", e);
+            showErrorAlert("Setup Error", "Failed to set up tasks table: " + e.getMessage());
+        }
     }
 
     /**
@@ -189,36 +208,41 @@ public class SubsystemController {
             return;
         }
         
-        // Bind text fields
-        ViewModelBinding.bindTextField(nameField, viewModel.subsystemNameProperty());
-        ViewModelBinding.bindTextArea(descriptionArea, viewModel.subsystemDescriptionProperty());
+        try {
+            // Bind text fields
+            ViewModelBinding.bindTextField(nameField, viewModel.subsystemNameProperty());
+            ViewModelBinding.bindTextArea(descriptionArea, viewModel.subsystemDescriptionProperty());
 
-        // Bind combo boxes
-        ViewModelBinding.bindComboBox(statusComboBox, viewModel.statusProperty());
-        ViewModelBinding.bindComboBox(responsibleSubteamComboBox, viewModel.responsibleSubteamProperty());
+            // Bind combo boxes
+            ViewModelBinding.bindComboBox(statusComboBox, viewModel.statusProperty());
+            ViewModelBinding.bindComboBox(responsibleSubteamComboBox, viewModel.responsibleSubteamProperty());
 
-        // Bind table items
-        tasksTable.setItems(viewModel.getTasks());
+            // Bind table items
+            tasksTable.setItems(viewModel.getTasks());
 
-        // Bind summary fields
-        totalTasksLabel.textProperty().bind(viewModel.totalTasksProperty().asString());
-        completedTasksLabel.textProperty().bind(viewModel.completedTasksProperty().asString());
-        completionPercentageLabel.textProperty().bind(
-                javafx.beans.binding.Bindings.format("%.1f%%", viewModel.completionPercentageProperty()));
-        completionProgressBar.progressProperty().bind(
-                viewModel.completionPercentageProperty().divide(100.0));
+            // Bind summary fields
+            totalTasksLabel.textProperty().bind(viewModel.totalTasksProperty().asString());
+            completedTasksLabel.textProperty().bind(viewModel.completedTasksProperty().asString());
+            completionPercentageLabel.textProperty().bind(
+                    javafx.beans.binding.Bindings.format("%.1f%%", viewModel.completionPercentageProperty()));
+            completionProgressBar.progressProperty().bind(
+                    viewModel.completionPercentageProperty().divide(100.0));
 
-        // Bind buttons
-        ViewModelBinding.bindCommandButton(saveButton, viewModel.getSaveCommand());
-        ViewModelBinding.bindCommandButton(addTaskButton, viewModel.getAddTaskCommand());
-        ViewModelBinding.bindCommandButton(viewTaskButton, viewModel.getViewTaskCommand());
+            // Bind buttons
+            ViewModelBinding.bindCommandButton(saveButton, viewModel.getSaveCommand());
+            ViewModelBinding.bindCommandButton(addTaskButton, viewModel.getAddTaskCommand());
+            ViewModelBinding.bindCommandButton(viewTaskButton, viewModel.getViewTaskCommand());
 
-        // Handle cancel button
-        cancelButton.setOnAction(event -> closeDialog());
+            // Handle cancel button
+            cancelButton.setOnAction(event -> closeDialog());
 
-        // Task selection listener
-        tasksTable.getSelectionModel().selectedItemProperty().addListener(
-            (obs, oldValue, newValue) -> viewModel.setSelectedTask(newValue));
+            // Task selection listener
+            tasksTable.getSelectionModel().selectedItemProperty().addListener(
+                (obs, oldValue, newValue) -> viewModel.setSelectedTask(newValue));
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up bindings", e);
+            showErrorAlert("Setup Error", "Failed to set up bindings: " + e.getMessage());
+        }
     }
     
     /**
@@ -231,20 +255,46 @@ public class SubsystemController {
             return;
         }
         
-        // Set up validation error listener
-        viewModel.errorMessageProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue != null && !newValue.isEmpty()) {
-                showErrorAlert("Error", newValue);
-                viewModel.errorMessageProperty().set("");
-            }
-        });
+        try {
+            // Set up validation error listener
+            viewModel.errorMessageProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue != null && !newValue.isEmpty()) {
+                    if (errorLabel != null) {
+                        // Display error in the UI label
+                        errorLabel.setText(newValue);
+                        errorLabel.setVisible(true);
+                    } else {
+                        // Fallback to dialog if label is not available
+                        showErrorAlert("Error", newValue);
+                    }
+                    viewModel.errorMessageProperty().set("");
+                } else if (errorLabel != null) {
+                    // Clear error message
+                    errorLabel.setText("");
+                    errorLabel.setVisible(false);
+                }
+            });
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up error listener", e);
+        }
     }
 
     /**
      * Sets up the controller for creating a new subsystem.
      */
     public void initNewSubsystem() {
-        viewModel.initNewSubsystem();
+        try {
+            viewModel.initNewSubsystem();
+            
+            // Clear error message
+            if (errorLabel != null) {
+                errorLabel.setText("");
+                errorLabel.setVisible(false);
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error initializing new subsystem", e);
+            showErrorAlert("Initialization Error", "Failed to initialize new subsystem: " + e.getMessage());
+        }
     }
 
     /**
@@ -258,7 +308,39 @@ public class SubsystemController {
             return;
         }
         
-        viewModel.initExistingSubsystem(subsystem);
+        try {
+            viewModel.initExistingSubsystem(subsystem);
+            
+            // Clear error message
+            if (errorLabel != null) {
+                errorLabel.setText("");
+                errorLabel.setVisible(false);
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error initializing existing subsystem", e);
+            showErrorAlert("Initialization Error", "Failed to initialize subsystem: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Extracted method for better testability.
+     * Protected for testability.
+     * 
+     * @param task the task to show in MainController
+     */
+    protected void showTaskInMainController(Task task) {
+        try {
+            MainController mainController = MainController.getInstance();
+            if (mainController != null) {
+                mainController.showTaskDialog(task, null);
+            } else {
+                // Alternative for when MainController instance isn't available
+                openTaskDialogDirectly(task);
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error showing task dialog", e);
+            showErrorAlert("Error", "Failed to open task dialog: " + e.getMessage());
+        }
     }
 
     /**
@@ -272,20 +354,12 @@ public class SubsystemController {
             return;
         }
         
-        try {
-            MainController mainController = MainController.getInstance();
-            if (mainController != null) {
-                mainController.showTaskDialog(task, null);
-
-                // Reload tasks
-                viewModel.getLoadTasksCommand().execute();
-            } else {
-                // Alternative for when MainController instance isn't available
-                openTaskDialogDirectly(task);
-            }
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error showing task dialog", e);
-            showErrorAlert("Error", "Failed to open task dialog: " + e.getMessage());
+        // Show task dialog
+        showTaskInMainController(task);
+        
+        // Reload tasks after dialog is closed
+        if (viewModel != null && viewModel.getLoadTasksCommand() != null) {
+            viewModel.getLoadTasksCommand().execute();
         }
     }
     
@@ -319,7 +393,9 @@ public class SubsystemController {
             showAndWaitDialog(dialogStage);
 
             // Reload tasks
-            viewModel.getLoadTasksCommand().execute();
+            if (viewModel != null && viewModel.getLoadTasksCommand() != null) {
+                viewModel.getLoadTasksCommand().execute();
+            }
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Error loading task dialog directly", e);
             showErrorAlert("Error", "Failed to open task dialog: " + e.getMessage());
@@ -352,10 +428,60 @@ public class SubsystemController {
      */
     protected void showErrorAlert(String title, String message) {
         try {
-            dialogService.showErrorAlert(title, message);
+            if (dialogService != null) {
+                dialogService.showErrorAlert(title, message);
+            } else {
+                // Fallback for tests
+                LOGGER.log(Level.INFO, "Alert would show: {0} - {1}", new Object[] { title, message });
+            }
         } catch (Exception e) {
             // This can happen in tests when not on FX thread
             LOGGER.log(Level.INFO, "Alert would show: {0} - {1}", new Object[] { title, message });
+        }
+    }
+    
+    /**
+     * Shows an information alert dialog.
+     * Protected for testability.
+     * 
+     * @param title   the title
+     * @param message the message
+     */
+    protected void showInfoAlert(String title, String message) {
+        try {
+            if (dialogService != null) {
+                dialogService.showInfoAlert(title, message);
+            } else {
+                // Fallback for tests
+                LOGGER.log(Level.INFO, "Info alert would show: {0} - {1}", new Object[] { title, message });
+            }
+        } catch (Exception e) {
+            // This can happen in tests when not on FX thread
+            LOGGER.log(Level.INFO, "Info alert would show: {0} - {1}", new Object[] { title, message });
+        }
+    }
+    
+    /**
+     * Shows a confirmation alert dialog.
+     * Protected for testability.
+     * 
+     * @param title   the title
+     * @param message the message
+     * @return true if confirmed, false otherwise
+     */
+    protected boolean showConfirmationAlert(String title, String message) {
+        try {
+            if (dialogService != null) {
+                return dialogService.showConfirmationAlert(title, message);
+            } else {
+                // Fallback for tests
+                LOGGER.log(Level.INFO, "Confirmation alert would show: {0} - {1}", new Object[] { title, message });
+                return false;
+            }
+        } catch (Exception e) {
+            // This can happen in tests when not on FX thread
+            LOGGER.log(Level.INFO, "Confirmation alert would show: {0} - {1}", new Object[] { title, message });
+            return false;
         }
     }
     

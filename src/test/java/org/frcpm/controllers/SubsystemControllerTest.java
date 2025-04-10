@@ -16,6 +16,8 @@ import org.frcpm.viewmodels.SubsystemViewModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 
@@ -124,10 +126,14 @@ public class SubsystemControllerTest {
 
     @Test
     public void testHandleViewTask() throws Exception {
+        // Set up the test
+        doNothing().when(controller).showTaskInMainController(any(Task.class));
+
         // Act
         controller.handleViewTask(mockTask);
 
         // Assert
+        verify(controller).showTaskInMainController(mockTask);
         verify(mockLoadTasksCommand).execute();
     }
 
@@ -147,6 +153,28 @@ public class SubsystemControllerTest {
 
         // Assert
         verify(mockDialogService).showErrorAlert("Test Title", "Test Message");
+    }
+
+    @Test
+    public void testShowInfoAlert() {
+        // Act
+        controller.showInfoAlert("Test Title", "Test Message");
+
+        // Assert
+        verify(mockDialogService).showInfoAlert("Test Title", "Test Message");
+    }
+
+    @Test
+    public void testShowConfirmationAlert() {
+        // Arrange
+        when(mockDialogService.showConfirmationAlert(anyString(), anyString())).thenReturn(true);
+
+        // Act
+        boolean result = controller.showConfirmationAlert("Test Title", "Test Message");
+
+        // Assert
+        assertTrue(result);
+        verify(mockDialogService).showConfirmationAlert("Test Title", "Test Message");
     }
 
     @Test
@@ -207,7 +235,7 @@ public class SubsystemControllerTest {
         // Act - simulate error message change
         errorProperty.set("Test Error");
 
-        // Assert
+        // Assert - Should show dialog since error label is null
         verify(mockDialogService).showErrorAlert(eq("Error"), eq("Test Error"));
     }
 }
