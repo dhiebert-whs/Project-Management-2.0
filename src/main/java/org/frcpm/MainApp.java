@@ -9,6 +9,7 @@ import org.frcpm.config.DatabaseConfig;
 import org.frcpm.services.ServiceFactory;
 import org.frcpm.services.SubteamService;
 import org.frcpm.utils.DatabaseInitializer;
+import org.frcpm.utils.DatabaseTestUtil;
 
 import java.io.IOException;
 import java.util.logging.Level;
@@ -29,7 +30,7 @@ public class MainApp extends Application {
             DatabaseInitializer.initialize(true); // Pass true to create sample data
 
 
-            
+
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/MainView.fxml"));
             Parent root = loader.load();
             
@@ -62,6 +63,12 @@ public class MainApp extends Application {
         try {
             DatabaseConfig.initialize();
             LOGGER.info("Database initialized successfully");
+            
+            // Test database connection and schema
+            boolean dbTestSuccess = DatabaseTestUtil.testDatabase();
+            if (!dbTestSuccess) {
+                LOGGER.severe("Database test failed - application may not function correctly");
+            }
             
             // Check if this is the first run (no projects exist)
             boolean firstRun = ServiceFactory.getProjectService().findAll().isEmpty();

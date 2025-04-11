@@ -86,6 +86,13 @@ public class DatabaseConfig {
         }
         return emf.createEntityManager();
     }
+
+    public static EntityManagerFactory getEntityManagerFactory() {
+        if (emf == null) {
+            initialize();
+        }
+        return emf;
+    }
     
     /**
      * Closes all database resources.

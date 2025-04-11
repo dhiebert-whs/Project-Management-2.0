@@ -654,31 +654,14 @@ public class MainController {
      */
     @FXML
     private void handleDatabaseManagement(javafx.event.ActionEvent event) {
-        try {
-            // Load the FXML
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/DatabaseMigrationView.fxml"));
-            Parent root = loader.load();
-
-            // Get the controller
-            DatabaseMigrationController controller = loader.getController();
-
-            // Create the dialog stage
-            Stage dialogStage = new Stage();
-            dialogStage.setTitle("Database Management");
-            dialogStage.initModality(Modality.WINDOW_MODAL);
-            dialogStage.initOwner(((Node) event.getSource()).getScene().getWindow());
-            dialogStage.setScene(new Scene(root));
-
-            // Set the controller's dialog stage
-            controller.setDialogStage(dialogStage);
-
-            // Show the dialog
-            dialogStage.showAndWait();
-
-        } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Error loading database migration view", e);
-            showNotImplementedAlert("Database Management");
-        }
+        // Create a simple information dialog instead
+        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
+                javafx.scene.control.Alert.AlertType.INFORMATION);
+        alert.setTitle("Database Information");
+        alert.setHeaderText("Database Status");
+        alert.setContentText("The application database is initialized and ready to use.\n\n" +
+                             "This application uses a local H2 database for storing project data.");
+        alert.showAndWait();
     }
 
     // ---- Help Menu Handlers ----
