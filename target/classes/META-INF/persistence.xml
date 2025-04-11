@@ -21,7 +21,7 @@
         
         <properties>
             <!-- JPA/Hibernate Properties -->
-            <property name="hibernate.dialect" value="org.hibernate.dialect.H2Dialect"/>
+            <!--property name="hibernate.dialect" value="org.hibernate.dialect.H2Dialect"/-->
             <!-- change to update after first run-->
             <!--property name="hibernate.hbm2ddl.auto" value="create"/-->
             <property name="hibernate.hbm2ddl.auto" value="update"/>      
