@@ -24,16 +24,16 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
 public class TaskRepositoryTest {
-
+    
     private TaskRepository repository;
     private ProjectRepository projectRepository;
     private SubsystemRepository subsystemRepository;
     private TeamMemberRepository teamMemberRepository;
-
+    
     private Project testProject;
     private Subsystem testSubsystem;
     private TeamMember testMember;
-
+    
     @BeforeEach
     public void setUp() {
         DatabaseConfig.initialize();
@@ -41,45 +41,40 @@ public class TaskRepositoryTest {
         projectRepository = RepositoryFactory.getProjectRepository();
         subsystemRepository = RepositoryFactory.getSubsystemRepository();
         teamMemberRepository = RepositoryFactory.getTeamMemberRepository();
-
+        
         // Create required test entities
         testProject = new Project(
-                "Test Task Project",
-                LocalDate.now(),
-                LocalDate.now().plusWeeks(6),
-                LocalDate.now().plusWeeks(8));
+            "Test Task Project", 
+            LocalDate.now(), 
+            LocalDate.now().plusWeeks(6), 
+            LocalDate.now().plusWeeks(8)
+        );
         testProject = projectRepository.save(testProject);
-
+        
         testSubsystem = new Subsystem("Test Task Subsystem");
         testSubsystem.setStatus(Subsystem.Status.NOT_STARTED);
         testSubsystem = subsystemRepository.save(testSubsystem);
-
+        
         testMember = new TeamMember("tasktestuser", "Task", "Test", "tasktest@example.com");
         testMember = teamMemberRepository.save(testMember);
-
+        
         // Add test data
         createTestTasks();
     }
-
+    
     @AfterEach
     public void tearDown() {
         // Clean up test data
         cleanupTestTasks();
-
+        
         teamMemberRepository.delete(testMember);
         subsystemRepository.delete(testSubsystem);
         projectRepository.delete(testProject);
-
+        
         DatabaseConfig.shutdown();
     }
     
     private void createTestTasks() {
-        // First create and save the parent entities
-        testProject = projectRepository.save(testProject);
-        testSubsystem = subsystemRepository.save(testSubsystem);
-        testMember = teamMemberRepository.save(testMember);
-        
-        // Now create the tasks
         Task task1 = new Task("Test Task 1", testProject, testSubsystem);
         task1.setEstimatedDuration(Duration.ofHours(5));
         task1.setPriority(Task.Priority.HIGH);
@@ -102,50 +97,47 @@ public class TaskRepositoryTest {
         task3.setProgress(100);
         task3.setCompleted(true);
         
-        // Save tasks first before creating relationships
-        Task savedTask1 = repository.save(task1);
-        Task savedTask2 = repository.save(task2);
-        Task savedTask3 = repository.save(task3);
-        
-        // Now create entity relationships
+        repository.save(task1);
+        repository.save(task2);
+        repository.save(task3);
         
         // Assign team member to task1
-        savedTask1.assignMember(testMember);
-        repository.save(savedTask1);
+        task1.assignMember(testMember);
+        repository.save(task1);
         
-        // Set task dependencies - tasks must be already saved to establish this relationship
-        savedTask2.addPreDependency(savedTask1);
-        repository.save(savedTask2);
+        // Set task dependencies
+        task2.addPreDependency(task1);
+        repository.save(task2);
     }
-
+    
     private void cleanupTestTasks() {
         List<Task> tasks = repository.findByProject(testProject);
         for (Task task : tasks) {
             repository.delete(task);
         }
     }
-
+    
     @Test
     public void testFindAll() {
         List<Task> tasks = repository.findAll();
         assertNotNull(tasks);
         assertTrue(tasks.size() >= 3);
     }
-
+    
     @Test
     public void testFindById() {
         // First, get a task ID from the DB
         List<Task> tasks = repository.findByProject(testProject);
         Task firstTask = tasks.stream()
-                .filter(t -> t.getTitle().equals("Test Task 1"))
-                .findFirst().orElseThrow();
-
+            .filter(t -> t.getTitle().equals("Test Task 1"))
+            .findFirst().orElseThrow();
+        
         // Now test findById
         Optional<Task> found = repository.findById(firstTask.getId());
         assertTrue(found.isPresent());
         assertEquals(firstTask.getTitle(), found.get().getTitle());
     }
-
+    
     @Test
     public void testFindByProject() {
         List<Task> tasks = repository.findByProject(testProject);
@@ -153,7 +145,7 @@ public class TaskRepositoryTest {
         assertTrue(tasks.stream().allMatch(t -> t.getProject().getId().equals(testProject.getId())));
         assertEquals(3, tasks.size());
     }
-
+    
     @Test
     public void testFindBySubsystem() {
         List<Task> tasks = repository.findBySubsystem(testSubsystem);
@@ -161,54 +153,54 @@ public class TaskRepositoryTest {
         assertTrue(tasks.stream().allMatch(t -> t.getSubsystem().getId().equals(testSubsystem.getId())));
         assertEquals(3, tasks.size());
     }
-
+    
     @Test
     public void testFindByAssignedMember() {
         List<Task> tasks = repository.findByAssignedMember(testMember);
         assertFalse(tasks.isEmpty());
         assertTrue(tasks.stream().anyMatch(t -> t.getTitle().equals("Test Task 1")));
     }
-
+    
     @Test
     public void testFindByCompleted() {
         List<Task> completedTasks = repository.findByCompleted(true);
         assertFalse(completedTasks.isEmpty());
         assertTrue(completedTasks.stream().allMatch(Task::isCompleted));
         assertTrue(completedTasks.stream().anyMatch(t -> t.getTitle().equals("Test Task 3")));
-
+        
         List<Task> incompleteTasks = repository.findByCompleted(false);
         assertFalse(incompleteTasks.isEmpty());
         assertTrue(incompleteTasks.stream().noneMatch(Task::isCompleted));
         assertTrue(incompleteTasks.stream().anyMatch(t -> t.getTitle().equals("Test Task 1")));
     }
-
+    
     @Test
     public void testFindByEndDateBefore() {
         LocalDate cutoffDate = LocalDate.now().plusWeeks(1).plusDays(1);
         List<Task> tasks = repository.findByEndDateBefore(cutoffDate);
         assertFalse(tasks.isEmpty());
-
+        
         for (Task task : tasks) {
             assertTrue(task.getEndDate().isBefore(cutoffDate));
         }
-
+        
         assertTrue(tasks.stream().anyMatch(t -> t.getTitle().equals("Test Task 1")));
         assertTrue(tasks.stream().anyMatch(t -> t.getTitle().equals("Test Task 3")));
     }
-
+    
     @Test
     public void testFindByPriority() {
         List<Task> highPriorityTasks = repository.findByPriority(Task.Priority.HIGH);
         assertFalse(highPriorityTasks.isEmpty());
         assertTrue(highPriorityTasks.stream().allMatch(t -> t.getPriority() == Task.Priority.HIGH));
         assertTrue(highPriorityTasks.stream().anyMatch(t -> t.getTitle().equals("Test Task 1")));
-
+        
         List<Task> mediumPriorityTasks = repository.findByPriority(Task.Priority.MEDIUM);
         assertFalse(mediumPriorityTasks.isEmpty());
         assertTrue(mediumPriorityTasks.stream().allMatch(t -> t.getPriority() == Task.Priority.MEDIUM));
         assertTrue(mediumPriorityTasks.stream().anyMatch(t -> t.getTitle().equals("Test Task 2")));
     }
-
+    
     @Test
     public void testSave() {
         Task newTask = new Task("Test Save Task", testProject, testSubsystem);
@@ -216,78 +208,78 @@ public class TaskRepositoryTest {
         newTask.setPriority(Task.Priority.MEDIUM);
         newTask.setStartDate(LocalDate.now());
         newTask.setEndDate(LocalDate.now().plusWeeks(1));
-
+        
         Task saved = repository.save(newTask);
         assertNotNull(saved.getId());
-
+        
         // Verify it was saved
         Optional<Task> found = repository.findById(saved.getId());
         assertTrue(found.isPresent());
         assertEquals("Test Save Task", found.get().getTitle());
     }
-
+    
     @Test
     public void testUpdate() {
         // First, create a task
         Task task = new Task("Test Update Task", testProject, testSubsystem);
         task.setEstimatedDuration(Duration.ofHours(3));
         Task saved = repository.save(task);
-
+        
         // Now update it
         saved.setTitle("Updated Task Title");
         saved.setProgress(50);
         Task updated = repository.save(saved);
-
+        
         // Verify the update
         assertEquals("Updated Task Title", updated.getTitle());
         assertEquals(50, updated.getProgress());
-
+        
         // Check in DB
         Optional<Task> found = repository.findById(updated.getId());
         assertTrue(found.isPresent());
         assertEquals("Updated Task Title", found.get().getTitle());
         assertEquals(50, found.get().getProgress());
     }
-
+    
     @Test
     public void testDelete() {
         // First, create a task
         Task task = new Task("Test Delete Task", testProject, testSubsystem);
         Task saved = repository.save(task);
         Long id = saved.getId();
-
+        
         // Now delete it
         repository.delete(saved);
-
+        
         // Verify the deletion
         Optional<Task> found = repository.findById(id);
         assertFalse(found.isPresent());
     }
-
+    
     @Test
     public void testDeleteById() {
         // First, create a task
         Task task = new Task("Test DeleteById Task", testProject, testSubsystem);
         Task saved = repository.save(task);
         Long id = saved.getId();
-
+        
         // Now delete it by ID
         boolean result = repository.deleteById(id);
         assertTrue(result);
-
+        
         // Verify the deletion
         Optional<Task> found = repository.findById(id);
         assertFalse(found.isPresent());
     }
-
+    
     @Test
     public void testCount() {
         long initialCount = repository.count();
-
+        
         // Add a new task
         Task task = new Task("Test Count Task", testProject, testSubsystem);
         repository.save(task);
-
+        
         // Verify count increased
         long newCount = repository.count();
         assertEquals(initialCount + 1, newCount);

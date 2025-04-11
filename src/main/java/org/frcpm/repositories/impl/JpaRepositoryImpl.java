@@ -75,20 +75,8 @@ public abstract class JpaRepositoryImpl<T, ID> implements Repository<T, ID> {
         try {
             em.getTransaction().begin();
             
-            // Check if this is a new entity or an existing one
-            boolean isNew = false;
-            try {
-                // Try to get the ID field using reflection
-                Field idField = getIdField(entityClass);
-                idField.setAccessible(true);
-                Object idValue = idField.get(entity);
-                isNew = idValue == null || (idValue instanceof Number && ((Number) idValue).longValue() == 0);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, "Could not determine if entity is new", e);
-            }
-            
             T managedEntity;
-            if (isNew) {
+            if (isNew(entity)) {
                 em.persist(entity);
                 managedEntity = entity;
             } else {
@@ -108,7 +96,44 @@ public abstract class JpaRepositoryImpl<T, ID> implements Repository<T, ID> {
             em.close();
         }
     }
-
+    
+    /**
+     * Determines if an entity is new (not yet persisted).
+     * 
+     * @param entity the entity to check
+     * @return true if the entity is new, false otherwise
+     */
+    protected boolean isNew(T entity) {
+        try {
+            for (Field field : entity.getClass().getDeclaredFields()) {
+                if (field.isAnnotationPresent(jakarta.persistence.Id.class)) {
+                    field.setAccessible(true);
+                    Object id = field.get(entity);
+                    return id == null || (id instanceof Number && ((Number) id).longValue() == 0);
+                }
+            }
+            
+            // Check superclass if no ID field found in declared fields
+            Class<?> superClass = entity.getClass().getSuperclass();
+            while (superClass != null && !superClass.equals(Object.class)) {
+                for (Field field : superClass.getDeclaredFields()) {
+                    if (field.isAnnotationPresent(jakarta.persistence.Id.class)) {
+                        field.setAccessible(true);
+                        Object id = field.get(entity);
+                        return id == null || (id instanceof Number && ((Number) id).longValue() == 0);
+                    }
+                }
+                superClass = superClass.getSuperclass();
+            }
+            
+            // If we can't determine, assume it's new
+            return true;
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Could not determine if entity is new", e);
+            return true;
+        }
+    }
+    
     // Helper method to find the ID field
     private Field getIdField(Class<?> clazz) {
         // Check current class

@@ -7,7 +7,6 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
 
-import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
@@ -18,7 +17,6 @@ public class DatabaseConfig {
     private static EntityManagerFactory emf;
     private static HikariDataSource dataSource;
     private static final String PERSISTENCE_UNIT_NAME = "frcpm";
-    private static final String DB_FILE_NAME = "frcpm-db";
     private static boolean initialized = false;
     
     /**
@@ -32,16 +30,8 @@ public class DatabaseConfig {
         try {
             LOGGER.info("Initializing database configuration...");
             
-            // Get the target directory path
-            String userDir = System.getProperty("user.dir");
-            File targetDir = new File(userDir, "target");
-            if (!targetDir.exists()) {
-                targetDir.mkdirs();
-            }
-            
-            // Create absolute path to DB file
-            String dbFilePath = new File(targetDir, DB_FILE_NAME).getAbsolutePath();
-            String jdbcUrl = "jdbc:h2:file:" + dbFilePath + ";DB_CLOSE_DELAY=-1";
+            // Use in-memory database for tests to avoid file path issues
+            String jdbcUrl = "jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1";
             
             LOGGER.info("Using JDBC URL: " + jdbcUrl);
             
@@ -51,9 +41,9 @@ public class DatabaseConfig {
             hikariConfig.setUsername("sa");
             hikariConfig.setPassword("");
             hikariConfig.setDriverClassName("org.h2.Driver");
-            hikariConfig.setPoolName("frcpm-hikari-pool");
-            hikariConfig.setMinimumIdle(5);
-            hikariConfig.setMaximumPoolSize(10);
+            hikariConfig.setPoolName("FRC-PM-HikariCP");
+            hikariConfig.setMinimumIdle(2);
+            hikariConfig.setMaximumPoolSize(5);
             hikariConfig.setIdleTimeout(30000);
             hikariConfig.setConnectionTimeout(30000);
             
@@ -69,7 +59,9 @@ public class DatabaseConfig {
             props.put("hibernate.dialect", "org.hibernate.dialect.H2Dialect");
             props.put("hibernate.hbm2ddl.auto", "create-drop"); // Use create-drop for tests
             props.put("hibernate.show_sql", "true");
+            props.put("hibernate.format_sql", "true");
             props.put("hibernate.connection.provider_class", "org.hibernate.hikaricp.internal.HikariCPConnectionProvider");
+            props.put("hibernate.hikari.dataSource", dataSource);
             
             // Create the entity manager factory
             emf = Persistence.createEntityManagerFactory(PERSISTENCE_UNIT_NAME, props);
