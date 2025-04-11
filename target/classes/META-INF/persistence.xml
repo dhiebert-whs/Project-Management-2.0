@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence xmlns="https://jakarta.ee/xml/ns/persistence"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="https://jakarta.ee/xml/ns/persistence https://jakarta.ee/xml/ns/persistence/persistence_3_0.xsd"
+             version="3.0">
+
+    <persistence-unit name="frcpm" transaction-type="RESOURCE_LOCAL">
+        <description>FRC Project Management System Persistence Unit</description>
+        <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+        
+        <!-- Entity classes -->
+        <class>org.frcpm.models.Project</class>
+        <class>org.frcpm.models.Subteam</class>
+        <class>org.frcpm.models.TeamMember</class>
+        <class>org.frcpm.models.Subsystem</class>
+        <class>org.frcpm.models.Task</class>
+        <class>org.frcpm.models.Component</class>
+        <class>org.frcpm.models.Meeting</class>
+        <class>org.frcpm.models.Attendance</class>
+        <class>org.frcpm.models.Milestone</class>
+        
+        <properties>
+            <!-- JPA/Hibernate Properties -->
+            <property name="hibernate.dialect" value="org.hibernate.dialect.H2Dialect"/>
+            <!-- change to update after first run-->
+            <!--property name="hibernate.hbm2ddl.auto" value="create"/-->
+            <property name="hibernate.hbm2ddl.auto" value="update"/>      
+
+            <property name="hibernate.show_sql" value="false"/>
+            <property name="hibernate.format_sql" value="true"/>
+            <property name="hibernate.use_sql_comments" value="true"/>
+            
+            <!-- Connection Pool Settings -->
+            <property name="hibernate.connection.provider_class" value="org.hibernate.hikaricp.internal.HikariCPConnectionProvider"/>
+            <property name="hibernate.hikari.minimumIdle" value="2"/>
+            <property name="hibernate.hikari.maximumPoolSize" value="10"/>
+            <property name="hibernate.hikari.idleTimeout" value="30000"/>
+            <property name="hibernate.hikari.connectionTimeout" value="10000"/>
+            <property name="hibernate.hikari.poolName" value="FRC-PM-HikariCP"/>
+            
+            <!-- Cache Settings -->
+            <property name="hibernate.cache.use_second_level_cache" value="false"/>
+            <property name="hibernate.cache.use_query_cache" value="false"/>
+            
+            <!-- Connection Handling -->
+            <property name="hibernate.connection.handling_mode" value="DELAYED_ACQUISITION_AND_RELEASE_AFTER_STATEMENT"/>
+            
+            <!-- Batch Processing -->
+            <property name="hibernate.jdbc.batch_size" value="30"/>
+            <property name="hibernate.order_inserts" value="true"/>
+            <property name="hibernate.order_updates" value="true"/>
+            <property name="hibernate.jdbc.batch_versioned_data" value="true"/>
+            
+            <!-- Transaction Management -->
+            <property name="hibernate.current_session_context_class" value="thread"/>
+            
+            <!-- Logging -->
+            <property name="hibernate.generate_statistics" value="false"/>
+        </properties>
+    </persistence-unit>
+</persistence>
