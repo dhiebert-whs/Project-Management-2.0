@@ -1,4 +1,3 @@
-<!-- src/main/resources/fxml/GanttChartView.fxml -->
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.scene.layout.BorderPane?>
