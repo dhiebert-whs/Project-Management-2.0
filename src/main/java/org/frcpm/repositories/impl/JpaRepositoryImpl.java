@@ -60,7 +60,9 @@ public abstract class JpaRepositoryImpl<T, ID> implements Repository<T, ID> {
             Root<T> root = cq.from(entityClass);
             cq.select(root);
             TypedQuery<T> query = em.createQuery(cq);
-            return query.getResultList();
+            List<T> resultList = query.getResultList();
+            // Ensure we're not returning null
+            return resultList != null ? resultList : List.of();
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error finding all entities", e);
             return List.of();
@@ -133,7 +135,7 @@ public abstract class JpaRepositoryImpl<T, ID> implements Repository<T, ID> {
             return true;
         }
     }
-    
+
     // Helper method to find the ID field
     private Field getIdField(Class<?> clazz) {
         // Check current class
@@ -205,7 +207,9 @@ public abstract class JpaRepositoryImpl<T, ID> implements Repository<T, ID> {
             CriteriaQuery<Long> cq = cb.createQuery(Long.class);
             Root<T> root = cq.from(entityClass);
             cq.select(cb.count(root));
-            return em.createQuery(cq).getSingleResult();
+            TypedQuery<Long> query = em.createQuery(cq);
+            Long result = query.getSingleResult();
+            return result != null ? result : 0L;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error counting entities", e);
             return 0;

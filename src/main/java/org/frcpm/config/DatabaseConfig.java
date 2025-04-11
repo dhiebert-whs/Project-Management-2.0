@@ -1,8 +1,6 @@
 // src/main/java/org/frcpm/config/DatabaseConfig.java
 package org.frcpm.config;
 
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
@@ -15,7 +13,6 @@ import java.util.logging.Logger;
 public class DatabaseConfig {
     private static final Logger LOGGER = Logger.getLogger(DatabaseConfig.class.getName());
     private static EntityManagerFactory emf;
-    private static HikariDataSource dataSource;
     private static final String PERSISTENCE_UNIT_NAME = "frcpm";
     private static boolean initialized = false;
     
@@ -35,21 +32,6 @@ public class DatabaseConfig {
             
             LOGGER.info("Using JDBC URL: " + jdbcUrl);
             
-            // Configure Hikari connection pool
-            HikariConfig hikariConfig = new HikariConfig();
-            hikariConfig.setJdbcUrl(jdbcUrl);
-            hikariConfig.setUsername("sa");
-            hikariConfig.setPassword("");
-            hikariConfig.setDriverClassName("org.h2.Driver");
-            hikariConfig.setPoolName("FRC-PM-HikariCP");
-            hikariConfig.setMinimumIdle(2);
-            hikariConfig.setMaximumPoolSize(5);
-            hikariConfig.setIdleTimeout(30000);
-            hikariConfig.setConnectionTimeout(30000);
-            
-            // Create the data source
-            dataSource = new HikariDataSource(hikariConfig);
-            
             // Set up JPA properties
             Map<String, Object> props = new HashMap<>();
             props.put("jakarta.persistence.jdbc.driver", "org.h2.Driver");
@@ -60,8 +42,9 @@ public class DatabaseConfig {
             props.put("hibernate.hbm2ddl.auto", "create-drop"); // Use create-drop for tests
             props.put("hibernate.show_sql", "true");
             props.put("hibernate.format_sql", "true");
-            props.put("hibernate.connection.provider_class", "org.hibernate.hikaricp.internal.HikariCPConnectionProvider");
-            props.put("hibernate.hikari.dataSource", dataSource);
+            
+            // Add standard connection pool settings
+            props.put("hibernate.connection.pool_size", "5");
             
             // Create the entity manager factory
             emf = Persistence.createEntityManagerFactory(PERSISTENCE_UNIT_NAME, props);
@@ -104,10 +87,6 @@ public class DatabaseConfig {
     public static synchronized void shutdown() {
         if (emf != null && emf.isOpen()) {
             emf.close();
-        }
-        
-        if (dataSource != null && !dataSource.isClosed()) {
-            dataSource.close();
         }
         
         initialized = false;

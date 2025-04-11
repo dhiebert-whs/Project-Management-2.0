@@ -67,9 +67,47 @@ public class JpaRepositoryImplTest {
     
     @Test
     public void testFindAll() {
+        // First let's count how many test entities we have
+        List<Project> allEntities = repository.findAll();
+        int initialCount = allEntities.size();
+        
+        // Now add two specific test entities that we can verify
+        Project testProject1 = new Project(
+            "Test FindAll Project 1", 
+            LocalDate.now(), 
+            LocalDate.now().plusWeeks(4), 
+            LocalDate.now().plusWeeks(6)
+        );
+        Project testProject2 = new Project(
+            "Test FindAll Project 2", 
+            LocalDate.now(), 
+            LocalDate.now().plusWeeks(4), 
+            LocalDate.now().plusWeeks(6)
+        );
+        
+        repository.save(testProject1);
+        repository.save(testProject2);
+        
+        // Get the list again and verify
         List<Project> entities = repository.findAll();
         assertNotNull(entities);
-        assertTrue(entities.size() >= 2);
+        assertTrue(entities.size() >= initialCount + 2);
+        
+        // Verify our test entities are in the results
+        boolean foundProject1 = false;
+        boolean foundProject2 = false;
+        
+        for (Project project : entities) {
+            if (project.getName().equals("Test FindAll Project 1")) {
+                foundProject1 = true;
+            }
+            if (project.getName().equals("Test FindAll Project 2")) {
+                foundProject2 = true;
+            }
+        }
+        
+        assertTrue(foundProject1, "Test project 1 was not found in results");
+        assertTrue(foundProject2, "Test project 2 was not found in results");
     }
     
     @Test
@@ -171,19 +209,29 @@ public class JpaRepositoryImplTest {
     
     @Test
     public void testCount() {
+        // Get initial count
         long initialCount = repository.count();
         
-        // Add a new entity
-        Project entity = new Project(
-            "Test Base Count Project", 
+        // Add a specific number of test entities
+        Project entity1 = new Project(
+            "Test Count Project 1", 
             LocalDate.now(), 
             LocalDate.now().plusWeeks(4), 
             LocalDate.now().plusWeeks(6)
         );
-        repository.save(entity);
+        Project entity2 = new Project(
+            "Test Count Project 2", 
+            LocalDate.now(), 
+            LocalDate.now().plusWeeks(4), 
+            LocalDate.now().plusWeeks(6)
+        );
         
-        // Verify count increased
+        repository.save(entity1);
+        repository.save(entity2);
+        
+        // Verify count increased by exactly the number we added
         long newCount = repository.count();
-        assertEquals(initialCount + 1, newCount);
+        assertEquals(initialCount + 2, newCount, 
+                    "Count should increase by exactly 2 after adding 2 projects");
     }
 }
