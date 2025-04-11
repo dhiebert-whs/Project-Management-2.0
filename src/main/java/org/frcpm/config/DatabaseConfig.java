@@ -1,3 +1,4 @@
+// src/main/java/org/frcpm/config/DatabaseConfig.java
 package org.frcpm.config;
 
 import com.zaxxer.hikari.HikariConfig;
@@ -5,70 +6,76 @@ import com.zaxxer.hikari.HikariDataSource;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
+
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/**
- * Database configuration for the FRC Project Management System.
- * Handles connection to the H2 database using HikariCP and JPA.
- */
 public class DatabaseConfig {
-    
     private static final Logger LOGGER = Logger.getLogger(DatabaseConfig.class.getName());
-    private static final String PERSISTENCE_UNIT_NAME = "frcpm";
-    private static final String DB_DIR = "db";
-    private static final String DB_NAME = "frcpm";
     private static EntityManagerFactory emf;
     private static HikariDataSource dataSource;
+    private static final String PERSISTENCE_UNIT_NAME = "frcpm";
+    private static final String DB_FILE_NAME = "frcpm-db";
+    private static boolean initialized = false;
     
     /**
-     * Initializes the database connection pool and JPA.
+     * Initializes the database configuration.
      */
-    public static void initialize() {
+    public static synchronized void initialize() {
+        if (initialized) {
+            return;
+        }
+        
         try {
-            // Ensure database directory exists
-            File dbDir = new File(DB_DIR);
-            if (!dbDir.exists()) {
-                dbDir.mkdirs();
+            LOGGER.info("Initializing database configuration...");
+            
+            // Get the target directory path
+            String userDir = System.getProperty("user.dir");
+            File targetDir = new File(userDir, "target");
+            if (!targetDir.exists()) {
+                targetDir.mkdirs();
             }
             
-            // Configure connection pool
-            HikariConfig config = new HikariConfig();
-            config.setJdbcUrl("jdbc:h2:file:./" + DB_DIR + "/" + DB_NAME);
-            config.setUsername("sa");
-            config.setPassword("");
-            config.setDriverClassName("org.h2.Driver");
-            config.setPoolName("FRC-PM-Pool");
-            config.setMaximumPoolSize(10);
-            config.setMinimumIdle(2);
-            config.setIdleTimeout(30000);
-            config.setConnectionTimeout(10000);
-            config.addDataSourceProperty("cachePrepStmts", "true");
-            config.addDataSourceProperty("prepStmtCacheSize", "250");
-            config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+            // Create absolute path to DB file
+            String dbFilePath = new File(targetDir, DB_FILE_NAME).getAbsolutePath();
+            String jdbcUrl = "jdbc:h2:file:" + dbFilePath + ";DB_CLOSE_DELAY=-1";
             
-            // Create data source
-            dataSource = new HikariDataSource(config);
+            LOGGER.info("Using JDBC URL: " + jdbcUrl);
             
-            // Configure JPA
+            // Configure Hikari connection pool
+            HikariConfig hikariConfig = new HikariConfig();
+            hikariConfig.setJdbcUrl(jdbcUrl);
+            hikariConfig.setUsername("sa");
+            hikariConfig.setPassword("");
+            hikariConfig.setDriverClassName("org.h2.Driver");
+            hikariConfig.setPoolName("frcpm-hikari-pool");
+            hikariConfig.setMinimumIdle(5);
+            hikariConfig.setMaximumPoolSize(10);
+            hikariConfig.setIdleTimeout(30000);
+            hikariConfig.setConnectionTimeout(30000);
+            
+            // Create the data source
+            dataSource = new HikariDataSource(hikariConfig);
+            
+            // Set up JPA properties
             Map<String, Object> props = new HashMap<>();
             props.put("jakarta.persistence.jdbc.driver", "org.h2.Driver");
-            props.put("jakarta.persistence.jdbc.url", "jdbc:h2:file:./" + DB_DIR + "/" + DB_NAME);
+            props.put("jakarta.persistence.jdbc.url", jdbcUrl);
             props.put("jakarta.persistence.jdbc.user", "sa");
             props.put("jakarta.persistence.jdbc.password", "");
             props.put("hibernate.dialect", "org.hibernate.dialect.H2Dialect");
-            //props.put("hibernate.hbm2ddl.auto", "create");
-            props.put("hibernate.hbm2ddl.auto", "update");
-            props.put("hibernate.show_sql", "false");
-            props.put("hibernate.format_sql", "true");
+            props.put("hibernate.hbm2ddl.auto", "create-drop"); // Use create-drop for tests
+            props.put("hibernate.show_sql", "true");
+            props.put("hibernate.connection.provider_class", "org.hibernate.hikaricp.internal.HikariCPConnectionProvider");
             
-            // Create EntityManagerFactory
+            // Create the entity manager factory
             emf = Persistence.createEntityManagerFactory(PERSISTENCE_UNIT_NAME, props);
             
-            LOGGER.info("Database connection initialized successfully");
+            initialized = true;
+            LOGGER.info("Database configuration initialized successfully");
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Failed to initialize database", e);
             throw new RuntimeException("Failed to initialize database", e);
@@ -76,29 +83,33 @@ public class DatabaseConfig {
     }
     
     /**
-     * Gets a new EntityManager from the factory.
+     * Gets the entity manager factory.
      * 
-     * @return a new EntityManager instance
+     * @return the entity manager factory
      */
-    public static EntityManager getEntityManager() {
-        if (emf == null) {
-            initialize();
-        }
-        return emf.createEntityManager();
-    }
-
     public static EntityManagerFactory getEntityManagerFactory() {
-        if (emf == null) {
+        if (!initialized) {
             initialize();
         }
         return emf;
     }
     
     /**
-     * Closes all database resources.
-     * This should be called when the application is shutting down.
+     * Creates a new entity manager.
+     * 
+     * @return a new entity manager
      */
-    public static void shutdown() {
+    public static EntityManager getEntityManager() {
+        if (!initialized) {
+            initialize();
+        }
+        return emf.createEntityManager();
+    }
+    
+    /**
+     * Shuts down the database configuration.
+     */
+    public static synchronized void shutdown() {
         if (emf != null && emf.isOpen()) {
             emf.close();
         }
@@ -107,6 +118,7 @@ public class DatabaseConfig {
             dataSource.close();
         }
         
-        LOGGER.info("Database resources closed");
+        initialized = false;
+        LOGGER.info("Database configuration shut down");
     }
 }

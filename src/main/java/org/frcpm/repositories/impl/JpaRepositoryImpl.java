@@ -8,6 +8,7 @@ import jakarta.persistence.criteria.Root;
 import org.frcpm.config.DatabaseConfig;
 import org.frcpm.repositories.Repository;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.util.List;
 import java.util.Optional;
@@ -73,7 +74,28 @@ public abstract class JpaRepositoryImpl<T, ID> implements Repository<T, ID> {
         EntityManager em = getEntityManager();
         try {
             em.getTransaction().begin();
-            T managedEntity = em.merge(entity);
+            
+            // Check if this is a new entity or an existing one
+            boolean isNew = false;
+            try {
+                // Try to get the ID field using reflection
+                Field idField = getIdField(entityClass);
+                idField.setAccessible(true);
+                Object idValue = idField.get(entity);
+                isNew = idValue == null || (idValue instanceof Number && ((Number) idValue).longValue() == 0);
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, "Could not determine if entity is new", e);
+            }
+            
+            T managedEntity;
+            if (isNew) {
+                em.persist(entity);
+                managedEntity = entity;
+            } else {
+                managedEntity = em.merge(entity);
+            }
+            
+            em.flush(); // Force SQL execution to detect any errors
             em.getTransaction().commit();
             return managedEntity;
         } catch (Exception e) {
@@ -85,6 +107,23 @@ public abstract class JpaRepositoryImpl<T, ID> implements Repository<T, ID> {
         } finally {
             em.close();
         }
+    }
+
+    // Helper method to find the ID field
+    private Field getIdField(Class<?> clazz) {
+        // Check current class
+        for (Field field : clazz.getDeclaredFields()) {
+            if (field.isAnnotationPresent(jakarta.persistence.Id.class)) {
+                return field;
+            }
+        }
+        
+        // Check superclass if exists
+        if (clazz.getSuperclass() != null && !clazz.getSuperclass().equals(Object.class)) {
+            return getIdField(clazz.getSuperclass());
+        }
+        
+        throw new IllegalArgumentException("No ID field found in class " + clazz.getName());
     }
     
     @Override
