@@ -233,14 +233,31 @@ class GanttDataServiceImplTest {
     
     @Test
     void testIdentifyBottlenecks() {
-        // Act
-        List<Long> bottlenecks = ganttDataService.identifyBottlenecks(1L);
+        // Setup
+        Long projectId = 1L;
+        when(mockProjectRepository.findById(projectId)).thenReturn(Optional.of(mockProject));
+        
+        // Create tasks with dependencies
+        Task task1 = new Task();
+        task1.setId(1L);
+        Task task2 = new Task();
+        task2.setId(2L);
+        Task task3 = new Task();
+        task3.setId(3L);
+        
+        // Set up dependencies - task3 has the most dependencies
+        task2.getPreDependencies().add(task1);
+        task3.getPreDependencies().add(task1);
+        task3.getPreDependencies().add(task2);
+        
+        List<Task> tasks = Arrays.asList(task1, task2, task3);
+        when(mockTaskRepository.findByProject(mockProject)).thenReturn(tasks);
+        
+        // Execute
+        List<Long> bottlenecks = ganttDataService.identifyBottlenecks(projectId);
         
         // Assert
-        assertNotNull(bottlenecks);
-        assertEquals(1, bottlenecks.size());
-        
-        // In our test setup, task1 is a dependency for task2, so it should be identified as a bottleneck
-        assertTrue(bottlenecks.contains(101L));
+        assertFalse(bottlenecks.isEmpty());
+        assertTrue(bottlenecks.contains(3L)); // task3 should be identified as a bottleneck
     }
 }

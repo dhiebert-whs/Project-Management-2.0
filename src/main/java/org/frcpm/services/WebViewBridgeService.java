@@ -68,4 +68,7 @@ public interface WebViewBridgeService {
      * @return the exported data
      */
     byte[] exportChart(String format);
+
+    
+    
 }

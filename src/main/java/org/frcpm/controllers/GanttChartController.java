@@ -288,4 +288,26 @@ public class GanttChartController {
     protected WebView getWebView() {
         return webView;
     }
+
+    /**
+     * For testing only - avoids initializing WebView components
+     */
+    void initializeForTesting() {
+        // Skip WebView initialization in tests
+        if (this.webView == null) {
+            // Already skipping initialization
+            return;
+        }
+        
+        // Setup bindings and error listener only
+        setupBindings();
+        setupErrorListener();
+    }
+
+    /**
+     * For testing only - sets the bridge initialization flag
+     */
+    void setBridgeInitializedForTesting(boolean value) {
+        this.bridgeInitialized = value;
+    }
 }

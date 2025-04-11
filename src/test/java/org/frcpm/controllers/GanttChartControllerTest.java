@@ -1,29 +1,32 @@
-// src/test/java/org/frcpm/controllers/GanttChartControllerTest.java
 package org.frcpm.controllers;
 
-import javafx.scene.control.Button;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.Label;
-import javafx.scene.control.ToggleButton;
-import javafx.scene.web.WebEngine;
-import javafx.scene.web.WebView;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import org.frcpm.binding.Command;
 import org.frcpm.models.Project;
 import org.frcpm.services.DialogService;
 import org.frcpm.services.WebViewBridgeService;
 import org.frcpm.viewmodels.GanttChartViewModel;
+import org.frcpm.viewmodels.GanttChartViewModel.ViewMode;
+import org.frcpm.viewmodels.GanttChartViewModel.FilterOption;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.Spy;
 
-import static org.mockito.ArgumentMatchers.anyString;
+import java.lang.reflect.Field;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.*;
 
 class GanttChartControllerTest {
-    
-    @Spy
+
     private GanttChartController controller;
     
     @Mock
@@ -36,40 +39,7 @@ class GanttChartControllerTest {
     private DialogService mockDialogService;
     
     @Mock
-    private WebView mockWebView;
-    
-    @Mock
-    private WebEngine mockWebEngine;
-    
-    @Mock
-    private Button mockRefreshButton;
-    
-    @Mock
-    private ComboBox<GanttChartViewModel.ViewMode> mockViewModeComboBox;
-    
-    @Mock
-    private ComboBox<GanttChartViewModel.FilterOption> mockFilterComboBox;
-    
-    @Mock
-    private Button mockZoomInButton;
-    
-    @Mock
-    private Button mockZoomOutButton;
-    
-    @Mock
-    private Button mockExportButton;
-    
-    @Mock
-    private Button mockTodayButton;
-    
-    @Mock
-    private ToggleButton mockMilestonesToggle;
-    
-    @Mock
-    private ToggleButton mockDependenciesToggle;
-    
-    @Mock
-    private Label mockStatusLabel;
+    private Project mockProject;
     
     @Mock
     private Command mockRefreshCommand;
@@ -86,58 +56,53 @@ class GanttChartControllerTest {
     @Mock
     private Command mockTodayCommand;
     
-    @Mock
-    private Project mockProject;
+    // Mock properties for the view model
+    private final StringProperty mockStatusProperty = new SimpleStringProperty();
+    private final BooleanProperty mockShowMilestonesProperty = new SimpleBooleanProperty();
+    private final BooleanProperty mockShowDependenciesProperty = new SimpleBooleanProperty();
+    private final ObjectProperty<ViewMode> mockViewModeProperty = new SimpleObjectProperty<>();
+    private final ObjectProperty<FilterOption> mockFilterOptionProperty = new SimpleObjectProperty<>();
+    private final StringProperty mockErrorProperty = new SimpleStringProperty();
     
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         MockitoAnnotations.openMocks(this);
         
-        // Setup view model command mocks
+        // Create controller 
+        controller = new GanttChartController();
+        
+        // Set up command mocks
         when(mockViewModel.getRefreshCommand()).thenReturn(mockRefreshCommand);
         when(mockViewModel.getZoomInCommand()).thenReturn(mockZoomInCommand);
         when(mockViewModel.getZoomOutCommand()).thenReturn(mockZoomOutCommand);
         when(mockViewModel.getExportCommand()).thenReturn(mockExportCommand);
         when(mockViewModel.getTodayCommand()).thenReturn(mockTodayCommand);
         
-        // Setup webview mock
-        doReturn(mockWebView).when(controller).getWebView();
-        when(mockWebView.getEngine()).thenReturn(mockWebEngine);
+        // Set up property mocks
+        when(mockViewModel.statusMessageProperty()).thenReturn(mockStatusProperty);
+        when(mockViewModel.showMilestonesProperty()).thenReturn(mockShowMilestonesProperty);
+        when(mockViewModel.showDependenciesProperty()).thenReturn(mockShowDependenciesProperty);
+        when(mockViewModel.viewModeProperty()).thenReturn(mockViewModeProperty);
+        when(mockViewModel.filterOptionProperty()).thenReturn(mockFilterOptionProperty);
+        when(mockViewModel.errorMessageProperty()).thenReturn(mockErrorProperty);
         
-        // Inject dependencies
-        controller.setViewModel(mockViewModel);
-        controller.setBridgeService(mockBridgeService);
-        controller.setDialogService(mockDialogService);
+        // Inject dependencies using reflection since the controller doesn't have public setters for all fields
+        setPrivateField(controller, "viewModel", mockViewModel);
+        setPrivateField(controller, "bridgeService", mockBridgeService);
+        setPrivateField(controller, "dialogService", mockDialogService);
         
-        // Mock controller method to avoid NullPointerException
-        doNothing().when(controller).setupBindings();
+        // Initialize without WebView
+        controller.initializeForTesting();
+        controller.setBridgeInitializedForTesting(true);
     }
     
-    @Test
-    void testSetProject() {
-        // Act
-        controller.setProject(mockProject);
-        
-        // Assert
-        verify(mockViewModel).setProject(mockProject);
-    }
-    
-    @Test
-    void testHandleRefresh() {
-        // Act
-        controller.handleRefresh();
-        
-        // Assert
-        verify(mockRefreshCommand).execute();
-    }
-    
-    @Test
-    void testHandleZoomIn() {
-        // Act
-        controller.handleZoomIn();
-        
-        // Assert
-        verify(mockZoomInCommand).execute();
+    /**
+     * Helper method to set private fields using reflection
+     */
+    private void setPrivateField(Object target, String fieldName, Object value) throws Exception {
+        Field field = GanttChartController.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(target, value);
     }
     
     @Test
@@ -150,12 +115,64 @@ class GanttChartControllerTest {
     }
     
     @Test
+    void testHandleRefresh() {
+        // Act
+        controller.handleRefresh();
+        
+        // Assert
+        verify(mockRefreshCommand).execute();
+    }
+    
+    @Test
     void testHandleExport() {
         // Act
         controller.handleExport();
         
         // Assert
         verify(mockExportCommand).execute();
+    }
+    
+    @Test
+    void testHandleZoomIn() {
+        // Act
+        controller.handleZoomIn();
+        
+        // Assert
+        verify(mockZoomInCommand).execute();
+    }
+    
+    @Test
+    void testSetupErrorListener() {
+        try {
+            // First, we need to directly access the setupErrorListener method using reflection
+            java.lang.reflect.Method setupErrorListenerMethod = 
+                GanttChartController.class.getDeclaredMethod("setupErrorListener");
+            setupErrorListenerMethod.setAccessible(true);
+            
+            // Now we can execute it directly
+            setupErrorListenerMethod.invoke(controller);
+            
+            // Now we need to simulate an error condition to trigger the handler
+            // To do this, we'll need access to the listener that was added to errorMessageProperty
+            
+            // Create a real JavaFX property that we can use to trigger the listener
+            javafx.beans.property.StringProperty realErrorProperty = new javafx.beans.property.SimpleStringProperty("");
+            
+            // Replace the mock with our real property temporarily
+            when(mockViewModel.errorMessageProperty()).thenReturn(realErrorProperty);
+            
+            // Re-execute the setupErrorListener method
+            setupErrorListenerMethod.invoke(controller);
+            
+            // Now we can set the error message
+            realErrorProperty.set("Test error");
+            
+            // Verify that the error handling occurred
+            verify(mockDialogService).showErrorAlert("Error", "Test error");
+            verify(mockViewModel).clearErrorMessage();
+        } catch (Exception e) {
+            fail("Reflection error: " + e.getMessage(), e);
+        }
     }
     
     @Test
@@ -168,11 +185,12 @@ class GanttChartControllerTest {
     }
     
     @Test
-    void testSetupErrorListener() {
-        // Call the method
-        controller.setupErrorListener();
+    void testSetProject() {
+        // Act
+        controller.setProject(mockProject);
         
-        // Verify that the error listener is set up
-        verify(mockViewModel).errorMessageProperty();
+        // Assert
+        verify(mockViewModel).setProject(mockProject);
+        verify(mockRefreshCommand).execute();
     }
 }

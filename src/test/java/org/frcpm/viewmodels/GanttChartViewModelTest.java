@@ -135,6 +135,21 @@ class GanttChartViewModelTest {
         // Arrange
         viewModel.setProject(mockProject);
         
+        // Reset the mock to clear the first call during setProject
+        reset(ganttDataService);
+        
+        // Set up mock service response again after reset
+        Map<String, Object> mockData = new HashMap<>();
+        mockData.put("tasks", Collections.emptyList());
+        mockData.put("milestones", Collections.emptyList());
+        mockData.put("dependencies", Collections.emptyList());
+        
+        when(ganttDataService.formatTasksForGantt(
+                eq(mockProject.getId()), 
+                any(LocalDate.class), 
+                any(LocalDate.class)))
+            .thenReturn(mockData);
+        
         // Act
         viewModel.getRefreshCommand().execute();
         
