@@ -8,6 +8,7 @@ import javafx.stage.Stage;
 import org.frcpm.config.DatabaseConfig;
 import org.frcpm.services.ServiceFactory;
 import org.frcpm.services.SubteamService;
+import org.frcpm.utils.DatabaseInitializer;
 
 import java.io.IOException;
 import java.util.logging.Level;
@@ -24,6 +25,11 @@ public class MainApp extends Application {
     @Override
     public void start(Stage primaryStage) {
         try {
+            // Initialize database
+            DatabaseInitializer.initialize(true); // Pass true to create sample data
+
+
+            
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/MainView.fxml"));
             Parent root = loader.load();
             
