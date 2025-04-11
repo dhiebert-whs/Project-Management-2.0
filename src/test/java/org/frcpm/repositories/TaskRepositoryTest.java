@@ -55,7 +55,9 @@ public class TaskRepositoryTest {
         testSubsystem.setStatus(Subsystem.Status.NOT_STARTED);
         testSubsystem = subsystemRepository.save(testSubsystem);
         
-        testMember = new TeamMember("tasktestuser", "Task", "Test", "tasktest@example.com");
+        // Generate unique username for each test run
+        String uniqueUsername = "tasktestuser_" + System.currentTimeMillis();
+        testMember = new TeamMember(uniqueUsername, "Task", "Test", "tasktest@example.com");
         testMember = teamMemberRepository.save(testMember);
         
         // Add test data
@@ -64,14 +66,34 @@ public class TaskRepositoryTest {
     
     @AfterEach
     public void tearDown() {
-        // Clean up test data
-        cleanupTestTasks();
-        
-        teamMemberRepository.delete(testMember);
-        subsystemRepository.delete(testSubsystem);
-        projectRepository.delete(testProject);
-        
-        DatabaseConfig.shutdown();
+        try {
+            // Clean up test data
+            cleanupTestTasks();
+            
+            // More robust error handling and sequence of cleanup
+            if (testMember != null && testMember.getId() != null) {
+                // First, remove member from any tasks
+                List<Task> memberTasks = repository.findByAssignedMember(testMember);
+                for (Task task : memberTasks) {
+                    task.unassignMember(testMember);
+                    repository.save(task);
+                }
+                // Then delete the member
+                teamMemberRepository.deleteById(testMember.getId());
+            }
+            
+            if (testSubsystem != null && testSubsystem.getId() != null) {
+                subsystemRepository.deleteById(testSubsystem.getId());
+            }
+            
+            if (testProject != null && testProject.getId() != null) {
+                projectRepository.deleteById(testProject.getId());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            DatabaseConfig.shutdown();
+        }
     }
     
     private void createTestTasks() {
@@ -111,9 +133,21 @@ public class TaskRepositoryTest {
     }
     
     private void cleanupTestTasks() {
-        List<Task> tasks = repository.findByProject(testProject);
-        for (Task task : tasks) {
-            repository.delete(task);
+        try {
+            List<Task> tasks = repository.findByProject(testProject);
+            for (Task task : tasks) {
+                // Clear relationships first to avoid constraint violations
+                task.getAssignedTo().clear();
+                task.getPreDependencies().clear();
+                task.getPostDependencies().clear();
+                task.getRequiredComponents().clear();
+                repository.save(task);
+                
+                // Now delete the task
+                repository.deleteById(task.getId());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
     
