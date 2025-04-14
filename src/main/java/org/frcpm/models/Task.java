@@ -269,17 +269,7 @@ public class Task {
     }
     
     // Helper methods
-    
-    public void addPreDependency(Task dependency) {
-        preDependencies.add(dependency);
-        dependency.getPostDependencies().add(this);
-    }
-    
-    public void removePreDependency(Task dependency) {
-        preDependencies.remove(dependency);
-        dependency.getPostDependencies().remove(this);
-    }
-    
+        
     public void addRequiredComponent(Component component) {
         requiredComponents.add(component);
         component.getRequiredForTasks().add(this);
@@ -290,18 +280,83 @@ public class Task {
         component.getRequiredForTasks().remove(this);
     }
     
-    public void assignMember(TeamMember member) {
-        assignedTo.add(member);
-        member.getAssignedTasks().add(this);
-    }
-    
-    public void unassignMember(TeamMember member) {
-        assignedTo.remove(member);
-        member.getAssignedTasks().remove(this);
-    }
+
     
     @Override
     public String toString() {
         return title;
+    }
+
+    /**
+     * Adds a pre-dependency to this task.
+     * 
+     * @param dependency the dependency to add
+     */
+    public void addPreDependency(Task dependency) {
+        if (dependency == null) return;
+        
+        // Check for self-reference
+        if (this.equals(dependency)) {
+            throw new IllegalArgumentException("A task cannot depend on itself");
+        }
+        
+        // Add to this task's dependencies
+        if (!this.preDependencies.contains(dependency)) {
+            this.preDependencies.add(dependency);
+        }
+        
+        // Add this task to dependency's post-dependencies
+        if (!dependency.postDependencies.contains(this)) {
+            dependency.postDependencies.add(this);
+        }
+    }
+
+    /**
+     * Removes a pre-dependency from this task.
+     * 
+     * @param dependency the dependency to remove
+     */
+    public void removePreDependency(Task dependency) {
+        if (dependency == null) return;
+        
+        // Remove from this task's dependencies
+        this.preDependencies.remove(dependency);
+        
+        // Remove this task from dependency's post-dependencies
+        dependency.postDependencies.remove(this);
+    }
+
+    /**
+     * Assigns a team member to this task.
+     * 
+     * @param member the team member to assign
+     */
+    public void assignMember(TeamMember member) {
+        if (member == null) return;
+        
+        // Add to this task's assigned members
+        if (!this.assignedTo.contains(member)) {
+            this.assignedTo.add(member);
+        }
+        
+        // Add this task to member's assigned tasks
+        if (!member.getAssignedTasks().contains(this)) {
+            member.getAssignedTasks().add(this);
+        }
+    }
+
+    /**
+     * Unassigns a team member from this task.
+     * 
+     * @param member the team member to unassign
+     */
+    public void unassignMember(TeamMember member) {
+        if (member == null) return;
+        
+        // Remove from this task's assigned members
+        this.assignedTo.remove(member);
+        
+        // Remove this task from member's assigned tasks
+        member.getAssignedTasks().remove(this);
     }
 }
