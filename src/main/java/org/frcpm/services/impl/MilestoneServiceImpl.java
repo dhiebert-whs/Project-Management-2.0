@@ -1,11 +1,15 @@
 package org.frcpm.services.impl;
 
+import org.frcpm.config.DatabaseConfig;
 import org.frcpm.models.Milestone;
 import org.frcpm.models.Project;
 import org.frcpm.repositories.RepositoryFactory;
 import org.frcpm.repositories.specific.MilestoneRepository;
 import org.frcpm.repositories.specific.ProjectRepository;
 import org.frcpm.services.MilestoneService;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.TypedQuery;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -78,7 +82,7 @@ public class MilestoneServiceImpl extends AbstractService<Milestone, Long, Miles
         return save(milestone);
     }
     
-    @Override
+ @Override
     public Milestone updateMilestoneDate(Long milestoneId, LocalDate date) {
         if (milestoneId == null) {
             throw new IllegalArgumentException("Milestone ID cannot be null");
@@ -88,21 +92,54 @@ public class MilestoneServiceImpl extends AbstractService<Milestone, Long, Miles
             throw new IllegalArgumentException("Milestone date cannot be null");
         }
         
-        Milestone milestone = findById(milestoneId);
-        if (milestone == null) {
-            LOGGER.log(Level.WARNING, "Milestone not found with ID: {0}", milestoneId);
-            return null;
+        // Get the milestone with its project eagerly loaded
+        Milestone milestone = null;
+        EntityManager em = null;
+        
+        try {
+            em = DatabaseConfig.getEntityManager();
+            // Use a JPQL query that eagerly fetches the project
+            TypedQuery<Milestone> query = em.createQuery(
+                "SELECT m FROM Milestone m JOIN FETCH m.project WHERE m.id = :id", 
+                Milestone.class);
+            query.setParameter("id", milestoneId);
+            
+            try {
+                milestone = query.getSingleResult();
+            } catch (jakarta.persistence.NoResultException e) {
+                LOGGER.log(Level.WARNING, "Milestone not found with ID: {0}", milestoneId);
+                return null;
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error fetching milestone with project", e);
+            throw new RuntimeException("Failed to fetch milestone: " + e.getMessage(), e);
+        } finally {
+            if (em != null) {
+                em.close();
+            }
         }
         
+        // Now we can safely access the project properties
         Project project = milestone.getProject();
         
         // Validate that the milestone date is within the project timeline
-        if (date.isBefore(project.getStartDate()) || date.isAfter(project.getHardDeadline())) {
-            LOGGER.log(Level.WARNING, "Milestone date is outside the project timeline");
+        if (project != null) {
+            if (date.isBefore(project.getStartDate()) || date.isAfter(project.getHardDeadline())) {
+                LOGGER.log(Level.WARNING, "Milestone date {0} is outside the project timeline ({1} to {2})",
+                    new Object[]{date, project.getStartDate(), project.getHardDeadline()});
+                // We're just logging a warning here but still allowing the update
+            }
+        } else {
+            LOGGER.log(Level.WARNING, "Project is null for milestone with ID: {0}", milestoneId);
         }
         
-        milestone.setDate(date);
-        return save(milestone);
+        try {
+            milestone.setDate(date);
+            return save(milestone);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error updating milestone date", e);
+            throw new RuntimeException("Failed to update milestone date: " + e.getMessage(), e);
+        }
     }
     
     @Override
