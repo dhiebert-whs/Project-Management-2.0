@@ -47,22 +47,22 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
         if (member == null) {
             throw new IllegalArgumentException("Member cannot be null");
         }
-        
+
         EntityManager em = null;
         try {
             em = DatabaseConfig.getEntityManager();
-            
+
             // Use JPQL with fetch joins to eagerly load collections
             TypedQuery<Task> query = em.createQuery(
-                "SELECT DISTINCT t FROM Task t " +
-                "LEFT JOIN FETCH t.assignedTo " +
-                "LEFT JOIN FETCH t.preDependencies " +
-                "LEFT JOIN FETCH t.postDependencies " +
-                "LEFT JOIN FETCH t.requiredComponents " +
-                "JOIN t.assignedTo m WHERE m.id = :memberId", 
-                Task.class);
+                    "SELECT DISTINCT t FROM Task t " +
+                            "LEFT JOIN FETCH t.assignedTo " +
+                            "LEFT JOIN FETCH t.preDependencies " +
+                            "LEFT JOIN FETCH t.postDependencies " +
+                            "LEFT JOIN FETCH t.requiredComponents " +
+                            "JOIN t.assignedTo m WHERE m.id = :memberId",
+                    Task.class);
             query.setParameter("memberId", member.getId());
-            
+
             return query.getResultList();
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error finding tasks by assigned member", e);
@@ -152,50 +152,43 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
             throw new IllegalArgumentException("Task ID cannot be null");
         }
 
+        // First, load the task with its existing assignments
+        Task task = findById(taskId);
+        if (task == null) {
+            LOGGER.log(Level.WARNING, "Task not found with ID: {0}", taskId);
+            return null;
+        }
+
         EntityManager em = null;
         try {
             em = DatabaseConfig.getEntityManager();
             em.getTransaction().begin();
-            
-            // Find the task
-            Task task = em.find(Task.class, taskId);
-            if (task == null) {
-                LOGGER.log(Level.WARNING, "Task not found with ID: {0}", taskId);
-                em.getTransaction().rollback();
-                return null;
+
+            // Get a managed instance of the task
+            Task managedTask = em.find(Task.class, taskId);
+
+            // Get managed instances of all current team members and clear connections
+            for (TeamMember member : new HashSet<>(managedTask.getAssignedTo())) {
+                TeamMember managedMember = em.find(TeamMember.class, member.getId());
+                managedMember.getAssignedTasks().remove(managedTask);
+                managedTask.getAssignedTo().remove(managedMember);
             }
-            
-            // Clear existing assignments
-            for (TeamMember existingMember : new HashSet<>(task.getAssignedTo())) {
-                existingMember.getAssignedTasks().remove(task);
-            }
-            task.getAssignedTo().clear();
-            
-            // Add new assignments
-            if (members != null && !members.isEmpty()) {
+
+            // Now add the new assignments
+            if (members != null) {
                 for (TeamMember member : members) {
-                    // Get managed reference to the member
                     TeamMember managedMember = em.find(TeamMember.class, member.getId());
-                    if (managedMember != null) {
-                        task.getAssignedTo().add(managedMember);
-                        managedMember.getAssignedTasks().add(task);
-                    } else {
-                        LOGGER.log(Level.WARNING, "TeamMember not found with ID: {0}", member.getId());
-                    }
+                    managedTask.getAssignedTo().add(managedMember);
+                    managedMember.getAssignedTasks().add(managedTask);
                 }
             }
-            
+
+            // Commit everything
             em.flush();
             em.getTransaction().commit();
-            
-            // Force a refresh of the database
-            em = DatabaseConfig.getEntityManager();
-            for (TeamMember member : members) {
-                em.refresh(em.find(TeamMember.class, member.getId()));
-            }
-            em.close();
-            
-            return task;
+
+            // Return the updated task
+            return findById(taskId);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error assigning members to task", e);
             if (em != null && em.getTransaction().isActive()) {
@@ -208,8 +201,6 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
             }
         }
     }
-
-    
 
     @Override
     public Task updateRequiredComponents(Long taskId, Set<Long> componentIds) {
@@ -254,43 +245,37 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
         if (taskId.equals(dependencyId)) {
             throw new IllegalArgumentException("A task cannot depend on itself");
         }
-        
+
         EntityManager em = null;
         try {
             em = DatabaseConfig.getEntityManager();
             em.getTransaction().begin();
-            
-            // Get managed task and dependency
+
+            // Get managed entities
             Task task = em.find(Task.class, taskId);
             Task dependency = em.find(Task.class, dependencyId);
-            
+
             if (task == null || dependency == null) {
                 LOGGER.log(Level.WARNING, "Task not found with ID: {0} or {1}", new Object[] { taskId, dependencyId });
                 em.getTransaction().rollback();
                 return false;
             }
-            
+
             // Check for circular dependencies
-            if (hasDependencyPath(dependency, task, em)) {
+            if (wouldCreateCircularDependency(dependency, task, em)) {
                 LOGGER.log(Level.WARNING, "Adding dependency would create a circular dependency");
                 em.getTransaction().rollback();
                 throw new IllegalArgumentException("Adding this dependency would create a circular dependency");
             }
-            
-            // Clear persistence context to avoid stale data
-            em.clear();
-            
-            // Reload the entities
-            task = em.find(Task.class, taskId);
-            dependency = em.find(Task.class, dependencyId);
-            
-            // Add the dependency
+
+            // Directly manage the bidirectional relationship
             task.getPreDependencies().add(dependency);
             dependency.getPostDependencies().add(task);
-            
+
+            // Commit the changes
             em.flush();
             em.getTransaction().commit();
-            
+
             return true;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error adding dependency", e);
@@ -313,44 +298,44 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
         if (taskId == null || dependencyId == null) {
             throw new IllegalArgumentException("Task IDs cannot be null");
         }
-        
+
         EntityManager em = null;
         try {
             em = DatabaseConfig.getEntityManager();
             em.getTransaction().begin();
-            
+
             // Get managed task and dependency
             Task task = em.find(Task.class, taskId);
             Task dependency = em.find(Task.class, dependencyId);
-            
+
             if (task == null || dependency == null) {
                 LOGGER.log(Level.WARNING, "Task not found with ID: {0} or {1}", new Object[] { taskId, dependencyId });
                 em.getTransaction().rollback();
                 return false;
             }
-            
+
             // Check if dependency exists
             if (!task.getPreDependencies().contains(dependency)) {
-                LOGGER.log(Level.WARNING, "Dependency does not exist between tasks {0} and {1}", 
+                LOGGER.log(Level.WARNING, "Dependency does not exist between tasks {0} and {1}",
                         new Object[] { taskId, dependencyId });
                 em.getTransaction().rollback();
                 return false;
             }
-            
+
             // Clear persistence context to avoid stale data
             em.clear();
-            
+
             // Reload the entities
             task = em.find(Task.class, taskId);
             dependency = em.find(Task.class, dependencyId);
-            
+
             // Remove the dependency - update both sides of the relationship
             task.getPreDependencies().remove(dependency);
             dependency.getPostDependencies().remove(task);
-            
+
             em.flush();
             em.getTransaction().commit();
-            
+
             return true;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error removing dependency", e);
@@ -415,7 +400,6 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
         return false;
     }
 
-
     // Helper method to check for circular dependencies
     private boolean hasCircularDependency(Task start, Task target, EntityManager em) {
         // Initialize a set to track visited tasks
@@ -427,27 +411,27 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
         if (current.getId().equals(target.getId())) {
             return true;
         }
-        
+
         visited.add(current.getId());
-        
+
         // Get the post dependencies (tasks that depend on the current task)
         TypedQuery<Task> query = em.createQuery(
-            "SELECT t FROM Task t JOIN t.preDependencies pd WHERE pd.id = :currentId", 
-            Task.class);
+                "SELECT t FROM Task t JOIN t.preDependencies pd WHERE pd.id = :currentId",
+                Task.class);
         query.setParameter("currentId", current.getId());
         List<Task> postDependencies = query.getResultList();
-        
+
         for (Task postDep : postDependencies) {
             // Skip tasks we've already visited to prevent infinite recursion
             if (visited.contains(postDep.getId())) {
                 continue;
             }
-            
+
             if (hasCircularDependencyRecursive(postDep, target, visited, em)) {
                 return true;
             }
         }
-        
+
         return false;
     }
 
@@ -458,18 +442,18 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
         EntityManager em = null;
         try {
             em = DatabaseConfig.getEntityManager();
-            
+
             // Use JPQL to eagerly fetch the task with all collections
             TypedQuery<Task> query = em.createQuery(
-                "SELECT DISTINCT t FROM Task t " +
-                "LEFT JOIN FETCH t.assignedTo " +
-                "LEFT JOIN FETCH t.preDependencies " +
-                "LEFT JOIN FETCH t.postDependencies " +
-                "LEFT JOIN FETCH t.requiredComponents " +
-                "WHERE t.id = :id", 
-                Task.class);
+                    "SELECT DISTINCT t FROM Task t " +
+                            "LEFT JOIN FETCH t.assignedTo " +
+                            "LEFT JOIN FETCH t.preDependencies " +
+                            "LEFT JOIN FETCH t.postDependencies " +
+                            "LEFT JOIN FETCH t.requiredComponents " +
+                            "WHERE t.id = :id",
+                    Task.class);
             query.setParameter("id", taskId);
-            
+
             try {
                 Task task = query.getSingleResult();
                 // Access collections to ensure they're initialized
@@ -500,22 +484,22 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
         if (id == null) {
             return null;
         }
-        
+
         EntityManager em = null;
         try {
             em = DatabaseConfig.getEntityManager();
-            
+
             // Use JPQL to eagerly fetch the task with all collections
             TypedQuery<Task> query = em.createQuery(
-                "SELECT DISTINCT t FROM Task t " +
-                "LEFT JOIN FETCH t.assignedTo " +
-                "LEFT JOIN FETCH t.preDependencies " +
-                "LEFT JOIN FETCH t.postDependencies " +
-                "LEFT JOIN FETCH t.requiredComponents " +
-                "WHERE t.id = :id", 
-                Task.class);
+                    "SELECT DISTINCT t FROM Task t " +
+                            "LEFT JOIN FETCH t.assignedTo " +
+                            "LEFT JOIN FETCH t.preDependencies " +
+                            "LEFT JOIN FETCH t.postDependencies " +
+                            "LEFT JOIN FETCH t.requiredComponents " +
+                            "WHERE t.id = :id",
+                    Task.class);
             query.setParameter("id", id);
-            
+
             try {
                 return query.getSingleResult();
             } catch (jakarta.persistence.NoResultException e) {
@@ -532,7 +516,6 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
         }
     }
 
-
     // Helper method to ensure task is properly initialized in cache
     private void updateTaskCache(Long taskId) {
         // This is a no-op, but in a real implementation, you might update
@@ -548,12 +531,24 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
     private boolean hasDependencyPath(Task start, Task target, EntityManager em) {
         // Create a new query for each check to avoid stale data
         TypedQuery<Long> query = em.createQuery(
-            "SELECT COUNT(t) FROM Task t JOIN t.preDependencies d " +
-            "WHERE t.id = :startId AND d.id = :targetId", 
-            Long.class);
+                "SELECT COUNT(t) FROM Task t JOIN t.preDependencies d " +
+                        "WHERE t.id = :startId AND d.id = :targetId",
+                Long.class);
         query.setParameter("startId", start.getId());
         query.setParameter("targetId", target.getId());
-        
+
+        return query.getSingleResult() > 0;
+    }
+
+    private boolean wouldCreateCircularDependency(Task start, Task target, EntityManager em) {
+        // Create a query to check for direct circular dependencies
+        TypedQuery<Long> query = em.createQuery(
+                "SELECT COUNT(t) FROM Task t JOIN t.preDependencies d " +
+                        "WHERE t.id = :startId AND d.id = :targetId",
+                Long.class);
+        query.setParameter("startId", start.getId());
+        query.setParameter("targetId", target.getId());
+
         return query.getSingleResult() > 0;
     }
 }
