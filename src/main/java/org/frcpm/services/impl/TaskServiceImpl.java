@@ -129,46 +129,48 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
         if (taskId == null) {
             throw new IllegalArgumentException("Task ID cannot be null");
         }
-
-        Task task = findById(taskId);
-        if (task == null) {
-            LOGGER.log(Level.WARNING, "Task not found with ID: {0}", taskId);
-            return null;
-        }
-
+    
         EntityManager em = null;
         try {
             em = DatabaseConfig.getEntityManager();
             em.getTransaction().begin();
-
-            // Get a managed instance
-            task = em.merge(task);
-
-            // Get the current assignments to properly update both sides
-            Set<TeamMember> currentAssignments = new HashSet<>(task.getAssignedTo());
-
-            // First, remove all existing assignments
-            for (TeamMember member : currentAssignments) {
-                // We need to use the helper method to maintain bidirectional relationship
-                task.unassignMember(member);
+            
+            // Get a fully managed Task entity
+            Task task = em.find(Task.class, taskId);
+            if (task == null) {
+                LOGGER.log(Level.WARNING, "Task not found with ID: {0}", taskId);
+                em.getTransaction().rollback();
+                return null;
             }
-
-            // Now add new assignments
+            
+            // Create a copy of current assignments to avoid concurrent modification issues
+            Set<TeamMember> currentAssignments = new HashSet<>(task.getAssignedTo());
+            
+            // Clear existing assignments by directly manipulating both sides
+            for (TeamMember member : currentAssignments) {
+                TeamMember managedMember = em.find(TeamMember.class, member.getId());
+                task.getAssignedTo().remove(managedMember);
+                managedMember.getAssignedTasks().remove(task);
+            }
+            
+            // Add new assignments with direct manipulation
             if (members != null) {
                 for (TeamMember member : members) {
                     if (member != null && member.getId() != null) {
                         TeamMember managedMember = em.find(TeamMember.class, member.getId());
                         if (managedMember != null) {
-                            // Use the helper method to maintain bidirectional relationship
-                            task.assignMember(managedMember);
+                            task.getAssignedTo().add(managedMember);
+                            managedMember.getAssignedTasks().add(task);
                         }
                     }
                 }
             }
-
+            
+            // Ensure changes are persisted
             em.flush();
+            task = em.merge(task);
             em.getTransaction().commit();
-
+            
             return task;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error assigning members to task", e);
@@ -188,35 +190,42 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
         if (taskId == null || dependencyId == null) {
             throw new IllegalArgumentException("Task IDs cannot be null");
         }
-
+        
         if (taskId.equals(dependencyId)) {
             throw new IllegalArgumentException("A task cannot depend on itself");
         }
-
-        Task task = findById(taskId);
-        Task dependency = findById(dependencyId);
-
-        if (task == null || dependency == null) {
-            LOGGER.log(Level.WARNING, "Task not found with ID: {0} or {1}",
-                    new Object[] { taskId, dependencyId });
-            return false;
-        }
-
+    
         EntityManager em = null;
         try {
             em = DatabaseConfig.getEntityManager();
             em.getTransaction().begin();
-
-            // Get managed instances
-            task = em.merge(task);
-            dependency = em.merge(dependency);
-
-            // Add the dependency using helper method
-            task.addPreDependency(dependency);
-
+            
+            // Get managed instances directly
+            Task task = em.find(Task.class, taskId);
+            Task dependency = em.find(Task.class, dependencyId);
+            
+            if (task == null || dependency == null) {
+                LOGGER.log(Level.WARNING, "Task not found with ID: {0} or {1}", 
+                        new Object[]{taskId, dependencyId});
+                em.getTransaction().rollback();
+                return false;
+            }
+            
+            // Check for circular dependency
+            if (checkCircularDependency(dependency, task, em)) {
+                LOGGER.log(Level.WARNING, "Adding dependency {0} to task {1} would create a circular reference", 
+                        new Object[]{dependencyId, taskId});
+                em.getTransaction().rollback();
+                return false;
+            }
+            
+            // Manually establish the bidirectional relationship
+            task.getPreDependencies().add(dependency);
+            dependency.getPostDependencies().add(task);
+            
+            // Ensure changes are persisted
             em.flush();
             em.getTransaction().commit();
-
             return true;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error adding dependency", e);
@@ -245,12 +254,13 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
             em = DatabaseConfig.getEntityManager();
             em.getTransaction().begin();
 
-            // Get managed task and dependency
+            // Get managed instances
             Task task = em.find(Task.class, taskId);
             Task dependency = em.find(Task.class, dependencyId);
 
             if (task == null || dependency == null) {
-                LOGGER.log(Level.WARNING, "Task not found with ID: {0} or {1}", new Object[] { taskId, dependencyId });
+                LOGGER.log(Level.WARNING, "Task not found with ID: {0} or {1}", 
+                        new Object[]{taskId, dependencyId});
                 em.getTransaction().rollback();
                 return false;
             }
@@ -266,19 +276,18 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
 
             if (!exists) {
                 LOGGER.log(Level.WARNING, "Dependency does not exist between tasks {0} and {1}",
-                        new Object[] { taskId, dependencyId });
+                        new Object[]{taskId, dependencyId});
                 em.getTransaction().rollback();
                 return false;
             }
 
-            // Remove the dependency using helper method that handles both sides
-            task.removePreDependency(dependency);
+            // Manually maintain both sides of the relationship
+            task.getPreDependencies().remove(dependency);
+            dependency.getPostDependencies().remove(task);
 
-            em.merge(task);
-            em.merge(dependency);
+            // Ensure changes are persisted
             em.flush();
             em.getTransaction().commit();
-
             return true;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error removing dependency", e);
