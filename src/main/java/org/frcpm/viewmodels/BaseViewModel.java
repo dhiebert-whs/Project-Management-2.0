@@ -14,14 +14,14 @@ import org.frcpm.binding.Command;
  * Provides common functionality for error handling and dirty state tracking.
  */
 public abstract class BaseViewModel {
-    
+
     // Common properties for all ViewModels
     private final StringProperty errorMessage = new SimpleStringProperty("");
     private final BooleanProperty dirty = new SimpleBooleanProperty(false);
-    
+
     // List to store property listeners for cleanup
     private final ObservableList<Runnable> propertyListenersList = FXCollections.observableArrayList();
-    
+
     /**
      * Gets the error message property.
      * 
@@ -30,16 +30,17 @@ public abstract class BaseViewModel {
     public StringProperty errorMessageProperty() {
         return errorMessage;
     }
-    
+
     /**
      * Gets the error message.
      * 
-     * @return the error message
+     * @return the error message or null if no error message is set
      */
     public String getErrorMessage() {
-        return errorMessage.get();
+        String message = errorMessage.get();
+        return message != null && message.isEmpty() ? null : message;
     }
-    
+
     /**
      * Sets the error message.
      * 
@@ -48,14 +49,14 @@ public abstract class BaseViewModel {
     protected void setErrorMessage(String message) {
         errorMessage.set(message);
     }
-    
+
     /**
      * Clears the error message.
      */
     protected void clearErrorMessage() {
         errorMessage.set("");
     }
-    
+
     /**
      * Gets the dirty property.
      * Dirty indicates that the ViewModel has unsaved changes.
@@ -65,7 +66,7 @@ public abstract class BaseViewModel {
     public BooleanProperty dirtyProperty() {
         return dirty;
     }
-    
+
     /**
      * Checks if the ViewModel has unsaved changes.
      * 
@@ -74,7 +75,7 @@ public abstract class BaseViewModel {
     public boolean isDirty() {
         return dirty.get();
     }
-    
+
     /**
      * Sets the dirty flag.
      * 
@@ -83,7 +84,7 @@ public abstract class BaseViewModel {
     protected void setDirty(boolean value) {
         dirty.set(value);
     }
-    
+
     /**
      * New feature: Adds a property listener to be tracked for cleanup.
      * 
@@ -92,7 +93,7 @@ public abstract class BaseViewModel {
     protected void trackPropertyListener(Runnable listener) {
         propertyListenersList.add(listener);
     }
-    
+
     /**
      * New feature: Creates a property change handler that sets dirty flag.
      * 
@@ -107,34 +108,36 @@ public abstract class BaseViewModel {
             }
         };
     }
-    
+
     /**
      * New feature: Helper to create a valid-only command.
      * 
-     * @param action the action to execute
+     * @param action     the action to execute
      * @param validCheck the validity check supplier
      * @return a command that checks validity before execution
      */
     protected Command createValidOnlyCommand(Runnable action, java.util.function.Supplier<Boolean> validCheck) {
         return new Command(action, validCheck);
     }
-    
+
     /**
      * New feature: Helper to create a save command (valid + dirty).
      * 
-     * @param action the action to execute
+     * @param action     the action to execute
      * @param validCheck the validity check supplier
      * @return a command that checks validity and dirty state before execution
      */
     protected Command createValidAndDirtyCommand(Runnable action, java.util.function.Supplier<Boolean> validCheck) {
         return new Command(action, () -> validCheck.get() && isDirty());
     }
-    
+
     /**
-     * New feature: Cleanup method to be called when the ViewModel is no longer needed.
+     * New feature: Cleanup method to be called when the ViewModel is no longer
+     * needed.
      */
     public void cleanupResources() {
         // Base implementation just clears tracked listeners
         propertyListenersList.clear();
     }
+
 }
