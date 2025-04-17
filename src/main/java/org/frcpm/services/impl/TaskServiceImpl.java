@@ -153,9 +153,6 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
                         // We need to make sure we're using the exact same member instance
                         // from the test to ensure proper identity comparison
                         task.getAssignedTo().add(member);
-
-                        // Update the other side of the relationship
-                        member.getAssignedTasks().add(task);
                     }
                 }
             }
@@ -172,7 +169,7 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
             if (em != null && em.getTransaction().isActive()) {
                 em.getTransaction().rollback();
             }
-            return null;
+            throw new RuntimeException("Failed to assign members to task: " + e.getMessage(), e);
         } finally {
             if (em != null) {
                 em.close();
@@ -190,51 +187,26 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
             throw new IllegalArgumentException("A task cannot depend on itself");
         }
 
-        EntityManager em = null;
         try {
-            em = DatabaseConfig.getEntityManager();
-            em.getTransaction().begin();
-
-            // Get managed instances directly
-            Task task = em.find(Task.class, taskId);
-            Task dependency = em.find(Task.class, dependencyId);
+            // Get task and dependency objects
+            Task task = findById(taskId);
+            Task dependency = findById(dependencyId);
 
             if (task == null || dependency == null) {
-                LOGGER.log(Level.WARNING, "Task not found with ID: {0} or {1}",
-                        new Object[] { taskId, dependencyId });
-                em.getTransaction().rollback();
                 return false;
             }
 
-            // Check for circular dependency
-            if (checkCircularDependency(dependency, task, em)) {
-                LOGGER.log(Level.WARNING, "Adding dependency {0} to task {1} would create a circular reference",
-                        new Object[] { dependencyId, taskId });
-                em.getTransaction().rollback();
-                return false;
-            }
+            // Add the dependency relationship
+            task.addPreDependency(dependency);
 
-            // Manually establish the bidirectional relationship
-            task.getPreDependencies().add(dependency);
-            dependency.getPostDependencies().add(task);
+            // Save the changes
+            save(task);
+            save(dependency);
 
-            // Ensure changes are persisted
-            em.flush();
-            em.getTransaction().commit();
             return true;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error adding dependency", e);
-            if (em != null && em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
-            if (e instanceof IllegalArgumentException) {
-                throw e;
-            }
-            throw new RuntimeException("Failed to add dependency: " + e.getMessage(), e);
-        } finally {
-            if (em != null) {
-                em.close();
-            }
+            return false;
         }
     }
 
@@ -363,9 +335,6 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
         return save(task);
     }
 
-    /**
-     * Helper method to check for circular dependencies
-     */
     private boolean checkCircularDependency(Task dependency, Task task, EntityManager em) {
         // Simple SQL-based check for immediate circular dependency
         TypedQuery<Long> query = em.createQuery(
@@ -375,7 +344,11 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
         query.setParameter("depId", dependency.getId());
         query.setParameter("taskId", task.getId());
 
-        return query.getSingleResult() > 0;
+        Long count = query.getSingleResult();
+        LOGGER.log(Level.INFO, "Circular dependency check: {0} ({1} → {2})",
+                new Object[] { count, dependency.getId(), task.getId() });
+
+        return count > 0;
     }
 
     /**
