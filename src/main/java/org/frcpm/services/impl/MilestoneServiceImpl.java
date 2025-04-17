@@ -82,7 +82,7 @@ public class MilestoneServiceImpl extends AbstractService<Milestone, Long, Miles
         return save(milestone);
     }
     
- @Override
+    @Override
     public Milestone updateMilestoneDate(Long milestoneId, LocalDate date) {
         if (milestoneId == null) {
             throw new IllegalArgumentException("Milestone ID cannot be null");
@@ -92,53 +92,49 @@ public class MilestoneServiceImpl extends AbstractService<Milestone, Long, Miles
             throw new IllegalArgumentException("Milestone date cannot be null");
         }
         
-        // Get the milestone with its project eagerly loaded
-        Milestone milestone = null;
         EntityManager em = null;
-        
         try {
             em = DatabaseConfig.getEntityManager();
-            // Use a JPQL query that eagerly fetches the project
-            TypedQuery<Milestone> query = em.createQuery(
-                "SELECT m FROM Milestone m JOIN FETCH m.project WHERE m.id = :id", 
-                Milestone.class);
-            query.setParameter("id", milestoneId);
+            em.getTransaction().begin();
             
-            try {
-                milestone = query.getSingleResult();
-            } catch (jakarta.persistence.NoResultException e) {
+            // Get a managed instance of the milestone
+            Milestone milestone = em.find(Milestone.class, milestoneId);
+            
+            if (milestone == null) {
                 LOGGER.log(Level.WARNING, "Milestone not found with ID: {0}", milestoneId);
+                em.getTransaction().rollback();
                 return null;
             }
+            
+            // Get the project association safely within the transaction
+            Project project = milestone.getProject();
+            
+            // Optional validation (just log warnings)
+            if (project != null) {
+                if (date.isBefore(project.getStartDate()) || date.isAfter(project.getHardDeadline())) {
+                    LOGGER.log(Level.WARNING, "Milestone date {0} is outside the project timeline ({1} to {2})",
+                            new Object[]{date, project.getStartDate(), project.getHardDeadline()});
+                }
+            }
+            
+            // Update the date
+            milestone.setDate(date);
+            
+            // Flush changes to detect any errors before committing
+            em.flush();
+            em.getTransaction().commit();
+            
+            return milestone;
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error fetching milestone with project", e);
-            throw new RuntimeException("Failed to fetch milestone: " + e.getMessage(), e);
+            LOGGER.log(Level.SEVERE, "Error updating milestone date", e);
+            if (em != null && em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            throw new RuntimeException("Failed to update milestone date: " + e.getMessage(), e);
         } finally {
             if (em != null) {
                 em.close();
             }
-        }
-        
-        // Now we can safely access the project properties
-        Project project = milestone.getProject();
-        
-        // Validate that the milestone date is within the project timeline
-        if (project != null) {
-            if (date.isBefore(project.getStartDate()) || date.isAfter(project.getHardDeadline())) {
-                LOGGER.log(Level.WARNING, "Milestone date {0} is outside the project timeline ({1} to {2})",
-                    new Object[]{date, project.getStartDate(), project.getHardDeadline()});
-                // We're just logging a warning here but still allowing the update
-            }
-        } else {
-            LOGGER.log(Level.WARNING, "Project is null for milestone with ID: {0}", milestoneId);
-        }
-        
-        try {
-            milestone.setDate(date);
-            return save(milestone);
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error updating milestone date", e);
-            throw new RuntimeException("Failed to update milestone date: " + e.getMessage(), e);
         }
     }
     
