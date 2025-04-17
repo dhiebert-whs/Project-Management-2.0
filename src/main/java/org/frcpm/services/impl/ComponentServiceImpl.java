@@ -1,11 +1,14 @@
 package org.frcpm.services.impl;
 
+import org.frcpm.config.DatabaseConfig;
 import org.frcpm.models.Component;
 import org.frcpm.models.Task;
 import org.frcpm.repositories.RepositoryFactory;
 import org.frcpm.repositories.specific.ComponentRepository;
 import org.frcpm.repositories.specific.TaskRepository;
 import org.frcpm.services.ComponentService;
+
+import jakarta.persistence.EntityManager;
 
 import java.time.LocalDate;
 import java.util.HashSet;
@@ -115,29 +118,56 @@ public class ComponentServiceImpl extends AbstractService<Component, Long, Compo
             throw new IllegalArgumentException("Task ID cannot be null");
         }
         
-        Task task = taskRepository.findById(taskId).orElse(null);
-        if (task == null) {
-            LOGGER.log(Level.WARNING, "Task not found with ID: {0}", taskId);
-            return null;
-        }
-        
-        // Clear existing components
-        task.getRequiredComponents().clear();
-        
-        if (componentIds != null && !componentIds.isEmpty()) {
-            Set<Component> components = new HashSet<>();
+        // Use entity manager for proper transaction handling
+        EntityManager em = null;
+        try {
+            em = DatabaseConfig.getEntityManager();
+            em.getTransaction().begin();
             
-            for (Long componentId : componentIds) {
-                Component component = findById(componentId);
-                if (component != null) {
-                    components.add(component);
-                    task.addRequiredComponent(component);
-                } else {
-                    LOGGER.log(Level.WARNING, "Component not found with ID: {0}", componentId);
+            // Get a managed instance of the task
+            Task task = em.find(Task.class, taskId);
+            if (task == null) {
+                LOGGER.log(Level.WARNING, "Task not found with ID: {0}", taskId);
+                em.getTransaction().rollback();
+                return null;
+            }
+            
+            // Clear existing components but maintain managed references
+            // Get a copy first to avoid concurrent modification
+            Set<Component> currentComponents = new HashSet<>(task.getRequiredComponents());
+            for (Component component : currentComponents) {
+                task.getRequiredComponents().remove(component);
+                component.getRequiredForTasks().remove(task);
+            }
+            
+            // Add new components
+            if (componentIds != null && !componentIds.isEmpty()) {
+                for (Long componentId : componentIds) {
+                    Component component = em.find(Component.class, componentId);
+                    if (component != null) {
+                        // Use the entity helper method to maintain both sides of the relationship
+                        task.addRequiredComponent(component);
+                    } else {
+                        LOGGER.log(Level.WARNING, "Component not found with ID: {0}", componentId);
+                    }
                 }
             }
+            
+            // Flush changes to detect any errors before committing
+            em.flush();
+            em.getTransaction().commit();
+            
+            return task;
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error associating components with task", e);
+            if (em != null && em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            throw new RuntimeException("Failed to associate components with task: " + e.getMessage(), e);
+        } finally {
+            if (em != null) {
+                em.close();
+            }
         }
-        
-        return taskRepository.save(task);
     }
 }
