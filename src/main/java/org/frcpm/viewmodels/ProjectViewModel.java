@@ -510,13 +510,19 @@ public class ProjectViewModel extends BaseViewModel {
         try {
             Project project = selectedProject.get();
             if (project != null) {
-                projectService.deleteById(project.getId());
-
-                // Remove from projects list
-                projects.remove(project);
-
-                // Clear selection
-                selectedProject.set(null);
+                // Delete from database first
+                boolean success = projectService.deleteById(project.getId());
+                
+                if (success) {
+                    // Important: Remove from the projects list BEFORE clearing the selection
+                    projects.remove(project);
+                    
+                    // Clear the selection only after updating the list
+                    selectedProject.set(null);
+                } else {
+                    // Handle unsuccessful deletion
+                    setErrorMessage("Failed to delete project: Database operation unsuccessful");
+                }
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error deleting project", e);
@@ -759,11 +765,8 @@ public class ProjectViewModel extends BaseViewModel {
         return daysUntilDeadline.get();
     }
 
-    /**
-     * Clears the error message.
-     * Public wrapper for BaseViewModel's protected clearErrorMessage method.
-     */
+    @Override
     public void clearErrorMessage() {
-        errorMessageProperty().set("");
+        super.clearErrorMessage();
     }
 }

@@ -232,7 +232,7 @@ public class ProjectViewModelTest {
     @Test
     public void testDeleteCommand() {
         // Configure mocks
-        doNothing().when(projectService).deleteById(anyLong());
+        when(projectService.deleteById(anyLong())).thenReturn(true);  // Changed from doNothing()
         when(projectService.getProjectSummary(anyLong())).thenReturn(testSummary);
         when(milestoneService.findByProject(any(Project.class))).thenReturn(testMilestones);
 
