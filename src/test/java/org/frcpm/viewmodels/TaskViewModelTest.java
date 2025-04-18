@@ -111,12 +111,17 @@ public class TaskViewModelTest {
         assertTrue(viewModel.getErrorMessage().contains("title"));
     }
     
+
     @Test
     public void testInitExistingTask() {
         // Set up mock task with assigned team member
         Set<TeamMember> assignedMembers = new HashSet<>();
         assignedMembers.add(mockTeamMember);
         when(mockTask.getAssignedTo()).thenReturn(assignedMembers);
+        
+        // Ensure proper returns for all properties
+        when(mockTask.getPreDependencies()).thenReturn(new HashSet<>()); // Empty set, not null
+        when(mockTask.getRequiredComponents()).thenReturn(new HashSet<>()); // Empty set, not null
         
         // Act
         viewModel.initExistingTask(mockTask);

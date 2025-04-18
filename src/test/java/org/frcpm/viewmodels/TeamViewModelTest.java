@@ -89,11 +89,11 @@ public class TeamViewModelTest {
 
     @Test
     public void testLoadMembers() {
-        // Configure mock
+        // Configure mock before creating the ViewModel
         when(teamMemberService.findAll()).thenReturn(testMembers);
 
-        // Load members by triggering the command - USE THE CORRECT COMMAND NAME
-        viewModel.getEditMemberCommand().execute();
+        // Create a new ViewModel that will use the configured mock
+        viewModel = new TeamViewModel(teamMemberService, subteamService);
 
         // Verify members are loaded
         assertEquals(1, viewModel.getMembers().size());
@@ -102,11 +102,11 @@ public class TeamViewModelTest {
 
     @Test
     public void testLoadSubteams() {
-        // Configure mock
+        // Configure mock before creating the ViewModel
         when(subteamService.findAll()).thenReturn(testSubteams);
 
-        // Load subteams by triggering the command - USE THE CORRECT COMMAND NAME
-        viewModel.getEditSubteamCommand().execute();
+        // Create a new ViewModel that will use the configured mock
+        viewModel = new TeamViewModel(teamMemberService, subteamService);
 
         // Verify subteams are loaded
         assertEquals(1, viewModel.getSubteams().size());
@@ -327,17 +327,16 @@ public class TeamViewModelTest {
 
     @Test
     public void testDeleteMemberCommand() {
-        // Configure mocks
-        doNothing().when(teamMemberService).deleteById(anyLong());
-
-        // Load members
+        // Configure mocks - use when().thenReturn() for boolean methods, not
+        // doNothing()
+        when(teamMemberService.deleteById(anyLong())).thenReturn(true);
         when(teamMemberService.findAll()).thenReturn(testMembers);
 
-        // USE THE CORRECT COMMAND NAME
-        viewModel.getEditMemberCommand().execute();
+        // Create a new ViewModel that will use the configured mock
+        viewModel = new TeamViewModel(teamMemberService, subteamService);
 
         // Set up existing member
-        viewModel.initExistingMember(testMember);
+        viewModel.setSelectedMember(testMember);
 
         // Initially the delete command should be executable
         assertTrue(viewModel.getDeleteMemberCommand().canExecute());
@@ -397,16 +396,17 @@ public class TeamViewModelTest {
 
     @Test
     public void testDeleteSubteamCommand_WithNoMembers() {
-        // Configure mocks
-        doNothing().when(subteamService).deleteById(anyLong());
+        // Configure mocks - use when().thenReturn() for boolean methods, not
+        // doNothing()
+        when(subteamService.deleteById(anyLong())).thenReturn(true);
         when(teamMemberService.findBySubteam(any(Subteam.class))).thenReturn(new ArrayList<>());
-
-        // Load subteams
         when(subteamService.findAll()).thenReturn(testSubteams);
-        viewModel.getEditSubteamCommand().execute();
+
+        // Create a new ViewModel that will use the configured mock
+        viewModel = new TeamViewModel(teamMemberService, subteamService);
 
         // Set up existing subteam
-        viewModel.initExistingSubteam(testSubteam);
+        viewModel.setSelectedSubteam(testSubteam);
 
         // Initially the delete command should be executable
         assertTrue(viewModel.getDeleteSubteamCommand().canExecute());

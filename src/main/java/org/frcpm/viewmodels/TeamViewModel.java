@@ -95,24 +95,36 @@ public class TeamViewModel extends BaseViewModel {
         saveSubteamCommand = new Command(this::saveSubteam, this::canSaveSubteam);
         loadSubteamMembersCommand = new Command(this::loadSubteamMembers, this::canLoadSubteamMembers);
         
-        // Set up validation listeners for member
-        memberUsername.addListener((observable, oldValue, newValue) -> validateMember());
-        memberFirstName.addListener((observable, oldValue, newValue) -> validateMember());
-        memberLastName.addListener((observable, oldValue, newValue) -> validateMember());
-        memberEmail.addListener((observable, oldValue, newValue) -> validateMember());
+        // Set up validation listeners for member using the new BaseViewModel pattern
+        Runnable memberValidator = createDirtyFlagHandler(this::validateMember);
+        memberUsername.addListener((observable, oldValue, newValue) -> memberValidator.run());
+        memberFirstName.addListener((observable, oldValue, newValue) -> memberValidator.run());
+        memberLastName.addListener((observable, oldValue, newValue) -> memberValidator.run());
+        memberEmail.addListener((observable, oldValue, newValue) -> memberValidator.run());
+        
+        // Track these listeners for cleanup
+        trackPropertyListener(memberValidator);
         
         // Set up dirty flag listeners for member
-        memberPhone.addListener((observable, oldValue, newValue) -> setDirty(true));
-        memberSkills.addListener((observable, oldValue, newValue) -> setDirty(true));
-        memberIsLeader.addListener((observable, oldValue, newValue) -> setDirty(true));
-        memberSubteam.addListener((observable, oldValue, newValue) -> setDirty(true));
+        Runnable dirtyHandler = createDirtyFlagHandler(null);
+        memberPhone.addListener((observable, oldValue, newValue) -> dirtyHandler.run());
+        memberSkills.addListener((observable, oldValue, newValue) -> dirtyHandler.run());
+        memberIsLeader.addListener((observable, oldValue, newValue) -> dirtyHandler.run());
+        memberSubteam.addListener((observable, oldValue, newValue) -> dirtyHandler.run());
         
-        // Set up validation listeners for subteam
-        subteamName.addListener((observable, oldValue, newValue) -> validateSubteam());
-        subteamColorCode.addListener((observable, oldValue, newValue) -> validateSubteam());
+        // Track these listeners for cleanup
+        trackPropertyListener(dirtyHandler);
+        
+        // Set up validation listeners for subteam using the new BaseViewModel pattern
+        Runnable subteamValidator = createDirtyFlagHandler(this::validateSubteam);
+        subteamName.addListener((observable, oldValue, newValue) -> subteamValidator.run());
+        subteamColorCode.addListener((observable, oldValue, newValue) -> subteamValidator.run());
+        
+        // Track these listeners for cleanup
+        trackPropertyListener(subteamValidator);
         
         // Set up dirty flag listeners for subteam
-        subteamSpecialties.addListener((observable, oldValue, newValue) -> setDirty(true));
+        subteamSpecialties.addListener((observable, oldValue, newValue) -> dirtyHandler.run());
         
         // Set up selection listeners
         selectedMember.addListener((observable, oldValue, newValue) -> {
@@ -137,7 +149,8 @@ public class TeamViewModel extends BaseViewModel {
         validateMember();
         validateSubteam();
         
-        // Load initial data
+        // Load initial data - this is called automatically in the constructor
+        // which can cause issues for tests if not properly mocked
         loadMembers();
         loadSubteams();
     }
@@ -199,12 +212,15 @@ public class TeamViewModel extends BaseViewModel {
     
     /**
      * Loads the list of team members.
+     * This method is public to allow direct calling from tests.
      */
-    private void loadMembers() {
+    public void loadMembers() {
         try {
             List<TeamMember> memberList = teamMemberService.findAll();
             members.clear();
-            members.addAll(memberList);
+            if (memberList != null) {
+                members.addAll(memberList);
+            }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error loading team members", e);
             setErrorMessage("Failed to load team members: " + e.getMessage());
@@ -213,12 +229,15 @@ public class TeamViewModel extends BaseViewModel {
     
     /**
      * Loads the list of subteams.
+     * This method is public to allow direct calling from tests.
      */
-    private void loadSubteams() {
+    public void loadSubteams() {
         try {
             List<Subteam> subteamList = subteamService.findAll();
             subteams.clear();
-            subteams.addAll(subteamList);
+            if (subteamList != null) {
+                subteams.addAll(subteamList);
+            }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error loading subteams", e);
             setErrorMessage("Failed to load subteams: " + e.getMessage());
@@ -234,7 +253,9 @@ public class TeamViewModel extends BaseViewModel {
             if (subteam != null) {
                 List<TeamMember> memberList = teamMemberService.findBySubteam(subteam);
                 subteamMembers.clear();
-                subteamMembers.addAll(memberList);
+                if (memberList != null) {
+                    subteamMembers.addAll(memberList);
+                }
             } else {
                 subteamMembers.clear();
             }
@@ -282,8 +303,9 @@ public class TeamViewModel extends BaseViewModel {
         // Update form from member
         updateMemberForm(member);
         
-        // Clear dirty flag
+        // Clear dirty flag and validate
         setDirty(false);
+        validateMember();
     }
     
     /**
@@ -355,8 +377,9 @@ public class TeamViewModel extends BaseViewModel {
         // Load subteam members
         loadSubteamMembers();
         
-        // Clear dirty flag
+        // Clear dirty flag and validate
         setDirty(false);
+        validateSubteam();
     }
     
     /**
@@ -409,17 +432,21 @@ public class TeamViewModel extends BaseViewModel {
         try {
             TeamMember member = selectedMember.get();
             if (member != null) {
-                teamMemberService.deleteById(member.getId());
+                boolean success = teamMemberService.deleteById(member.getId());
                 
-                // Remove from members list
-                members.remove(member);
-                
-                // Clear selection
-                selectedMember.set(null);
-                
-                // If the deleted member was in the selected subteam, refresh the subteam members list
-                if (selectedSubteam.get() != null) {
-                    loadSubteamMembers();
+                if (success) {
+                    // Remove from members list
+                    members.remove(member);
+                    
+                    // Clear selection
+                    selectedMember.set(null);
+                    
+                    // If the deleted member was in the selected subteam, refresh the subteam members list
+                    if (selectedSubteam.get() != null) {
+                        loadSubteamMembers();
+                    }
+                } else {
+                    setErrorMessage("Failed to delete team member: Operation returned false");
                 }
             }
         } catch (Exception e) {
@@ -547,18 +574,22 @@ public class TeamViewModel extends BaseViewModel {
             if (subteam != null) {
                 // Check if the subteam has members
                 List<TeamMember> subteamMembers = teamMemberService.findBySubteam(subteam);
-                if (!subteamMembers.isEmpty()) {
+                if (subteamMembers != null && !subteamMembers.isEmpty()) {
                     setErrorMessage("Cannot delete subteam that has members assigned to it. Reassign members first.");
                     return;
                 }
                 
-                subteamService.deleteById(subteam.getId());
+                boolean success = subteamService.deleteById(subteam.getId());
                 
-                // Remove from subteams list
-                subteams.remove(subteam);
-                
-                // Clear selection
-                selectedSubteam.set(null);
+                if (success) {
+                    // Remove from subteams list
+                    subteams.remove(subteam);
+                    
+                    // Clear selection
+                    selectedSubteam.set(null);
+                } else {
+                    setErrorMessage("Failed to delete subteam: Operation returned false");
+                }
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error deleting subteam", e);
@@ -933,7 +964,23 @@ public class TeamViewModel extends BaseViewModel {
      * Clears the error message.
      * Public method to be accessed by the controller.
      */
+    @Override
     public void clearErrorMessage() {
-        errorMessageProperty().set("");
+        super.clearErrorMessage();
+    }
+    
+    /**
+     * Override the cleanupResources method from BaseViewModel
+     * to clean up any additional resources specific to this ViewModel.
+     */
+    @Override
+    public void cleanupResources() {
+        // Call super to cleanup tracked listeners
+        super.cleanupResources();
+        
+        // Clear collections to help garbage collection
+        members.clear();
+        subteams.clear();
+        subteamMembers.clear();
     }
 }

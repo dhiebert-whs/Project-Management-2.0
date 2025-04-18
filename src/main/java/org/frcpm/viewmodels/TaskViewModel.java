@@ -254,10 +254,9 @@ public class TaskViewModel extends BaseViewModel {
         if (!errors.isEmpty()) {
             setErrorMessage(String.join("\n", errors));
         } else {
-            clearErrorMessage();
+            clearErrorMessage();  // This should now correctly set to null via BaseViewModel
         }
     }
-
     /**
      * Saves the task.
      * Called when the save command is executed.
