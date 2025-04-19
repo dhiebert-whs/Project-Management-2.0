@@ -1,9 +1,13 @@
 package org.frcpm.viewmodels;
 
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.StringProperty;
-import javafx.collections.ObservableList;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
+
 import org.frcpm.binding.Command;
 import org.frcpm.models.Component;
 import org.frcpm.models.Task;
@@ -15,13 +19,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.StringProperty;
+import javafx.collections.ObservableList;
 
 @ExtendWith(MockitoExtension.class)
 public class ComponentViewModelTest {
@@ -38,9 +39,14 @@ public class ComponentViewModelTest {
 
     @BeforeEach
     public void setUp() {
-        // Create the ViewModel with mock services
+        // Create test data first
+        setupTestData();
+        
+        // Create the ViewModel with mock services - don't configure mocks here
         viewModel = new ComponentViewModel(mockComponentService, mockTaskService);
-
+    }
+    
+    private void setupTestData() {
         // Create test data
         testComponent = new Component("Test Component", "PART123");
         testComponent.setId(1L);
@@ -58,9 +64,6 @@ public class ComponentViewModelTest {
         Set<Task> tasks = new HashSet<>();
         tasks.add(testTask);
         testComponent.setRequiredForTasks(tasks);
-
-        // Mock service methods
-        when(mockComponentService.save(any(Component.class))).thenReturn(testComponent);
     }
 
     @Test
@@ -78,6 +81,7 @@ public class ComponentViewModelTest {
         assertFalse(viewModel.deliveredProperty().get());
         assertTrue(viewModel.getRequiredForTasks().isEmpty());
         assertFalse(viewModel.isDirty());
+        assertNull(viewModel.getErrorMessage()); // Make sure error message is cleared
     }
 
     @Test
@@ -95,6 +99,7 @@ public class ComponentViewModelTest {
         assertEquals(testComponent.isDelivered(), viewModel.deliveredProperty().get());
         assertEquals(1, viewModel.getRequiredForTasks().size());
         assertFalse(viewModel.isDirty());
+        assertNull(viewModel.getErrorMessage()); // Make sure error message is cleared
     }
 
     @Test
@@ -127,6 +132,7 @@ public class ComponentViewModelTest {
     @Test
     public void testSaveCommand() {
         // Arrange
+        when(mockComponentService.save(any(Component.class))).thenReturn(testComponent);
         viewModel.initExistingComponent(testComponent);
         Command saveCommand = viewModel.getSaveCommand();
 
@@ -143,6 +149,7 @@ public class ComponentViewModelTest {
         // Assert - verify the service was called
         verify(mockComponentService).save(any(Component.class));
         assertFalse(viewModel.isDirty());
+        assertNull(viewModel.getErrorMessage()); // Error message should be cleared after successful save
     }
 
     @Test
@@ -160,15 +167,47 @@ public class ComponentViewModelTest {
 
         // Assert
         assertTrue(viewModel.isDirty());
-        assertTrue(saveCommand.canExecute());
+        
+        // Validate to set error message and valid state
+        viewModel.validate();
+        assertFalse(viewModel.isValid()); // Should be invalid due to missing name
+        assertFalse(saveCommand.canExecute()); // Save command should not be executable
+        assertNotNull(viewModel.getErrorMessage());
+        assertTrue(viewModel.getErrorMessage().contains("Component name is required"));
+        
+        // Verify service was never called
+        verify(mockComponentService, never()).save(any());
+    }
 
-        // Act - execute the command
-        saveCommand.execute();
-
-        // Assert - verify the service was NOT called due to validation failure
-        verify(mockComponentService, never()).save(any(Component.class));
-        assertTrue(viewModel.isDirty());
-        assertNotEquals("", viewModel.errorMessageProperty().get());
+    @Test
+    public void testValidation_ValidComponent() {
+        // Arrange
+        viewModel.initNewComponent();
+        
+        // Act - set valid properties
+        viewModel.nameProperty().set("Valid Component");
+        
+        // Assert
+        viewModel.validate(); // Explicitly validate
+        assertTrue(viewModel.isValid());
+        assertNull(viewModel.getErrorMessage());
+    }
+    
+    @Test
+    public void testValidation_DeliveredWithoutDate() {
+        // Arrange
+        viewModel.initNewComponent();
+        
+        // Act - set valid name but mark as delivered without delivery date
+        viewModel.nameProperty().set("Valid Component");
+        viewModel.deliveredProperty().set(true);
+        viewModel.actualDeliveryProperty().set(null); // Clear the date that might be auto-set
+        
+        // Assert
+        viewModel.validate(); // Explicitly validate
+        assertFalse(viewModel.isValid());
+        assertNotNull(viewModel.getErrorMessage());
+        assertTrue(viewModel.getErrorMessage().contains("Actual delivery date is required"));
     }
 
     @Test
@@ -200,12 +239,10 @@ public class ComponentViewModelTest {
     @Test
     public void testRemoveTaskCommand() {
         // Arrange
+        when(mockTaskService.save(any(Task.class))).thenReturn(testTask);
         viewModel.initExistingComponent(testComponent);
         viewModel.setSelectedTask(testTask);
         Command removeTaskCommand = viewModel.getRemoveTaskCommand();
-
-        // Mock TaskService behavior
-        when(mockTaskService.save(any(Task.class))).thenReturn(testTask);
 
         // Assert
         assertTrue(removeTaskCommand.canExecute());
@@ -216,6 +253,35 @@ public class ComponentViewModelTest {
         // Assert - verify task was removed
         assertEquals(0, viewModel.getRequiredForTasks().size());
         verify(mockTaskService).save(any(Task.class));
+    }
+
+    @Test
+    public void testRemoveTaskCommand_NullTask() {
+        // Arrange
+        viewModel.initExistingComponent(testComponent);
+        viewModel.setSelectedTask(null);
+        Command removeTaskCommand = viewModel.getRemoveTaskCommand();
+
+        // Assert
+        assertFalse(removeTaskCommand.canExecute());
+    }
+    
+    @Test
+    public void testRemoveTaskCommand_ExceptionHandling() {
+        // Arrange
+        viewModel.initExistingComponent(testComponent);
+        viewModel.setSelectedTask(testTask);
+        Command removeTaskCommand = viewModel.getRemoveTaskCommand();
+
+        // Mock TaskService to throw exception
+        doThrow(new RuntimeException("Test exception")).when(mockTaskService).save(any(Task.class));
+
+        // Act
+        removeTaskCommand.execute();
+
+        // Assert
+        assertNotNull(viewModel.getErrorMessage());
+        assertTrue(viewModel.getErrorMessage().contains("Failed to remove task"));
     }
 
     @Test
@@ -288,6 +354,19 @@ public class ComponentViewModelTest {
         assertEquals(1, tasks.size());
         assertEquals(testTask.getId(), tasks.get(0).getId());
     }
+    
+    @Test
+    public void testLoadTasks_HandlesNullRequiredForTasks() {
+        // Arrange
+        testComponent.setRequiredForTasks(null);
+        viewModel.initExistingComponent(testComponent);
+        
+        // Act - explicitly call loadTasks to test null handling
+        viewModel.loadTasks();
+        
+        // Assert
+        assertTrue(viewModel.getRequiredForTasks().isEmpty());
+    }
 
     @Test
     public void testSetSelectedTask() {
@@ -301,5 +380,17 @@ public class ComponentViewModelTest {
         // Assert
         assertEquals(testTask, viewModel.getSelectedTask());
         assertTrue(viewModel.getRemoveTaskCommand().canExecute());
+    }
+    
+    @Test
+    public void testCleanupResources() {
+        // Arrange
+        viewModel.initExistingComponent(testComponent);
+        
+        // Act
+        viewModel.cleanupResources();
+        
+        // Assert - just make sure it doesn't throw exceptions
+        // This is primarily testing that the method exists and can be called
     }
 }
