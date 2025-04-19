@@ -44,6 +44,8 @@ public class MainViewModelTest {
     
     @BeforeEach
     public void setUp() {
+        // Do not stub any methods here that aren't used by every test
+        // Only create the viewModel with mocked dependencies
         viewModel = new MainViewModel(
             projectService,
             meetingService,
@@ -57,8 +59,10 @@ public class MainViewModelTest {
     public void testLoadProjects() {
         // Arrange
         List<Project> projects = new ArrayList<>();
-        projects.add(new Project("Project 1", LocalDate.now(), LocalDate.now().plusWeeks(6), LocalDate.now().plusWeeks(8)));
-        projects.add(new Project("Project 2", LocalDate.now(), LocalDate.now().plusWeeks(6), LocalDate.now().plusWeeks(8)));
+        Project project1 = new Project("Project 1", LocalDate.now(), LocalDate.now().plusWeeks(6), LocalDate.now().plusWeeks(8));
+        Project project2 = new Project("Project 2", LocalDate.now(), LocalDate.now().plusWeeks(6), LocalDate.now().plusWeeks(8));
+        projects.add(project1);
+        projects.add(project2);
         
         when(projectService.findAll()).thenReturn(projects);
         
@@ -69,22 +73,24 @@ public class MainViewModelTest {
         assertEquals(2, viewModel.getProjectList().size());
         assertEquals("Project 1", viewModel.getProjectList().get(0).getName());
         assertEquals("Project 2", viewModel.getProjectList().get(1).getName());
-        verify(projectService, times(1)).findAll();
+        assertNull(viewModel.getErrorMessage(), "Error message should be null after successful load");
+        verify(projectService, times(2)).findAll(); // Once in constructor, once in loadProjects()
     }
     
     @Test
-    public void testLoadProjectsHandlesException() {
+    public void testLoadProjectHandlesException() {
         // Arrange
-        when(projectService.findAll()).thenThrow(new RuntimeException("Test exception"));
+        RuntimeException exception = new RuntimeException("Test exception");
+        when(projectService.findAll()).thenThrow(exception);
         
         // Act
         viewModel.loadProjects();
         
         // Assert
-        assertTrue(viewModel.getProjectList().isEmpty());
-        assertNotNull(viewModel.getErrorMessage());
-        assertFalse(viewModel.getErrorMessage().isEmpty());
-        verify(projectService, times(1)).findAll();
+        assertTrue(viewModel.getProjectList().isEmpty(), "Project list should be empty when load fails");
+        assertNotNull(viewModel.getErrorMessage(), "Error message should not be null after exception");
+        assertEquals("Failed to load projects from the database.", viewModel.getErrorMessage());
+        verify(projectService, times(2)).findAll(); // Once in constructor, once in loadProjects()
     }
     
     @Test
@@ -103,12 +109,18 @@ public class MainViewModelTest {
     
     @Test
     public void testOpenProjectWithNull() {
+        // Arrange - set a project first to ensure we're testing a change
+        Project project = new Project("Test Project", LocalDate.now(), LocalDate.now().plusWeeks(6), LocalDate.now().plusWeeks(8));
+        viewModel.setSelectedProject(project);
+        assertFalse(viewModel.isProjectTabDisabled());
+        
         // Act
         viewModel.openProject(null);
         
         // Assert
-        assertNull(viewModel.getSelectedProject());
-        assertTrue(viewModel.isProjectTabDisabled());
+        // Should not change the currently selected project when null is provided
+        assertEquals(project, viewModel.getSelectedProject());
+        assertFalse(viewModel.isProjectTabDisabled());
     }
     
     @Test

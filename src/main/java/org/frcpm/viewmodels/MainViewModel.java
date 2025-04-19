@@ -13,6 +13,7 @@ import org.frcpm.utils.ShortcutManager;
 import java.io.File;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -20,6 +21,7 @@ import java.util.logging.Logger;
 /**
  * ViewModel for the main application in the FRC Project Management System.
  * Follows the MVVM pattern to separate business logic from UI.
+ * Updated to follow consistent ViewModel patterns and best practices.
  */
 public class MainViewModel extends BaseViewModel {
     
@@ -39,6 +41,7 @@ public class MainViewModel extends BaseViewModel {
     private final ObjectProperty<Project> selectedProject = new SimpleObjectProperty<>();
     private final BooleanProperty projectTabDisabled = new SimpleBooleanProperty(true);
     private final StringProperty projectTabTitle = new SimpleStringProperty("Project Details");
+    private final BooleanProperty valid = new SimpleBooleanProperty(true);
     
     // Date formatter for displaying dates
     private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
@@ -116,61 +119,91 @@ public class MainViewModel extends BaseViewModel {
             SubsystemService subsystemService,
             ShortcutManager shortcutManager) {
         
+        if (projectService == null) {
+            throw new IllegalArgumentException("Project service cannot be null");
+        }
+        if (meetingService == null) {
+            throw new IllegalArgumentException("Meeting service cannot be null");
+        }
+        if (taskService == null) {
+            throw new IllegalArgumentException("Task service cannot be null");
+        }
+        if (subsystemService == null) {
+            throw new IllegalArgumentException("Subsystem service cannot be null");
+        }
+        if (shortcutManager == null) {
+            throw new IllegalArgumentException("Shortcut manager cannot be null");
+        }
+        
         this.projectService = projectService;
         this.meetingService = meetingService;
         this.taskService = taskService;
         this.subsystemService = subsystemService;
         this.shortcutManager = shortcutManager;
         
-        // Initialize commands
-        loadProjectsCommand = new Command(this::loadProjects);
-        createNewProjectCommand = new Command(this::handleNewProject);
-        openProjectCommand = new Command(this::handleOpenSelectedProject, this::canOpenSelectedProject);
-        closeProjectCommand = new Command(this::handleCloseProject, this::canCloseProject);
-        saveProjectCommand = new Command(this::handleSave, this::canSave);
-        saveProjectAsCommand = new Command(this::handleSaveAs, this::canSaveAs);
-        importProjectCommand = new Command(this::handleImportProject);
-        exportProjectCommand = new Command(this::handleExportProject, this::canExportProject);
-        exitCommand = new Command(this::handleExit);
+        // Initialize commands using BaseViewModel helper methods
+        loadProjectsCommand = createValidOnlyCommand(this::loadProjects, () -> true);
+        createNewProjectCommand = createValidOnlyCommand(this::handleNewProject, () -> true);
+        openProjectCommand = createValidOnlyCommand(this::handleOpenSelectedProject, this::canOpenSelectedProject);
+        closeProjectCommand = createValidOnlyCommand(this::handleCloseProject, this::canCloseProject);
+        saveProjectCommand = createValidOnlyCommand(this::handleSave, this::canSave);
+        saveProjectAsCommand = createValidOnlyCommand(this::handleSaveAs, this::canSaveAs);
+        importProjectCommand = createValidOnlyCommand(this::handleImportProject, () -> true);
+        exportProjectCommand = createValidOnlyCommand(this::handleExportProject, this::canExportProject);
+        exitCommand = createValidOnlyCommand(this::handleExit, () -> true);
         
         // Edit menu commands
-        undoCommand = new Command(this::handleUndo);
-        redoCommand = new Command(this::handleRedo);
-        cutCommand = new Command(this::handleCut);
-        copyCommand = new Command(this::handleCopy);
-        pasteCommand = new Command(this::handlePaste);
-        deleteCommand = new Command(this::handleDelete);
-        selectAllCommand = new Command(this::handleSelectAll);
-        findCommand = new Command(this::handleFind);
+        undoCommand = createValidOnlyCommand(this::handleUndo, () -> false); // Not implemented yet
+        redoCommand = createValidOnlyCommand(this::handleRedo, () -> false); // Not implemented yet
+        cutCommand = createValidOnlyCommand(this::handleCut, () -> false); // Not implemented yet
+        copyCommand = createValidOnlyCommand(this::handleCopy, () -> false); // Not implemented yet
+        pasteCommand = createValidOnlyCommand(this::handlePaste, () -> false); // Not implemented yet
+        deleteCommand = createValidOnlyCommand(this::handleDelete, () -> false); // Not implemented yet
+        selectAllCommand = createValidOnlyCommand(this::handleSelectAll, () -> false); // Not implemented yet
+        findCommand = createValidOnlyCommand(this::handleFind, () -> false); // Not implemented yet
         
         // View menu commands
-        viewDashboardCommand = new Command(this::handleViewDashboard);
-        viewGanttCommand = new Command(this::handleViewGantt);
-        viewCalendarCommand = new Command(this::handleViewCalendar);
-        viewDailyCommand = new Command(this::handleViewDaily);
-        refreshCommand = new Command(this::handleRefresh);
+        viewDashboardCommand = createValidOnlyCommand(this::handleViewDashboard, this::canUseProjectCommands);
+        viewGanttCommand = createValidOnlyCommand(this::handleViewGantt, this::canUseProjectCommands);
+        viewCalendarCommand = createValidOnlyCommand(this::handleViewCalendar, this::canUseProjectCommands);
+        viewDailyCommand = createValidOnlyCommand(this::handleViewDaily, this::canUseProjectCommands);
+        refreshCommand = createValidOnlyCommand(this::handleRefresh, () -> true);
         
         // Project menu commands
-        projectPropertiesCommand = new Command(this::handleProjectProperties, this::canUseProjectCommands);
-        addMilestoneCommand = new Command(this::handleAddMilestone, this::canUseProjectCommands);
-        scheduleMeetingCommand = new Command(this::handleScheduleMeeting, this::canUseProjectCommands);
-        addTaskCommand = new Command(this::handleAddTask, this::canUseProjectCommands);
-        projectStatisticsCommand = new Command(this::handleProjectStatistics, this::canUseProjectCommands);
+        projectPropertiesCommand = createValidOnlyCommand(this::handleProjectProperties, this::canUseProjectCommands);
+        addMilestoneCommand = createValidOnlyCommand(this::handleAddMilestone, this::canUseProjectCommands);
+        scheduleMeetingCommand = createValidOnlyCommand(this::handleScheduleMeeting, this::canUseProjectCommands);
+        addTaskCommand = createValidOnlyCommand(this::handleAddTask, this::canUseProjectCommands);
+        projectStatisticsCommand = createValidOnlyCommand(this::handleProjectStatistics, this::canUseProjectCommands);
         
         // Team menu commands
-        subteamsCommand = new Command(this::handleSubteams);
-        membersCommand = new Command(this::handleMembers);
-        takeAttendanceCommand = new Command(this::handleTakeAttendance, this::canUseProjectCommands);
-        attendanceHistoryCommand = new Command(this::handleAttendanceHistory, this::canUseProjectCommands);
-        subsystemsCommand = new Command(this::handleSubsystems);
+        subteamsCommand = createValidOnlyCommand(this::handleSubteams, this::canUseProjectCommands);
+        membersCommand = createValidOnlyCommand(this::handleMembers, this::canUseProjectCommands);
+        takeAttendanceCommand = createValidOnlyCommand(this::handleTakeAttendance, this::canUseProjectCommands);
+        attendanceHistoryCommand = createValidOnlyCommand(this::handleAttendanceHistory, this::canUseProjectCommands);
+        subsystemsCommand = createValidOnlyCommand(this::handleSubsystems, this::canUseProjectCommands);
         
         // Tools menu commands
-        settingsCommand = new Command(this::handleSettings);
-        databaseManagementCommand = new Command(this::handleDatabaseManagement);
-        userGuideCommand = new Command(this::handleUserGuide);
-        aboutCommand = new Command(this::handleAbout);
+        settingsCommand = createValidOnlyCommand(this::handleSettings, () -> true);
+        databaseManagementCommand = createValidOnlyCommand(this::handleDatabaseManagement, () -> true);
+        userGuideCommand = createValidOnlyCommand(this::handleUserGuide, () -> true);
+        aboutCommand = createValidOnlyCommand(this::handleAbout, () -> true);
         
-        // Set up change listeners
+        // Set up property listeners
+        setupPropertyListeners();
+        
+        // Initial data load
+        loadProjects();
+    }
+    
+    /**
+     * Sets up listeners for property changes.
+     */
+    private void setupPropertyListeners() {
+        // Create validation handler
+        Runnable validationHandler = createDirtyFlagHandler(this::validate);
+        
+        // Set up project selection listener
         selectedProject.addListener((obs, oldValue, newValue) -> {
             boolean hasProject = (newValue != null);
             projectTabDisabled.set(!hasProject);
@@ -180,10 +213,32 @@ public class MainViewModel extends BaseViewModel {
             } else {
                 projectTabTitle.set("Project Details");
             }
+            
+            validationHandler.run();
         });
         
-        // Initial data load
-        loadProjects();
+        // Track the listener
+        trackPropertyListener(validationHandler);
+    }
+    
+    /**
+     * Validates the current state.
+     * Currently very simple since most validation is done in child ViewModels.
+     */
+    public void validate() {
+        List<String> errors = new ArrayList<>();
+        
+        // Currently no specific validation rules for MainViewModel
+        // This is mostly a container for project operations
+        
+        // Update valid state and error message
+        valid.set(errors.isEmpty());
+        
+        if (!errors.isEmpty()) {
+            setErrorMessage(String.join("\n", errors));
+        } else {
+            clearErrorMessage();
+        }
     }
     
     /**
@@ -193,6 +248,7 @@ public class MainViewModel extends BaseViewModel {
         try {
             List<Project> projects = projectService.findAll();
             projectList.setAll(projects);
+            clearErrorMessage(); // Clear any previous error message on successful load
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error loading projects", e);
             setErrorMessage("Failed to load projects from the database.");
@@ -216,11 +272,13 @@ public class MainViewModel extends BaseViewModel {
      */
     public void openProject(Project project) {
         if (project == null) {
+            LOGGER.warning("Attempted to open null project");
             return;
         }
         
         // Set selected project
         selectedProject.set(project);
+        clearErrorMessage();
     }
     
     /**
@@ -253,13 +311,28 @@ public class MainViewModel extends BaseViewModel {
      * Saves the current project.
      */
     public void handleSave() {
-        LOGGER.info("Save Project action triggered");
+        Project project = selectedProject.get();
+        if (project == null) {
+            LOGGER.warning("No project selected to save");
+            return;
+        }
+        
+        try {
+            projectService.save(project);
+            setDirty(false);
+            clearErrorMessage();
+            LOGGER.info("Project saved successfully: " + project.getName());
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error saving project", e);
+            setErrorMessage("Failed to save project: " + e.getMessage());
+        }
     }
     
     /**
      * Saves the current project with a new name.
      */
     public void handleSaveAs() {
+        // This will be handled by the controller which will show a dialog
         LOGGER.info("Save Project As action triggered");
     }
     
@@ -277,8 +350,18 @@ public class MainViewModel extends BaseViewModel {
      * @param file the file to import from
      */
     public void importProject(File file) {
-        if (file != null) {
+        if (file == null) {
+            LOGGER.warning("Null file provided for import");
+            return;
+        }
+        
+        try {
             LOGGER.info("Importing project from " + file.getName());
+            // Implementation would go here
+            clearErrorMessage();
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error importing project", e);
+            setErrorMessage("Failed to import project: " + e.getMessage());
         }
     }
     
@@ -509,7 +592,9 @@ public class MainViewModel extends BaseViewModel {
      * @param subsystem the subsystem for a new task
      */
     public void showTaskDialog(Task task, Subsystem subsystem) {
-        // This will be handled by the controller which will show a dialog
+        if (task == null && subsystem == null) {
+            LOGGER.warning("Both task and subsystem are null in showTaskDialog");
+        }
         LOGGER.info("Show Task Dialog action triggered");
     }
     
@@ -519,7 +604,6 @@ public class MainViewModel extends BaseViewModel {
      * @param subsystem the subsystem to edit, or null to create a new subsystem
      */
     public void showSubsystemDialog(Subsystem subsystem) {
-        // This will be handled by the controller which will show a dialog
         LOGGER.info("Show Subsystem Dialog action triggered");
     }
     
@@ -577,6 +661,15 @@ public class MainViewModel extends BaseViewModel {
      */
     private boolean canUseProjectCommands() {
         return selectedProject.get() != null;
+    }
+    
+    /**
+     * Cleans up resources when the ViewModel is no longer needed.
+     */
+    @Override
+    public void cleanupResources() {
+        super.cleanupResources();
+        // Any additional cleanup specific to this ViewModel
     }
     
     // Getters for commands
@@ -759,6 +852,14 @@ public class MainViewModel extends BaseViewModel {
         return projectTabTitle.get();
     }
     
+    public BooleanProperty validProperty() {
+        return valid;
+    }
+    
+    public boolean isValid() {
+        return valid.get();
+    }
+    
     public ShortcutManager getShortcutManager() {
         return shortcutManager;
     }
@@ -782,7 +883,12 @@ public class MainViewModel extends BaseViewModel {
      * @param combination the key combination
      */
     public void handleKeyShortcut(String combination) {
-        // This will be expanded later to handle keyboard shortcuts
+        if (combination == null || combination.isEmpty()) {
+            LOGGER.warning("Null or empty key combination received");
+            return;
+        }
+        
         LOGGER.info("Key shortcut: " + combination);
+        // This will be expanded later to handle keyboard shortcuts
     }
 }
