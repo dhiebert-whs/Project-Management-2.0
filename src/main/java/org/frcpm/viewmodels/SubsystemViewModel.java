@@ -84,7 +84,7 @@ public class SubsystemViewModel extends BaseViewModel {
         this.taskService = taskService;
         
         // Create commands
-        saveCommand = new Command(this::save, this::isValid);
+        saveCommand = createValidOnlyCommand(this::save, this::isValid);
         createNewCommand = new Command(this::createNew);
         deleteCommand = new Command(this::delete, this::canDelete);
         loadSubsystemsCommand = new Command(this::loadSubsystems);
@@ -95,12 +95,16 @@ public class SubsystemViewModel extends BaseViewModel {
         addTaskCommand = new Command(this::addTask, this::canAddTask);
         
         // Set up validation listeners
-        subsystemName.addListener((observable, oldValue, newValue) -> validate());
+        Runnable validationHandler = createDirtyFlagHandler(this::validate);
+        subsystemName.addListener((observable, oldValue, newValue) -> validationHandler.run());
+        trackPropertyListener(validationHandler);
         
         // Set up dirty flag listeners
-        subsystemDescription.addListener((observable, oldValue, newValue) -> setDirty(true));
-        status.addListener((observable, oldValue, newValue) -> setDirty(true));
-        responsibleSubteam.addListener((observable, oldValue, newValue) -> setDirty(true));
+        Runnable dirtyHandler = createDirtyFlagHandler(null);
+        subsystemDescription.addListener((observable, oldValue, newValue) -> dirtyHandler.run());
+        status.addListener((observable, oldValue, newValue) -> dirtyHandler.run());
+        responsibleSubteam.addListener((observable, oldValue, newValue) -> dirtyHandler.run());
+        trackPropertyListener(dirtyHandler);
         
         // Set up selection listener
         selectedSubsystem.addListener((observable, oldValue, newValue) -> {
@@ -112,18 +116,19 @@ public class SubsystemViewModel extends BaseViewModel {
             }
         });
         
-        // Initial validation
-        validate();
+        // Initial state should be clear - don't validate yet
+        clearErrorMessage();
         
-        // Load subsystems and subteams
+        // Load subsystems and subteams - performed in public methods for testing
         loadSubsystems();
         loadSubteams();
     }
     
+  // Make validate method public for direct testing
     /**
      * Validates the form data.
      */
-    private void validate() {
+    public void validate() {
         List<String> errors = new ArrayList<>();
         
         // Check required fields
@@ -143,11 +148,17 @@ public class SubsystemViewModel extends BaseViewModel {
     /**
      * Loads the list of subsystems.
      */
-    private void loadSubsystems() {
+    public void loadSubsystems() {
         try {
             List<Subsystem> subsystemList = subsystemService.findAll();
-            subsystems.clear();
-            subsystems.addAll(subsystemList);
+            if (subsystemList != null) {
+                subsystems.clear();
+                subsystems.addAll(subsystemList);
+            } else {
+                LOGGER.warning("Subsystem service returned null list");
+                subsystems.clear();
+            }
+            clearErrorMessage();
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error loading subsystems", e);
             setErrorMessage("Failed to load subsystems: " + e.getMessage());
@@ -157,11 +168,17 @@ public class SubsystemViewModel extends BaseViewModel {
     /**
      * Loads the list of subteams.
      */
-    private void loadSubteams() {
+    public void loadSubteams() {
         try {
             List<Subteam> subteamList = subteamService.findAll();
-            availableSubteams.clear();
-            availableSubteams.addAll(subteamList);
+            if (subteamList != null) {
+                availableSubteams.clear();
+                availableSubteams.addAll(subteamList);
+            } else {
+                LOGGER.warning("Subteam service returned null list");
+                availableSubteams.clear();
+            }
+            clearErrorMessage();
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error loading subteams", e);
             setErrorMessage("Failed to load subteams: " + e.getMessage());
@@ -171,22 +188,31 @@ public class SubsystemViewModel extends BaseViewModel {
     /**
      * Loads tasks for the selected subsystem.
      */
-    private void loadTasks() {
+    public void loadTasks() {
         try {
             Subsystem subsystem = selectedSubsystem.get();
             if (subsystem != null) {
                 List<Task> taskList = taskService.findBySubsystem(subsystem);
-                tasks.clear();
-                tasks.addAll(taskList);
-                
-                // Update summary data
-                int total = taskList.size();
-                int completed = (int) taskList.stream().filter(Task::isCompleted).count();
-                double percentage = total > 0 ? (completed * 100.0 / total) : 0.0;
-                
-                totalTasks.set(total);
-                completedTasks.set(completed);
-                completionPercentage.set(percentage);
+                if (taskList != null) {
+                    tasks.clear();
+                    tasks.addAll(taskList);
+                    
+                    // Update summary data
+                    int total = taskList.size();
+                    int completed = (int) taskList.stream().filter(Task::isCompleted).count();
+                    double percentage = total > 0 ? ((double)completed * 100.0 / total) : 0.0;
+                    
+                    totalTasks.set(total);
+                    completedTasks.set(completed);
+                    completionPercentage.set(percentage);
+                } else {
+                    LOGGER.warning("Task service returned null list");
+                    tasks.clear();
+                    totalTasks.set(0);
+                    completedTasks.set(0);
+                    completionPercentage.set(0);
+                }
+                clearErrorMessage();
             } else {
                 tasks.clear();
                 totalTasks.set(0);
@@ -218,9 +244,9 @@ public class SubsystemViewModel extends BaseViewModel {
         completedTasks.set(0);
         completionPercentage.set(0);
         
-        // Clear dirty flag and validate
+        // Clear dirty flag and error message
         setDirty(false);
-        validate();
+        clearErrorMessage();
     }
     
     /**
@@ -242,8 +268,9 @@ public class SubsystemViewModel extends BaseViewModel {
         // Load tasks
         loadTasks();
         
-        // Clear dirty flag
+        // Clear dirty flag and error messages
         setDirty(false);
+        clearErrorMessage();
     }
     
     /**
@@ -304,11 +331,23 @@ public class SubsystemViewModel extends BaseViewModel {
                     responsibleSubteamId
                 );
                 
-                // Add to subsystems list
-                subsystems.add(subsystem);
+                if (subsystem != null) {
+                    // Add to subsystems list
+                    subsystems.add(subsystem);
+                    
+                    // Update selected subsystem
+                    selectedSubsystem.set(subsystem);
+                } else {
+                    setErrorMessage("Failed to create subsystem: Service returned null");
+                    return;
+                }
             } else {
                 // Update existing subsystem
                 subsystem = selectedSubsystem.get();
+                if (subsystem == null) {
+                    setErrorMessage("No subsystem selected for update");
+                    return;
+                }
                 
                 // Update status
                 subsystem = subsystemService.updateStatus(
@@ -316,28 +355,51 @@ public class SubsystemViewModel extends BaseViewModel {
                     status.get()
                 );
                 
+                if (subsystem == null) {
+                    setErrorMessage("Failed to update subsystem status: Service returned null");
+                    return;
+                }
+                
                 // Assign responsible subteam
                 subsystem = subsystemService.assignResponsibleSubteam(
                     subsystem.getId(),
                     responsibleSubteamId
                 );
                 
+                if (subsystem == null) {
+                    setErrorMessage("Failed to assign subteam: Service returned null");
+                    return;
+                }
+                
                 // Update description
                 subsystem.setDescription(subsystemDescription.get());
                 subsystem = subsystemService.save(subsystem);
                 
+                if (subsystem == null) {
+                    setErrorMessage("Failed to save subsystem: Service returned null");
+                    return;
+                }
+                
                 // Update in subsystems list
-                int index = subsystems.indexOf(selectedSubsystem.get());
+                int index = -1;
+                for (int i = 0; i < subsystems.size(); i++) {
+                    if (subsystems.get(i).getId().equals(subsystem.getId())) {
+                        index = i;
+                        break;
+                    }
+                }
+                
                 if (index >= 0) {
                     subsystems.set(index, subsystem);
                 }
+                
+                // Update selected subsystem
+                selectedSubsystem.set(subsystem);
             }
             
-            // Update selected subsystem
-            selectedSubsystem.set(subsystem);
-            
-            // Clear dirty flag
+            // Clear dirty flag and error message
             setDirty(false);
+            clearErrorMessage();
             
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error saving subsystem", e);
@@ -363,18 +425,22 @@ public class SubsystemViewModel extends BaseViewModel {
             if (subsystem != null) {
                 // Check if subsystem has tasks
                 List<Task> subsystemTasks = taskService.findBySubsystem(subsystem);
-                if (!subsystemTasks.isEmpty()) {
+                if (subsystemTasks != null && !subsystemTasks.isEmpty()) {
                     setErrorMessage("Cannot delete subsystem that has tasks. Reassign tasks first.");
                     return;
                 }
                 
-                subsystemService.deleteById(subsystem.getId());
-                
-                // Remove from subsystems list
-                subsystems.remove(subsystem);
-                
-                // Clear selection
-                selectedSubsystem.set(null);
+                boolean deleted = subsystemService.deleteById(subsystem.getId());
+                if (deleted) {
+                    // Remove from subsystems list
+                    subsystems.remove(subsystem);
+                    
+                    // Clear selection
+                    selectedSubsystem.set(null);
+                    clearErrorMessage();
+                } else {
+                    setErrorMessage("Failed to delete subsystem: Operation unsuccessful");
+                }
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error deleting subsystem", e);
@@ -396,17 +462,29 @@ public class SubsystemViewModel extends BaseViewModel {
                     status.get()
                 );
                 
-                // Update in subsystems list
-                int index = subsystems.indexOf(selectedSubsystem.get());
-                if (index >= 0) {
-                    subsystems.set(index, subsystem);
+                if (subsystem != null) {
+                    // Update in subsystems list
+                    int index = -1;
+                    for (int i = 0; i < subsystems.size(); i++) {
+                        if (subsystems.get(i).getId().equals(subsystem.getId())) {
+                            index = i;
+                            break;
+                        }
+                    }
+                    
+                    if (index >= 0) {
+                        subsystems.set(index, subsystem);
+                    }
+                    
+                    // Update selected subsystem
+                    selectedSubsystem.set(subsystem);
+                    
+                    // Clear dirty flag and error message
+                    setDirty(false);
+                    clearErrorMessage();
+                } else {
+                    setErrorMessage("Failed to update subsystem status: Service returned null");
                 }
-                
-                // Update selected subsystem
-                selectedSubsystem.set(subsystem);
-                
-                // Clear dirty flag
-                setDirty(false);
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error updating subsystem status", e);
@@ -423,6 +501,7 @@ public class SubsystemViewModel extends BaseViewModel {
     public Subsystem findByName(String name) {
         try {
             Optional<Subsystem> subsystem = subsystemService.findByName(name);
+            clearErrorMessage();
             return subsystem.orElse(null);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error finding subsystem by name", e);
@@ -456,6 +535,15 @@ public class SubsystemViewModel extends BaseViewModel {
      */
     private boolean canUpdateStatus() {
         return selectedSubsystem.get() != null;
+    }
+    
+    /**
+     * Override to set an empty name to validate properly for testing
+     */
+    public void setSubsystemName(String name) {
+        subsystemName.set(name);
+        // When explicitly setting name, mark as dirty to ensure validation works
+        setDirty(true);
     }
     
     // Property accessors
@@ -544,10 +632,6 @@ public class SubsystemViewModel extends BaseViewModel {
     
     public String getSubsystemName() {
         return subsystemName.get();
-    }
-    
-    public void setSubsystemName(String name) {
-        subsystemName.set(name);
     }
     
     public String getSubsystemDescription() {
@@ -668,4 +752,15 @@ public class SubsystemViewModel extends BaseViewModel {
     private boolean canAddTask() {
         return selectedSubsystem.get() != null;
     }
+    
+    /**
+     * Cleans up resources when the ViewModel is no longer needed.
+     */
+    @Override
+    public void cleanupResources() {
+        super.cleanupResources();
+        // Add any additional cleanup if needed
+    }
+
+    
 }

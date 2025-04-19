@@ -79,7 +79,7 @@ public class SubsystemManagementViewModelTest {
         
         emptyTasks = new ArrayList<>();
         
-        // Configure mocks
+        // Configure mocks BEFORE creating the ViewModel
         when(subsystemService.findAll()).thenReturn(testSubsystems);
         when(taskService.findBySubsystem(testSubsystem1)).thenReturn(testTasks);
         when(taskService.findBySubsystem(testSubsystem2)).thenReturn(emptyTasks);
@@ -104,6 +104,9 @@ public class SubsystemManagementViewModelTest {
         // Verify reload
         assertEquals(2, viewModel.getSubsystems().size());
         verify(subsystemService, times(2)).findAll();
+        
+        // Verify error message is cleared
+        assertNull(viewModel.getErrorMessage());
     }
     
     @Test
@@ -234,5 +237,52 @@ public class SubsystemManagementViewModelTest {
         assertEquals(0, viewModel.getSubsystems().size());
         assertNotNull(viewModel.getErrorMessage());
         assertTrue(viewModel.getErrorMessage().contains("Failed to load subsystems"));
+    }
+    
+    @Test
+    public void testLoadSubsystems_HandleNullResult() {
+        // Setup null result
+        when(subsystemService.findAll()).thenReturn(null);
+        
+        // Clear and reload
+        viewModel.getSubsystems().clear();
+        viewModel.getLoadSubsystemsCommand().execute();
+        
+        // Verify error handling
+        assertEquals(0, viewModel.getSubsystems().size());
+        assertNull(viewModel.getErrorMessage());
+    }
+    
+    @Test
+    public void testGetTaskCount_NullTaskList() {
+        // Setup null task list
+        when(taskService.findBySubsystem(testSubsystem1)).thenReturn(null);
+        
+        // Get task count
+        int taskCount = viewModel.getTaskCount(testSubsystem1);
+        
+        // Verify result
+        assertEquals(0, taskCount);
+    }
+    
+    @Test
+    public void testGetCompletionPercentage_NullTaskList() {
+        // Setup null task list
+        when(taskService.findBySubsystem(testSubsystem1)).thenReturn(null);
+        
+        // Get completion percentage
+        double percentage = viewModel.getCompletionPercentage(testSubsystem1);
+        
+        // Verify result
+        assertEquals(0.0, percentage);
+    }
+    
+    @Test
+    public void testCleanupResources() {
+        // Call cleanup method
+        viewModel.cleanupResources();
+        
+        // Verify the method doesn't throw exceptions
+        // This is a minimal test to ensure the method exists and is implemented
     }
 }
