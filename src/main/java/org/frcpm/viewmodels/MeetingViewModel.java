@@ -57,9 +57,10 @@ public class MeetingViewModel extends BaseViewModel {
     public MeetingViewModel(MeetingService meetingService) {
         this.meetingService = meetingService;
 
-        // Create commands
-        saveCommand = new Command(this::save, this::isValid);
+        // Create commands using BaseViewModel utility methods
+        saveCommand = createValidAndDirtyCommand(this::save, this::isValid);
         cancelCommand = new Command(() -> {
+            // No action needed for cancel
         });
 
         // Set up default values
@@ -67,14 +68,30 @@ public class MeetingViewModel extends BaseViewModel {
         startTimeString.set("16:00");
         endTimeString.set("18:00");
 
-        // Set up validation listeners
-        date.addListener((observable, oldValue, newValue) -> validate());
-        startTimeString.addListener((observable, oldValue, newValue) -> validate());
-        endTimeString.addListener((observable, oldValue, newValue) -> validate());
-        notes.addListener((observable, oldValue, newValue) -> setDirty(true));
+        // Set up validation listeners with property tracking
+        setupPropertyListeners();
+    }
 
-        // Initial validation
-        validate();
+    /**
+     * Sets up property listeners for validation and dirty state tracking.
+     */
+    private void setupPropertyListeners() {
+        // Create standard validation handler
+        Runnable validationHandler = createDirtyFlagHandler(this::validate);
+        
+        // Add listeners and track them
+        date.addListener((observable, oldValue, newValue) -> validationHandler.run());
+        trackPropertyListener(validationHandler);
+        
+        startTimeString.addListener((observable, oldValue, newValue) -> validationHandler.run());
+        trackPropertyListener(validationHandler);
+        
+        endTimeString.addListener((observable, oldValue, newValue) -> validationHandler.run());
+        trackPropertyListener(validationHandler);
+        
+        // Notes only affects dirty state, not validation
+        notes.addListener((observable, oldValue, newValue) -> setDirty(true));
+        trackPropertyListener(() -> setDirty(true));
     }
 
     /**
@@ -83,6 +100,11 @@ public class MeetingViewModel extends BaseViewModel {
      * @param project the project for the meeting
      */
     public void initNewMeeting(Project project) {
+        if (project == null) {
+            LOGGER.warning("Cannot initialize meeting with null project");
+            return;
+        }
+        
         this.project.set(project);
         meeting.set(null);
         isNewMeeting.set(true);
@@ -93,8 +115,11 @@ public class MeetingViewModel extends BaseViewModel {
         endTimeString.set("18:00");
         notes.set("");
 
-        // Clear dirty flag and validate
+        // Clear dirty flag and error message
         setDirty(false);
+        clearErrorMessage();
+        
+        // Validate after initialization to ensure valid state
         validate();
     }
 
@@ -104,6 +129,11 @@ public class MeetingViewModel extends BaseViewModel {
      * @param meeting the meeting to edit
      */
     public void initExistingMeeting(Meeting meeting) {
+        if (meeting == null) {
+            LOGGER.warning("Cannot initialize with null meeting");
+            return;
+        }
+        
         this.meeting.set(meeting);
         project.set(meeting.getProject());
         isNewMeeting.set(false);
@@ -114,16 +144,20 @@ public class MeetingViewModel extends BaseViewModel {
         endTimeString.set(formatTime(meeting.getEndTime()));
         notes.set(meeting.getNotes());
 
-        // Clear dirty flag and validate
+        // Clear dirty flag and error message
         setDirty(false);
+        clearErrorMessage();
+        
+        // Validate after initialization to ensure valid state
         validate();
     }
 
     /**
      * Validates the meeting data.
      * Sets the valid property and error message.
+     * Made public for testing.
      */
-    private void validate() {
+    public void validate() {
         List<String> errors = new ArrayList<>();
 
         // Check required fields
@@ -135,7 +169,7 @@ public class MeetingViewModel extends BaseViewModel {
             errors.add("Start time cannot be empty");
         } else {
             try {
-                LocalTime.parse(startTimeString.get());
+                LocalTime.parse(startTimeString.get(), TIME_FORMATTER);
             } catch (DateTimeParseException e) {
                 errors.add("Start time format should be HH:MM");
             }
@@ -145,7 +179,7 @@ public class MeetingViewModel extends BaseViewModel {
             errors.add("End time cannot be empty");
         } else {
             try {
-                LocalTime.parse(endTimeString.get());
+                LocalTime.parse(endTimeString.get(), TIME_FORMATTER);
             } catch (DateTimeParseException e) {
                 errors.add("End time format should be HH:MM");
             }
@@ -166,6 +200,7 @@ public class MeetingViewModel extends BaseViewModel {
 
         // Update valid property and error message
         valid.set(errors.isEmpty());
+        
         if (!errors.isEmpty()) {
             setErrorMessage(String.join("\n", errors));
         } else {
@@ -203,8 +238,9 @@ public class MeetingViewModel extends BaseViewModel {
             // Update meeting property with saved meeting
             meeting.set(savedMeeting);
 
-            // Clear dirty flag
+            // Clear dirty flag and error message
             setDirty(false);
+            clearErrorMessage();
 
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error saving meeting", e);
@@ -244,76 +280,44 @@ public class MeetingViewModel extends BaseViewModel {
         return time.format(TIME_FORMATTER);
     }
 
-    // Property getters
-
     /**
-     * Gets whether the input is valid.
-     * 
-     * @return true if the input is valid, false otherwise
+     * Cleans up resources when the ViewModel is no longer needed.
      */
+    @Override
+    public void cleanupResources() {
+        super.cleanupResources();
+        // Add any additional cleanup if needed
+    }
+
+    // Property getters
     public boolean isValid() {
         return valid.get();
     }
 
-    /**
-     * Gets the valid property.
-     * 
-     * @return the valid property
-     */
     public BooleanProperty validProperty() {
         return valid;
     }
 
-    /**
-     * Gets the save command.
-     * 
-     * @return the save command
-     */
     public Command getSaveCommand() {
         return saveCommand;
     }
 
-    /**
-     * Gets the cancel command.
-     * 
-     * @return the cancel command
-     */
     public Command getCancelCommand() {
         return cancelCommand;
     }
 
-    /**
-     * Gets the meeting.
-     * 
-     * @return the meeting
-     */
     public Meeting getMeeting() {
         return meeting.get();
     }
 
-    /**
-     * Gets the meeting property.
-     * 
-     * @return the meeting property
-     */
     public ObjectProperty<Meeting> meetingProperty() {
         return meeting;
     }
 
-    /**
-     * Gets the new meeting flag.
-     * 
-     * @return true if this is a new meeting, false otherwise
-     */
     public boolean isNewMeeting() {
         return isNewMeeting.get();
     }
 
-    /**
-     * Gets the new meeting property.
-     * 
-     * @return the new meeting property
-     */
     public BooleanProperty isNewMeetingProperty() {
         return isNewMeeting;
     }
