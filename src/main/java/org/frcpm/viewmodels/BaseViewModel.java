@@ -38,7 +38,7 @@ public abstract class BaseViewModel {
      */
     public String getErrorMessage() {
         String message = errorMessage.get();
-        return message != null && message.isEmpty() ? null : message;
+        return message == null ? "" : message;
     }
 
     /**

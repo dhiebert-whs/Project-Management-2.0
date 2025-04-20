@@ -58,7 +58,7 @@ public class MeetingViewModel extends BaseViewModel {
         this.meetingService = meetingService;
 
         // Create commands using BaseViewModel utility methods
-        saveCommand = createValidAndDirtyCommand(this::save, this::isValid);
+        saveCommand = createValidOnlyCommand(this::save, this::isValid);
         cancelCommand = new Command(() -> {
             // No action needed for cancel
         });
