@@ -13,7 +13,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.Spy;
 
 import java.time.LocalDate;
 import java.util.Optional;
@@ -24,12 +23,11 @@ import static org.mockito.Mockito.*;
 
 /**
  * Tests for ComponentManagementController that avoid JavaFX toolkit initialization.
- * Follows the standardized MVVM pattern for testability.
+ * Uses TestableComponentManagementController to enable testing without JavaFX.
  */
 public class ComponentManagementControllerTest {
 
-    @Spy
-    private ComponentManagementController controller;
+    private TestableComponentManagementController controller;
 
     @Mock
     private ComponentManagementViewModel mockViewModel;
@@ -55,6 +53,9 @@ public class ComponentManagementControllerTest {
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);
+        
+        // Create a testable controller
+        controller = new TestableComponentManagementController();
 
         // Set up command mocks
         when(mockViewModel.getAddComponentCommand()).thenReturn(mockAddCommand);
@@ -76,27 +77,24 @@ public class ComponentManagementControllerTest {
         when(mockComponent.getExpectedDelivery()).thenReturn(LocalDate.now().plusWeeks(1));
         when(mockComponent.isDelivered()).thenReturn(false);
 
-        // Mock protected methods to avoid JavaFX operations
-        doReturn(mockComponent).when(controller).getSelectedComponent();
-        doReturn(Optional.of(ButtonType.OK)).when(controller).showAndWaitDialog(any(Stage.class));
-        
-        // Avoid the IOException by mocking at a higher level
-        doNothing().when(controller).handleEditComponent(any(Component.class));
-
         // Inject dependencies
         controller.setViewModel(mockViewModel);
         controller.setDialogService(mockDialogService);
+        
+        // Reset tracking for each test
+        controller.resetTracking();
     }
 
     @Test
     public void testHandleAddComponent() {
-        // Arrange - prepare by mocking handleEditComponent
-        doNothing().when(controller).handleEditComponent(isNull());
-        
         // Act
         controller.handleAddComponent();
         
-        // Assert - verify the view model's loadComponents method was called
+        // Assert
+        assertTrue(controller.wasAddComponentCalled(), "Add component method should be called");
+        assertTrue(controller.wasComponentDialogShown(), "Component dialog should be shown");
+        assertEquals("New Component", controller.getLastDialogTitle(), "Dialog title should be 'New Component'");
+        assertNull(controller.getLastEditedComponent(), "Component should be null for new component");
         verify(mockViewModel).loadComponents();
     }
 
@@ -105,8 +103,11 @@ public class ComponentManagementControllerTest {
         // Act
         controller.handleEditComponent(mockComponent);
         
-        // No specific assert needed here, since we mocked this method
-        // The test will fail if the original method is called instead of our mock
+        // Assert
+        assertTrue(controller.wasComponentDialogShown(), "Component dialog should be shown");
+        assertEquals("Edit Component", controller.getLastDialogTitle(), "Dialog title should be 'Edit Component'");
+        assertEquals(mockComponent, controller.getLastEditedComponent(), "Edited component should match mock component");
+        verify(mockViewModel).loadComponents();
     }
 
     @Test
