@@ -1,3 +1,4 @@
+// Path: src/main/java/org/frcpm/viewmodels/BaseViewModel.java
 package org.frcpm.viewmodels;
 
 import javafx.beans.property.BooleanProperty;
@@ -38,7 +39,8 @@ public abstract class BaseViewModel {
      */
     public String getErrorMessage() {
         String message = errorMessage.get();
-        return message == null ? "" : message;
+        // Return null if the message is empty, to standardize behavior across all ViewModels
+        return (message == null || message.isEmpty()) ? null : message;
     }
 
     /**
@@ -54,6 +56,7 @@ public abstract class BaseViewModel {
      * Clears the error message.
      */
     protected void clearErrorMessage() {
+        // Set to empty string internally, but getErrorMessage() will return null
         errorMessage.set("");
     }
 
@@ -128,7 +131,15 @@ public abstract class BaseViewModel {
      * @return a command that checks validity and dirty state before execution
      */
     protected Command createValidAndDirtyCommand(Runnable action, java.util.function.Supplier<Boolean> validCheck) {
-        return new Command(action, () -> validCheck.get() && isDirty());
+        // Ensure strict checking of both the validity condition and dirty state
+        return new Command(
+            action, 
+            () -> {
+                boolean isValidResult = validCheck.get();
+                boolean isDirtyResult = isDirty();
+                return isValidResult && isDirtyResult;
+            }
+        );
     }
 
     /**
@@ -139,5 +150,4 @@ public abstract class BaseViewModel {
         // Base implementation just clears tracked listeners
         propertyListenersList.clear();
     }
-
 }
