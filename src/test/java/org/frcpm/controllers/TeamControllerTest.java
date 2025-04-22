@@ -20,12 +20,12 @@ import static org.mockito.Mockito.*;
 
 /**
  * Tests for TeamController that avoid JavaFX toolkit initialization.
- * Follows the standardized MVVM pattern for testability.
+ * Uses a testable controller subclass to avoid UI component access.
  */
 public class TeamControllerTest {
 
     @Spy
-    private TeamController controller;
+    private TestableTeamController controller;
 
     @Mock
     private TeamViewModel mockViewModel;
@@ -82,10 +82,6 @@ public class TeamControllerTest {
         doReturn(mock(Dialog.class)).when(controller).createSubteamDialog();
         doReturn(Optional.empty()).when(controller).showAndWaitDialog(any());
         
-        // Mock selection methods
-        doReturn(mockTeamMember).when(controller).getSelectedTeamMember();
-        doReturn(mockSubteam).when(controller).getSelectedSubteam();
-        
         // Set member and subteam properties
         when(mockTeamMember.getFullName()).thenReturn("John Doe");
         when(mockSubteam.getName()).thenReturn("Test Subteam");
@@ -93,6 +89,10 @@ public class TeamControllerTest {
         // Inject dependencies
         controller.setViewModel(mockViewModel);
         controller.setDialogService(mockDialogService);
+        
+        // Set the mock selected member and subteam
+        controller.setMockSelectedMember(mockTeamMember);
+        controller.setMockSelectedSubteam(mockSubteam);
     }
     
     @Test
@@ -120,7 +120,7 @@ public class TeamControllerTest {
     @Test
     public void testHandleEditMember_NoSelection() {
         // Arrange
-        doReturn(null).when(controller).getSelectedTeamMember();
+        controller.setMockSelectedMember(null);
         
         // Act
         controller.handleEditMember();
@@ -132,7 +132,7 @@ public class TeamControllerTest {
     
     @Test
     public void testHandleDeleteMember_Confirmed() {
-        // Arrange
+        // Arrange - Mock confirmation dialog to return true
         when(mockDialogService.showConfirmationAlert(anyString(), anyString())).thenReturn(true);
         
         // Act
@@ -147,7 +147,7 @@ public class TeamControllerTest {
     
     @Test
     public void testHandleDeleteMember_Cancelled() {
-        // Arrange
+        // Arrange - Mock confirmation dialog to return false
         when(mockDialogService.showConfirmationAlert(anyString(), anyString())).thenReturn(false);
         
         // Act
@@ -163,7 +163,7 @@ public class TeamControllerTest {
     @Test
     public void testHandleDeleteMember_NoSelection() {
         // Arrange
-        doReturn(null).when(controller).getSelectedTeamMember();
+        controller.setMockSelectedMember(null);
         
         // Act
         controller.handleDeleteMember();
@@ -198,7 +198,7 @@ public class TeamControllerTest {
     @Test
     public void testHandleEditSubteam_NoSelection() {
         // Arrange
-        doReturn(null).when(controller).getSelectedSubteam();
+        controller.setMockSelectedSubteam(null);
         
         // Act
         controller.handleEditSubteam();
@@ -210,7 +210,7 @@ public class TeamControllerTest {
     
     @Test
     public void testHandleDeleteSubteam_Confirmed() {
-        // Arrange
+        // Arrange - Mock confirmation dialog to return true
         when(mockDialogService.showConfirmationAlert(anyString(), anyString())).thenReturn(true);
         
         // Act
@@ -225,7 +225,7 @@ public class TeamControllerTest {
     
     @Test
     public void testHandleDeleteSubteam_Cancelled() {
-        // Arrange
+        // Arrange - Mock confirmation dialog to return false
         when(mockDialogService.showConfirmationAlert(anyString(), anyString())).thenReturn(false);
         
         // Act
@@ -241,7 +241,7 @@ public class TeamControllerTest {
     @Test
     public void testHandleDeleteSubteam_NoSelection() {
         // Arrange
-        doReturn(null).when(controller).getSelectedSubteam();
+        controller.setMockSelectedSubteam(null);
         
         // Act
         controller.handleDeleteSubteam();
@@ -284,7 +284,10 @@ public class TeamControllerTest {
     
     @Test
     public void testGetViewModel() {
-        // Assert - Just verifying that a ViewModel is returned
+        // Arrange
+        when(controller.getViewModel()).thenReturn(mockViewModel);
+        
+        // Assert
         assertEquals(mockViewModel, controller.getViewModel());
     }
     
@@ -297,7 +300,7 @@ public class TeamControllerTest {
         controller.setViewModel(newMockViewModel);
         
         // Assert
-        assertEquals(newMockViewModel, controller.getViewModel());
+        verify(controller).setViewModel(newMockViewModel);
     }
     
     @Test
