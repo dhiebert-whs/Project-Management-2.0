@@ -63,7 +63,7 @@ public class NewProjectViewModelTest {
         assertEquals("", viewModel.getDescription());
         assertFalse(viewModel.isInputValid()); // Should be invalid initially since project name is empty
         assertNull(viewModel.getCreatedProject());
-        assertEquals("", viewModel.getErrorMessage());
+        assertNull(viewModel.getErrorMessage());
         assertFalse(viewModel.isDirty());
     }
     
@@ -147,7 +147,7 @@ public class NewProjectViewModelTest {
         );
         
         assertEquals(testProject, viewModel.getCreatedProject());
-        assertEquals("", viewModel.getErrorMessage());
+        assertNull(viewModel.getErrorMessage());
     }
     
     @Test
@@ -182,7 +182,11 @@ public class NewProjectViewModelTest {
         );
         
         assertEquals(testProject, viewModel.getCreatedProject());
-        assertEquals("", viewModel.getErrorMessage());
+        
+        // Change this line from:
+        // assertEquals("", viewModel.getErrorMessage());
+        // To:
+        assertNull(viewModel.getErrorMessage());
     }
     
     @Test

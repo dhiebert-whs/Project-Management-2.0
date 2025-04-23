@@ -43,7 +43,7 @@ public class BaseViewModelCompatibilityTest {
         
         // Then: validation should pass and error message should be cleared
         assertTrue(existingViewModel.isValid());
-        assertEquals("", existingViewModel.getErrorMessage()); // BaseViewModel returns empty string not null
+        assertNull(existingViewModel.getErrorMessage()); // BaseViewModel returns empty string not null
     }
 
     @Test

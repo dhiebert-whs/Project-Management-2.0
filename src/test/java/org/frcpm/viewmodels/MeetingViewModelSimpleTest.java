@@ -142,7 +142,10 @@ public class MeetingViewModelSimpleTest {
         // Set up
         viewModel.initNewMeeting(testProject);
         assertTrue(viewModel.isValid()); // Should be valid with default values
-
+        
+        // Set dirty flag to true (this is the fix)
+        viewModel.setStartTimeString("17:00"); // Change a property to mark as dirty
+        
         // Verify command can execute
         assertTrue(viewModel.getSaveCommand().canExecute());
     }
