@@ -23,14 +23,12 @@ public class MainApp extends Application {
     
     private static final Logger LOGGER = Logger.getLogger(MainApp.class.getName());
     
+    // Flag to indicate development mode (can be set via JVM args)
+    private static boolean developmentMode = Boolean.getBoolean("app.db.dev");
+    
     @Override
     public void start(Stage primaryStage) {
         try {
-            // Initialize database
-            DatabaseInitializer.initialize(true); // Pass true to create sample data
-
-
-
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/MainView.fxml"));
             Parent root = loader.load();
             
@@ -61,8 +59,13 @@ public class MainApp extends Application {
         // Initialize resources before application starts
         LOGGER.info("Initializing FRC Project Management System...");
         try {
+            // Set development mode for database (create-drop vs update)
+            DatabaseConfig.setDevelopmentMode(developmentMode);
+            
+            // Initialize database configuration with appropriate schema mode
             DatabaseConfig.initialize();
-            LOGGER.info("Database initialized successfully");
+            LOGGER.info("Database initialized in " + 
+                       (developmentMode ? "DEVELOPMENT" : "PRODUCTION") + " mode");
             
             // Test database connection and schema
             boolean dbTestSuccess = DatabaseTestUtil.testDatabase();
@@ -73,15 +76,14 @@ public class MainApp extends Application {
             // Check if this is the first run (no projects exist)
             boolean firstRun = ServiceFactory.getProjectService().findAll().isEmpty();
             if (firstRun) {
-                LOGGER.info("First run detected - creating default data");
-                createDefaultData();
+                LOGGER.info("First run detected - creating initial data");
+                DatabaseInitializer.initialize(true); // Create sample data
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error initializing database", e);
             showErrorAndExit("Error initializing database: " + e.getMessage());
         }
     }
-
 
     /**
      * Creates default data for first-time run.
@@ -118,6 +120,15 @@ public class MainApp extends Application {
      * @param args command line arguments
      */
     public static void main(String[] args) {
+        // Check for development mode flag in arguments
+        for (String arg : args) {
+            if (arg.equals("--dev")) {
+                developmentMode = true;
+                break;
+            }
+        }
+        
+        // Launch the JavaFX application
         launch(args);
     }
 }
