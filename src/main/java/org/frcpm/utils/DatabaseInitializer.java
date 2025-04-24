@@ -72,8 +72,9 @@ public class DatabaseInitializer {
     private static void verifyDatabaseSchema() throws Exception {
         LOGGER.info("Verifying database schema...");
         
-        EntityManager em = DatabaseConfig.getEntityManager();
+        EntityManager em = null;
         try {
+            em = DatabaseConfig.getEntityManager();
             em.getTransaction().begin();
             
             // Check if core tables exist by running queries against each entity
@@ -89,20 +90,25 @@ public class DatabaseInitializer {
                     LOGGER.info(entityName + " table exists with " + count + " records");
                 } catch (Exception e) {
                     LOGGER.warning("Error verifying " + entityName + " table: " + e.getMessage());
-                    throw new Exception("Database schema verification failed for " + entityName);
+                    if (em.getTransaction().isActive()) {
+                        em.getTransaction().rollback();
+                    }
+                    throw new Exception("Database schema verification failed for " + entityName, e);
                 }
             }
             
             em.getTransaction().commit();
             LOGGER.info("Database schema verification completed successfully");
         } catch (Exception e) {
-            if (em.getTransaction().isActive()) {
+            if (em != null && em.getTransaction().isActive()) {
                 em.getTransaction().rollback();
             }
             LOGGER.severe("Database schema verification failed: " + e.getMessage());
             throw e;
         } finally {
-            em.close();
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
         }
     }
     

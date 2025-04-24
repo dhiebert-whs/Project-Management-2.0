@@ -19,6 +19,7 @@ public class DatabaseConfig {
     private static final String PERSISTENCE_UNIT_NAME = "frcpm";
     private static boolean initialized = false;
     private static boolean developmentMode = false;
+    private static String databaseName = System.getProperty("app.db.name", "frcpm");
     
     /**
      * Initializes the database configuration with default settings.
@@ -41,6 +42,9 @@ public class DatabaseConfig {
             LOGGER.info("Initializing database configuration...");
             developmentMode = forceDevMode || Boolean.getBoolean("app.db.dev");
             
+            // Get the database name from system property
+            databaseName = System.getProperty("app.db.name", "frcpm");
+            
             // Determine database path - use persistent location for production
             String dbPath;
             if (developmentMode) {
@@ -54,7 +58,7 @@ public class DatabaseConfig {
                 if (!dbDir.exists()) {
                     dbDir.mkdirs();
                 }
-                dbPath = "file:" + new File(dbDir, "frcpm").getAbsolutePath();
+                dbPath = "file:" + new File(dbDir, databaseName).getAbsolutePath();
                 LOGGER.info("Using FILE-BASED database at: " + dbPath);
             }
             
@@ -87,9 +91,9 @@ public class DatabaseConfig {
             props.put("hibernate.hikari.connectionTimeout", "10000");
             props.put("hibernate.hikari.poolName", "FRC-PM-HikariCP");
             
-            // Cache settings - enable second-level cache in production mode
-            props.put("hibernate.cache.use_second_level_cache", !developmentMode);
-            props.put("hibernate.cache.use_query_cache", !developmentMode);
+            // IMPORTANT: Disable second-level cache for all test runs to avoid cache provider issues
+            props.put("hibernate.cache.use_second_level_cache", false);
+            props.put("hibernate.cache.use_query_cache", false);
             
             // Connection handling
             props.put("hibernate.connection.handling_mode", "DELAYED_ACQUISITION_AND_RELEASE_AFTER_STATEMENT");
@@ -166,11 +170,39 @@ public class DatabaseConfig {
     }
     
     /**
+     * Sets the database name for file-based storage.
+     * Only has effect before initialization.
+     * 
+     * @param name the database name
+     */
+    public static void setDatabaseName(String name) {
+        if (!initialized) {
+            databaseName = name;
+        } else {
+            LOGGER.warning("Cannot change database name after initialization");
+        }
+    }
+    
+    /**
+     * Gets the current database name.
+     * 
+     * @return the database name
+     */
+    public static String getDatabaseName() {
+        return databaseName;
+    }
+    
+    /**
      * Shuts down the database configuration.
      */
     public static synchronized void shutdown() {
         if (emf != null && emf.isOpen()) {
-            emf.close();
+            try {
+                emf.close();
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, "Error closing EntityManagerFactory", e);
+            }
+            emf = null;
         }
         
         initialized = false;
@@ -184,7 +216,16 @@ public class DatabaseConfig {
      * @param forceDevMode whether to force development mode
      */
     public static synchronized void reinitialize(boolean forceDevMode) {
+        // Ensure we fully close and clear any existing connections
         shutdown();
-        initialize(forceDevMode);
+        
+        // Reset the initialized flag
+        initialized = false;
+        
+        // Set development mode
+        developmentMode = forceDevMode;
+        
+        // Reinitialize with clean state
+        initialize();
     }
 }

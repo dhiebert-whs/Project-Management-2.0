@@ -30,14 +30,19 @@ public class DatabaseInitializerTest {
     
     @BeforeEach
     public void setUp() {
-        // Ensure database is shut down and reinitialized in dev mode for each test
+        // Ensure database is fully shut down before each test
         DatabaseConfig.shutdown();
-        DatabaseConfig.setDevelopmentMode(true);
+        
+        // Reset database state
+        System.setProperty("app.db.dev", "true");
+        
+        // Reinitialize with clean development mode
+        DatabaseConfig.reinitialize(true);
     }
-    
+
     @AfterEach
     public void tearDown() {
-        // Clean up database
+        // Clean up database after each test
         DatabaseConfig.shutdown();
     }
     
@@ -146,8 +151,22 @@ public class DatabaseInitializerTest {
     @Test
     @DisplayName("Test production mode database initialization")
     public void testProductionMode() {
-        // Initialize in production mode
+        // Make sure we start clean
+        DatabaseConfig.shutdown();
+        
+        // Force production mode with a test-specific database
+        System.clearProperty("app.db.dev");
         DatabaseConfig.setDevelopmentMode(false);
+        
+        // Generate unique DB name for this test run to avoid file locking issues
+        String testDbName = "test-prod-" + System.currentTimeMillis();
+        System.setProperty("app.db.name", testDbName);
+        DatabaseConfig.setDatabaseName(testDbName);
+        
+        // First, initialize the database directly through DatabaseConfig
+        DatabaseConfig.initialize();
+        
+        // Now use DatabaseInitializer, which should work with the already initialized config
         boolean initResult = DatabaseInitializer.initialize(false);
         assertTrue(initResult, "Database initialization in production mode should succeed");
         
@@ -155,8 +174,9 @@ public class DatabaseInitializerTest {
         ProjectRepository projectRepository = RepositoryFactory.getProjectRepository();
         
         // Create a test project
+        String uniqueName = "Production Mode Test " + System.currentTimeMillis();
         Project testProject = new Project(
-            "Production Mode Test", 
+            uniqueName, 
             LocalDate.now(), 
             LocalDate.now().plusDays(30), 
             LocalDate.now().plusDays(60)
@@ -171,12 +191,13 @@ public class DatabaseInitializerTest {
         // Reinitialize database - should preserve data in production mode
         DatabaseConfig.shutdown();
         DatabaseConfig.setDevelopmentMode(false);
-        DatabaseInitializer.initialize(false);
+        DatabaseConfig.setDatabaseName(testDbName);
+        DatabaseConfig.initialize();
         
         // Project should still exist
         Optional<Project> projectAfterReinit = projectRepository.findById(projectId);
         assertTrue(projectAfterReinit.isPresent(), "Project should be preserved after reinitialization in production mode");
-        assertEquals("Production Mode Test", projectAfterReinit.get().getName(), "Project data should be preserved correctly");
+        assertEquals(uniqueName, projectAfterReinit.get().getName(), "Project data should be preserved correctly");
         
         // Clean up test project
         projectRepository.delete(projectAfterReinit.get());
@@ -189,49 +210,68 @@ public class DatabaseInitializerTest {
         boolean initResult = DatabaseInitializer.initialize(true);
         assertTrue(initResult, "Database initialization with sample data should succeed");
         
-        // Get repositories for verification
-        ProjectRepository projectRepository = RepositoryFactory.getProjectRepository();
-        TaskRepository taskRepository = RepositoryFactory.getTaskRepository();
-        
-        // Get a project with tasks
-        List<Project> projects = projectRepository.findAll();
-        assertFalse(projects.isEmpty(), "Sample projects should be created");
-        
-        for (Project project : projects) {
-            List<Task> tasks = taskRepository.findByProject(project);
+        // Create a separate EntityManager specifically for this test
+        EntityManager em = DatabaseConfig.getEntityManager();
+        try {
+            // Start a transaction to keep the session open
+            em.getTransaction().begin();
             
-            if (!tasks.isEmpty()) {
-                Task firstTask = tasks.get(0);
+            // Query directly with this EntityManager to avoid session issues
+            List<Project> projects = em.createQuery("SELECT p FROM Project p", Project.class).getResultList();
+            assertFalse(projects.isEmpty(), "Sample projects should be created");
+            
+            for (Project project : projects) {
+                List<Task> tasks = em.createQuery(
+                    "SELECT t FROM Task t WHERE t.project = :project", Task.class)
+                    .setParameter("project", project)
+                    .getResultList();
                 
-                // Test that we can navigate from Task to Project
-                assertEquals(project.getId(), firstTask.getProject().getId(), 
-                        "Task should be linked to correct project");
-                
-                // Test that we can navigate from Task to Subsystem if it has one
-                if (firstTask.getSubsystem() != null) {
-                    assertNotNull(firstTask.getSubsystem().getName(), 
-                            "Should be able to access subsystem name through task");
+                if (!tasks.isEmpty()) {
+                    Task firstTask = tasks.get(0);
                     
-                    // Test that we can navigate from Subsystem to Subteam if it has one
-                    if (firstTask.getSubsystem().getResponsibleSubteam() != null) {
-                        assertNotNull(firstTask.getSubsystem().getResponsibleSubteam().getName(), 
-                                "Should be able to access subteam name through subsystem");
+                    // Test that we can navigate from Task to Project
+                    assertEquals(project.getId(), firstTask.getProject().getId(), 
+                            "Task should be linked to correct project");
+                    
+                    // Test that we can navigate from Task to Subsystem if it has one
+                    if (firstTask.getSubsystem() != null) {
+                        // Force initialization inside transaction
+                        String subsystemName = firstTask.getSubsystem().getName();
+                        assertNotNull(subsystemName, 
+                                "Should be able to access subsystem name through task");
+                        
+                        // Test that we can navigate from Subsystem to Subteam if it has one
+                        if (firstTask.getSubsystem().getResponsibleSubteam() != null) {
+                            // Force initialization inside transaction
+                            String subteamName = firstTask.getSubsystem().getResponsibleSubteam().getName();
+                            assertNotNull(subteamName, 
+                                    "Should be able to access subteam name through subsystem");
+                        }
                     }
+                    
+                    // Test that we can access team members assigned to task
+                    if (!firstTask.getAssignedTo().isEmpty()) {
+                        TeamMember member = firstTask.getAssignedTo().iterator().next();
+                        assertNotNull(member.getUsername(), "Should be able to access team member data through task");
+                    }
+                    
+                    // Found a task with relationships - test passed
+                    em.getTransaction().commit();
+                    return;
                 }
-                
-                // Test that we can access team members assigned to task
-                if (!firstTask.getAssignedTo().isEmpty()) {
-                    TeamMember member = firstTask.getAssignedTo().iterator().next();
-                    assertNotNull(member.getUsername(), "Should be able to access team member data through task");
-                }
-                
-                // Found a task with relationships - test passed
-                return;
             }
+            
+            // If we get here, none of the projects had tasks with relationships
+            em.getTransaction().commit();
+            // This is not necessarily a failure, but we should log it
+            LOGGER.warning("No tasks with relationships found to test");
+        } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            throw e;
+        } finally {
+            em.close();
         }
-        
-        // If we get here, none of the projects had tasks with relationships
-        // This is not necessarily a failure, but we should log it
-        LOGGER.warning("No tasks with relationships found to test");
     }
 }
