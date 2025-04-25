@@ -1,6 +1,7 @@
 // src/main/java/org/frcpm/services/impl/GanttDataServiceImpl.java
 package org.frcpm.services.impl;
 
+import org.frcpm.models.GanttChartData;
 import org.frcpm.models.Milestone;
 import org.frcpm.models.Project;
 import org.frcpm.models.Task;
@@ -8,6 +9,7 @@ import org.frcpm.repositories.RepositoryFactory;
 import org.frcpm.repositories.specific.MilestoneRepository;
 import org.frcpm.repositories.specific.ProjectRepository;
 import org.frcpm.repositories.specific.TaskRepository;
+import org.frcpm.services.GanttChartTransformationService;
 import org.frcpm.services.GanttDataService;
 
 import java.time.LocalDate;
@@ -29,6 +31,7 @@ public class GanttDataServiceImpl implements GanttDataService {
     private final ProjectRepository projectRepository;
     private final TaskRepository taskRepository;
     private final MilestoneRepository milestoneRepository;
+    private final GanttChartTransformationService transformationService;
     
     /**
      * Creates a new GanttDataServiceImpl with default repositories.
@@ -37,6 +40,7 @@ public class GanttDataServiceImpl implements GanttDataService {
         this.projectRepository = RepositoryFactory.getProjectRepository();
         this.taskRepository = RepositoryFactory.getTaskRepository();
         this.milestoneRepository = RepositoryFactory.getMilestoneRepository();
+        this.transformationService = new GanttChartTransformationService();
     }
     
     /**
@@ -52,6 +56,24 @@ public class GanttDataServiceImpl implements GanttDataService {
         this.projectRepository = projectRepository;
         this.taskRepository = taskRepository;
         this.milestoneRepository = milestoneRepository;
+        this.transformationService = new GanttChartTransformationService();
+    }
+    
+    /**
+     * Creates a new GanttDataServiceImpl with specified repositories and transformation service.
+     * This constructor is mainly used for testing.
+     * 
+     * @param projectRepository the project repository
+     * @param taskRepository the task repository
+     * @param milestoneRepository the milestone repository
+     * @param transformationService the transformation service
+     */
+    public GanttDataServiceImpl(ProjectRepository projectRepository, TaskRepository taskRepository, 
+                               MilestoneRepository milestoneRepository, GanttChartTransformationService transformationService) {
+        this.projectRepository = projectRepository;
+        this.taskRepository = taskRepository;
+        this.milestoneRepository = milestoneRepository;
+        this.transformationService = transformationService;
     }
     
     @Override
@@ -80,19 +102,19 @@ public class GanttDataServiceImpl implements GanttDataService {
             // Load milestones for the project
             List<Milestone> milestones = milestoneRepository.findByProject(project);
             
-            // Format tasks for Gantt chart
-            List<Map<String, Object>> taskItems = formatTasks(tasks, chartStartDate, chartEndDate);
+            // Transform tasks to GanttChartData
+            List<GanttChartData> taskChartData = transformationService.transformTasksToChartData(tasks);
             
-            // Format milestones for Gantt chart
-            List<Map<String, Object>> milestoneItems = formatMilestones(milestones, chartStartDate, chartEndDate);
+            // Transform milestones to GanttChartData
+            List<GanttChartData> milestoneChartData = transformationService.transformMilestonesToChartData(milestones);
             
             // Format dependencies
-            List<Map<String, Object>> dependencies = formatDependencies(tasks);
+            List<Map<String, Object>> dependencies = transformationService.createDependencyData(tasks);
             
             // Create result map
             Map<String, Object> result = new HashMap<>();
-            result.put("tasks", taskItems);
-            result.put("milestones", milestoneItems);
+            result.put("tasks", taskChartData);
+            result.put("milestones", milestoneChartData);
             result.put("dependencies", dependencies);
             result.put("startDate", chartStartDate.format(DATE_FORMATTER));
             result.put("endDate", chartEndDate.format(DATE_FORMATTER));
@@ -113,72 +135,52 @@ public class GanttDataServiceImpl implements GanttDataService {
         
         try {
             String filterType = (String) filterCriteria.get("filterType");
-            if (filterType == null) {
-                return ganttData;
+            String subsystem = (String) filterCriteria.get("subsystem");
+            String subteam = (String) filterCriteria.get("subteam");
+            LocalDate filterStartDate = null;
+            LocalDate filterEndDate = null;
+            
+            // Parse date strings if provided
+            if (filterCriteria.containsKey("startDate") && filterCriteria.get("startDate") != null) {
+                String startDateStr = (String) filterCriteria.get("startDate");
+                filterStartDate = LocalDate.parse(startDateStr);
+            }
+            
+            if (filterCriteria.containsKey("endDate") && filterCriteria.get("endDate") != null) {
+                String endDateStr = (String) filterCriteria.get("endDate");
+                filterEndDate = LocalDate.parse(endDateStr);
             }
             
             // Create a copy of the input data
             Map<String, Object> result = new HashMap<>(ganttData);
             
-            // Get tasks
+            // Get tasks and milestones
             @SuppressWarnings("unchecked")
-            List<Map<String, Object>> tasks = (List<Map<String, Object>>) ganttData.get("tasks");
+            List<GanttChartData> tasks = (List<GanttChartData>) ganttData.get("tasks");
+            
+            @SuppressWarnings("unchecked")
+            List<GanttChartData> milestones = (List<GanttChartData>) ganttData.get("milestones");
+            
             if (tasks == null) {
-                return result;
+                tasks = new ArrayList<>();
             }
             
-            // Apply filter based on type
-            List<Map<String, Object>> filteredTasks;
-            
-            switch (filterType) {
-                case "My Tasks":
-                    // For demo purposes, just show a subset (in a real app, would filter by assigned user)
-                    filteredTasks = tasks.stream()
-                        .filter(task -> task.containsKey("assignedTo") && !((List<?>) task.get("assignedTo")).isEmpty())
-                        .collect(Collectors.toList());
-                    break;
-                    
-                case "Critical Path":
-                    // For demo purposes, just show tasks with highest priority
-                    filteredTasks = tasks.stream()
-                        .filter(task -> "CRITICAL".equals(task.get("priority")))
-                        .collect(Collectors.toList());
-                    break;
-                    
-                case "Behind Schedule":
-                    // Show tasks that are behind schedule (progress < expected progress)
-                    LocalDate today = LocalDate.now();
-                    filteredTasks = tasks.stream()
-                        .filter(task -> {
-                            int progress = (int) task.get("progress");
-                            LocalDate startDate = LocalDate.parse((String) task.get("startDate"), DATE_FORMATTER);
-                            LocalDate endDate = LocalDate.parse((String) task.get("endDate"), DATE_FORMATTER);
-                            
-                            if (today.isBefore(startDate) || today.isAfter(endDate)) {
-                                return false;
-                            }
-                            
-                            long totalDays = startDate.until(endDate).getDays();
-                            long daysPassed = startDate.until(today).getDays();
-                            
-                            if (totalDays == 0) {
-                                return progress < 100;
-                            }
-                            
-                            int expectedProgress = (int) (daysPassed * 100 / totalDays);
-                            return progress < expectedProgress;
-                        })
-                        .collect(Collectors.toList());
-                    break;
-                    
-                default:
-                    // All Tasks - no filtering
-                    filteredTasks = tasks;
-                    break;
+            if (milestones == null) {
+                milestones = new ArrayList<>();
             }
             
-            // Update tasks in result
+            // Apply filters
+            List<GanttChartData> filteredTasks = transformationService.filterChartData(
+                tasks, filterType, subteam, subsystem, filterStartDate, filterEndDate
+            );
+            
+            List<GanttChartData> filteredMilestones = transformationService.filterChartData(
+                milestones, null, null, null, filterStartDate, filterEndDate
+            );
+            
+            // Update result
             result.put("tasks", filteredTasks);
+            result.put("milestones", filteredMilestones);
             
             return result;
         } catch (Exception e) {
@@ -211,10 +213,6 @@ public class GanttDataServiceImpl implements GanttDataService {
                 .filter(task -> Task.Priority.CRITICAL.equals(task.getPriority()))
                 .map(Task::getId)
                 .collect(Collectors.toList());
-            
-            // Note: A real critical path algorithm would be more complex,
-            // involving topological sorting and calculating the longest path
-            // through the dependency graph
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error calculating critical path", e);
             return Collections.emptyList();
@@ -235,15 +233,13 @@ public class GanttDataServiceImpl implements GanttDataService {
             // Get full Gantt data
             Map<String, Object> fullData = formatTasksForGantt(projectId, null, null);
             
-            // Filter to just the specified date
-            LocalDate startDate = date;
-            LocalDate endDate = date.plusDays(1);
+            // Create filter criteria for just the specified date
+            Map<String, Object> filterCriteria = new HashMap<>();
+            filterCriteria.put("startDate", date.format(DATE_FORMATTER));
+            filterCriteria.put("endDate", date.plusDays(1).format(DATE_FORMATTER));
             
-            // Update date range in result
-            fullData.put("startDate", startDate.format(DATE_FORMATTER));
-            fullData.put("endDate", endDate.format(DATE_FORMATTER));
-            
-            return fullData;
+            // Apply the filter
+            return applyFiltersToGanttData(fullData, filterCriteria);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error getting Gantt data for date", e);
             return Collections.emptyMap();
@@ -337,176 +333,5 @@ public class GanttDataServiceImpl implements GanttDataService {
             LOGGER.log(Level.SEVERE, "Error identifying bottlenecks", e);
             return Collections.emptyList();
         }
-    }
-    
-    /**
-     * Formats tasks for Gantt chart visualization.
-     * 
-     * @param tasks the tasks to format
-     * @param startDate the start date of the chart
-     * @param endDate the end date of the chart
-     * @return a list of formatted task objects
-     */
-    private List<Map<String, Object>> formatTasks(List<Task> tasks, LocalDate startDate, LocalDate endDate) {
-        return tasks.stream()
-            .filter(task -> isTaskInDateRange(task, startDate, endDate))
-            .map(this::formatTaskForGantt)
-            .collect(Collectors.toList());
-    }
-    
-    /**
-     * Formats milestones for Gantt chart visualization.
-     * 
-     * @param milestones the milestones to format
-     * @param startDate the start date of the chart
-     * @param endDate the end date of the chart
-     * @return a list of formatted milestone objects
-     */
-    private List<Map<String, Object>> formatMilestones(List<Milestone> milestones, LocalDate startDate, LocalDate endDate) {
-        return milestones.stream()
-            .filter(milestone -> isMilestoneInDateRange(milestone, startDate, endDate))
-            .map(this::formatMilestoneForGantt)
-            .collect(Collectors.toList());
-    }
-    
-    /**
-     * Formats task dependencies for Gantt chart visualization.
-     * 
-     * @param tasks the tasks with dependencies
-     * @return a list of formatted dependency objects
-     */
-    private List<Map<String, Object>> formatDependencies(List<Task> tasks) {
-        List<Map<String, Object>> dependencies = new ArrayList<>();
-        
-        for (Task task : tasks) {
-            for (Task dependency : task.getPreDependencies()) {
-                Map<String, Object> dep = new HashMap<>();
-                dep.put("id", task.getId() + "_" + dependency.getId());
-                dep.put("source", dependency.getId().toString());
-                dep.put("target", task.getId().toString());
-                dep.put("type", "finish-to-start");
-                dependencies.add(dep);
-            }
-        }
-        
-        return dependencies;
-    }
-    
-    /**
-     * Formats a task for Gantt chart visualization.
-     * 
-     * @param task the task to format
-     * @return a map containing the formatted task data
-     */
-    private Map<String, Object> formatTaskForGantt(Task task) {
-        Map<String, Object> formatted = new HashMap<>();
-        
-        formatted.put("id", task.getId().toString());
-        formatted.put("name", task.getTitle());
-        formatted.put("progress", task.getProgress());
-        formatted.put("priority", task.getPriority().toString());
-        formatted.put("completed", task.isCompleted());
-        
-        // Handle dates
-        LocalDate taskStartDate = task.getStartDate();
-        LocalDate taskEndDate = task.getEndDate();
-        
-        if (taskStartDate == null) {
-            taskStartDate = LocalDate.now();
-        }
-        
-        if (taskEndDate == null) {
-            // Default to start date + estimated duration (or 1 day if no duration)
-            long days = task.getEstimatedDuration().toDays();
-            taskEndDate = taskStartDate.plusDays(days > 0 ? days : 1);
-        }
-        
-        formatted.put("startDate", taskStartDate.format(DATE_FORMATTER));
-        formatted.put("endDate", taskEndDate.format(DATE_FORMATTER));
-        
-        // Additional information
-        formatted.put("description", task.getDescription());
-        formatted.put("subsystem", task.getSubsystem().getName());
-        
-        // Handle assigned team members
-        List<Map<String, Object>> assignedMembers = task.getAssignedTo().stream()
-            .map(member -> {
-                Map<String, Object> m = new HashMap<>();
-                m.put("id", member.getId().toString());
-                m.put("name", member.getFullName());
-                return m;
-            })
-            .collect(Collectors.toList());
-        
-        formatted.put("assignedTo", assignedMembers);
-        
-        return formatted;
-    }
-    
-    /**
-     * Formats a milestone for Gantt chart visualization.
-     * 
-     * @param milestone the milestone to format
-     * @return a map containing the formatted milestone data
-     */
-    private Map<String, Object> formatMilestoneForGantt(Milestone milestone) {
-        Map<String, Object> formatted = new HashMap<>();
-        
-        formatted.put("id", "m_" + milestone.getId().toString());
-        formatted.put("name", milestone.getName());
-        formatted.put("date", milestone.getDate().format(DATE_FORMATTER));
-        formatted.put("passed", milestone.isPassed());
-        formatted.put("description", milestone.getDescription());
-        
-        return formatted;
-    }
-    
-    /**
-     * Checks if a task is within the specified date range.
-     * 
-     * @param task the task to check
-     * @param startDate the start date of the range
-     * @param endDate the end date of the range
-     * @return true if the task is within the range, false otherwise
-     */
-    private boolean isTaskInDateRange(Task task, LocalDate startDate, LocalDate endDate) {
-        LocalDate taskStartDate = task.getStartDate();
-        LocalDate taskEndDate = task.getEndDate();
-        
-        if (taskStartDate == null && taskEndDate == null) {
-            return true; // Include tasks without dates
-        }
-        
-        if (taskStartDate == null) {
-            taskStartDate = LocalDate.now();
-        }
-        
-        if (taskEndDate == null) {
-            // Default to start date + estimated duration (or 1 day if no duration)
-            long days = task.getEstimatedDuration().toDays();
-            taskEndDate = taskStartDate.plusDays(days > 0 ? days : 1);
-        }
-        
-        // Check if task overlaps with date range
-        return !(taskEndDate.isBefore(startDate) || taskStartDate.isAfter(endDate));
-    }
-    
-    /**
-     * Checks if a milestone is within the specified date range.
-     * 
-     * @param milestone the milestone to check
-     * @param startDate the start date of the range
-     * @param endDate the end date of the range
-     * @return true if the milestone is within the range, false otherwise
-     */
-    private boolean isMilestoneInDateRange(Milestone milestone, LocalDate startDate, LocalDate endDate) {
-        LocalDate milestoneDate = milestone.getDate();
-        
-        if (milestoneDate == null) {
-            return false;
-        }
-        
-        // Check if milestone is within date range
-        return !(milestoneDate.isBefore(startDate) || milestoneDate.isAfter(endDate));
     }
 }

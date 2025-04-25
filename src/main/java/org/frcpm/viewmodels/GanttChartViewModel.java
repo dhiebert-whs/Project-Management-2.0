@@ -7,11 +7,14 @@ import javafx.collections.ObservableList;
 import org.frcpm.binding.Command;
 import org.frcpm.models.Milestone;
 import org.frcpm.models.Project;
+import org.frcpm.models.Subsystem;
+import org.frcpm.models.Subteam;
 import org.frcpm.models.Task;
 import org.frcpm.services.GanttDataService;
 import org.frcpm.services.ServiceFactory;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -78,6 +81,9 @@ public class GanttChartViewModel extends BaseViewModel {
     private final ObservableList<Long> criticalPathTasks = FXCollections.observableArrayList();
     private final BooleanProperty showMilestones = new SimpleBooleanProperty(true);
     private final BooleanProperty showDependencies = new SimpleBooleanProperty(true);
+    private final ObjectProperty<Subsystem> selectedSubsystem = new SimpleObjectProperty<>();
+    private final ObjectProperty<Subteam> selectedSubteam = new SimpleObjectProperty<>();
+    private final BooleanProperty showCompletedTasks = new SimpleBooleanProperty(true);
 
     // Commands
     private final Command refreshCommand;
@@ -87,6 +93,9 @@ public class GanttChartViewModel extends BaseViewModel {
     private final Command todayCommand;
     private final Command toggleMilestonesCommand;
     private final Command toggleDependenciesCommand;
+    private final Command filterBySubsystemCommand;
+    private final Command filterBySubteamCommand;
+    private final Command toggleCompletedTasksCommand;
 
     /**
      * Creates a new GanttChartViewModel with default services.
@@ -112,20 +121,38 @@ public class GanttChartViewModel extends BaseViewModel {
         todayCommand = new Command(this::goToToday);
         toggleMilestonesCommand = new Command(this::toggleMilestones);
         toggleDependenciesCommand = new Command(this::toggleDependencies);
+        filterBySubsystemCommand = new Command(this::applySubsystemFilter, this::canLoadData);
+        filterBySubteamCommand = new Command(this::applySubteamFilter, this::canLoadData);
+        toggleCompletedTasksCommand = new Command(this::toggleCompletedTasks);
 
         // Set up property listeners
+        setupPropertyListeners();
+    }
+
+    /**
+     * Sets up listeners for property changes.
+     */
+    private void setupPropertyListeners() {
+        // Apply dirty flag handler when properties change
+        Runnable dirtyHandler = createDirtyFlagHandler(null);
+
+        // Create a listener for viewMode changes
         viewMode.addListener((obs, oldVal, newVal) -> {
             if (canLoadData()) {
                 loadGanttData();
             }
         });
+        trackPropertyListener(dirtyHandler);
 
+        // Create a listener for filterOption changes
         filterOption.addListener((obs, oldVal, newVal) -> {
             if (canLoadData()) {
                 applyFilter();
             }
         });
+        trackPropertyListener(dirtyHandler);
 
+        // Create a listener for project changes
         project.addListener((obs, oldVal, newVal) -> {
             if (newVal != null) {
                 startDate.set(newVal.getStartDate());
@@ -137,6 +164,20 @@ public class GanttChartViewModel extends BaseViewModel {
                 chartData.set(null);
             }
         });
+        trackPropertyListener(dirtyHandler);
+
+        // Create listeners for subsystem and subteam changes
+        selectedSubsystem.addListener((obs, oldVal, newVal) -> {
+            // Don't automatically apply filter, wait for command
+            setDirty(true);
+        });
+        trackPropertyListener(dirtyHandler);
+
+        selectedSubteam.addListener((obs, oldVal, newVal) -> {
+            // Don't automatically apply filter, wait for command
+            setDirty(true);
+        });
+        trackPropertyListener(dirtyHandler);
     }
 
     /**
@@ -171,6 +212,7 @@ public class GanttChartViewModel extends BaseViewModel {
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error loading Gantt data", e);
             statusMessage.set("Error loading chart data: " + e.getMessage());
+            setErrorMessage("Error loading chart data: " + e.getMessage());
             dataLoaded.set(false);
         }
     }
@@ -190,6 +232,7 @@ public class GanttChartViewModel extends BaseViewModel {
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error applying filter", e);
             statusMessage.set("Error applying filter: " + e.getMessage());
+            setErrorMessage("Error applying filter: " + e.getMessage());
         }
     }
 
@@ -211,14 +254,88 @@ public class GanttChartViewModel extends BaseViewModel {
 
         try {
             // Create filter criteria based on selected option
-            Map<String, Object> filterCriteria = Map.of("filterType", filter.toString());
-
+            Map<String, Object> filterCriteria = new HashMap<>();
+            filterCriteria.put("filterType", filter.toString());
+            
+            // Add subsystem filter if selected
+            if (selectedSubsystem.get() != null) {
+                filterCriteria.put("subsystem", selectedSubsystem.get().getName());
+            }
+            
+            // Add subteam filter if selected
+            if (selectedSubteam.get() != null) {
+                filterCriteria.put("subteam", selectedSubteam.get().getName());
+            }
+            
             // Apply filter using service
             return ganttDataService.applyFiltersToGanttData(data, filterCriteria);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error applying filter to data", e);
             return data; // Return unfiltered data on error
         }
+    }
+
+    /**
+     * Applies a filter based on the selected subsystem.
+     */
+    private void applySubsystemFilter() {
+        if (selectedSubsystem.get() == null || chartData.get() == null) {
+            return;
+        }
+        
+        try {
+            Map<String, Object> filterCriteria = new HashMap<>();
+            filterCriteria.put("filterType", filterOption.get().toString());
+            filterCriteria.put("subsystem", selectedSubsystem.get().getName());
+            
+            Map<String, Object> filteredData = ganttDataService.applyFiltersToGanttData(
+                chartData.get(), filterCriteria);
+            
+            chartData.set(filteredData);
+            statusMessage.set("Filtered by subsystem: " + selectedSubsystem.get().getName());
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error applying subsystem filter", e);
+            setErrorMessage("Error applying subsystem filter: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Applies a filter based on the selected subteam.
+     */
+    private void applySubteamFilter() {
+        if (selectedSubteam.get() == null || chartData.get() == null) {
+            return;
+        }
+        
+        try {
+            Map<String, Object> filterCriteria = new HashMap<>();
+            filterCriteria.put("filterType", filterOption.get().toString());
+            filterCriteria.put("subteam", selectedSubteam.get().getName());
+            
+            Map<String, Object> filteredData = ganttDataService.applyFiltersToGanttData(
+                chartData.get(), filterCriteria);
+            
+            chartData.set(filteredData);
+            statusMessage.set("Filtered by subteam: " + selectedSubteam.get().getName());
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error applying subteam filter", e);
+            setErrorMessage("Error applying subteam filter: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Toggles visibility of completed tasks.
+     */
+    private void toggleCompletedTasks() {
+        showCompletedTasks.set(!showCompletedTasks.get());
+        
+        // If data is loaded, reload with new filter
+        if (dataLoaded.get()) {
+            loadGanttData();
+        }
+        
+        statusMessage.set(showCompletedTasks.get() ? 
+            "Showing completed tasks" : "Hiding completed tasks");
     }
 
     /**
@@ -236,6 +353,7 @@ public class GanttChartViewModel extends BaseViewModel {
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error loading critical path", e);
             statusMessage.set("Error loading critical path: " + e.getMessage());
+            setErrorMessage("Error loading critical path: " + e.getMessage());
         }
     }
 
@@ -348,6 +466,15 @@ public class GanttChartViewModel extends BaseViewModel {
     }
 
     /**
+     * Cleans up resources used by this ViewModel.
+     */
+    @Override
+    public void cleanupResources() {
+        super.cleanupResources();
+        // Add any additional cleanup if needed
+    }
+
+    /**
      * Clears the error message.
      * Public wrapper for BaseViewModel's protected clearErrorMessage method.
      */
@@ -384,6 +511,18 @@ public class GanttChartViewModel extends BaseViewModel {
 
     public Command getToggleDependenciesCommand() {
         return toggleDependenciesCommand;
+    }
+
+    public Command getFilterBySubsystemCommand() {
+        return filterBySubsystemCommand;
+    }
+
+    public Command getFilterBySubteamCommand() {
+        return filterBySubteamCommand;
+    }
+
+    public Command getToggleCompletedTasksCommand() {
+        return toggleCompletedTasksCommand;
     }
 
     // Getters and setters for properties
@@ -518,5 +657,41 @@ public class GanttChartViewModel extends BaseViewModel {
 
     public BooleanProperty showDependenciesProperty() {
         return showDependencies;
+    }
+
+    public Subsystem getSelectedSubsystem() {
+        return selectedSubsystem.get();
+    }
+
+    public void setSelectedSubsystem(Subsystem subsystem) {
+        this.selectedSubsystem.set(subsystem);
+    }
+
+    public ObjectProperty<Subsystem> selectedSubsystemProperty() {
+        return selectedSubsystem;
+    }
+
+    public Subteam getSelectedSubteam() {
+        return selectedSubteam.get();
+    }
+
+    public void setSelectedSubteam(Subteam subteam) {
+        this.selectedSubteam.set(subteam);
+    }
+
+    public ObjectProperty<Subteam> selectedSubteamProperty() {
+        return selectedSubteam;
+    }
+
+    public boolean isShowCompletedTasks() {
+        return showCompletedTasks.get();
+    }
+
+    public void setShowCompletedTasks(boolean show) {
+        this.showCompletedTasks.set(show);
+    }
+
+    public BooleanProperty showCompletedTasksProperty() {
+        return showCompletedTasks;
     }
 }

@@ -36,7 +36,6 @@ public class GanttChartData {
         this.endDate = endDate;
     }
     
-    // Create from Task
     public static GanttChartData fromTask(Task task) {
         GanttChartData data = new GanttChartData(
                 "task_" + task.getId(),
@@ -63,20 +62,25 @@ public class GanttChartData {
             data.setSubsystem(task.getSubsystem().getName());
         }
         
-        // Set color based on priority
-        switch (task.getPriority()) {
-            case LOW:
-                data.setColor("#28a745"); // Green
-                break;
-            case MEDIUM:
-                data.setColor("#ffc107"); // Yellow
-                break;
-            case HIGH:
-                data.setColor("#fd7e14"); // Orange
-                break;
-            case CRITICAL:
-                data.setColor("#dc3545"); // Red
-                break;
+        // Set color based on priority - handle null priority
+        if (task.getPriority() != null) {
+            switch (task.getPriority()) {
+                case LOW:
+                    data.setColor("#28a745"); // Green
+                    break;
+                case MEDIUM:
+                    data.setColor("#ffc107"); // Yellow
+                    break;
+                case HIGH:
+                    data.setColor("#fd7e14"); // Orange
+                    break;
+                case CRITICAL:
+                    data.setColor("#dc3545"); // Red
+                    break;
+            }
+        } else {
+            // Default color for tasks with no priority
+            data.setColor("#6c757d"); // Gray
         }
         
         return data;
