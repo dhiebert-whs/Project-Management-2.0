@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.frcpm.services.ProjectServiceTest
+-------------------------------------------------------------------------------
+Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.389 s -- in org.frcpm.services.ProjectServiceTest

@@ -1,0 +1,12 @@
+-------------------------------------------------------------------------------
+Test set: org.frcpm.services.AttendanceServiceTest
+-------------------------------------------------------------------------------
+Tests run: 12, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 6.717 s <<< FAILURE! -- in org.frcpm.services.AttendanceServiceTest
+org.frcpm.services.AttendanceServiceTest.testRecordAttendanceForMeeting -- Time elapsed: 0.394 s <<< ERROR!
+java.lang.IllegalArgumentException: Username already exists
+	at org.frcpm.services.impl.TeamMemberServiceImpl.createTeamMember(TeamMemberServiceImpl.java:60)
+	at org.frcpm.services.AttendanceServiceTest.testRecordAttendanceForMeeting(AttendanceServiceTest.java:282)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+

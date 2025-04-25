@@ -1,0 +1,84 @@
+-------------------------------------------------------------------------------
+Test set: org.frcpm.services.ComponentServiceTest
+-------------------------------------------------------------------------------
+Tests run: 10, Failures: 0, Errors: 10, Skipped: 0, Time elapsed: 4.387 s <<< FAILURE! -- in org.frcpm.services.ComponentServiceTest
+org.frcpm.services.ComponentServiceTest.testCreateComponentWithoutPartNumber -- Time elapsed: 0.550 s <<< ERROR!
+java.lang.IllegalArgumentException: Subsystem with name 'Component Test Subsystem' already exists
+	at org.frcpm.services.impl.SubsystemServiceImpl.createSubsystem(SubsystemServiceImpl.java:52)
+	at org.frcpm.services.ComponentServiceTest.setUp(ComponentServiceTest.java:51)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.ComponentServiceTest.testFindByName -- Time elapsed: 0.412 s <<< ERROR!
+java.lang.IllegalArgumentException: Subsystem with name 'Component Test Subsystem' already exists
+	at org.frcpm.services.impl.SubsystemServiceImpl.createSubsystem(SubsystemServiceImpl.java:52)
+	at org.frcpm.services.ComponentServiceTest.setUp(ComponentServiceTest.java:51)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.ComponentServiceTest.testInvalidComponentCreation -- Time elapsed: 0.503 s <<< ERROR!
+java.lang.IllegalArgumentException: Subsystem with name 'Component Test Subsystem' already exists
+	at org.frcpm.services.impl.SubsystemServiceImpl.createSubsystem(SubsystemServiceImpl.java:52)
+	at org.frcpm.services.ComponentServiceTest.setUp(ComponentServiceTest.java:51)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.ComponentServiceTest.testUpdateExpectedDelivery -- Time elapsed: 0.385 s <<< ERROR!
+java.lang.IllegalArgumentException: Subsystem with name 'Component Test Subsystem' already exists
+	at org.frcpm.services.impl.SubsystemServiceImpl.createSubsystem(SubsystemServiceImpl.java:52)
+	at org.frcpm.services.ComponentServiceTest.setUp(ComponentServiceTest.java:51)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.ComponentServiceTest.testFindByDelivered -- Time elapsed: 0.479 s <<< ERROR!
+java.lang.IllegalArgumentException: Subsystem with name 'Component Test Subsystem' already exists
+	at org.frcpm.services.impl.SubsystemServiceImpl.createSubsystem(SubsystemServiceImpl.java:52)
+	at org.frcpm.services.ComponentServiceTest.setUp(ComponentServiceTest.java:51)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.ComponentServiceTest.testMarkAsDelivered -- Time elapsed: 0.435 s <<< ERROR!
+java.lang.IllegalArgumentException: Subsystem with name 'Component Test Subsystem' already exists
+	at org.frcpm.services.impl.SubsystemServiceImpl.createSubsystem(SubsystemServiceImpl.java:52)
+	at org.frcpm.services.ComponentServiceTest.setUp(ComponentServiceTest.java:51)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.ComponentServiceTest.testDeleteById -- Time elapsed: 0.442 s <<< ERROR!
+java.lang.IllegalArgumentException: Subsystem with name 'Component Test Subsystem' already exists
+	at org.frcpm.services.impl.SubsystemServiceImpl.createSubsystem(SubsystemServiceImpl.java:52)
+	at org.frcpm.services.ComponentServiceTest.setUp(ComponentServiceTest.java:51)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.ComponentServiceTest.testCreateComponent -- Time elapsed: 0.399 s <<< ERROR!
+java.lang.IllegalArgumentException: Subsystem with name 'Component Test Subsystem' already exists
+	at org.frcpm.services.impl.SubsystemServiceImpl.createSubsystem(SubsystemServiceImpl.java:52)
+	at org.frcpm.services.ComponentServiceTest.setUp(ComponentServiceTest.java:51)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.ComponentServiceTest.testFindByPartNumber -- Time elapsed: 0.388 s <<< ERROR!
+java.lang.IllegalArgumentException: Subsystem with name 'Component Test Subsystem' already exists
+	at org.frcpm.services.impl.SubsystemServiceImpl.createSubsystem(SubsystemServiceImpl.java:52)
+	at org.frcpm.services.ComponentServiceTest.setUp(ComponentServiceTest.java:51)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.ComponentServiceTest.testAssociateComponentsWithTask -- Time elapsed: 0.390 s <<< ERROR!
+java.lang.IllegalArgumentException: Subsystem with name 'Component Test Subsystem' already exists
+	at org.frcpm.services.impl.SubsystemServiceImpl.createSubsystem(SubsystemServiceImpl.java:52)
+	at org.frcpm.services.ComponentServiceTest.setUp(ComponentServiceTest.java:51)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
