@@ -128,7 +128,9 @@ public class DatabaseTestUtilTest {
         // Create a project using doInTransaction
         DatabaseTestUtil.doInTransaction(() -> {
             EntityManager em = DatabaseConfig.getEntityManager();
+            EntityTransaction tx = em.getTransaction();
             try {
+                tx.begin();
                 Project project = new Project(
                     "Transaction Test Project",
                     LocalDate.now(),
@@ -136,7 +138,14 @@ public class DatabaseTestUtilTest {
                     LocalDate.now().plusWeeks(6)
                 );
                 em.persist(project);
-                projectId[0] = project.getId();
+                em.flush(); // Important: Flush to ensure the ID is generated
+                projectId[0] = project.getId(); // Capture ID
+                tx.commit();
+            } catch (Exception e) {
+                if (tx != null && tx.isActive()) {
+                    tx.rollback();
+                }
+                throw e;
             } finally {
                 em.close();
             }
@@ -162,10 +171,12 @@ public class DatabaseTestUtilTest {
         final Long[] projectId = new Long[1];
         final Long[] taskId = new Long[1];
         
-        // Outer transaction to create project
+        // First transaction - create project and get ID
         DatabaseTestUtil.doInTransaction(() -> {
             EntityManager em = DatabaseConfig.getEntityManager();
+            EntityTransaction tx = em.getTransaction();
             try {
+                tx.begin();
                 Project project = new Project(
                     "Nested Transaction Project",
                     LocalDate.now(),
@@ -173,29 +184,43 @@ public class DatabaseTestUtilTest {
                     LocalDate.now().plusWeeks(6)
                 );
                 em.persist(project);
-                projectId[0] = project.getId();
-                
-                // Don't close the EntityManager yet - we'll use it in the nested transaction
+                em.flush(); // Important: Flush to ensure the ID is generated
+                projectId[0] = project.getId(); // Capture ID
+                tx.commit();
+            } catch (Exception e) {
+                if (tx != null && tx.isActive()) {
+                    tx.rollback();
+                }
+                throw e;
             } finally {
                 em.close();
             }
-            
-            // Use a separate Runnable for nested transaction
-            DatabaseTestUtil.doInTransaction(() -> {
-                EntityManager nestedEm = DatabaseConfig.getEntityManager();
-                try {
-                    // Find the project we just created
-                    Project persistedProject = nestedEm.find(Project.class, projectId[0]);
-                    Subsystem subsystem = DatabaseTestUtil.getTestSubsystem();
-                    
-                    // Create a task for the project
-                    Task task = new Task("Nested Transaction Task", persistedProject, subsystem);
-                    nestedEm.persist(task);
-                    taskId[0] = task.getId();
-                } finally {
-                    nestedEm.close();
+        });
+        
+        // Second transaction - create task referencing the project
+        DatabaseTestUtil.doInTransaction(() -> {
+            EntityManager em = DatabaseConfig.getEntityManager();
+            EntityTransaction tx = em.getTransaction();
+            try {
+                tx.begin();
+                // Find the project we just created
+                Project persistedProject = em.find(Project.class, projectId[0]);
+                Subsystem subsystem = DatabaseTestUtil.getTestSubsystem();
+                
+                // Create a task for the project
+                Task task = new Task("Nested Transaction Task", persistedProject, subsystem);
+                em.persist(task);
+                em.flush(); // Flush to ensure the ID is generated
+                taskId[0] = task.getId(); // Capture ID
+                tx.commit();
+            } catch (Exception e) {
+                if (tx != null && tx.isActive()) {
+                    tx.rollback();
                 }
-            });
+                throw e;
+            } finally {
+                em.close();
+            }
         });
         
         // Verify both the project and task exist
@@ -268,7 +293,10 @@ public class DatabaseTestUtilTest {
         // Create project and task
         DatabaseTestUtil.doInTransaction(() -> {
             EntityManager em = DatabaseConfig.getEntityManager();
+            EntityTransaction tx = em.getTransaction();
             try {
+                tx.begin();
+                
                 // Create project
                 Project project = new Project(
                     projectName,
@@ -292,10 +320,18 @@ public class DatabaseTestUtilTest {
                 project.addTask(task);
                 
                 em.persist(task);
+                em.flush(); // Ensure IDs are generated
                 
                 // Store IDs for later verification
                 projectId[0] = project.getId();
                 taskId[0] = task.getId();
+                
+                tx.commit();
+            } catch (Exception e) {
+                if (tx != null && tx.isActive()) {
+                    tx.rollback();
+                }
+                throw e;
             } finally {
                 em.close();
             }
@@ -317,11 +353,19 @@ public class DatabaseTestUtilTest {
         // Now delete the project - tasks should be deleted via cascade
         DatabaseTestUtil.doInTransaction(() -> {
             EntityManager deleteEm = DatabaseConfig.getEntityManager();
+            EntityTransaction tx = deleteEm.getTransaction();
             try {
+                tx.begin();
                 Project projectToDelete = deleteEm.find(Project.class, projectId[0]);
                 if (projectToDelete != null) {
                     deleteEm.remove(projectToDelete);
                 }
+                tx.commit();
+            } catch (Exception e) {
+                if (tx != null && tx.isActive()) {
+                    tx.rollback();
+                }
+                throw e;
             } finally {
                 deleteEm.close();
             }
@@ -350,7 +394,9 @@ public class DatabaseTestUtilTest {
         // Create the project
         DatabaseTestUtil.doInTransaction(() -> {
             EntityManager em = DatabaseConfig.getEntityManager();
+            EntityTransaction tx = em.getTransaction();
             try {
+                tx.begin();
                 Project project = new Project(
                     projectName,
                     LocalDate.now(),
@@ -358,7 +404,14 @@ public class DatabaseTestUtilTest {
                     LocalDate.now().plusWeeks(6)
                 );
                 em.persist(project);
+                em.flush(); // Ensure ID is generated
                 projectId[0] = project.getId();
+                tx.commit();
+            } catch (Exception e) {
+                if (tx != null && tx.isActive()) {
+                    tx.rollback();
+                }
+                throw e;
             } finally {
                 em.close();
             }

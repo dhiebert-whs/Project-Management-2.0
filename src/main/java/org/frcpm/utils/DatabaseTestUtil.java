@@ -315,22 +315,27 @@ public class DatabaseTestUtil {
      * @param action the database action to perform inside a transaction
      */
     public static void doInTransaction(Runnable action) {
-        EntityManager em = DatabaseConfig.getEntityManager();
+        EntityManager em = null;
+        EntityTransaction tx = null;
+        
         try {
-            EntityTransaction tx = em.getTransaction();
+            em = DatabaseConfig.getEntityManager();
+            tx = em.getTransaction();
             tx.begin();
-
+            
             try {
                 action.run();
                 tx.commit();
             } catch (Exception e) {
-                if (tx.isActive()) {
+                if (tx != null && tx.isActive()) {
                     tx.rollback();
                 }
                 throw e;
             }
         } finally {
-            em.close();
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
         }
     }
 
@@ -424,7 +429,13 @@ public class DatabaseTestUtil {
         LOGGER.info("Checking database schema mode...");
 
         try {
-            // Create a timestamp in the database
+            // First check if we're in development mode - dev mode always uses create-drop
+            if (DatabaseConfig.isDevelopmentMode()) {
+                LOGGER.info("Database is in CREATE-DROP mode (development mode)");
+                return false;
+            }
+            
+            // For non-dev mode, create a timestamp in the database
             String marker = "TEST_MARKER_" + System.currentTimeMillis();
 
             // Create a project with the marker
