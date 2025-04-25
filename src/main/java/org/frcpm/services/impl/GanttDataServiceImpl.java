@@ -225,9 +225,8 @@ public class GanttDataServiceImpl implements GanttDataService {
             throw new IllegalArgumentException("Project ID cannot be null");
         }
         
-        if (date == null) {
-            throw new IllegalArgumentException("Date cannot be null");
-        }
+        // Use current date if not specified
+        LocalDate effectiveDate = (date != null) ? date : LocalDate.now();
         
         try {
             // Get full Gantt data
@@ -235,8 +234,8 @@ public class GanttDataServiceImpl implements GanttDataService {
             
             // Create filter criteria for just the specified date
             Map<String, Object> filterCriteria = new HashMap<>();
-            filterCriteria.put("startDate", date.format(DATE_FORMATTER));
-            filterCriteria.put("endDate", date.plusDays(1).format(DATE_FORMATTER));
+            filterCriteria.put("startDate", effectiveDate.format(DATE_FORMATTER));
+            filterCriteria.put("endDate", effectiveDate.plusDays(1).format(DATE_FORMATTER));
             
             // Apply the filter
             return applyFiltersToGanttData(fullData, filterCriteria);

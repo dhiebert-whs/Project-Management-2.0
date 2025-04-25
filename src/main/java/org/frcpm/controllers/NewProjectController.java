@@ -94,9 +94,9 @@ public class NewProjectController {
      */
     public void setDialogStage(Stage dialogStage) {
         this.dialogStage = dialogStage;
-
-        // Close the dialog when the project is created
-        viewModel.getCreateProjectCommand().execute();
+        
+        // Set dialogStage first, then try to execute the command
+        // to avoid NullPointerException if command tries to access dialogStage
         if (viewModel.getCreatedProject() != null) {
             dialogStage.close();
         }

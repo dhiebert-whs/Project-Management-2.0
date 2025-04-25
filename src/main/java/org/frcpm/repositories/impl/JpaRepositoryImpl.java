@@ -158,10 +158,47 @@ public abstract class JpaRepositoryImpl<T, ID> implements Repository<T, ID> {
         EntityManager em = getEntityManager();
         try {
             em.getTransaction().begin();
-            if (!em.contains(entity)) {
-                entity = em.merge(entity);
+            
+            // If entity is Component, handle related tasks first
+            if (entityClass.equals(org.frcpm.models.Component.class)) {
+                Long entityId = getEntityId(entity);
+                if (entityId != null) {
+                    // Remove component references from tasks
+                    em.createNativeQuery(
+                        "DELETE FROM task_components WHERE component_id = :componentId")
+                      .setParameter("componentId", entityId)
+                      .executeUpdate();
+                }
             }
-            em.remove(entity);
+            
+            // If entity is Task, handle dependencies and components
+            if (entityClass.equals(org.frcpm.models.Task.class)) {
+                Long entityId = getEntityId(entity);
+                if (entityId != null) {
+                    // Remove dependencies
+                    em.createNativeQuery(
+                        "DELETE FROM task_dependencies WHERE task_id = :taskId OR dependency_id = :taskId")
+                      .setParameter("taskId", entityId)
+                      .executeUpdate();
+                    
+                    // Remove component relationships
+                    em.createNativeQuery(
+                        "DELETE FROM task_components WHERE task_id = :taskId")
+                      .setParameter("taskId", entityId)
+                      .executeUpdate();
+                    
+                    // Remove assignments
+                    em.createNativeQuery(
+                        "DELETE FROM task_assignments WHERE task_id = :taskId")
+                      .setParameter("taskId", entityId)
+                      .executeUpdate();
+                }
+            }
+            
+            // If entity is not managed, merge it first
+            T managedEntity = em.contains(entity) ? entity : em.merge(entity);
+            em.remove(managedEntity);
+            
             em.getTransaction().commit();
         } catch (Exception e) {
             if (em.getTransaction().isActive()) {
@@ -216,5 +253,23 @@ public abstract class JpaRepositoryImpl<T, ID> implements Repository<T, ID> {
         } finally {
             em.close();
         }
+    }
+
+    // Helper method to get entity ID
+    private Long getEntityId(T entity) {
+        try {
+            for (Field field : entity.getClass().getDeclaredFields()) {
+                if (field.isAnnotationPresent(jakarta.persistence.Id.class)) {
+                    field.setAccessible(true);
+                    Object id = field.get(entity);
+                    if (id instanceof Long) {
+                        return (Long) id;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Could not get entity ID", e);
+        }
+        return null;
     }
 }
