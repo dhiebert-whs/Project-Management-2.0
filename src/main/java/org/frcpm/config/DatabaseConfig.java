@@ -49,7 +49,7 @@ public class DatabaseConfig {
             String dbPath;
             if (developmentMode) {
                 // Use in-memory database for development
-                dbPath = "mem:testdb;DB_CLOSE_DELAY=-1";
+                dbPath = "mem:" + databaseName + ";DB_CLOSE_DELAY=-1";
                 LOGGER.info("Using IN-MEMORY database (development mode)");
             } else {
                 // Use file-based database for production in user's home directory
@@ -58,7 +58,7 @@ public class DatabaseConfig {
                 if (!dbDir.exists()) {
                     dbDir.mkdirs();
                 }
-                dbPath = "file:" + new File(dbDir, databaseName).getAbsolutePath();
+                dbPath = "file:" + new File(dbDir, databaseName).getAbsolutePath() + ";DB_CLOSE_ON_EXIT=FALSE;AUTO_RECONNECT=TRUE;DB_CLOSE_DELAY=-1";
                 LOGGER.info("Using FILE-BASED database at: " + dbPath);
             }
             
@@ -83,13 +83,20 @@ public class DatabaseConfig {
             props.put("hibernate.format_sql", developmentMode);
             props.put("hibernate.use_sql_comments", developmentMode);
             
-            // Add standard connection pool settings
+            // Add standard connection pool settings with improved reliability
             props.put("hibernate.connection.provider_class", "org.hibernate.hikaricp.internal.HikariCPConnectionProvider");
             props.put("hibernate.hikari.minimumIdle", "2");
             props.put("hibernate.hikari.maximumPoolSize", "10");
             props.put("hibernate.hikari.idleTimeout", "30000");
             props.put("hibernate.hikari.connectionTimeout", "10000");
+            props.put("hibernate.hikari.maxLifetime", "1800000"); // 30 minutes
             props.put("hibernate.hikari.poolName", "FRC-PM-HikariCP");
+            props.put("hibernate.hikari.autoCommit", "false");
+            props.put("hibernate.hikari.initializationFailTimeout", "30000");
+            
+            // Connection testing
+            props.put("hibernate.hikari.connectionTestQuery", "SELECT 1");
+            props.put("hibernate.hikari.validationTimeout", "5000");
             
             // IMPORTANT: Disable second-level cache for all test runs to avoid cache provider issues
             props.put("hibernate.cache.use_second_level_cache", false);
@@ -198,6 +205,7 @@ public class DatabaseConfig {
     public static synchronized void shutdown() {
         if (emf != null && emf.isOpen()) {
             try {
+                LOGGER.info("Shutting down database...");
                 emf.close();
             } catch (Exception e) {
                 LOGGER.log(Level.WARNING, "Error closing EntityManagerFactory", e);
@@ -227,5 +235,85 @@ public class DatabaseConfig {
         
         // Reinitialize with clean state
         initialize();
+    }
+    
+    /**
+     * Creates a backup of the database.
+     * 
+     * @param backupPath the path to save the backup to
+     * @return true if the backup was successful, false otherwise
+     */
+    public static boolean createBackup(String backupPath) {
+        if (developmentMode) {
+            LOGGER.warning("Cannot create backup in development mode (in-memory database)");
+            return false;
+        }
+        
+        EntityManager em = null;
+        try {
+            em = getEntityManager();
+            em.getTransaction().begin();
+            
+            // Execute BACKUP SQL command
+            String backupScript = "BACKUP TO '" + backupPath + "'";
+            em.createNativeQuery(backupScript).executeUpdate();
+            
+            em.getTransaction().commit();
+            LOGGER.info("Database backup created at: " + backupPath);
+            return true;
+        } catch (Exception e) {
+            if (em != null && em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            LOGGER.log(Level.SEVERE, "Error creating database backup", e);
+            return false;
+        } finally {
+            if (em != null) {
+                em.close();
+            }
+        }
+    }
+    
+    /**
+     * Restores the database from a backup.
+     * 
+     * @param backupPath the path to the backup file
+     * @return true if the restore was successful, false otherwise
+     */
+    public static boolean restoreFromBackup(String backupPath) {
+        // First shut down the current database
+        shutdown();
+        
+        // Now restore from backup
+        EntityManager em = null;
+        try {
+            // Reinitialize with minimal configuration
+            initialize();
+            
+            em = getEntityManager();
+            em.getTransaction().begin();
+            
+            // Execute RESTORE SQL command
+            String restoreScript = "RESTORE FROM '" + backupPath + "'";
+            em.createNativeQuery(restoreScript).executeUpdate();
+            
+            em.getTransaction().commit();
+            LOGGER.info("Database restored from: " + backupPath);
+            
+            // Reinitialize to ensure clean state
+            reinitialize(developmentMode);
+            
+            return true;
+        } catch (Exception e) {
+            if (em != null && em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            LOGGER.log(Level.SEVERE, "Error restoring database from backup", e);
+            return false;
+        } finally {
+            if (em != null) {
+                em.close();
+            }
+        }
     }
 }

@@ -1,17 +1,18 @@
 package org.frcpm;
 
 import javafx.application.Application;
-import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import org.frcpm.config.DatabaseConfig;
-import org.frcpm.services.ServiceFactory;
+import org.frcpm.di.FrcpmModule;
+import org.frcpm.di.ServiceProvider;
+import org.frcpm.di.ViewLoader;
 import org.frcpm.services.SubteamService;
 import org.frcpm.utils.DatabaseInitializer;
 import org.frcpm.utils.DatabaseTestUtil;
+import org.frcpm.views.MainView;
 
-import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -29,8 +30,11 @@ public class MainApp extends Application {
     @Override
     public void start(Stage primaryStage) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/MainView.fxml"));
-            Parent root = loader.load();
+            // Initialize AfterburnerFX dependency injection
+            FrcpmModule.initialize();
+            
+            // Load the main view using AfterburnerFX
+            Parent root = ViewLoader.loadView(MainView.class);
             
             Scene scene = new Scene(root, 1024, 768);
             scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
@@ -41,7 +45,7 @@ public class MainApp extends Application {
             
             LOGGER.info("FRC Project Management System started");
             
-        } catch (IOException e) {
+        } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error loading main view", e);
             showErrorAndExit("Error loading main view: " + e.getMessage());
         }
@@ -51,6 +55,11 @@ public class MainApp extends Application {
     public void stop() {
         // Clean up resources when application stops
         LOGGER.info("FRC Project Management System stopping...");
+        
+        // Shutdown AfterburnerFX
+        FrcpmModule.shutdown();
+        
+        // Shutdown database
         DatabaseConfig.shutdown();
     }
     
@@ -74,7 +83,7 @@ public class MainApp extends Application {
             }
             
             // Check if this is the first run (no projects exist)
-            boolean firstRun = ServiceFactory.getProjectService().findAll().isEmpty();
+            boolean firstRun = ServiceProvider.getProjectService().findAll().isEmpty();
             if (firstRun) {
                 LOGGER.info("First run detected - creating initial data");
                 DatabaseInitializer.initialize(true); // Create sample data
@@ -91,7 +100,7 @@ public class MainApp extends Application {
     private void createDefaultData() {
         try {
             // Create default subteams
-            SubteamService subteamService = ServiceFactory.getSubteamService();
+            SubteamService subteamService = ServiceProvider.getSubteamService();
             subteamService.createSubteam("Programming", "#3366CC", "Java, Vision, Controls");
             subteamService.createSubteam("Mechanical", "#CC3333", "CAD, Fabrication, Assembly");
             subteamService.createSubteam("Electrical", "#FFCC00", "Wiring, Electronics, Control Systems");

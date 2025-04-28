@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+    <?import javafx.scene.control.*?>
+    <?import javafx.scene.layout.*?>
+    
+    <BorderPane fx:id="mainBorderPane" prefWidth="1024" prefHeight="768" 
+                xmlns="http://javafx.com/javafx/11" xmlns:fx="http://javafx.com/fxml/1" 
+                fx:controller="org.frcpm.presenters.MainPresenter">
+        
+        <padding>
+            <Insets top="10" right="10" bottom="10" left="10"/>
+        </padding>
+        
+        <top>
+            <VBox spacing="10">
+                <MenuBar>
+                    <Menu text="File">
+                        <MenuItem fx:id="fileNewProjectMenuItem" text="New Project"/>
+                        <MenuItem fx:id="fileOpenProjectMenuItem" text="Open Project"/>
+                        <SeparatorMenuItem/>
+                        <MenuItem fx:id="fileExitMenuItem" text="Exit"/>
+                    </Menu>
+                    <Menu text="Edit">
+                        <MenuItem text="Preferences"/>
+                    </Menu>
+                    <Menu text="Help">
+                        <MenuItem text="About"/>
+                    </Menu>
+                </MenuBar>
+                
+                <Label text="FRC Project Management System" 
+                       style="-fx-font-size: 24; -fx-font-weight: bold;"/>
+            </VBox>
+        </top>
+        
+        <center>
+            <VBox spacing="10">
+                <Label text="Select a Project:" style="-fx-font-size: 16; -fx-font-weight: bold;"/>
+                <ListView fx:id="projectListView" VBox.vgrow="ALWAYS">
+                    <placeholder>
+                        <Label text="No projects found. Click 'New Project' to create one."/>
+                    </placeholder>
+                </ListView>
+            </VBox>
+        </center>
+        
+        <bottom>
+            <HBox spacing="10" alignment="CENTER_RIGHT">
+                <Button fx:id="newProjectButton" text="New Project"/>
+                <Button fx:id="openProjectButton" text="Open Project"/>
+            </HBox>
+        </bottom>
+        
+    </BorderPane>
