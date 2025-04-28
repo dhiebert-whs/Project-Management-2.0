@@ -1,59 +1,59 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.ComboBox?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.control.TableColumn?>
-<?import javafx.scene.control.TableView?>
-<?import javafx.scene.layout.AnchorPane?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.VBox?>
-<?import javafx.scene.text.Font?>
-
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="600.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.frcpm.presenters.ComponentManagementPresenter">
-   <children>
-      <VBox layoutX="14.0" layoutY="14.0" spacing="10.0" AnchorPane.bottomAnchor="10.0" AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0" AnchorPane.topAnchor="10.0">
-         <children>
-            <Label text="Component Management" textFill="#2c3e50">
-               <font>
-                  <Font name="System Bold" size="18.0" />
-               </font>
-            </Label>
-            <HBox alignment="CENTER_LEFT" spacing="10.0">
-               <children>
-                  <Label text="Filter:" />
-                  <ComboBox fx:id="filterComboBox" prefWidth="200.0" />
-                  <Button fx:id="refreshButton" mnemonicParsing="false" text="Refresh" />
-               </children>
-            </HBox>
-            <TableView fx:id="componentsTable" VBox.vgrow="ALWAYS">
-               <columns>
-                  <TableColumn fx:id="nameColumn" prefWidth="250.0" text="Name" />
-                  <TableColumn fx:id="partNumberColumn" prefWidth="150.0" text="Part Number" />
-                  <TableColumn fx:id="expectedDeliveryColumn" prefWidth="150.0" text="Expected Delivery" />
-                  <TableColumn fx:id="deliveredColumn" prefWidth="100.0" text="Delivered" />
-               </columns>
-               <VBox.margin>
-                  <Insets />
-               </VBox.margin>
-            </TableView>
-            <Label text="Double-click a component to edit it" textFill="#666666">
-               <font>
-                  <Font size="11.0" />
-               </font>
-            </Label>
-            <HBox alignment="CENTER_LEFT" spacing="10.0">
-               <children>
-                  <Button fx:id="addComponentButton" mnemonicParsing="false" text="Add Component" />
-                  <Button fx:id="editComponentButton" mnemonicParsing="false" text="Edit Component" />
-                  <Button fx:id="deleteComponentButton" mnemonicParsing="false" text="Delete Component" />
-               </children>
-               <VBox.margin>
-                  <Insets top="5.0" />
-               </VBox.margin>
-            </HBox>
-         </children>
-      </VBox>
-   </children>
-</AnchorPane>
+   <?import javafx.scene.control.Button?>
+   <?import javafx.scene.control.ComboBox?>
+   <?import javafx.scene.control.Label?>
+   <?import javafx.scene.control.TableColumn?>
+   <?import javafx.scene.control.TableView?>
+   <?import javafx.scene.layout.AnchorPane?>
+   <?import javafx.scene.layout.HBox?>
+   <?import javafx.scene.layout.VBox?>
+   <?import javafx.scene.text.Font?>
+   
+   <AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="600.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.frcpm.presenters.ComponentManagementPresenter">
+      <children>
+         <VBox layoutX="14.0" layoutY="14.0" spacing="10.0" AnchorPane.bottomAnchor="10.0" AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0" AnchorPane.topAnchor="10.0">
+            <children>
+               <Label text="%component.management.title" textFill="#2c3e50">
+                  <font>
+                     <Font name="System Bold" size="18.0" />
+                  </font>
+               </Label>
+               <HBox alignment="CENTER_LEFT" spacing="10.0">
+                  <children>
+                     <Label text="%component.filter" />
+                     <ComboBox fx:id="filterComboBox" prefWidth="200.0" />
+                     <Button fx:id="refreshButton" mnemonicParsing="false" text="%button.refresh" />
+                  </children>
+               </HBox>
+               <TableView fx:id="componentsTable" VBox.vgrow="ALWAYS">
+                  <columns>
+                     <TableColumn fx:id="nameColumn" prefWidth="250.0" text="%component.column.name" />
+                     <TableColumn fx:id="partNumberColumn" prefWidth="150.0" text="%component.column.partNumber" />
+                     <TableColumn fx:id="expectedDeliveryColumn" prefWidth="150.0" text="%component.column.expectedDelivery" />
+                     <TableColumn fx:id="deliveredColumn" prefWidth="100.0" text="%component.column.delivered" />
+                  </columns>
+                  <VBox.margin>
+                     <Insets />
+                  </VBox.margin>
+               </TableView>
+               <Label text="%component.instruction.doubleClick" textFill="#666666">
+                  <font>
+                     <Font size="11.0" />
+                  </font>
+               </Label>
+               <HBox alignment="CENTER_LEFT" spacing="10.0">
+                  <children>
+                     <Button fx:id="addComponentButton" mnemonicParsing="false" text="%component.button.add" />
+                     <Button fx:id="editComponentButton" mnemonicParsing="false" text="%component.button.edit" />
+                     <Button fx:id="deleteComponentButton" mnemonicParsing="false" text="%component.button.delete" />
+                  </children>
+                  <VBox.margin>
+                     <Insets top="5.0" />
+                  </VBox.margin>
+               </HBox>
+            </children>
+         </VBox>
+      </children>
+   </AnchorPane>
