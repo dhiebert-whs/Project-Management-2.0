@@ -1,14 +1,23 @@
+// src/main/java/org/frcpm/presenters/ProjectListPresenter.java
+
 package org.frcpm.presenters;
 
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
-import javafx.scene.control.Button;
-import javafx.scene.control.ListView;
+import javafx.scene.control.*;
+import javafx.scene.Scene;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import org.frcpm.binding.ViewModelBinding;
+import org.frcpm.di.DialogFactory;
 import org.frcpm.di.ServiceProvider;
 import org.frcpm.di.ViewLoader;
 import org.frcpm.models.Project;
+import org.frcpm.services.DialogService;
 import org.frcpm.services.ProjectService;
+import org.frcpm.utils.ErrorHandler;
 import org.frcpm.viewmodels.ProjectListViewModel;
+import org.frcpm.views.NewProjectDialogView;
 import org.frcpm.views.ProjectView;
 
 import javax.inject.Inject;
@@ -18,13 +27,13 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Presenter for the project list view.
- * This follows the AfterburnerFX presenter convention.
+ * Presenter for the project list view using AfterburnerFX pattern.
  */
 public class ProjectListPresenter implements Initializable {
-    
+
     private static final Logger LOGGER = Logger.getLogger(ProjectListPresenter.class.getName());
-    
+
+    // FXML UI components
     @FXML
     private ListView<Project> projectListView;
     
@@ -40,164 +49,211 @@ public class ProjectListPresenter implements Initializable {
     @FXML
     private Button deleteProjectButton;
     
+    // Injected services
     @Inject
     private ProjectService projectService;
     
+    @Inject
+    private DialogService dialogService;
+
+    // ViewModel and resources
     private ProjectListViewModel viewModel;
-    
+    private ResourceBundle resources;
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        LOGGER.info("Initializing ProjectListPresenter");
+        LOGGER.info("Initializing ProjectListPresenter with resource bundle");
         
-        // Create view model
+        this.resources = resources;
+        
+        // Create view model with injected service
         viewModel = new ProjectListViewModel(projectService);
-        
-        // Set up UI bindings
+
+        // Set up bindings
         setupBindings();
         
         // Load projects
-        loadProjects();
+        refreshProjectList();
     }
-    
+
     /**
-     * Sets up UI bindings.
+     * Sets up the bindings between UI controls and ViewModel properties.
      */
     private void setupBindings() {
-        // Bind the list view to the projects in the view model
+        // Check for null UI components for testability
+        if (projectListView == null || newProjectButton == null || openProjectButton == null || 
+            importProjectButton == null || deleteProjectButton == null) {
+            LOGGER.warning("UI components not initialized - likely in test environment");
+            return;
+        }
+
+        // Set up list view
         projectListView.setItems(viewModel.getProjects());
+        projectListView.setCellFactory(lv -> new ListCell<Project>() {
+            @Override
+            protected void updateItem(Project project, boolean empty) {
+                super.updateItem(project, empty);
+                if (empty || project == null) {
+                    setText(null);
+                } else {
+                    setText(project.getName());
+                }
+            }
+        });
         
-        // Bind button actions
-        newProjectButton.setOnAction(e -> handleNewProject());
-        openProjectButton.setOnAction(e -> handleOpenProject());
-        importProjectButton.setOnAction(e -> handleImportProject());
-        deleteProjectButton.setOnAction(e -> handleDeleteProject());
-        
-        // Set up selection binding
+        // Setup selection handling
         projectListView.getSelectionModel().selectedItemProperty().addListener(
-                (observable, oldValue, newValue) -> viewModel.setSelectedProject(newValue));
+            (observable, oldValue, newValue) -> viewModel.setSelectedProject(newValue));
         
-        // Disable buttons that need a selection if no project is selected
-        openProjectButton.disableProperty().bind(
-                projectListView.getSelectionModel().selectedItemProperty().isNull());
-        deleteProjectButton.disableProperty().bind(
-                projectListView.getSelectionModel().selectedItemProperty().isNull());
+        // Setup double-click handler for opening projects
+        projectListView.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2) {
+                Project selectedProject = projectListView.getSelectionModel().getSelectedItem();
+                if (selectedProject != null) {
+                    openProject(selectedProject);
+                }
+            }
+        });
+        
+        // Set up button handlers
+        newProjectButton.setOnAction(event -> handleNewProject());
+        openProjectButton.setOnAction(event -> handleOpenProject());
+        deleteProjectButton.setOnAction(event -> handleDeleteProject());
+        
+        // Enable the open project button (fixing the issue from the controller)
+        openProjectButton.setDisable(false);
     }
-    
+
     /**
-     * Loads projects.
+     * Refreshes the project list.
      */
-    private void loadProjects() {
+    public void refreshProjectList() {
         try {
             viewModel.loadProjects();
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error loading projects", e);
-            showError("Error Loading Projects", "Failed to load projects: " + e.getMessage());
+            ErrorHandler.showError("Error Loading Projects", 
+                "Failed to load the list of projects: " + e.getMessage(), e);
         }
     }
     
     /**
-     * Handles creating a new project.
+     * Opens the selected project.
      */
-    private void handleNewProject() {
+    @FXML
+    public void handleOpenProject() {
+        Project selectedProject = projectListView.getSelectionModel().getSelectedItem();
+        if (selectedProject != null) {
+            openProject(selectedProject);
+        } else {
+            ErrorHandler.showError("No Selection", "Please select a project to open");
+        }
+    }
+    
+    /**
+     * Creates a new project.
+     */
+    @FXML
+    public void handleNewProject() {
         try {
-            ViewLoader.showDialog(ProjectView.class, "New Project", 
-                    projectListView.getScene().getWindow());
-            loadProjects(); // Reload after dialog closes
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error creating new project", e);
-            showError("Error Creating Project", "Failed to create new project: " + e.getMessage());
-        }
-    }
-    
-    /**
-     * Handles opening a project.
-     */
-    private void handleOpenProject() {
-        Project selectedProject = projectListView.getSelectionModel().getSelectedItem();
-        if (selectedProject != null) {
-            try {
-                ViewLoader.showView(ProjectView.class, "Project: " + selectedProject.getName(), 
-                        projectListView.getScene().getWindow());
-            } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "Error opening project", e);
-                showError("Error Opening Project", "Failed to open project: " + e.getMessage());
+            // Use DialogFactory to show the dialog
+            NewProjectPresenter presenter = DialogFactory.showDialog(
+                NewProjectDialogView.class, 
+                "Create New Project", 
+                projectListView.getScene().getWindow(), 
+                null);
+            
+            // After dialog closes, check if a project was created
+            Project createdProject = presenter.getCreatedProject();
+            if (createdProject != null) {
+                refreshProjectList();
+                // Select and open the new project
+                viewModel.setSelectedProject(createdProject);
+                openProject(createdProject);
             }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error showing new project dialog", e);
+            ErrorHandler.showError("Error", "Failed to open new project dialog", e);
         }
     }
     
     /**
-     * Handles importing a project.
+     * Handles the delete project action.
      */
-    private void handleImportProject() {
-        // Not implemented yet
-        showInfo("Import Project", "This feature is not implemented yet.");
-    }
-    
-    /**
-     * Handles deleting a project.
-     */
-    private void handleDeleteProject() {
+    @FXML
+    public void handleDeleteProject() {
         Project selectedProject = projectListView.getSelectionModel().getSelectedItem();
-        if (selectedProject != null) {
+        
+        if (selectedProject == null) {
+            ErrorHandler.showError("No Selection", "Please select a project to delete");
+            return;
+        }
+        
+        boolean confirmed = ErrorHandler.showConfirmation(
+            "Delete Project",
+            "Are you sure you want to delete project '" + selectedProject.getName() + "'?");
+            
+        if (confirmed) {
             try {
-                if (showConfirmation("Delete Project", 
-                        "Are you sure you want to delete the project '" + 
-                                selectedProject.getName() + "'?")) {
-                    viewModel.deleteProject(selectedProject);
-                    loadProjects(); // Reload after deletion
+                if (viewModel.deleteProject(selectedProject)) {
+                    refreshProjectList();
+                } else {
+                    ErrorHandler.showError("Error", "Failed to delete the project");
                 }
             } catch (Exception e) {
                 LOGGER.log(Level.SEVERE, "Error deleting project", e);
-                showError("Error Deleting Project", "Failed to delete project: " + e.getMessage());
+                ErrorHandler.showError("Error", "Failed to delete the project", e);
             }
         }
     }
     
     /**
-     * Shows an error dialog.
+     * Opens a project.
      * 
-     * @param title the title of the dialog
-     * @param message the error message
+     * @param project the project to open
      */
-    private void showError(String title, String message) {
-        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
-                javafx.scene.control.Alert.AlertType.ERROR);
-        alert.setTitle("Error");
-        alert.setHeaderText(title);
-        alert.setContentText(message);
-        alert.showAndWait();
+    private void openProject(Project project) {
+        try {
+            // Ensure the project has all required fields
+            if (project.getStartDate() == null || project.getGoalEndDate() == null || 
+                project.getHardDeadline() == null) {
+                ErrorHandler.showError("Invalid Project", "The project is missing required date fields");
+                return;
+            }
+            
+            // Load the project view
+            Parent root = ViewLoader.loadView(ProjectView.class);
+            
+            // Get the controller and set the project
+            ProjectPresenter presenter = ViewLoader.loadController(ProjectView.class);
+            presenter.setProject(project);
+            
+            // Show the project view
+            Stage stage = (Stage) projectListView.getScene().getWindow();
+            stage.setTitle("FRC Project Management - " + project.getName());
+            stage.setScene(new Scene(root));
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error opening project", e);
+            ErrorHandler.showError("Error", "Failed to open project", e);
+        }
     }
     
     /**
-     * Shows an information dialog.
+     * Gets the ViewModel.
      * 
-     * @param title the title of the dialog
-     * @param message the information message
+     * @return the ViewModel
      */
-    private void showInfo(String title, String message) {
-        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
-                javafx.scene.control.Alert.AlertType.INFORMATION);
-        alert.setTitle("Information");
-        alert.setHeaderText(title);
-        alert.setContentText(message);
-        alert.showAndWait();
+    public ProjectListViewModel getViewModel() {
+        return viewModel;
     }
     
     /**
-     * Shows a confirmation dialog.
+     * Sets the ViewModel (for testing).
      * 
-     * @param title the title of the dialog
-     * @param message the confirmation message
-     * @return true if the user confirmed, false otherwise
+     * @param viewModel the ViewModel
      */
-    private boolean showConfirmation(String title, String message) {
-        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
-                javafx.scene.control.Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Confirmation");
-        alert.setHeaderText(title);
-        alert.setContentText(message);
-        
-        java.util.Optional<javafx.scene.control.ButtonType> result = alert.showAndWait();
-        return result.isPresent() && result.get() == javafx.scene.control.ButtonType.OK;
+    public void setViewModel(ProjectListViewModel viewModel) {
+        this.viewModel = viewModel;
     }
 }

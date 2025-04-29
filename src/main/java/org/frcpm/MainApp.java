@@ -1,14 +1,18 @@
+// src/main/java/org/frcpm/MainApp.java
+
 package org.frcpm;
 
+import com.airhacks.afterburner.injection.Injector;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.stage.Stage;
 import org.frcpm.config.DatabaseConfig;
 import org.frcpm.di.FrcpmModule;
 import org.frcpm.di.ServiceProvider;
 import org.frcpm.di.ViewLoader;
-import org.frcpm.services.SubteamService;
 import org.frcpm.utils.DatabaseInitializer;
 import org.frcpm.utils.DatabaseTestUtil;
 import org.frcpm.views.MainView;
@@ -21,48 +25,65 @@ import java.util.logging.Logger;
  * This is the entry point for the JavaFX application.
  */
 public class MainApp extends Application {
-    
+
     private static final Logger LOGGER = Logger.getLogger(MainApp.class.getName());
-    
+
     // Flag to indicate development mode (can be set via JVM args)
     private static boolean developmentMode = Boolean.getBoolean("app.db.dev");
-    
+
     @Override
     public void start(Stage primaryStage) {
         try {
             // Initialize AfterburnerFX dependency injection
             FrcpmModule.initialize();
-            
+
+            // Configure default uncaught exception handler for JavaFX thread
+            Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+                LOGGER.log(Level.SEVERE, "Uncaught exception in JavaFX thread", throwable);
+                showErrorAndContinue("Application Error",
+                        "An unexpected error occurred. Please try again or restart the application.",
+                        throwable.getMessage());
+            });
+
             // Load the main view using AfterburnerFX
             Parent root = ViewLoader.loadView(MainView.class);
-            
+
             Scene scene = new Scene(root, 1024, 768);
             scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
-            
+
             primaryStage.setTitle("FRC Project Management System");
             primaryStage.setScene(scene);
             primaryStage.show();
-            
+
             LOGGER.info("FRC Project Management System started");
-            
+
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error loading main view", e);
             showErrorAndExit("Error loading main view: " + e.getMessage());
         }
     }
-    
+
     @Override
     public void stop() {
         // Clean up resources when application stops
         LOGGER.info("FRC Project Management System stopping...");
-        
-        // Shutdown AfterburnerFX
-        FrcpmModule.shutdown();
-        
-        // Shutdown database
-        DatabaseConfig.shutdown();
+
+        try {
+            // Shutdown AfterburnerFX
+            FrcpmModule.shutdown();
+
+            // Properly forget all dependencies
+            Injector.forgetAll();
+
+            // Shutdown database with appropriate closure
+            DatabaseConfig.shutdown();
+
+            LOGGER.info("Application shutdown complete");
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error during application shutdown", e);
+        }
     }
-    
+
     @Override
     public void init() throws Exception {
         // Initialize resources before application starts
@@ -70,18 +91,18 @@ public class MainApp extends Application {
         try {
             // Set development mode for database (create-drop vs update)
             DatabaseConfig.setDevelopmentMode(developmentMode);
-            
+
             // Initialize database configuration with appropriate schema mode
             DatabaseConfig.initialize();
-            LOGGER.info("Database initialized in " + 
-                       (developmentMode ? "DEVELOPMENT" : "PRODUCTION") + " mode");
-            
+            LOGGER.info("Database initialized in " +
+                    (developmentMode ? "DEVELOPMENT" : "PRODUCTION") + " mode");
+
             // Test database connection and schema
             boolean dbTestSuccess = DatabaseTestUtil.testDatabase();
             if (!dbTestSuccess) {
                 LOGGER.severe("Database test failed - application may not function correctly");
             }
-            
+
             // Check if this is the first run (no projects exist)
             boolean firstRun = ServiceProvider.getProjectService().findAll().isEmpty();
             if (firstRun) {
@@ -95,26 +116,30 @@ public class MainApp extends Application {
     }
 
     /**
-     * Creates default data for first-time run.
+     * Shows a non-fatal error dialog but allows the application to continue.
+     * 
+     * @param title   the dialog title
+     * @param header  the header message
+     * @param message the detailed message
      */
-    private void createDefaultData() {
-        try {
-            // Create default subteams
-            SubteamService subteamService = ServiceProvider.getSubteamService();
-            subteamService.createSubteam("Programming", "#3366CC", "Java, Vision, Controls");
-            subteamService.createSubteam("Mechanical", "#CC3333", "CAD, Fabrication, Assembly");
-            subteamService.createSubteam("Electrical", "#FFCC00", "Wiring, Electronics, Control Systems");
-            
-            LOGGER.info("Default data created successfully");
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Error creating default data", e);
-        }
+    private void showErrorAndContinue(String title, String header, String message) {
+        Platform.runLater(() -> {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle(title);
+            alert.setHeaderText(header);
+            alert.setContentText(message);
+            alert.showAndWait();
+        });
     }
 
+    /**
+     * Shows a fatal error dialog and exits the application.
+     * 
+     * @param message the error message
+     */
     private void showErrorAndExit(String message) {
-        javafx.application.Platform.runLater(() -> {
-            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
-                    javafx.scene.control.Alert.AlertType.ERROR);
+        Platform.runLater(() -> {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
             alert.setTitle("Application Error");
             alert.setHeaderText("Fatal Error");
             alert.setContentText(message);
@@ -136,7 +161,7 @@ public class MainApp extends Application {
                 break;
             }
         }
-        
+
         // Launch the JavaFX application
         launch(args);
     }

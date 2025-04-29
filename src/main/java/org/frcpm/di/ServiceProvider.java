@@ -24,7 +24,13 @@ public class ServiceProvider {
      */
     public static <T> T getService(Class<T> serviceClass) {
         LOGGER.fine("Getting service: " + serviceClass.getSimpleName());
-        return Injector.instantiatePresenter(serviceClass);
+        // Check if it's registered in FrcpmModule first
+        Object instance = Injector.getInstanceSupplier().apply(serviceClass);
+        if (instance != null) {
+            return (T) instance;
+        }
+        // If not found, try to create it
+        return Injector.instantiate(serviceClass);
     }
     
     /**
@@ -146,8 +152,15 @@ public class ServiceProvider {
      */
     public static <T> T getRepository(Class<T> repositoryClass) {
         LOGGER.fine("Getting repository: " + repositoryClass.getSimpleName());
-        return Injector.instantiatePresenter(repositoryClass);
+        // Check if it's registered in FrcpmModule first
+        Object instance = Injector.getInstanceSupplier().apply(repositoryClass);
+        if (instance != null) {
+            return (T) instance;
+        }
+        // If not found, try to create it
+        return Injector.instantiate(repositoryClass);
     }
+
     
     /**
      * Gets the project repository.

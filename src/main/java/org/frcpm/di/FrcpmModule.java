@@ -1,3 +1,5 @@
+// src/main/java/org/frcpm/di/FrcpmModule.java
+
 package org.frcpm.di;
 
 import com.airhacks.afterburner.injection.Injector;
@@ -27,9 +29,8 @@ public class FrcpmModule {
     public static void initialize() {
         LOGGER.info("Initializing FrcpmModule for dependency injection");
         
-        // Register all services
-        registerRepositories();
-        registerServices();
+        // Register all services and repositories
+        registerDependencies();
         
         // Register custom producers
         Map<String, Object> customConfig = new HashMap<>();
@@ -46,10 +47,23 @@ public class FrcpmModule {
     }
     
     /**
-     * Registers all repositories with the dependency injection system.
+     * Registers all dependencies with the DI system.
      */
-    private static void registerRepositories() {
-        // Register specific repositories
+    private static void registerDependencies() {
+        // Register repositories first
+        registerSpecificRepositories();
+        
+        // Then register services that use repositories
+        registerServices();
+        
+        LOGGER.info("Registered all dependencies");
+    }
+    
+    /**
+     * Registers all specific repositories.
+     */
+    private static void registerSpecificRepositories() {
+        // Register repositories with interfaces
         register(ProjectRepository.class, RepositoryFactory.getProjectRepository());
         register(TaskRepository.class, RepositoryFactory.getTaskRepository());
         register(TeamMemberRepository.class, RepositoryFactory.getTeamMemberRepository());
@@ -62,10 +76,10 @@ public class FrcpmModule {
     }
     
     /**
-     * Registers all services with the dependency injection system.
+     * Registers all services.
      */
     private static void registerServices() {
-        // Register services
+        // Register services with interfaces
         register(ProjectService.class, ServiceFactory.getProjectService());
         register(TaskService.class, ServiceFactory.getTaskService());
         register(TeamMemberService.class, ServiceFactory.getTeamMemberService());
@@ -78,6 +92,7 @@ public class FrcpmModule {
         register(DialogService.class, ServiceFactory.getDialogService());
         register(GanttDataService.class, ServiceFactory.getGanttDataService());
         register(WebViewBridgeService.class, ServiceFactory.getWebViewBridgeService());
+        register(GanttChartTransformationService.class, ServiceFactory.getGanttDataService().getTransformationService());
     }
     
     /**
@@ -108,7 +123,6 @@ public class FrcpmModule {
      */
     public static void shutdown() {
         LOGGER.info("Shutting down FrcpmModule");
-        Injector.forgetAll();
         CUSTOM_SERVICES.clear();
     }
 }

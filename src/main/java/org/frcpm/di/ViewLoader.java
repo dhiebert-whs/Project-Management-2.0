@@ -162,4 +162,16 @@ public class ViewLoader {
             throw new RuntimeException("Failed to instantiate view: " + viewClass.getSimpleName(), e);
         }
     }
+
+    /**
+     * Loads a view and returns its Parent.
+     * 
+     * @param viewClass the class of the view to load
+     * @return the parent node
+     */
+    public static Parent loadView(Class<? extends FXMLView> viewClass) {
+        LOGGER.fine("Loading view: " + viewClass.getSimpleName());
+        FXMLView view = instantiateView(viewClass);
+        return view.getView();
+    }
 }
