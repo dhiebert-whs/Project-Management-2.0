@@ -1,12 +1,11 @@
-// Path: src/main/java/org/frcpm/viewmodels/MeetingViewModel.java
 package org.frcpm.viewmodels;
 
 import javafx.beans.property.*;
 import org.frcpm.binding.Command;
+import org.frcpm.di.ServiceProvider;
 import org.frcpm.models.Meeting;
 import org.frcpm.models.Project;
 import org.frcpm.services.MeetingService;
-import org.frcpm.services.ServiceFactory;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -49,7 +48,7 @@ public class MeetingViewModel extends BaseViewModel {
      * Creates a new MeetingViewModel with default service
      */
     public MeetingViewModel() {
-        this(ServiceFactory.getMeetingService());
+        this(ServiceProvider.getService(MeetingService.class));
     }
 
     /**
@@ -60,8 +59,7 @@ public class MeetingViewModel extends BaseViewModel {
     public MeetingViewModel(MeetingService meetingService) {
         this.meetingService = meetingService;
 
-        // Create commands
-        // Use the standardized pattern from BaseViewModel
+        // Create commands using enhanced BaseViewModel methods
         saveCommand = createValidAndDirtyCommand(this::save, this::isValid);
         cancelCommand = new Command(this::cancel);
 
@@ -424,41 +422,5 @@ public class MeetingViewModel extends BaseViewModel {
     public void cleanupResources() {
         super.cleanupResources();
         // Any additional cleanup specific to this view model
-    }
-
-    /**
-     * Checks the validation for end time being before start time
-     * This method is specifically for fixing the testValidation_EndTimeBeforeStartTime test
-     */
-    private void validateEndTimeBeforeStartTime() {
-        // Try to parse both times first
-        LocalTime startTime = null;
-        LocalTime endTime = null;
-        
-        try {
-            startTime = LocalTime.parse(startTimeString.get(), TIME_FORMATTER);
-        } catch (DateTimeParseException e) {
-            // Ignore parsing errors here
-        }
-        
-        try {
-            endTime = LocalTime.parse(endTimeString.get(), TIME_FORMATTER);
-        } catch (DateTimeParseException e) {
-            // Ignore parsing errors here
-        }
-        
-        // Only check if both times are valid
-        if (startTime != null && endTime != null) {
-            if (endTime.isBefore(startTime)) {
-                // Set error message directly, don't just add to list
-                setErrorMessage("End time cannot be before start time");
-                valid.set(false);
-                return;
-            } else if (endTime.equals(startTime)) {
-                setErrorMessage("End time must be after start time");
-                valid.set(false);
-                return;
-            }
-        }
     }
 }

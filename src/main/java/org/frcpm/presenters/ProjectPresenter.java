@@ -57,6 +57,7 @@ public class ProjectPresenter implements Initializable {
     @FXML private Button addMilestoneButton;
     @FXML private Button scheduleMeetingButton;
     
+        
     @Inject
     private ProjectService projectService;
     
@@ -72,20 +73,19 @@ public class ProjectPresenter implements Initializable {
     @Inject
     private DialogService dialogService;
     
+    @Inject
+    private SubsystemService subsystemService;
+    
+    @Inject
     private ProjectViewModel viewModel;
+    
     private Project project;
     
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         LOGGER.info("Initializing ProjectPresenter");
         
-        // Create view model with injected services
-        viewModel = new ProjectViewModel(
-                projectService,
-                milestoneService,
-                taskService,
-                meetingService,
-                ServiceProvider.getSubsystemService());
+        // No need to create view model manually - it's injected
         
         // Set up table columns
         setupTableColumns();

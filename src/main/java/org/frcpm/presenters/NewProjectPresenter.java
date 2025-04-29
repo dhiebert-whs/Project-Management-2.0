@@ -53,8 +53,12 @@ public class NewProjectPresenter implements Initializable {
     @Inject
     private DialogService dialogService;
 
+    // Use @Inject instead of creating it manually
+    @Inject
     private NewProjectViewModel viewModel;
+    
     private ResourceBundle resources;
+
 
     /**
      * Initializes the controller.
@@ -65,8 +69,6 @@ public class NewProjectPresenter implements Initializable {
         
         this.resources = resources;
         
-        // Create view model with injected service
-        viewModel = new NewProjectViewModel(projectService);
 
         // Bind UI controls to ViewModel properties
         setupBindings();

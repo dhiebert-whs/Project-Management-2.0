@@ -19,7 +19,7 @@ import java.util.logging.Logger;
 
 /**
  * Presenter for milestone management.
- * Follows the AfterburnerFX presenter convention.
+ * Follows the AfterburnerFX presenter convention with dependency injection.
  */
 public class MilestonePresenter implements Initializable {
     
@@ -34,22 +34,30 @@ public class MilestonePresenter implements Initializable {
     @FXML private Label projectLabel;
     @FXML private Label errorLabel;
     
-    // Injected services
+    // Injected dependencies using AfterburnerFX
     @Inject
     private MilestoneService milestoneService;
     
     @Inject
     private DialogService dialogService;
     
-    // ViewModel
+    @Inject
     private MilestoneViewModel viewModel;
+    
+    // Resource bundle
+    private ResourceBundle resources;
     
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         LOGGER.info("Initializing MilestonePresenter with resource bundle");
         
-        // Create view model with injected service
-        viewModel = new MilestoneViewModel(milestoneService);
+        this.resources = resources;
+        
+        // Verify injections
+        if (viewModel == null) {
+            LOGGER.severe("MilestoneViewModel not injected - creating manually as fallback");
+            viewModel = new MilestoneViewModel(milestoneService);
+        }
         
         // Set up bindings
         setupBindings();
@@ -61,6 +69,9 @@ public class MilestonePresenter implements Initializable {
         if (errorLabel != null) {
             errorLabel.setVisible(false);
         }
+        
+        // Set the close dialog action
+        viewModel.setCloseDialogAction(this::closeDialog);
     }
     
     /**
@@ -88,9 +99,6 @@ public class MilestonePresenter implements Initializable {
                     viewModel.projectProperty()
                 )
             );
-            
-            // Set close dialog action
-            viewModel.setCloseDialogAction(this::closeDialog);
             
             // Bind buttons to commands
             ViewModelBinding.bindCommandButton(saveButton, viewModel.getSaveCommand());
@@ -205,7 +213,7 @@ public class MilestonePresenter implements Initializable {
         }
     }
     
-    /**
+/**
      * Gets the milestone.
      * 
      * @return the milestone from the view model
@@ -239,5 +247,17 @@ public class MilestonePresenter implements Initializable {
      */
     public MilestoneViewModel getViewModel() {
         return viewModel;
+    }
+    
+    /**
+     * Method for testing and legacy compatibility
+     * Allows setting a mock view model for testing
+     * 
+     * @param viewModel the view model to set
+     */
+    public void setViewModel(MilestoneViewModel viewModel) {
+        this.viewModel = viewModel;
+        setupBindings();
+        setupErrorHandling();
     }
 }

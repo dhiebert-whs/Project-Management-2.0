@@ -43,15 +43,17 @@ public class MeetingPresenter implements Initializable {
     @FXML
     private Button cancelButton;
 
-    // Injected services
+    // Injected services and ViewModel
     @Inject
     private MeetingService meetingService;
     
     @Inject
     private DialogService dialogService;
-
-    // ViewModel and resources
+    
+    @Inject
     private MeetingViewModel viewModel;
+
+    // Resources
     private ResourceBundle resources;
 
     /**
@@ -63,11 +65,17 @@ public class MeetingPresenter implements Initializable {
         
         this.resources = resources;
         
-        // Create view model with injected service
-        viewModel = new MeetingViewModel(meetingService);
+        // Verify injection - create fallback if needed
+        if (viewModel == null) {
+            LOGGER.severe("MeetingViewModel not injected - creating manually as fallback");
+            viewModel = new MeetingViewModel(meetingService);
+        }
 
         // Set up bindings
         setupBindings();
+        
+        // Set up error handling
+        setupErrorHandling();
     }
 
     /**
@@ -81,23 +89,43 @@ public class MeetingPresenter implements Initializable {
             return;
         }
 
-        // Bind UI elements to ViewModel properties using ViewModelBinding utility
-        ViewModelBinding.bindDatePicker(datePicker, viewModel.dateProperty());
-        ViewModelBinding.bindTextField(startTimeField, viewModel.startTimeStringProperty());
-        ViewModelBinding.bindTextField(endTimeField, viewModel.endTimeStringProperty());
-        ViewModelBinding.bindTextArea(notesArea, viewModel.notesProperty());
-
-        // Bind buttons to commands using ViewModelBinding
-        ViewModelBinding.bindCommandButton(saveButton, viewModel.getSaveCommand());
-        cancelButton.setOnAction(event -> closeDialog());
-
-        // Add error message listener
-        viewModel.errorMessageProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal != null && !newVal.isEmpty()) {
-                showErrorAlert("Error", newVal);
-                viewModel.errorMessageProperty().set("");
-            }
-        });
+        try {
+            // Bind UI elements to ViewModel properties using ViewModelBinding utility
+            ViewModelBinding.bindDatePicker(datePicker, viewModel.dateProperty());
+            ViewModelBinding.bindTextField(startTimeField, viewModel.startTimeStringProperty());
+            ViewModelBinding.bindTextField(endTimeField, viewModel.endTimeStringProperty());
+            ViewModelBinding.bindTextArea(notesArea, viewModel.notesProperty());
+    
+            // Bind buttons to commands using ViewModelBinding
+            ViewModelBinding.bindCommandButton(saveButton, viewModel.getSaveCommand());
+            cancelButton.setOnAction(event -> closeDialog());
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up bindings", e);
+            showErrorAlert("Setup Error", "Failed to initialize bindings: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Sets up the error message handling.
+     */
+    private void setupErrorHandling() {
+        if (viewModel == null) {
+            LOGGER.warning("ViewModel not initialized - likely in test environment");
+            return;
+        }
+        
+        try {
+            // Add error message listener
+            viewModel.errorMessageProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal != null && !newVal.isEmpty()) {
+                    showErrorAlert("Validation Error", newVal);
+                    viewModel.errorMessageProperty().set("");
+                }
+            });
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up error handler", e);
+            showErrorAlert("Setup Error", "Failed to initialize error handling: " + e.getMessage());
+        }
     }
 
     /**
@@ -106,7 +134,12 @@ public class MeetingPresenter implements Initializable {
      * @param project the project for the meeting
      */
     public void initNewMeeting(Project project) {
-        viewModel.initNewMeeting(project);
+        try {
+            viewModel.initNewMeeting(project);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error initializing new meeting", e);
+            showErrorAlert("Initialization Error", "Failed to initialize new meeting: " + e.getMessage());
+        }
     }
 
     /**
@@ -115,7 +148,12 @@ public class MeetingPresenter implements Initializable {
      * @param meeting the meeting to edit
      */
     public void initExistingMeeting(Meeting meeting) {
-        viewModel.initExistingMeeting(meeting);
+        try {
+            viewModel.initExistingMeeting(meeting);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error initializing existing meeting", e);
+            showErrorAlert("Initialization Error", "Failed to initialize meeting: " + e.getMessage());
+        }
     }
 
     /**
@@ -170,6 +208,17 @@ public class MeetingPresenter implements Initializable {
      */
     public MeetingViewModel getViewModel() {
         return viewModel;
+    }
+    
+    /**
+     * Sets the ViewModel (for testing purposes).
+     * 
+     * @param viewModel the ViewModel to set
+     */
+    public void setViewModel(MeetingViewModel viewModel) {
+        this.viewModel = viewModel;
+        setupBindings();
+        setupErrorHandling();
     }
     
     /**

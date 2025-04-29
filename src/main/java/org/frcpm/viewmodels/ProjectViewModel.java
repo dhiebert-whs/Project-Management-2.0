@@ -6,6 +6,7 @@ import javafx.beans.property.*;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import org.frcpm.binding.Command;
+import org.frcpm.di.ServiceProvider;
 import org.frcpm.models.*;
 import org.frcpm.services.*;
 
@@ -69,11 +70,11 @@ public class ProjectViewModel extends BaseViewModel {
      */
     public ProjectViewModel() {
         this(
-                ServiceFactory.getProjectService(),
-                ServiceFactory.getMilestoneService(),
-                ServiceFactory.getTaskService(),
-                ServiceFactory.getMeetingService(),
-                ServiceFactory.getSubsystemService());
+                ServiceProvider.getProjectService(),
+                ServiceProvider.getMilestoneService(),
+                ServiceProvider.getTaskService(),
+                ServiceProvider.getMeetingService(),
+                ServiceProvider.getSubsystemService());
     }
 
     /**
@@ -87,9 +88,9 @@ public class ProjectViewModel extends BaseViewModel {
         this(
                 projectService,
                 milestoneService,
-                ServiceFactory.getTaskService(),
-                ServiceFactory.getMeetingService(),
-                ServiceFactory.getSubsystemService());
+                ServiceProvider.getTaskService(),
+                ServiceProvider.getMeetingService(),
+                ServiceProvider.getSubsystemService());
     }
 
     /**
@@ -114,43 +115,55 @@ public class ProjectViewModel extends BaseViewModel {
         this.meetingService = meetingService;
         this.subsystemService = subsystemService;
 
-        // Create commands
-        saveCommand = new Command(this::save, this::isValid);
+        // Create commands using BaseViewModel helper methods
+        saveCommand = createValidAndDirtyCommand(this::save, this::isValid);
         createNewCommand = new Command(this::createNew);
-        deleteCommand = new Command(this::delete, this::canDelete);
+        deleteCommand = createValidOnlyCommand(this::delete, this::canDelete);
         loadProjectsCommand = new Command(this::loadProjects);
-        loadMilestonesCommand = new Command(this::loadMilestones, this::canLoadMilestones);
-        loadTasksCommand = new Command(this::loadTasks, this::canLoadData);
-        loadMeetingsCommand = new Command(this::loadMeetings, this::canLoadData);
-        addTaskCommand = new Command(this::addTask, this::canLoadData);
-        addMilestoneCommand = new Command(this::addMilestone, this::canLoadData);
-        scheduleMeetingCommand = new Command(this::scheduleMeeting, this::canLoadData);
+        loadMilestonesCommand = createValidOnlyCommand(this::loadMilestones, this::canLoadMilestones);
+        loadTasksCommand = createValidOnlyCommand(this::loadTasks, this::canLoadData);
+        loadMeetingsCommand = createValidOnlyCommand(this::loadMeetings, this::canLoadData);
+        addTaskCommand = createValidOnlyCommand(this::addTask, this::canLoadData);
+        addMilestoneCommand = createValidOnlyCommand(this::addMilestone, this::canLoadData);
+        scheduleMeetingCommand = createValidOnlyCommand(this::scheduleMeeting, this::canLoadData);
 
-        // Set up validation listeners
-        projectName.addListener((observable, oldValue, newValue) -> validate());
-        startDate.addListener((observable, oldValue, newValue) -> validate());
-        goalEndDate.addListener((observable, oldValue, newValue) -> validate());
-        hardDeadline.addListener((observable, oldValue, newValue) -> validate());
-
-        // Set up dirty flag listeners
-        projectDescription.addListener((observable, oldValue, newValue) -> setDirty(true));
-
-        // Set up selection listener
-        selectedProject.addListener((observable, oldValue, newValue) -> {
-            if (newValue != null) {
-                updateFormFromProject(newValue);
-                loadProjectSummary(newValue);
-                loadMilestones();
-                loadTasks();
-                loadMeetings();
-            } else {
-                clearForm();
-            }
+         // Set up property listeners using BaseViewModel tracking
+         Runnable nameListener = createDirtyFlagHandler(this::validate);
+         projectName.addListener((obs, oldVal, newVal) -> nameListener.run());
+         trackPropertyListener(nameListener);
+         
+         Runnable startDateListener = createDirtyFlagHandler(this::validate);
+         startDate.addListener((obs, oldVal, newVal) -> startDateListener.run());
+         trackPropertyListener(startDateListener);
+         
+         Runnable goalDateListener = createDirtyFlagHandler(this::validate);
+         goalEndDate.addListener((obs, oldVal, newVal) -> goalDateListener.run());
+         trackPropertyListener(goalDateListener);
+         
+         Runnable deadlineListener = createDirtyFlagHandler(this::validate);
+         hardDeadline.addListener((obs, oldVal, newVal) -> deadlineListener.run());
+         trackPropertyListener(deadlineListener);
+         
+         Runnable descriptionListener = createDirtyFlagHandler(null);
+         projectDescription.addListener((obs, oldVal, newVal) -> descriptionListener.run());
+         trackPropertyListener(descriptionListener);
+ 
+         // Set up selection listener
+         selectedProject.addListener((observable, oldValue, newValue) -> {
+             if (newValue != null) {
+                 updateFormFromProject(newValue);
+                 loadProjectSummary(newValue);
+                 loadMilestones();
+                 loadTasks();
+                 loadMeetings();
+             } else {
+                 clearForm();
+             }
         });
-
+ 
         // Initial validation
         validate();
-
+ 
         // Load projects
         loadProjects();
     }

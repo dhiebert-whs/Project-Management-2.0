@@ -7,9 +7,10 @@ import javafx.beans.property.StringProperty;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import org.frcpm.binding.Command;
+import org.frcpm.di.ServiceProvider;
 import org.frcpm.models.Project;
 import org.frcpm.services.ProjectService;
-import org.frcpm.services.ServiceFactory;
+
 
 import java.time.LocalDate;
 import java.util.logging.Level;
@@ -42,10 +43,11 @@ public class NewProjectViewModel extends BaseViewModel {
     private final Command cancelCommand;
     
     /**
-     * Creates a new NewProjectViewModel with default service.
+     * Creates a new NewProjectViewModel with dependency injection.
+     * This constructor is used by AfterburnerFX.
      */
     public NewProjectViewModel() {
-        this(ServiceFactory.getProjectService());
+        this(ServiceProvider.getProjectService());
     }
     
     /**

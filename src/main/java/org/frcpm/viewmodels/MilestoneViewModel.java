@@ -2,10 +2,11 @@ package org.frcpm.viewmodels;
 
 import javafx.beans.property.*;
 import org.frcpm.binding.Command;
+import org.frcpm.di.ServiceProvider;
 import org.frcpm.models.Milestone;
 import org.frcpm.models.Project;
 import org.frcpm.services.MilestoneService;
-import org.frcpm.services.ServiceFactory;
+
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -44,7 +45,7 @@ public class MilestoneViewModel extends BaseViewModel {
      * Creates a new MilestoneViewModel with default services.
      */
     public MilestoneViewModel() {
-        this(ServiceFactory.getMilestoneService());
+        this(ServiceProvider.getService(MilestoneService.class));
     }
     
     /**
@@ -56,26 +57,42 @@ public class MilestoneViewModel extends BaseViewModel {
     public MilestoneViewModel(MilestoneService milestoneService) {
         this.milestoneService = milestoneService;
         
-        // Create commands
-        saveCommand = new Command(this::save, this::isValid);
+        // Create commands using BaseViewModel's enhanced methods
+        saveCommand = createValidAndDirtyCommand(this::save, this::isValid);
         cancelCommand = new Command(() -> {
             if (closeDialogAction != null) {
                 closeDialogAction.run();
             }
         });
         
-        // Set up validation listeners
-        name.addListener((observable, oldValue, newValue) -> validate());
-        date.addListener((observable, oldValue, newValue) -> validate());
-        project.addListener((observable, oldValue, newValue) -> validate());
-        
-        // Set up dirty flag listeners
-        name.addListener((observable, oldValue, newValue) -> setDirty(true));
-        description.addListener((observable, oldValue, newValue) -> setDirty(true));
-        date.addListener((observable, oldValue, newValue) -> setDirty(true));
+        // Set up validation and dirty flag listeners using BaseViewModel's enhanced methods
+        setupPropertyListeners();
         
         // Initial validation
         validate();
+    }
+    
+    /**
+     * Sets up property change listeners with better resource management
+     */
+    private void setupPropertyListeners() {
+        // Create a handler that validates and sets dirty flag
+        Runnable validateAndSetDirty = createDirtyFlagHandler(this::validate);
+        
+        // Add listeners to properties that affect both validation and dirty state
+        name.addListener((observable, oldValue, newValue) -> validateAndSetDirty.run());
+        trackPropertyListener(validateAndSetDirty);
+        
+        date.addListener((observable, oldValue, newValue) -> validateAndSetDirty.run());
+        trackPropertyListener(validateAndSetDirty);
+        
+        project.addListener((observable, oldValue, newValue) -> validateAndSetDirty.run());
+        trackPropertyListener(validateAndSetDirty);
+        
+        // For description, we only need to track dirty state but not validation
+        Runnable dirtyOnly = createDirtyFlagHandler(null);
+        description.addListener((observable, oldValue, newValue) -> dirtyOnly.run());
+        trackPropertyListener(dirtyOnly);
     }
     
     /**
@@ -177,7 +194,7 @@ public class MilestoneViewModel extends BaseViewModel {
      * Called when the save command is executed.
      */
     private void save() {
-        if (!valid.get()) {
+        if (!valid.get() || !isDirty()) {
             return;
         }
         
@@ -370,5 +387,15 @@ public class MilestoneViewModel extends BaseViewModel {
     
     public void setValid(boolean value) {
         valid.set(value);
+    }
+    
+    /**
+     * Cleans up resources when the ViewModel is no longer needed
+     */
+    @Override
+    public void cleanupResources() {
+        super.cleanupResources();
+        // Clear any references to avoid memory leaks
+        closeDialogAction = null;
     }
 }
