@@ -8,6 +8,8 @@ import javafx.stage.Stage;
 import org.frcpm.models.Meeting;
 import org.frcpm.services.AttendanceService;
 import org.frcpm.services.DialogService;
+import org.frcpm.services.TeamMemberService;
+import org.frcpm.services.MeetingService;
 import org.frcpm.viewmodels.AttendanceViewModel;
 
 import javax.inject.Inject;
@@ -70,9 +72,18 @@ public class AttendancePresenter implements Initializable {
     
     @Inject
     private DialogService dialogService;
-
-    // ViewModel and resources
+    
+    @Inject
+    private TeamMemberService teamMemberService;
+    
+    @Inject
+    private MeetingService meetingService;
+    
+    // Injected ViewModel
+    @Inject
     private AttendanceViewModel viewModel;
+
+    // Resource bundle
     private ResourceBundle resources;
 
     @Override
@@ -81,14 +92,25 @@ public class AttendancePresenter implements Initializable {
         
         this.resources = resources;
         
-        // Create view model with injected service
-        viewModel = new AttendanceViewModel(attendanceService);
+        // Verify injection - create fallback if needed
+        if (viewModel == null) {
+            LOGGER.severe("AttendanceViewModel not injected - creating manually as fallback");
+            viewModel = new AttendanceViewModel(attendanceService, teamMemberService, meetingService);
+        }
 
-        // Set up table columns
-        setupTableColumns();
-
-        // Set up bindings
-        setupBindings();
+        try {
+            // Set up table columns
+            setupTableColumns();
+    
+            // Set up bindings
+            setupBindings();
+            
+            // Set up error handling
+            setupErrorHandling();
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error initializing presenter", e);
+            showErrorAlert("Initialization Error", "Failed to initialize attendance view: " + e.getMessage());
+        }
     }
 
     /**
@@ -102,71 +124,78 @@ public class AttendancePresenter implements Initializable {
             return;
         }
         
-        // Set up name column
-        nameColumn.setCellValueFactory(cellData -> 
-            new javafx.beans.property.SimpleStringProperty(cellData.getValue().getMember().getFullName()));
-        
-        // Set up subteam column
-        subteamColumn.setCellValueFactory(cellData -> {
-            String subteamName = cellData.getValue().getMember().getSubteam() != null ? 
-                                cellData.getValue().getMember().getSubteam().getName() : "";
-            return new javafx.beans.property.SimpleStringProperty(subteamName);
-        });
-        
-        // Set up present column with checkboxes
-        presentColumn.setCellValueFactory(new PropertyValueFactory<>("present"));
-        presentColumn.setCellFactory(column -> new TableCell<AttendanceViewModel.AttendanceRecord, Boolean>() {
-            private final CheckBox checkBox = new CheckBox();
+        try {
+            // Set up name column
+            nameColumn.setCellValueFactory(cellData -> 
+                new javafx.beans.property.SimpleStringProperty(cellData.getValue().getTeamMember().getFullName()));
             
-            {
-                // Add listener to checkbox
-                checkBox.selectedProperty().addListener((obs, oldVal, newVal) -> {
-                    if (getTableRow() != null && getTableRow().getItem() != null) {
-                        AttendanceViewModel.AttendanceRecord record = getTableRow().getItem();
-                        record.setPresent(newVal);
+            // Set up subteam column
+            subteamColumn.setCellValueFactory(cellData -> {
+                String subteamName = cellData.getValue().getTeamMember().getSubteam() != null ? 
+                                    cellData.getValue().getTeamMember().getSubteam().getName() : "";
+                return new javafx.beans.property.SimpleStringProperty(subteamName);
+            });
+            
+            // Set up present column with checkboxes
+            presentColumn.setCellValueFactory(new PropertyValueFactory<>("present"));
+            presentColumn.setCellFactory(column -> new TableCell<AttendanceViewModel.AttendanceRecord, Boolean>() {
+                private final CheckBox checkBox = new CheckBox();
+                
+                {
+                    // Add listener to checkbox
+                    checkBox.selectedProperty().addListener((obs, oldVal, newVal) -> {
+                        if (getTableRow() != null && getTableRow().getItem() != null) {
+                            AttendanceViewModel.AttendanceRecord record = getTableRow().getItem();
+                            record.setPresent(newVal);
+                            // Mark the ViewModel as dirty indirectly
+                            viewModel.updateRecordTimes(record, record.getArrivalTime(), record.getDepartureTime());
+                        }
+                    });
+                }
+                
+                @Override
+                protected void updateItem(Boolean item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) {
+                        setGraphic(null);
+                    } else {
+                        checkBox.setSelected(item);
+                        setGraphic(checkBox);
                     }
-                });
-            }
+                }
+            });
             
-            @Override
-            protected void updateItem(Boolean item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setGraphic(null);
-                } else {
-                    checkBox.setSelected(item);
-                    setGraphic(checkBox);
+            // Set up arrival time column
+            arrivalColumn.setCellValueFactory(new PropertyValueFactory<>("arrivalTime"));
+            arrivalColumn.setCellFactory(column -> new TableCell<AttendanceViewModel.AttendanceRecord, LocalTime>() {
+                @Override
+                protected void updateItem(LocalTime time, boolean empty) {
+                    super.updateItem(time, empty);
+                    if (empty || time == null) {
+                        setText(null);
+                    } else {
+                        setText(time.toString());
+                    }
                 }
-            }
-        });
-        
-        // Set up arrival time column
-        arrivalColumn.setCellValueFactory(new PropertyValueFactory<>("arrivalTime"));
-        arrivalColumn.setCellFactory(column -> new TableCell<AttendanceViewModel.AttendanceRecord, LocalTime>() {
-            @Override
-            protected void updateItem(LocalTime time, boolean empty) {
-                super.updateItem(time, empty);
-                if (empty || time == null) {
-                    setText(null);
-                } else {
-                    setText(time.toString());
+            });
+            
+            // Set up departure time column
+            departureColumn.setCellValueFactory(new PropertyValueFactory<>("departureTime"));
+            departureColumn.setCellFactory(column -> new TableCell<AttendanceViewModel.AttendanceRecord, LocalTime>() {
+                @Override
+                protected void updateItem(LocalTime time, boolean empty) {
+                    super.updateItem(time, empty);
+                    if (empty || time == null) {
+                        setText(null);
+                    } else {
+                        setText(time.toString());
+                    }
                 }
-            }
-        });
-        
-        // Set up departure time column
-        departureColumn.setCellValueFactory(new PropertyValueFactory<>("departureTime"));
-        departureColumn.setCellFactory(column -> new TableCell<AttendanceViewModel.AttendanceRecord, LocalTime>() {
-            @Override
-            protected void updateItem(LocalTime time, boolean empty) {
-                super.updateItem(time, empty);
-                if (empty || time == null) {
-                    setText(null);
-                } else {
-                    setText(time.toString());
-                }
-            }
-        });
+            });
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up table columns", e);
+            throw new RuntimeException("Failed to set up table columns", e);
+        }
     }
 
     /**
@@ -180,45 +209,55 @@ public class AttendancePresenter implements Initializable {
             return;
         }
         
-        // Bind meeting information
-        meetingTitleLabel.textProperty().bind(
-            javafx.beans.binding.Bindings.createStringBinding(
-                () -> viewModel.getMeeting() != null ? viewModel.getMeeting().getTitle() : "",
-                viewModel.meetingProperty()
-            )
-        );
+        try {
+            // Bind meeting information
+            meetingTitleLabel.textProperty().bind(viewModel.meetingTitleProperty());
+            dateLabel.textProperty().bind(viewModel.meetingDateProperty());
+            timeLabel.textProperty().bind(viewModel.meetingTimeProperty());
+            
+            // Bind attendance table to view model's list
+            attendanceTable.setItems(viewModel.getAttendanceRecords());
+            
+            // Set up selection listener
+            attendanceTable.getSelectionModel().selectedItemProperty().addListener(
+                (obs, oldVal, newVal) -> viewModel.setSelectedRecord(newVal)
+            );
+            
+            // Bind buttons
+            saveButton.setOnAction(event -> {
+                if (viewModel.saveMeetingAttendance()) {
+                    showInfoAlert("Success", "Attendance saved successfully");
+                    closeDialog();
+                }
+            });
+            
+            cancelButton.setOnAction(event -> closeDialog());
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up bindings", e);
+            throw new RuntimeException("Failed to set up bindings", e);
+        }
+    }
+    
+    /**
+     * Sets up error handling for the ViewModel.
+     */
+    private void setupErrorHandling() {
+        if (viewModel == null) {
+            LOGGER.warning("ViewModel not initialized - cannot set up error handling");
+            return;
+        }
         
-        dateLabel.textProperty().bind(
-            javafx.beans.binding.Bindings.createStringBinding(
-                () -> viewModel.getMeeting() != null ? viewModel.getMeeting().getDate().toString() : "",
-                viewModel.meetingProperty()
-            )
-        );
-        
-        timeLabel.textProperty().bind(
-            javafx.beans.binding.Bindings.createStringBinding(
-                () -> viewModel.getMeeting() != null ? 
-                     viewModel.getMeeting().getStartTime() + " - " + viewModel.getMeeting().getEndTime() : "",
-                viewModel.meetingProperty()
-            )
-        );
-        
-        // Bind attendance table to view model's list
-        attendanceTable.setItems(viewModel.getAttendanceRecords());
-        
-        // Set up selection listener
-        attendanceTable.getSelectionModel().selectedItemProperty().addListener(
-            (obs, oldVal, newVal) -> viewModel.setSelectedRecord(newVal)
-        );
-        
-        // Bind buttons
-        saveButton.setOnAction(event -> {
-            if (viewModel.saveMeetingAttendance()) {
-                closeDialog();
-            }
-        });
-        
-        cancelButton.setOnAction(event -> closeDialog());
+        try {
+            // Add error message listener
+            viewModel.errorMessageProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal != null && !newVal.isEmpty()) {
+                    showErrorAlert("Error", newVal);
+                }
+            });
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up error handling", e);
+            throw new RuntimeException("Failed to set up error handling", e);
+        }
     }
     
     /**
@@ -228,23 +267,28 @@ public class AttendancePresenter implements Initializable {
     public void handleSetTime() {
         AttendanceViewModel.AttendanceRecord selectedRecord = viewModel.getSelectedRecord();
         if (selectedRecord != null) {
-            // Check for null UI components for testability
-            LocalTime arrivalTime = null;
-            LocalTime departureTime = null;
-            
-            if (arrivalTimeField != null) {
-                arrivalTime = viewModel.parseTime(arrivalTimeField.getText());
-            }
-            
-            if (departureTimeField != null) {
-                departureTime = viewModel.parseTime(departureTimeField.getText());
-            }
-            
-            viewModel.updateRecordTimes(selectedRecord, arrivalTime, departureTime);
-            
-            // Check for null UI component for testability
-            if (attendanceTable != null) {
-                attendanceTable.refresh();
+            try {
+                // Check for null UI components for testability
+                LocalTime arrivalTime = null;
+                LocalTime departureTime = null;
+                
+                if (arrivalTimeField != null) {
+                    arrivalTime = viewModel.parseTime(arrivalTimeField.getText());
+                }
+                
+                if (departureTimeField != null) {
+                    departureTime = viewModel.parseTime(departureTimeField.getText());
+                }
+                
+                viewModel.updateRecordTimes(selectedRecord, arrivalTime, departureTime);
+                
+                // Check for null UI component for testability
+                if (attendanceTable != null) {
+                    attendanceTable.refresh();
+                }
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error setting time", e);
+                showErrorAlert("Error", "Failed to set time: " + e.getMessage());
             }
         } else {
             showInfoAlert("No Selection", "Please select a team member first.");
@@ -257,7 +301,12 @@ public class AttendancePresenter implements Initializable {
      * @param meeting the meeting
      */
     public void initWithMeeting(Meeting meeting) {
-        viewModel.initWithMeeting(meeting);
+        try {
+            viewModel.initWithMeeting(meeting);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error initializing with meeting", e);
+            showErrorAlert("Initialization Error", "Failed to initialize with meeting: " + e.getMessage());
+        }
     }
 
     /**
@@ -267,6 +316,11 @@ public class AttendancePresenter implements Initializable {
         try {
             if (saveButton != null && saveButton.getScene() != null && 
                 saveButton.getScene().getWindow() != null) {
+                
+                // Clean up resources
+                if (viewModel != null) {
+                    viewModel.cleanupResources();
+                }
                 
                 Stage stage = (Stage) saveButton.getScene().getWindow();
                 stage.close();
@@ -313,6 +367,17 @@ public class AttendancePresenter implements Initializable {
      */
     public AttendanceViewModel getViewModel() {
         return viewModel;
+    }
+    
+    /**
+     * Sets the ViewModel (for testing purposes).
+     * 
+     * @param viewModel the view model to set
+     */
+    public void setViewModel(AttendanceViewModel viewModel) {
+        this.viewModel = viewModel;
+        setupBindings();
+        setupErrorHandling();
     }
     
     /**

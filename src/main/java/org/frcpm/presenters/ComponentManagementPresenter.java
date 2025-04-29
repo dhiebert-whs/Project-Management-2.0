@@ -65,9 +65,12 @@ public class ComponentManagementPresenter implements Initializable {
     
     @Inject
     private DialogService dialogService;
-
-    // ViewModel and resources
+    
+    // Injected ViewModel
+    @Inject
     private ComponentManagementViewModel viewModel;
+
+    // Resource bundle
     private ResourceBundle resources;
 
     @Override
@@ -76,23 +79,34 @@ public class ComponentManagementPresenter implements Initializable {
         
         this.resources = resources;
         
-        // Create view model with injected service
-        viewModel = new ComponentManagementViewModel(componentService);
+        // Verify injection - create fallback if needed
+        if (viewModel == null) {
+            LOGGER.severe("ComponentManagementViewModel not injected - creating manually as fallback");
+            viewModel = new ComponentManagementViewModel(componentService);
+        }
 
-        // Set up table columns
-        setupTableColumns();
-        
-        // Set up bindings
-        setupBindings();
-        
-        // Set up table row double-click handler
-        setupRowHandler();
-        
-        // Set up filter combo box
-        setupFilterComboBox();
-
-        // Load components data
-        viewModel.loadComponents();
+        try {
+            // Set up table columns
+            setupTableColumns();
+            
+            // Set up bindings
+            setupBindings();
+            
+            // Set up table row double-click handler
+            setupRowHandler();
+            
+            // Set up filter combo box
+            setupFilterComboBox();
+            
+            // Set up error handling
+            setupErrorHandling();
+    
+            // Load components data
+            viewModel.loadComponents();
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error initializing presenter", e);
+            showErrorAlert("Initialization Error", "Failed to initialize component management view: " + e.getMessage());
+        }
     }
     
     /**
@@ -106,44 +120,49 @@ public class ComponentManagementPresenter implements Initializable {
             return;
         }
 
-        nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
-        partNumberColumn.setCellValueFactory(new PropertyValueFactory<>("partNumber"));
-        expectedDeliveryColumn.setCellValueFactory(new PropertyValueFactory<>("expectedDelivery"));
-
-        // Set up the delivered column with a checkbox
-        deliveredColumn.setCellValueFactory(new PropertyValueFactory<>("delivered"));
-        deliveredColumn.setCellFactory(column -> new TableCell<Component, Boolean>() {
-            private final CheckBox checkBox = new CheckBox();
-
-            {
-                // Disable editing in the table view
-                checkBox.setDisable(true);
-            }
-
-            @Override
-            protected void updateItem(Boolean item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setGraphic(null);
-                } else {
-                    checkBox.setSelected(item);
-                    setGraphic(checkBox);
+        try {
+            nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
+            partNumberColumn.setCellValueFactory(new PropertyValueFactory<>("partNumber"));
+            expectedDeliveryColumn.setCellValueFactory(new PropertyValueFactory<>("expectedDelivery"));
+    
+            // Set up the delivered column with a checkbox
+            deliveredColumn.setCellValueFactory(new PropertyValueFactory<>("delivered"));
+            deliveredColumn.setCellFactory(column -> new TableCell<Component, Boolean>() {
+                private final CheckBox checkBox = new CheckBox();
+    
+                {
+                    // Disable editing in the table view
+                    checkBox.setDisable(true);
                 }
-            }
-        });
-
-        // Set up date formatter for expected delivery column
-        expectedDeliveryColumn.setCellFactory(column -> new TableCell<Component, LocalDate>() {
-            @Override
-            protected void updateItem(LocalDate date, boolean empty) {
-                super.updateItem(date, empty);
-                if (empty || date == null) {
-                    setText(null);
-                } else {
-                    setText(date.format(DateTimeFormatter.ofPattern("MM/dd/yyyy")));
+    
+                @Override
+                protected void updateItem(Boolean item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) {
+                        setGraphic(null);
+                    } else {
+                        checkBox.setSelected(item);
+                        setGraphic(checkBox);
+                    }
                 }
-            }
-        });
+            });
+    
+            // Set up date formatter for expected delivery column
+            expectedDeliveryColumn.setCellFactory(column -> new TableCell<Component, LocalDate>() {
+                @Override
+                protected void updateItem(LocalDate date, boolean empty) {
+                    super.updateItem(date, empty);
+                    if (empty || date == null) {
+                        setText(null);
+                    } else {
+                        setText(date.format(DateTimeFormatter.ofPattern("MM/dd/yyyy")));
+                    }
+                }
+            });
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up table columns", e);
+            throw new RuntimeException("Failed to set up table columns", e);
+        }
     }
     
     /**
@@ -157,28 +176,25 @@ public class ComponentManagementPresenter implements Initializable {
             return;
         }
 
-        // Bind table to view model components list
-        componentsTable.setItems(viewModel.getComponents());
-
-        // Bind buttons to commands
-        ViewModelBinding.bindCommandButton(addComponentButton, viewModel.getAddComponentCommand());
-        ViewModelBinding.bindCommandButton(editComponentButton, viewModel.getEditComponentCommand());
-        ViewModelBinding.bindCommandButton(deleteComponentButton, viewModel.getDeleteComponentCommand());
-        ViewModelBinding.bindCommandButton(refreshButton, viewModel.getRefreshCommand());
-
-        // Bind selection changes
-        if (componentsTable.getSelectionModel() != null) {
-            componentsTable.getSelectionModel().selectedItemProperty().addListener(
-                    (obs, oldVal, newVal) -> viewModel.setSelectedComponent(newVal));
-        }
-
-        // Set up error message binding
-        viewModel.errorMessageProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal != null && !newVal.isEmpty()) {
-                showErrorAlert("Error", newVal);
-                viewModel.clearErrorMessage();
+        try {
+            // Bind table to view model components list
+            componentsTable.setItems(viewModel.getComponents());
+    
+            // Bind buttons to commands
+            ViewModelBinding.bindCommandButton(addComponentButton, viewModel.getAddComponentCommand());
+            ViewModelBinding.bindCommandButton(editComponentButton, viewModel.getEditComponentCommand());
+            ViewModelBinding.bindCommandButton(deleteComponentButton, viewModel.getDeleteComponentCommand());
+            ViewModelBinding.bindCommandButton(refreshButton, viewModel.getRefreshCommand());
+    
+            // Bind selection changes
+            if (componentsTable.getSelectionModel() != null) {
+                componentsTable.getSelectionModel().selectedItemProperty().addListener(
+                        (obs, oldVal, newVal) -> viewModel.setSelectedComponent(newVal));
             }
-        });
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up bindings", e);
+            throw new RuntimeException("Failed to set up bindings", e);
+        }
     }
     
     /**
@@ -190,16 +206,21 @@ public class ComponentManagementPresenter implements Initializable {
             return;
         }
 
-        componentsTable.setRowFactory(tv -> {
-            TableRow<Component> row = new TableRow<>();
-            row.setOnMouseClicked(event -> {
-                if (event.getClickCount() == 2 && !row.isEmpty()) {
-                    Component component = row.getItem();
-                    handleEditComponent(component);
-                }
+        try {
+            componentsTable.setRowFactory(tv -> {
+                TableRow<Component> row = new TableRow<>();
+                row.setOnMouseClicked(event -> {
+                    if (event.getClickCount() == 2 && !row.isEmpty()) {
+                        Component component = row.getItem();
+                        handleEditComponent(component);
+                    }
+                });
+                return row;
             });
-            return row;
-        });
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up row handler", e);
+            throw new RuntimeException("Failed to set up row handler", e);
+        }
     }
     
     /**
@@ -211,17 +232,45 @@ public class ComponentManagementPresenter implements Initializable {
             return;
         }
 
-        // Set up filter options
-        filterComboBox.getItems().clear();
-        filterComboBox.getItems().addAll(ComponentManagementViewModel.ComponentFilter.values());
-        filterComboBox.setValue(ComponentManagementViewModel.ComponentFilter.ALL);
-
-        // Set up filter change listener
-        filterComboBox.valueProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal != null) {
-                viewModel.setFilter(newVal);
-            }
-        });
+        try {
+            // Set up filter options
+            filterComboBox.getItems().clear();
+            filterComboBox.getItems().addAll(ComponentManagementViewModel.ComponentFilter.values());
+            filterComboBox.setValue(ComponentManagementViewModel.ComponentFilter.ALL);
+    
+            // Set up filter change listener
+            filterComboBox.valueProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal != null) {
+                    viewModel.setFilter(newVal);
+                }
+            });
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up filter combo box", e);
+            throw new RuntimeException("Failed to set up filter combo box", e);
+        }
+    }
+    
+    /**
+     * Sets up error handling for the ViewModel.
+     */
+    private void setupErrorHandling() {
+        if (viewModel == null) {
+            LOGGER.warning("ViewModel not initialized - cannot set up error handling");
+            return;
+        }
+        
+        try {
+            // Set up error message binding
+            viewModel.errorMessageProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal != null && !newVal.isEmpty()) {
+                    showErrorAlert("Error", newVal);
+                    viewModel.clearErrorMessage();
+                }
+            });
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up error handling", e);
+            throw new RuntimeException("Failed to set up error handling", e);
+        }
     }
 
     /**
@@ -375,5 +424,25 @@ public class ComponentManagementPresenter implements Initializable {
      */
     public ComponentManagementViewModel getViewModel() {
         return viewModel;
+    }
+    
+    /**
+     * Sets the ViewModel (for testing purposes).
+     * 
+     * @param viewModel the view model to set
+     */
+    public void setViewModel(ComponentManagementViewModel viewModel) {
+        this.viewModel = viewModel;
+        setupBindings();
+        setupErrorHandling();
+    }
+    
+    /**
+     * Clean up resources when the presenter is no longer needed.
+     */
+    public void cleanup() {
+        if (viewModel != null) {
+            viewModel.cleanupResources();
+        }
     }
 }

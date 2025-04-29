@@ -1,13 +1,13 @@
-// src/main/java/org/frcpm/viewmodels/ComponentManagementViewModel.java
 package org.frcpm.viewmodels;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import org.frcpm.binding.Command;
+import org.frcpm.di.ServiceProvider;
 import org.frcpm.models.Component;
 import org.frcpm.services.ComponentService;
-import org.frcpm.services.ServiceFactory;
+
 
 import java.util.List;
 import java.util.logging.Level;
@@ -65,7 +65,7 @@ public class ComponentManagementViewModel extends BaseViewModel {
      * Creates a new ComponentManagementViewModel with default services.
      */
     public ComponentManagementViewModel() {
-        this(ServiceFactory.getComponentService());
+        this(ServiceProvider.getService(ComponentService.class));
     }
     
     /**
@@ -77,10 +77,10 @@ public class ComponentManagementViewModel extends BaseViewModel {
     public ComponentManagementViewModel(ComponentService componentService) {
         this.componentService = componentService;
         
-        // Initialize commands
+        // Initialize commands using BaseViewModel utility methods
         addComponentCommand = new Command(this::addComponent);
-        editComponentCommand = new Command(this::editComponent, this::canEditOrDeleteComponent);
-        deleteComponentCommand = new Command(this::deleteComponent, this::canEditOrDeleteComponent);
+        editComponentCommand = createValidOnlyCommand(this::editComponent, this::canEditOrDeleteComponent);
+        deleteComponentCommand = createValidOnlyCommand(this::deleteComponent, this::canEditOrDeleteComponent);
         refreshCommand = new Command(this::loadComponents);
         
         // Set up filtered list predicate
@@ -106,6 +106,11 @@ public class ComponentManagementViewModel extends BaseViewModel {
      * @param filter the filter to apply
      */
     public void setFilter(ComponentFilter filter) {
+        if (filter == null) {
+            LOGGER.warning("Attempting to set null filter, using ALL instead");
+            filter = ComponentFilter.ALL;
+        }
+        
         this.currentFilter = filter;
         updateFilterPredicate();
     }
@@ -115,6 +120,10 @@ public class ComponentManagementViewModel extends BaseViewModel {
      */
     private void updateFilterPredicate() {
         filteredComponents.setPredicate(component -> {
+            if (component == null) {
+                return false;
+            }
+            
             switch (currentFilter) {
                 case ALL:
                     return true;
@@ -148,32 +157,49 @@ public class ComponentManagementViewModel extends BaseViewModel {
     
     /**
      * Command action to delete the selected component.
+     * Checks if the component is used by any tasks before deletion.
+     * 
+     * @return true if deletion was successful, false otherwise
      */
-    private void deleteComponent() {
-        if (selectedComponent == null) {
-            return;
+    public boolean deleteComponent(Component component) {
+        if (component == null) {
+            setErrorMessage("No component selected");
+            return false;
         }
         
         try {
             // Check if the component is used by any tasks
-            if (!selectedComponent.getRequiredForTasks().isEmpty()) {
-                int taskCount = selectedComponent.getRequiredForTasks().size();
+            if (component.getRequiredForTasks() != null && !component.getRequiredForTasks().isEmpty()) {
+                int taskCount = component.getRequiredForTasks().size();
                 setErrorMessage("Cannot delete component because it is required by " + taskCount + 
                         " task(s). Please remove these dependencies first.");
-                return;
+                return false;
             }
             
             // Delete the component
-            componentService.deleteById(selectedComponent.getId());
+            componentService.deleteById(component.getId());
             
             // Remove it from the list
-            allComponents.remove(selectedComponent);
-            selectedComponent = null;
+            allComponents.remove(component);
+            if (component.equals(selectedComponent)) {
+                selectedComponent = null;
+            }
+            
+            return true;
             
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error deleting component", e);
             setErrorMessage("Failed to delete component: " + e.getMessage());
+            return false;
         }
+    }
+    
+    /**
+     * Command action to delete the selected component.
+     * Implementation for the command binding.
+     */
+    private void deleteComponent() {
+        deleteComponent(selectedComponent);
     }
     
     /**
@@ -181,7 +207,7 @@ public class ComponentManagementViewModel extends BaseViewModel {
      * 
      * @return true if a component is selected, false otherwise
      */
-    private boolean canEditOrDeleteComponent() {
+    public boolean canEditOrDeleteComponent() {
         return selectedComponent != null;
     }
     
@@ -264,5 +290,15 @@ public class ComponentManagementViewModel extends BaseViewModel {
     @Override
     public void clearErrorMessage() {
         super.clearErrorMessage();
+    }
+    
+    /**
+     * Cleans up resources when the ViewModel is no longer needed.
+     */
+    @Override
+    public void cleanupResources() {
+        super.cleanupResources();
+        allComponents.clear();
+        selectedComponent = null;
     }
 }

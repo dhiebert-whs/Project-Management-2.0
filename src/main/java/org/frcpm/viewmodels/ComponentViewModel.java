@@ -4,15 +4,18 @@ import javafx.beans.property.*;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import org.frcpm.binding.Command;
+import org.frcpm.di.ServiceProvider;
 import org.frcpm.models.Component;
 import org.frcpm.models.Task;
 import org.frcpm.services.ComponentService;
-import org.frcpm.services.ServiceFactory;
+
 import org.frcpm.services.TaskService;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -58,7 +61,7 @@ public class ComponentViewModel extends BaseViewModel {
      * Creates a new ComponentViewModel with default services.
      */
     public ComponentViewModel() {
-        this(ServiceFactory.getComponentService(), ServiceFactory.getTaskService());
+        this(ServiceProvider.getService(ComponentService.class), ServiceProvider.getService(TaskService.class));
     }
     
     /**
@@ -93,13 +96,15 @@ public class ComponentViewModel extends BaseViewModel {
         Runnable validationHandler = createDirtyFlagHandler(this::validate);
         
         // When delivered is changed, update actual delivery date if needed
-        delivered.addListener((obs, oldVal, newVal) -> {
-            if (Boolean.TRUE.equals(newVal) && actualDelivery.get() == null) {
+        Runnable deliveredListener = createDirtyFlagHandler(() -> {
+            if (Boolean.TRUE.equals(delivered.get()) && actualDelivery.get() == null) {
                 actualDelivery.set(LocalDate.now());
             }
-            setDirty(true);
             validate();
         });
+        
+        delivered.addListener((obs, oldVal, newVal) -> deliveredListener.run());
+        trackPropertyListener(deliveredListener);
         
         // Set up validation listeners with tracking
         name.addListener((obs, oldVal, newVal) -> validationHandler.run());
@@ -117,11 +122,9 @@ public class ComponentViewModel extends BaseViewModel {
         expectedDelivery.addListener((obs, oldVal, newVal) -> dirtyHandler.run());
         trackPropertyListener(dirtyHandler);
         
-        actualDelivery.addListener((obs, oldVal, newVal) -> {
-            dirtyHandler.run();
-            validate();
-        });
-        trackPropertyListener(dirtyHandler);
+        Runnable actualDeliveryListener = createDirtyFlagHandler(this::validate);
+        actualDelivery.addListener((obs, oldVal, newVal) -> actualDeliveryListener.run());
+        trackPropertyListener(actualDeliveryListener);
     }
     
     /**
@@ -254,7 +257,7 @@ public class ComponentViewModel extends BaseViewModel {
      * Saves the component.
      */
     private void save() {
-        if (!valid.get()) {
+        if (!valid.get() || !isDirty()) {
             return;
         }
         
@@ -291,6 +294,53 @@ public class ComponentViewModel extends BaseViewModel {
         // This would typically show a dialog to select a task
         // Actual implementation would be provided by the controller
         LOGGER.info("Add task action triggered");
+    }
+    
+    /**
+     * Adds a task to the component's required tasks.
+     * This is called from the presenter after task selection.
+     * 
+     * @param task the task to add
+     * @return true if the task was added, false otherwise
+     */
+    public boolean addTask(Task task) {
+        if (task == null) {
+            LOGGER.warning("Cannot add null task");
+            return false;
+        }
+        
+        try {
+            // Check if the task is already in the list
+            if (requiredForTasks.contains(task)) {
+                setErrorMessage("Task is already associated with this component");
+                return false;
+            }
+            
+            // Add task to the list
+            requiredForTasks.add(task);
+            
+            // Update the relationship in the model
+            if (component.getRequiredForTasks() == null) {
+                component.setRequiredForTasks(new HashSet<>());
+            }
+            component.getRequiredForTasks().add(task);
+            
+            // Update the task to add this component
+            if (task.getRequiredComponents() == null) {
+                task.setRequiredComponents(new HashSet<>());
+            }
+            task.getRequiredComponents().add(component);
+            taskService.save(task);
+            
+            // Mark as dirty
+            setDirty(true);
+            return true;
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error adding task", e);
+            setErrorMessage("Failed to add task: " + e.getMessage());
+            return false;
+        }
     }
     
     /**
@@ -375,7 +425,7 @@ public class ComponentViewModel extends BaseViewModel {
         return partNumber;
     }
     
-    /**
+/**
      * Gets the description property.
      * 
      * @return the description property
@@ -525,5 +575,8 @@ public class ComponentViewModel extends BaseViewModel {
     @Override
     public void cleanupResources() {
         super.cleanupResources();
+        // Clear all references and collections to prevent memory leaks
+        requiredForTasks.clear();
+        selectedTask = null;
     }
 }

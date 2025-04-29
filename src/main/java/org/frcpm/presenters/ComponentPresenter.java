@@ -82,9 +82,12 @@ public class ComponentPresenter implements Initializable {
     
     @Inject
     private DialogService dialogService;
-
-    // ViewModel and resources
+    
+    // Injected ViewModel
+    @Inject
     private ComponentViewModel viewModel;
+
+    // Resource bundle
     private ResourceBundle resources;
 
     @Override
@@ -93,14 +96,25 @@ public class ComponentPresenter implements Initializable {
         
         this.resources = resources;
         
-        // Create ViewModel with injected services
-        viewModel = new ComponentViewModel(componentService, taskService);
+        // Verify injection - create fallback if needed
+        if (viewModel == null) {
+            LOGGER.severe("ComponentViewModel not injected - creating manually as fallback");
+            viewModel = new ComponentViewModel(componentService, taskService);
+        }
 
-        // Set up table columns
-        setupTableColumns();
-
-        // Set up bindings
-        setupBindings();
+        try {
+            // Set up table columns
+            setupTableColumns();
+    
+            // Set up bindings
+            setupBindings();
+            
+            // Set up error handling
+            setupErrorHandling();
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error initializing presenter", e);
+            showErrorAlert("Initialization Error", "Failed to initialize component view: " + e.getMessage());
+        }
     }
 
     /**
@@ -113,18 +127,23 @@ public class ComponentPresenter implements Initializable {
             return;
         }
 
-        taskTitleColumn.setCellValueFactory(new PropertyValueFactory<>("title"));
-
-        // Set up the subsystem column that displays subsystem name
-        taskSubsystemColumn.setCellValueFactory(cellData -> {
-            Task task = cellData.getValue();
-            return new javafx.beans.property.SimpleStringProperty(
-                    task.getSubsystem() != null ? task.getSubsystem().getName() : "");
-        });
-
-        // Set up the progress column
-        taskProgressColumn.setCellValueFactory(new PropertyValueFactory<>("progress"));
-        taskProgressColumn.setCellFactory(createProgressCellFactory());
+        try {
+            taskTitleColumn.setCellValueFactory(new PropertyValueFactory<>("title"));
+    
+            // Set up the subsystem column that displays subsystem name
+            taskSubsystemColumn.setCellValueFactory(cellData -> {
+                Task task = cellData.getValue();
+                return new javafx.beans.property.SimpleStringProperty(
+                        task.getSubsystem() != null ? task.getSubsystem().getName() : "");
+            });
+    
+            // Set up the progress column
+            taskProgressColumn.setCellValueFactory(new PropertyValueFactory<>("progress"));
+            taskProgressColumn.setCellFactory(createProgressCellFactory());
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up table columns", e);
+            throw new RuntimeException("Failed to set up table columns", e);
+        }
     }
 
     /**
@@ -165,58 +184,83 @@ public class ComponentPresenter implements Initializable {
             return;
         }
 
-        // Bind text fields
-        ViewModelBinding.bindTextField(nameTextField, viewModel.nameProperty());
-        ViewModelBinding.bindTextField(partNumberTextField, viewModel.partNumberProperty());
-        ViewModelBinding.bindTextArea(descriptionTextArea, viewModel.descriptionProperty());
-
-        // Bind date pickers
-        ViewModelBinding.bindDatePicker(expectedDeliveryDatePicker, viewModel.expectedDeliveryProperty());
-        ViewModelBinding.bindDatePicker(actualDeliveryDatePicker, viewModel.actualDeliveryProperty());
-
-        // Bind checkbox
-        deliveredCheckBox.selectedProperty().bindBidirectional(viewModel.deliveredProperty());
-
-        // When delivered is checked, enable/disable actual delivery date
-        actualDeliveryDatePicker.disableProperty().bind(viewModel.deliveredProperty().not());
-
-        // Bind table to view model collection
-        requiredForTasksTable.setItems(viewModel.getRequiredForTasks());
-
-        // Bind buttons to commands
-        ViewModelBinding.bindCommandButton(saveButton, viewModel.getSaveCommand());
-        ViewModelBinding.bindCommandButton(cancelButton, viewModel.getCancelCommand());
-        ViewModelBinding.bindCommandButton(addTaskButton, viewModel.getAddTaskCommand());
-        ViewModelBinding.bindCommandButton(removeTaskButton, viewModel.getRemoveTaskCommand());
-
-        // Setup selection changes
-        requiredForTasksTable.getSelectionModel().selectedItemProperty().addListener(
-                (obs, oldVal, newVal) -> viewModel.setSelectedTask(newVal));
-
-        // Set up error message binding
-        viewModel.errorMessageProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal != null && !newVal.isEmpty()) {
-                showErrorAlert("Validation Error", newVal);
-                viewModel.clearErrorMessage();
-            }
-        });
-
-        // Set up cancel button override to close dialog
-        cancelButton.setOnAction(event -> closeDialog());
-
-        // Set up delivered checkbox action
-        deliveredCheckBox.selectedProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal && actualDeliveryDatePicker.getValue() == null) {
-                actualDeliveryDatePicker.setValue(LocalDate.now());
-            }
-        });
+        try {
+            // Bind text fields
+            ViewModelBinding.bindTextField(nameTextField, viewModel.nameProperty());
+            ViewModelBinding.bindTextField(partNumberTextField, viewModel.partNumberProperty());
+            ViewModelBinding.bindTextArea(descriptionTextArea, viewModel.descriptionProperty());
+    
+            // Bind date pickers
+            ViewModelBinding.bindDatePicker(expectedDeliveryDatePicker, viewModel.expectedDeliveryProperty());
+            ViewModelBinding.bindDatePicker(actualDeliveryDatePicker, viewModel.actualDeliveryProperty());
+    
+            // Bind checkbox
+            deliveredCheckBox.selectedProperty().bindBidirectional(viewModel.deliveredProperty());
+    
+            // When delivered is checked, enable/disable actual delivery date
+            actualDeliveryDatePicker.disableProperty().bind(viewModel.deliveredProperty().not());
+    
+            // Bind table to view model collection
+            requiredForTasksTable.setItems(viewModel.getRequiredForTasks());
+    
+            // Bind buttons to commands
+            ViewModelBinding.bindCommandButton(saveButton, viewModel.getSaveCommand());
+            ViewModelBinding.bindCommandButton(cancelButton, viewModel.getCancelCommand());
+            ViewModelBinding.bindCommandButton(addTaskButton, viewModel.getAddTaskCommand());
+            ViewModelBinding.bindCommandButton(removeTaskButton, viewModel.getRemoveTaskCommand());
+    
+            // Setup selection changes
+            requiredForTasksTable.getSelectionModel().selectedItemProperty().addListener(
+                    (obs, oldVal, newVal) -> viewModel.setSelectedTask(newVal));
+    
+            // Set up cancel button override to close dialog
+            cancelButton.setOnAction(event -> closeDialog());
+    
+            // Set up delivered checkbox action
+            deliveredCheckBox.selectedProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal && actualDeliveryDatePicker.getValue() == null) {
+                    actualDeliveryDatePicker.setValue(LocalDate.now());
+                }
+            });
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up bindings", e);
+            throw new RuntimeException("Failed to set up bindings", e);
+        }
+    }
+    
+    /**
+     * Sets up error handling for the ViewModel.
+     */
+    private void setupErrorHandling() {
+        if (viewModel == null) {
+            LOGGER.warning("ViewModel not initialized - cannot set up error handling");
+            return;
+        }
+        
+        try {
+            // Set up error message binding
+            viewModel.errorMessageProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal != null && !newVal.isEmpty()) {
+                    showErrorAlert("Validation Error", newVal);
+                    viewModel.clearErrorMessage();
+                }
+            });
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up error handling", e);
+            throw new RuntimeException("Failed to set up error handling", e);
+        }
     }
 
     /**
      * Initializes the presenter for a new component.
      */
     public void initNewComponent() {
-        viewModel.initNewComponent();
+        try {
+            viewModel.initNewComponent();
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error initializing new component", e);
+            showErrorAlert("Initialization Error", "Failed to initialize new component: " + e.getMessage());
+        }
     }
 
     /**
@@ -225,7 +269,12 @@ public class ComponentPresenter implements Initializable {
      * @param component the component to edit
      */
     public void initExistingComponent(Component component) {
-        viewModel.initExistingComponent(component);
+        try {
+            viewModel.initExistingComponent(component);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error initializing existing component", e);
+            showErrorAlert("Initialization Error", "Failed to initialize component: " + e.getMessage());
+        }
     }
     
     /**
@@ -233,16 +282,24 @@ public class ComponentPresenter implements Initializable {
      */
     @FXML
     private void handleAddTask() {
-        // Example of using ViewLoader with AfterburnerFX
-        TaskPresenter presenter = ViewLoader.showDialog(TaskView.class, 
-                resources.getString("task.select.title"), 
-                saveButton.getScene().getWindow());
-        
-        if (presenter != null) {
-            Task task = presenter.getTask();
-            if (task != null) {
-                viewModel.addTask(task);
+        try {
+            // Example of using ViewLoader with AfterburnerFX
+            TaskPresenter presenter = ViewLoader.showDialog(TaskView.class, 
+                    resources.getString("task.select.title"), 
+                    saveButton.getScene().getWindow());
+            
+            if (presenter != null) {
+                Task task = presenter.getTask();
+                if (task != null) {
+                    boolean success = viewModel.addTask(task);
+                    if (success) {
+                        showInfoAlert("Success", "Task added successfully");
+                    }
+                }
             }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error adding task", e);
+            showErrorAlert("Error", "Failed to add task: " + e.getMessage());
         }
     }
 
@@ -284,6 +341,11 @@ public class ComponentPresenter implements Initializable {
             if (saveButton != null && saveButton.getScene() != null && 
                 saveButton.getScene().getWindow() != null) {
                 
+                // Clean up resources
+                if (viewModel != null) {
+                    viewModel.cleanupResources();
+                }
+                
                 Stage stage = (Stage) saveButton.getScene().getWindow();
                 stage.close();
             }
@@ -317,5 +379,25 @@ public class ComponentPresenter implements Initializable {
      */
     public ComponentViewModel getViewModel() {
         return viewModel;
+    }
+    
+    /**
+     * Sets the ViewModel (for testing purposes).
+     * 
+     * @param viewModel the view model to set
+     */
+    public void setViewModel(ComponentViewModel viewModel) {
+        this.viewModel = viewModel;
+        setupBindings();
+        setupErrorHandling();
+    }
+    
+    /**
+     * Clean up resources when the presenter is no longer needed.
+     */
+    public void cleanup() {
+        if (viewModel != null) {
+            viewModel.cleanupResources();
+        }
     }
 }

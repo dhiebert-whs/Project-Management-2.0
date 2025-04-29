@@ -4,12 +4,12 @@ import javafx.beans.property.*;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import org.frcpm.binding.Command;
+import org.frcpm.di.ServiceProvider;
 import org.frcpm.models.Attendance;
 import org.frcpm.models.Meeting;
 import org.frcpm.models.TeamMember;
 import org.frcpm.services.AttendanceService;
 import org.frcpm.services.MeetingService;
-import org.frcpm.services.ServiceFactory;
 import org.frcpm.services.TeamMemberService;
 
 import java.time.LocalTime;
@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.function.Supplier;
 
 /**
  * ViewModel for attendance management in the FRC Project Management System.
@@ -165,9 +166,9 @@ public class AttendanceViewModel extends BaseViewModel {
      */
     public AttendanceViewModel() {
         this(
-                ServiceFactory.getAttendanceService(),
-                ServiceFactory.getTeamMemberService(),
-                ServiceFactory.getMeetingService());
+                ServiceProvider.getService(AttendanceService.class),
+                ServiceProvider.getService(TeamMemberService.class),
+                ServiceProvider.getService(MeetingService.class));
     }
 
     /**
@@ -193,7 +194,7 @@ public class AttendanceViewModel extends BaseViewModel {
         this.meetingService = meetingService;
 
         // Create commands using BaseViewModel utility methods
-        saveAttendanceCommand = createValidOnlyCommand(this::saveAttendance, this::canSaveAttendance);
+        saveAttendanceCommand = createValidAndDirtyCommand(this::saveMeetingAttendance, this::canSaveAttendance);
         cancelCommand = new Command(() -> {
             // Cancel operation
         });
@@ -337,12 +338,16 @@ public class AttendanceViewModel extends BaseViewModel {
 
     /**
      * Saves attendance data for all team members.
+     * Returns true if save was successful, false otherwise.
+     * 
+     * @return true if save was successful
      */
-    public void saveAttendance() {
+    public boolean saveMeetingAttendance() {
         Meeting currentMeeting = meeting.get();
         if (currentMeeting == null) {
             LOGGER.warning("Cannot save attendance: no meeting selected");
-            return;
+            setErrorMessage("No meeting selected");
+            return false;
         }
 
         try {
@@ -390,10 +395,12 @@ public class AttendanceViewModel extends BaseViewModel {
             // Clear dirty flag and error message
             setDirty(false);
             clearErrorMessage();
+            return true;
 
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error saving attendance data", e);
             setErrorMessage("Failed to save attendance data: " + e.getMessage());
+            return false;
         }
     }
 
