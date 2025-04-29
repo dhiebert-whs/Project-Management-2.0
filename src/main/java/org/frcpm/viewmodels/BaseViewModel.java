@@ -55,7 +55,7 @@ public abstract class BaseViewModel {
     /**
      * Clears the error message.
      */
-    protected void clearErrorMessage() {
+    public void clearErrorMessage() {
         // Set to empty string internally, but getErrorMessage() will return null
         errorMessage.set("");
     }

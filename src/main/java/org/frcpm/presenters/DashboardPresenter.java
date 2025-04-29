@@ -4,12 +4,11 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.chart.PieChart;
 import javafx.scene.chart.LineChart;
-import javafx.scene.chart.NumberAxis;
-import javafx.scene.chart.XYChart;
+
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.VBox;
-import javafx.scene.layout.HBox;
+
 import org.frcpm.binding.ViewModelBinding;
 import org.frcpm.di.ViewLoader;
 import org.frcpm.models.Meeting;
@@ -485,3 +484,4 @@ public class DashboardPresenter implements Initializable {
     public DashboardViewModel getViewModel() {
         return viewModel;
     }
+}

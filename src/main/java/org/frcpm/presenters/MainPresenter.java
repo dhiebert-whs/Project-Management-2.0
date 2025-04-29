@@ -16,6 +16,7 @@ import org.frcpm.views.ProjectView;
 import javax.inject.Inject;
 import java.net.URL;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -50,17 +51,24 @@ public class MainPresenter implements Initializable {
     @Inject
     private ProjectService projectService;
     
+    @Inject
     private MainViewModel viewModel;
     
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         LOGGER.info("Initializing MainPresenter");
         
-        // Create view model
-        viewModel = new MainViewModel();
+        // Verify injection - create fallback if needed
+        if (viewModel == null) {
+            LOGGER.severe("MainViewModel not injected - creating manually as fallback");
+            viewModel = new MainViewModel();
+        }
         
         // Set up UI bindings
         setupBindings();
+        
+        // Set up error handling
+        setupErrorHandling();
         
         // Load projects
         loadProjects();
@@ -71,7 +79,7 @@ public class MainPresenter implements Initializable {
      */
     private void setupBindings() {
         // Set up project list
-        projectListView.setItems(viewModel.getProjects());
+        projectListView.setItems(viewModel.getProjectList());
         
         // Set up actions
         fileNewProjectMenuItem.setOnAction(e -> newProject());
@@ -91,12 +99,29 @@ public class MainPresenter implements Initializable {
     }
     
     /**
-     * Loads projects.
+     * Sets up error message handling.
+     */
+    private void setupErrorHandling() {
+        if (viewModel == null) {
+            LOGGER.warning("ViewModel not initialized - likely in test environment");
+            return;
+        }
+        
+        // Show an alert when error message changes
+        viewModel.errorMessageProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null && !newVal.isEmpty()) {
+                showError("Error", newVal);
+                viewModel.clearErrorMessage();
+            }
+        });
+    }
+    
+    /**
+     * Loads projects using the ViewModel's command.
      */
     private void loadProjects() {
         try {
-            viewModel.getProjects().clear();
-            viewModel.getProjects().addAll(projectService.findAll());
+            viewModel.getLoadProjectsCommand().execute();
         } catch (Exception e) {
             LOGGER.severe("Error loading projects: " + e.getMessage());
             showError("Error loading projects", e.getMessage());
@@ -129,12 +154,17 @@ public class MainPresenter implements Initializable {
      * @param message the error message
      */
     private void showError(String title, String message) {
-        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
-                javafx.scene.control.Alert.AlertType.ERROR);
-        alert.setTitle("Error");
-        alert.setHeaderText(title);
-        alert.setContentText(message);
-        alert.showAndWait();
+        try {
+            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
+                    javafx.scene.control.Alert.AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText(title);
+            alert.setContentText(message);
+            alert.showAndWait();
+        } catch (Exception e) {
+            // This can happen in tests when not on FX thread
+            LOGGER.log(Level.INFO, "Alert would show: {0} - {1}", new Object[] { title, message });
+        }
     }
     
     /**
@@ -142,5 +172,29 @@ public class MainPresenter implements Initializable {
      */
     private void exit() {
         mainBorderPane.getScene().getWindow().hide();
+    }
+    
+    /**
+     * For testing - gets the view model.
+     * 
+     * @return the view model
+     */
+    public MainViewModel getViewModel() {
+        return viewModel;
+    }
+    
+    /**
+     * For testing - sets the view model.
+     * 
+     * @param viewModel the view model to set
+     */
+    public void setViewModel(MainViewModel viewModel) {
+        this.viewModel = viewModel;
+        
+        // Reset bindings if UI is available
+        if (projectListView != null) {
+            setupBindings();
+            setupErrorHandling();
+        }
     }
 }
