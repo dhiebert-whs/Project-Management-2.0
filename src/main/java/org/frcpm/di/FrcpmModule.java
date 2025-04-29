@@ -92,7 +92,19 @@ public class FrcpmModule {
         register(DialogService.class, ServiceFactory.getDialogService());
         register(GanttDataService.class, ServiceFactory.getGanttDataService());
         register(WebViewBridgeService.class, ServiceFactory.getWebViewBridgeService());
-        register(GanttChartTransformationService.class, ServiceFactory.getGanttDataService().getTransformationService());
+        
+        // Fix: Get transformation service from GanttDataService instance
+        GanttDataService ganttDataService = ServiceFactory.getGanttDataService();
+        if (ganttDataService != null) {
+            GanttChartTransformationService transformationService = ganttDataService.getTransformationService();
+            if (transformationService != null) {
+                register(GanttChartTransformationService.class, transformationService);
+            } else {
+                LOGGER.warning("GanttChartTransformationService is null from GanttDataService");
+            }
+        } else {
+            LOGGER.warning("GanttDataService is null from ServiceFactory");
+        }
     }
     
     /**

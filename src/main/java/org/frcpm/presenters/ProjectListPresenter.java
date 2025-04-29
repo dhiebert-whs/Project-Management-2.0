@@ -5,12 +5,10 @@ package org.frcpm.presenters;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.frcpm.binding.ViewModelBinding;
-import org.frcpm.di.DialogFactory;
-import org.frcpm.di.ServiceProvider;
 import org.frcpm.di.ViewLoader;
 import org.frcpm.models.Project;
 import org.frcpm.services.DialogService;
@@ -66,7 +64,7 @@ public class ProjectListPresenter implements Initializable {
         
         this.resources = resources;
         
-        // Create view model with injected service
+        // Create view model with injected service - key fix: proper service injection
         viewModel = new ProjectListViewModel(projectService);
 
         // Set up bindings
@@ -120,7 +118,7 @@ public class ProjectListPresenter implements Initializable {
         openProjectButton.setOnAction(event -> handleOpenProject());
         deleteProjectButton.setOnAction(event -> handleDeleteProject());
         
-        // Enable the open project button (fixing the issue from the controller)
+        // Enable the open project button
         openProjectButton.setDisable(false);
     }
 
@@ -156,20 +154,21 @@ public class ProjectListPresenter implements Initializable {
     @FXML
     public void handleNewProject() {
         try {
-            // Use DialogFactory to show the dialog
-            NewProjectPresenter presenter = DialogFactory.showDialog(
+            // Use AfterburnerFX ViewLoader to create the dialog
+            NewProjectPresenter presenter = ViewLoader.showDialog(
                 NewProjectDialogView.class, 
-                "Create New Project", 
-                projectListView.getScene().getWindow(), 
-                null);
+                resources.getString("project.new.title"), 
+                projectListView.getScene().getWindow());
             
             // After dialog closes, check if a project was created
-            Project createdProject = presenter.getCreatedProject();
-            if (createdProject != null) {
-                refreshProjectList();
-                // Select and open the new project
-                viewModel.setSelectedProject(createdProject);
-                openProject(createdProject);
+            if (presenter != null) {
+                Project createdProject = presenter.getCreatedProject();
+                if (createdProject != null) {
+                    refreshProjectList();
+                    // Select and open the new project
+                    viewModel.setSelectedProject(createdProject);
+                    openProject(createdProject);
+                }
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error showing new project dialog", e);
@@ -195,6 +194,7 @@ public class ProjectListPresenter implements Initializable {
             
         if (confirmed) {
             try {
+                viewModel.setSelectedProject(selectedProject);
                 if (viewModel.deleteProject(selectedProject)) {
                     refreshProjectList();
                 } else {
@@ -221,7 +221,13 @@ public class ProjectListPresenter implements Initializable {
                 return;
             }
             
-            // Load the project view
+            // Validate competition date/deadline
+            if (project.getHardDeadline() == null) {
+                ErrorHandler.showError("Invalid Project", "Competition date is required");
+                return;
+            }
+            
+            // Use AfterburnerFX ViewLoader to load the project view
             Parent root = ViewLoader.loadView(ProjectView.class);
             
             // Get the controller and set the project
@@ -255,5 +261,41 @@ public class ProjectListPresenter implements Initializable {
      */
     public void setViewModel(ProjectListViewModel viewModel) {
         this.viewModel = viewModel;
+    }
+    
+    /**
+     * Gets the project service.
+     * 
+     * @return the project service
+     */
+    public ProjectService getProjectService() {
+        return projectService;
+    }
+    
+    /**
+     * Sets the project service (for testing).
+     * 
+     * @param projectService the project service
+     */
+    public void setProjectService(ProjectService projectService) {
+        this.projectService = projectService;
+    }
+    
+    /**
+     * Gets the dialog service.
+     * 
+     * @return the dialog service
+     */
+    public DialogService getDialogService() {
+        return dialogService;
+    }
+    
+    /**
+     * Sets the dialog service (for testing).
+     * 
+     * @param dialogService the dialog service
+     */
+    public void setDialogService(DialogService dialogService) {
+        this.dialogService = dialogService;
     }
 }

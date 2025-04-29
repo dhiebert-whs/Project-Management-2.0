@@ -1,3 +1,5 @@
+// src/main/java/org/frcpm/presenters/NewProjectPresenter.java
+
 package org.frcpm.presenters;
 
 import javafx.fxml.FXML;
@@ -17,8 +19,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Presenter for the new project dialog.
- * Follows the AfterburnerFX presenter convention.
+ * Presenter for the new project dialog in AfterburnerFX pattern.
  */
 public class NewProjectPresenter implements Initializable {
 
@@ -45,15 +46,15 @@ public class NewProjectPresenter implements Initializable {
     @FXML
     private Button cancelButton;
 
-    private Stage dialogStage;
-    private NewProjectViewModel viewModel;
-    private ResourceBundle resources;
-
+    // Injected services
     @Inject
     private ProjectService projectService;
     
     @Inject
     private DialogService dialogService;
+
+    private NewProjectViewModel viewModel;
+    private ResourceBundle resources;
 
     /**
      * Initializes the controller.
@@ -96,7 +97,7 @@ public class NewProjectPresenter implements Initializable {
         // Bind button states and actions
         ViewModelBinding.bindCommandButton(createButton, viewModel.getCreateProjectCommand());
 
-        // Set cancelButton action (not using ViewModelBinding as it's a simple action)
+        // Set cancelButton action
         cancelButton.setOnAction(event -> closeDialog());
     }
 
@@ -114,30 +115,6 @@ public class NewProjectPresenter implements Initializable {
     }
 
     /**
-     * Sets the dialog stage.
-     * 
-     * @param dialogStage the dialog stage
-     */
-    public void setDialogStage(Stage dialogStage) {
-        this.dialogStage = dialogStage;
-        
-        // Set dialogStage first, then try to execute the command
-        // to avoid NullPointerException if command tries to access dialogStage
-        if (viewModel.getCreatedProject() != null) {
-            dialogStage.close();
-        }
-    }
-
-    /**
-     * Gets the created project.
-     * 
-     * @return the created project, or null if no project was created
-     */
-    public Project getCreatedProject() {
-        return viewModel.getCreatedProject();
-    }
-
-    /**
      * Shows an error alert dialog.
      * 
      * @param title   the title
@@ -151,15 +128,27 @@ public class NewProjectPresenter implements Initializable {
             LOGGER.log(Level.INFO, "Alert would show: {0} - {1}", new Object[] { title, message });
         }
     }
-    
+
+    /**
+     * Gets the created project.
+     * 
+     * @return the created project, or null if no project was created
+     */
+    public Project getCreatedProject() {
+        return viewModel.getCreatedProject();
+    }
+
     /**
      * Closes the dialog.
      */
     @FXML
     private void closeDialog() {
         try {
-            if (dialogStage != null) {
-                dialogStage.close();
+            if (cancelButton != null && cancelButton.getScene() != null && 
+                cancelButton.getScene().getWindow() != null) {
+                
+                Stage stage = (Stage) cancelButton.getScene().getWindow();
+                stage.close();
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error closing dialog", e);
@@ -171,9 +160,18 @@ public class NewProjectPresenter implements Initializable {
      */
     @FXML
     private void handleCreate() {
-        if (viewModel.validate()) {
+        if (viewModel.isInputValid()) {
             viewModel.getCreateProjectCommand().execute();
             closeDialog();
         }
+    }
+
+    /**
+     * Gets the ViewModel.
+     * 
+     * @return the ViewModel
+     */
+    public NewProjectViewModel getViewModel() {
+        return viewModel;
     }
 }
