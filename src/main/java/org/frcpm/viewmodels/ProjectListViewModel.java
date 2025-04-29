@@ -2,6 +2,8 @@ package org.frcpm.viewmodels;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+
+import org.frcpm.binding.Command;
 import org.frcpm.models.Project;
 import org.frcpm.services.ProjectService;
 
@@ -17,6 +19,12 @@ public class ProjectListViewModel extends BaseViewModel {
     private final ProjectService projectService;
     private final ObservableList<Project> projects = FXCollections.observableArrayList();
     private Project selectedProject;
+
+    private Command loadProjectsCommand;
+    private Command newProjectCommand;
+    private Command openProjectCommand;
+    private Command importProjectCommand;
+    private Command deleteProjectCommand;
     
     /**
      * Creates a new project list view model.
@@ -25,6 +33,32 @@ public class ProjectListViewModel extends BaseViewModel {
      */
     public ProjectListViewModel(ProjectService projectService) {
         this.projectService = projectService;
+
+           
+        // Initialize commands
+        loadProjectsCommand = new Command(this::loadProjects);
+        
+        newProjectCommand = new Command(() -> {
+            // This will be handled by the controller/presenter
+            LOGGER.info("New project command executed");
+        });
+        
+        openProjectCommand = new Command(() -> {
+            // This will be handled by the controller/presenter
+            LOGGER.info("Open project command executed");
+        }, () -> selectedProject != null);
+        
+        importProjectCommand = new Command(() -> {
+            // This will be handled by the controller/presenter
+            LOGGER.info("Import project command executed");
+        });
+        
+        deleteProjectCommand = new Command(() -> {
+            // This will be handled by the controller/presenter
+            if (selectedProject != null) {
+                deleteProject(selectedProject);
+            }
+        }, () -> selectedProject != null);
     }
     
     /**
@@ -83,5 +117,50 @@ public class ProjectListViewModel extends BaseViewModel {
      */
     public void setSelectedProject(Project selectedProject) {
         this.selectedProject = selectedProject;
+    }
+
+    /**
+     * Gets the load projects command.
+     * 
+     * @return the load projects command
+     */
+    public Command getLoadProjectsCommand() {
+        return loadProjectsCommand;
+    }
+
+    /**
+     * Gets the new project command.
+     * 
+     * @return the new project command
+     */
+    public Command getNewProjectCommand() {
+        return newProjectCommand;
+    }
+
+    /**
+     * Gets the open project command.
+     * 
+     * @return the open project command
+     */
+    public Command getOpenProjectCommand() {
+        return openProjectCommand;
+    }
+
+    /**
+     * Gets the import project command.
+     * 
+     * @return the import project command
+     */
+    public Command getImportProjectCommand() {
+        return importProjectCommand;
+    }
+
+    /**
+     * Gets the delete project command.
+     * 
+     * @return the delete project command
+     */
+    public Command getDeleteProjectCommand() {
+        return deleteProjectCommand;
     }
 }

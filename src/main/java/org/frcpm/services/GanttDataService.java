@@ -63,4 +63,11 @@ public interface GanttDataService {
      * @return List of task IDs identified as bottlenecks
      */
     List<Long> identifyBottlenecks(Long projectId);
+
+    /**
+     * Get the transformation service used by this data service.
+     * 
+     * @return The GanttChartTransformationService instance
+     */
+    GanttChartTransformationService getTransformationService();
 }

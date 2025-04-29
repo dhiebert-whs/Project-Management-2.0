@@ -333,4 +333,14 @@ public class GanttDataServiceImpl implements GanttDataService {
             return Collections.emptyList();
         }
     }
+
+    /**
+     * Gets the transformation service used by this data service.
+     * 
+     * @return the transformation service
+     */
+    @Override
+    public GanttChartTransformationService getTransformationService() {
+        return this.transformationService;
+    }
 }

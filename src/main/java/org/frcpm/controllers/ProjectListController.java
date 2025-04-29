@@ -1,8 +1,5 @@
 // src/main/java/org/frcpm/controllers/ProjectListController.java
 package org.frcpm.controllers;
-
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -17,8 +14,7 @@ import org.frcpm.services.ServiceFactory;
 import org.frcpm.viewmodels.ProjectListViewModel;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Optional;
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -40,7 +36,8 @@ public class ProjectListController {
     @FXML
     private Button deleteProjectButton;
     
-    private ProjectListViewModel viewModel = new ProjectListViewModel();
+    private ProjectListViewModel viewModel = new ProjectListViewModel(ServiceFactory.getProjectService());
+
     private DialogService dialogService = ServiceFactory.getDialogService();
     
     @FXML

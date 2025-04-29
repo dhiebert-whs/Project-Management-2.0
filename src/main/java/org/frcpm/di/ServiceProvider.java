@@ -5,6 +5,7 @@ import org.frcpm.services.*;
 import org.frcpm.repositories.*;
 import org.frcpm.repositories.specific.*;
 
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -24,13 +25,22 @@ public class ServiceProvider {
      */
     public static <T> T getService(Class<T> serviceClass) {
         LOGGER.fine("Getting service: " + serviceClass.getSimpleName());
-        // Check if it's registered in FrcpmModule first
-        Object instance = Injector.getInstanceSupplier().apply(serviceClass);
-        if (instance != null) {
-            return (T) instance;
+        // Use the proper AfterburnerFX API
+        try {
+            // First try to get from FrcpmModule's registered services
+            Object instance = null;
+            // Use proper AfterburnerFX API to get the instance
+            instance = Injector.instantiatePresenter(serviceClass);
+            if (instance != null) {
+                return (T) instance;
+            }
+            
+            // If not found, create a new instance
+            return serviceClass.getDeclaredConstructor().newInstance();
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error getting service: " + serviceClass.getSimpleName(), e);
+            return null;
         }
-        // If not found, try to create it
-        return Injector.instantiate(serviceClass);
     }
     
     /**
@@ -152,13 +162,22 @@ public class ServiceProvider {
      */
     public static <T> T getRepository(Class<T> repositoryClass) {
         LOGGER.fine("Getting repository: " + repositoryClass.getSimpleName());
-        // Check if it's registered in FrcpmModule first
-        Object instance = Injector.getInstanceSupplier().apply(repositoryClass);
-        if (instance != null) {
-            return (T) instance;
+        // Use the proper AfterburnerFX API
+        try {
+            // First try to get from FrcpmModule's registered repositories
+            Object instance = null;
+            // Use proper AfterburnerFX API to get the instance
+            instance = Injector.instantiatePresenter(repositoryClass);
+            if (instance != null) {
+                return (T) instance;
+            }
+            
+            // If not found, create a new instance
+            return repositoryClass.getDeclaredConstructor().newInstance();
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error getting repository: " + repositoryClass.getSimpleName(), e);
+            return null;
         }
-        // If not found, try to create it
-        return Injector.instantiate(repositoryClass);
     }
 
     
