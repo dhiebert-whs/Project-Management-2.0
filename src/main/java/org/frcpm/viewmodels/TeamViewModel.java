@@ -1,74 +1,126 @@
+// src/main/java/org/frcpm/viewmodels/TeamViewModel.java
 package org.frcpm.viewmodels;
 
 import javafx.beans.property.*;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
 import org.frcpm.binding.Command;
+import org.frcpm.models.Project;
 import org.frcpm.models.Subteam;
 import org.frcpm.models.TeamMember;
+import org.frcpm.services.ProjectService;
+import org.frcpm.services.ServiceFactory;
 import org.frcpm.services.SubteamService;
 import org.frcpm.services.TeamMemberService;
-import org.frcpm.services.ServiceFactory;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 /**
  * ViewModel for team management in the FRC Project Management System.
- * Standardized implementation following MVVM pattern.
+ * Provides functionality for managing team members and subteams.
  */
 public class TeamViewModel extends BaseViewModel {
     
     private static final Logger LOGGER = Logger.getLogger(TeamViewModel.class.getName());
     
+    /**
+     * Enum for filtering team members.
+     */
+    public enum MemberFilter {
+        ALL("All Members"),
+        LEADERS("Leaders Only"),
+        UNASSIGNED("Unassigned");
+        
+        private final String displayName;
+        
+        MemberFilter(String displayName) {
+            this.displayName = displayName;
+        }
+        
+        @Override
+        public String toString() {
+            return displayName;
+        }
+    }
+    
     // Services
     private final TeamMemberService teamMemberService;
     private final SubteamService subteamService;
+    private final ProjectService projectService;
     
-    // Team member properties
-    private final StringProperty memberUsername = new SimpleStringProperty("");
-    private final StringProperty memberFirstName = new SimpleStringProperty("");
-    private final StringProperty memberLastName = new SimpleStringProperty("");
-    private final StringProperty memberEmail = new SimpleStringProperty("");
-    private final StringProperty memberPhone = new SimpleStringProperty("");
-    private final StringProperty memberSkills = new SimpleStringProperty("");
-    private final BooleanProperty memberIsLeader = new SimpleBooleanProperty(false);
+    // Project
+    private final ObjectProperty<Project> project = new SimpleObjectProperty<>();
+    
+    // Member properties
+    private final StringProperty firstName = new SimpleStringProperty("");
+    private final StringProperty lastName = new SimpleStringProperty("");
+    private final StringProperty email = new SimpleStringProperty("");
+    private final StringProperty phone = new SimpleStringProperty("");
+    private final ObjectProperty<TeamMember.Role> role = new SimpleObjectProperty<>();
+    private final StringProperty skills = new SimpleStringProperty("");
+    private final BooleanProperty isLeader = new SimpleBooleanProperty(false);
     private final ObjectProperty<Subteam> memberSubteam = new SimpleObjectProperty<>();
-    private final ObjectProperty<TeamMember> selectedMember = new SimpleObjectProperty<>();
-    private final ObservableList<TeamMember> members = FXCollections.observableArrayList();
-    private final BooleanProperty isNewMember = new SimpleBooleanProperty(true);
-    private final BooleanProperty memberValid = new SimpleBooleanProperty(false);
+    private final StringProperty notes = new SimpleStringProperty("");
     
     // Subteam properties
     private final StringProperty subteamName = new SimpleStringProperty("");
-    private final StringProperty subteamColorCode = new SimpleStringProperty("#0000FF"); // Default blue
-    private final StringProperty subteamSpecialties = new SimpleStringProperty("");
-    private final ObjectProperty<Subteam> selectedSubteam = new SimpleObjectProperty<>();
+    private final StringProperty subteamColor = new SimpleStringProperty("#2196F3"); // Default blue
+    private final StringProperty subteamLead = new SimpleStringProperty("");
+    private final StringProperty subteamDescription = new SimpleStringProperty("");
+    
+    // Collections
+    private final ObservableList<TeamMember> members = FXCollections.observableArrayList();
+    private final FilteredList<TeamMember> filteredMembers = new FilteredList<>(members);
     private final ObservableList<Subteam> subteams = FXCollections.observableArrayList();
-    private final ObservableList<TeamMember> subteamMembers = FXCollections.observableArrayList();
+    
+    // Selection
+    private final ObjectProperty<TeamMember> selectedMember = new SimpleObjectProperty<>();
+    private final ObjectProperty<Subteam> selectedSubteam = new SimpleObjectProperty<>();
+    
+    // Filtering
+    private MemberFilter currentFilter = MemberFilter.ALL;
+    private String searchText = "";
+    
+    // State
+    private final BooleanProperty isNewMember = new SimpleBooleanProperty(true);
     private final BooleanProperty isNewSubteam = new SimpleBooleanProperty(true);
-    private final BooleanProperty subteamValid = new SimpleBooleanProperty(false);
     
-    // Commands for team members
-    private final Command createNewMemberCommand;
-    private final Command deleteMemberCommand;
+    // Commands
+    private final Command addMemberCommand;
     private final Command editMemberCommand;
+    private final Command deleteMemberCommand;
     private final Command saveMemberCommand;
-    
-    // Commands for subteams
-    private final Command createNewSubteamCommand;
-    private final Command deleteSubteamCommand;
+    private final Command addSubteamCommand;
     private final Command editSubteamCommand;
+    private final Command deleteSubteamCommand;
     private final Command saveSubteamCommand;
-    private final Command loadSubteamMembersCommand;
+    private final Command importMembersCommand;
+    private final Command exportMembersCommand;
     
     /**
      * Creates a new TeamViewModel with default services.
      */
     public TeamViewModel() {
-        this(ServiceFactory.getTeamMemberService(), ServiceFactory.getSubteamService());
+        this(
+            ServiceFactory.getTeamMemberService(),
+            ServiceFactory.getSubteamService(),
+            ServiceFactory.getProjectService()
+        );
+    }
+    
+    /**
+     * Creates a new TeamViewModel with the specified TeamMemberService and SubteamService.
+     * This constructor is used by the TeamPresenter.
+     * 
+     * @param teamMemberService the team member service
+     * @param subteamService the subteam service
+     */
+    public TeamViewModel(TeamMemberService teamMemberService, SubteamService subteamService) {
+        this(teamMemberService, subteamService, ServiceFactory.getProjectService());
     }
     
     /**
@@ -77,150 +129,152 @@ public class TeamViewModel extends BaseViewModel {
      * 
      * @param teamMemberService the team member service
      * @param subteamService the subteam service
+     * @param projectService the project service
      */
-    public TeamViewModel(TeamMemberService teamMemberService, SubteamService subteamService) {
+    public TeamViewModel(TeamMemberService teamMemberService, SubteamService subteamService, ProjectService projectService) {
         this.teamMemberService = teamMemberService;
         this.subteamService = subteamService;
+        this.projectService = projectService;
         
-        // Create commands for team members
-        createNewMemberCommand = new Command(this::createNewMember);
-        deleteMemberCommand = new Command(this::deleteMember, this::canDeleteMember);
+        // Initialize commands
+        addMemberCommand = new Command(this::initNewMember);
         editMemberCommand = new Command(this::editMember, this::canEditMember);
-        saveMemberCommand = new Command(this::saveMember, this::canSaveMember);
+        deleteMemberCommand = new Command(this::deleteMember, this::canDeleteMember);
+        saveMemberCommand = createValidOnlyCommand(this::saveMember, this::isValidMember);
         
-        // Create commands for subteams
-        createNewSubteamCommand = new Command(this::createNewSubteam);
-        deleteSubteamCommand = new Command(this::deleteSubteam, this::canDeleteSubteam);
+        addSubteamCommand = new Command(this::initNewSubteam);
         editSubteamCommand = new Command(this::editSubteam, this::canEditSubteam);
-        saveSubteamCommand = new Command(this::saveSubteam, this::canSaveSubteam);
-        loadSubteamMembersCommand = new Command(this::loadSubteamMembers, this::canLoadSubteamMembers);
+        deleteSubteamCommand = new Command(this::deleteSubteam, this::canDeleteSubteam);
+        saveSubteamCommand = createValidOnlyCommand(this::saveSubteam, this::isValidSubteam);
         
-        // Set up validation listeners for member using the new BaseViewModel pattern
-        Runnable memberValidator = createDirtyFlagHandler(this::validateMember);
-        memberUsername.addListener((observable, oldValue, newValue) -> memberValidator.run());
-        memberFirstName.addListener((observable, oldValue, newValue) -> memberValidator.run());
-        memberLastName.addListener((observable, oldValue, newValue) -> memberValidator.run());
-        memberEmail.addListener((observable, oldValue, newValue) -> memberValidator.run());
+        importMembersCommand = new Command(this::importMembersFromCSV);
+        exportMembersCommand = new Command(this::exportMembersToCSV);
         
-        // Track these listeners for cleanup
-        trackPropertyListener(memberValidator);
+        // Setup property change listeners
+        setupPropertyListeners();
         
-        // Set up dirty flag listeners for member
-        Runnable dirtyHandler = createDirtyFlagHandler(null);
-        memberPhone.addListener((observable, oldValue, newValue) -> dirtyHandler.run());
-        memberSkills.addListener((observable, oldValue, newValue) -> dirtyHandler.run());
-        memberIsLeader.addListener((observable, oldValue, newValue) -> dirtyHandler.run());
-        memberSubteam.addListener((observable, oldValue, newValue) -> dirtyHandler.run());
+        // Setup filter predicate
+        updateFilterPredicate();
         
-        // Track these listeners for cleanup
-        trackPropertyListener(dirtyHandler);
-        
-        // Set up validation listeners for subteam using the new BaseViewModel pattern
-        Runnable subteamValidator = createDirtyFlagHandler(this::validateSubteam);
-        subteamName.addListener((observable, oldValue, newValue) -> subteamValidator.run());
-        subteamColorCode.addListener((observable, oldValue, newValue) -> subteamValidator.run());
-        
-        // Track these listeners for cleanup
-        trackPropertyListener(subteamValidator);
-        
-        // Set up dirty flag listeners for subteam
-        subteamSpecialties.addListener((observable, oldValue, newValue) -> dirtyHandler.run());
-        
-        // Set up selection listeners
-        selectedMember.addListener((observable, oldValue, newValue) -> {
-            if (newValue != null) {
-                updateMemberForm(newValue);
+        // Set up project property listener
+        project.addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                loadMembers();
+                loadSubteams();
             } else {
-                clearMemberForm();
+                members.clear();
+                subteams.clear();
             }
         });
-        
-        selectedSubteam.addListener((observable, oldValue, newValue) -> {
-            if (newValue != null) {
-                updateSubteamForm(newValue);
-                loadSubteamMembers();
-            } else {
-                clearSubteamForm();
-                subteamMembers.clear();
-            }
-        });
-        
-        // Initial validation
-        validateMember();
-        validateSubteam();
-        
-        // Load initial data - this is called automatically in the constructor
-        // which can cause issues for tests if not properly mocked
-        loadMembers();
-        loadSubteams();
     }
     
     /**
-     * Validates the member form.
+     * Sets up property change listeners for dirty flag and validation.
+     */
+    private void setupPropertyListeners() {
+        // Member property listeners
+        Runnable memberValidateHandler = createDirtyFlagHandler(this::validateMember);
+        firstName.addListener((obs, oldVal, newVal) -> memberValidateHandler.run());
+        lastName.addListener((obs, oldVal, newVal) -> memberValidateHandler.run());
+        email.addListener((obs, oldVal, newVal) -> memberValidateHandler.run());
+        trackPropertyListener(memberValidateHandler);
+        
+        Runnable memberDirtyHandler = createDirtyFlagHandler(null);
+        phone.addListener((obs, oldVal, newVal) -> memberDirtyHandler.run());
+        role.addListener((obs, oldVal, newVal) -> memberDirtyHandler.run());
+        skills.addListener((obs, oldVal, newVal) -> memberDirtyHandler.run());
+        isLeader.addListener((obs, oldVal, newVal) -> memberDirtyHandler.run());
+        memberSubteam.addListener((obs, oldVal, newVal) -> memberDirtyHandler.run());
+        notes.addListener((obs, oldVal, newVal) -> memberDirtyHandler.run());
+        trackPropertyListener(memberDirtyHandler);
+        
+        // Subteam property listeners
+        Runnable subteamValidateHandler = createDirtyFlagHandler(this::validateSubteam);
+        subteamName.addListener((obs, oldVal, newVal) -> subteamValidateHandler.run());
+        trackPropertyListener(subteamValidateHandler);
+        
+        Runnable subteamDirtyHandler = createDirtyFlagHandler(null);
+        subteamColor.addListener((obs, oldVal, newVal) -> subteamDirtyHandler.run());
+        subteamLead.addListener((obs, oldVal, newVal) -> subteamDirtyHandler.run());
+        subteamDescription.addListener((obs, oldVal, newVal) -> subteamDirtyHandler.run());
+        trackPropertyListener(subteamDirtyHandler);
+        
+        // Selection listeners
+        selectedMember.addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                updateMemberForm(newVal);
+            }
+        });
+        
+        selectedSubteam.addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                updateSubteamForm(newVal);
+            }
+        });
+    }
+    
+    /**
+     * Validates the current member form data.
      */
     private void validateMember() {
-        List<String> errors = new ArrayList<>();
-        
-        // Check required fields
-        if (memberUsername.get() == null || memberUsername.get().trim().isEmpty()) {
-            errors.add("Username is required");
-        }
-        
-        if (memberFirstName.get() == null || memberFirstName.get().trim().isEmpty()) {
-            errors.add("First name is required");
-        }
+        boolean isValid = (firstName.get() != null && !firstName.get().trim().isEmpty()) ||
+                         (lastName.get() != null && !lastName.get().trim().isEmpty());
         
         // Check email format if provided
-        if (memberEmail.get() != null && !memberEmail.get().trim().isEmpty() &&
-                !memberEmail.get().contains("@")) {
-            errors.add("Email must be a valid email address");
-        }
-        
-        // Update valid state and error message
-        memberValid.set(errors.isEmpty());
-        if (!errors.isEmpty()) {
-            setErrorMessage(String.join("\n", errors));
+        if (isValid && email.get() != null && !email.get().trim().isEmpty() && !isValidEmail(email.get())) {
+            isValid = false;
+            setErrorMessage("Invalid email format");
+        } else if (!isValid) {
+            setErrorMessage("First name or last name is required");
         } else {
             clearErrorMessage();
         }
     }
     
     /**
-     * Validates the subteam form.
+     * Validates the current subteam form data.
      */
     private void validateSubteam() {
-        List<String> errors = new ArrayList<>();
+        boolean isValid = subteamName.get() != null && !subteamName.get().trim().isEmpty();
         
-        // Check required fields
-        if (subteamName.get() == null || subteamName.get().trim().isEmpty()) {
-            errors.add("Subteam name is required");
-        }
-        
-        // Check color code format
-        if (subteamColorCode.get() == null || !subteamColorCode.get().matches("^#[0-9A-Fa-f]{6}$")) {
-            errors.add("Color code must be a valid hex color code (e.g., #FF0000)");
-        }
-        
-        // Update valid state and error message
-        subteamValid.set(errors.isEmpty());
-        if (!errors.isEmpty()) {
-            setErrorMessage(String.join("\n", errors));
+        if (!isValid) {
+            setErrorMessage("Subteam name is required");
         } else {
             clearErrorMessage();
         }
     }
     
     /**
-     * Loads the list of team members.
-     * This method is public to allow direct calling from tests.
+     * Checks if the provided email is valid.
+     * 
+     * @param email the email to validate
+     * @return true if valid, false otherwise
+     */
+    private boolean isValidEmail(String email) {
+        return email.matches("^[A-Za-z0-9+_.-]+@(.+)$");
+    }
+    
+    /**
+     * Loads team members for the current project.
      */
     public void loadMembers() {
         try {
-            List<TeamMember> memberList = teamMemberService.findAll();
+            List<TeamMember> memberList;
+            
+            if (project.get() != null) {
+                // In a real implementation, this would filter by project
+                // For now, we'll just load all members
+                memberList = teamMemberService.findAll();
+            } else {
+                memberList = teamMemberService.findAll();
+            }
+            
             members.clear();
             if (memberList != null) {
                 members.addAll(memberList);
             }
+            
+            applyFilter();
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error loading team members", e);
             setErrorMessage("Failed to load team members: " + e.getMessage());
@@ -228,12 +282,20 @@ public class TeamViewModel extends BaseViewModel {
     }
     
     /**
-     * Loads the list of subteams.
-     * This method is public to allow direct calling from tests.
+     * Loads subteams for the current project.
      */
     public void loadSubteams() {
         try {
-            List<Subteam> subteamList = subteamService.findAll();
+            List<Subteam> subteamList;
+            
+            if (project.get() != null) {
+                // In a real implementation, this would filter by project
+                // For now, we'll just load all subteams
+                subteamList = subteamService.findAll();
+            } else {
+                subteamList = subteamService.findAll();
+            }
+            
             subteams.clear();
             if (subteamList != null) {
                 subteams.addAll(subteamList);
@@ -245,46 +307,101 @@ public class TeamViewModel extends BaseViewModel {
     }
     
     /**
-     * Loads the list of members for the selected subteam.
+     * Sets the filter and updates the filtered list.
+     * 
+     * @param filter the filter to apply
      */
-    private void loadSubteamMembers() {
-        try {
-            Subteam subteam = selectedSubteam.get();
-            if (subteam != null) {
-                List<TeamMember> memberList = teamMemberService.findBySubteam(subteam);
-                subteamMembers.clear();
-                if (memberList != null) {
-                    subteamMembers.addAll(memberList);
-                }
-            } else {
-                subteamMembers.clear();
+    public void setFilter(MemberFilter filter) {
+        this.currentFilter = filter;
+        updateFilterPredicate();
+    }
+    
+    /**
+     * Sets the search text and updates the filtered list.
+     * 
+     * @param searchText the search text
+     */
+    public void setSearchText(String searchText) {
+        this.searchText = searchText != null ? searchText.toLowerCase() : "";
+        updateFilterPredicate();
+    }
+    
+    /**
+     * Updates the filter predicate based on the current filter and search text.
+     */
+    private void updateFilterPredicate() {
+        filteredMembers.setPredicate(member -> {
+            // Check filter first
+            boolean matchesFilter = switch (currentFilter) {
+                case ALL -> true;
+                case LEADERS -> member.isLeader();
+                case UNASSIGNED -> member.getSubteam() == null;
+            };
+            
+            // Then check search text
+            boolean matchesSearch = true;
+            if (matchesFilter && searchText != null && !searchText.isEmpty()) {
+                String lowerSearchText = searchText.toLowerCase();
+                matchesSearch = (member.getFirstName() != null && member.getFirstName().toLowerCase().contains(lowerSearchText)) ||
+                               (member.getLastName() != null && member.getLastName().toLowerCase().contains(lowerSearchText)) ||
+                               (member.getEmail() != null && member.getEmail().toLowerCase().contains(lowerSearchText));
             }
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error loading subteam members", e);
-            setErrorMessage("Failed to load subteam members: " + e.getMessage());
+            
+            return matchesFilter && matchesSearch;
+        });
+    }
+    
+    /**
+     * Applies the current filter to the team members list.
+     * This method is called explicitly from the presenter.
+     */
+    public void applyFilter() {
+        updateFilterPredicate();
+    }
+    
+    /**
+     * Filters team members by the specified subteam.
+     * 
+     * @param subteam the subteam to filter by
+     */
+    public void filterMembersBySubteam(Subteam subteam) {
+        if (subteam == null) {
+            filteredMembers.setPredicate(null);
+            return;
         }
+        
+        filteredMembers.setPredicate(member -> 
+            member.getSubteam() != null && member.getSubteam().getId().equals(subteam.getId())
+        );
+    }
+    
+    /**
+     * Clears the current filter.
+     */
+    public void clearFilter() {
+        filteredMembers.setPredicate(null);
     }
     
     /**
      * Sets up the form for creating a new team member.
      */
     public void initNewMember() {
-        selectedMember.set(null);
         isNewMember.set(true);
         
-        // Set default values
-        memberUsername.set("");
-        memberFirstName.set("");
-        memberLastName.set("");
-        memberEmail.set("");
-        memberPhone.set("");
-        memberSkills.set("");
-        memberIsLeader.set(false);
+        // Clear form fields
+        firstName.set("");
+        lastName.set("");
+        email.set("");
+        phone.set("");
+        role.set(null);
+        skills.set("");
+        isLeader.set(false);
         memberSubteam.set(null);
+        notes.set("");
         
-        // Clear dirty flag and validate
+        // Clear dirty flag and error message
         setDirty(false);
-        validateMember();
+        clearErrorMessage();
     }
     
     /**
@@ -297,15 +414,13 @@ public class TeamViewModel extends BaseViewModel {
             throw new IllegalArgumentException("Team member cannot be null");
         }
         
-        selectedMember.set(member);
         isNewMember.set(false);
         
-        // Update form from member
         updateMemberForm(member);
         
-        // Clear dirty flag and validate
+        // Clear dirty flag and error message
         setDirty(false);
-        validateMember();
+        clearErrorMessage();
     }
     
     /**
@@ -314,48 +429,41 @@ public class TeamViewModel extends BaseViewModel {
      * @param member the team member to get values from
      */
     private void updateMemberForm(TeamMember member) {
-        memberUsername.set(member.getUsername());
-        memberFirstName.set(member.getFirstName());
-        memberLastName.set(member.getLastName());
-        memberEmail.set(member.getEmail());
-        memberPhone.set(member.getPhone());
-        memberSkills.set(member.getSkills());
-        memberIsLeader.set(member.isLeader());
+        firstName.set(member.getFirstName());
+        lastName.set(member.getLastName());
+        email.set(member.getEmail());
+        phone.set(member.getPhone());
+        // Convert string role to Role enum if possible
+        try {
+            if (member.getRole() != null && !member.getRole().isEmpty()) {
+                role.set(TeamMember.Role.valueOf(member.getRole()));
+            } else {
+                role.set(null);
+            }
+        } catch (IllegalArgumentException e) {
+            role.set(null);
+        }
+        skills.set(member.getSkills());
+        isLeader.set(member.isLeader());
         memberSubteam.set(member.getSubteam());
-    }
-    
-    /**
-     * Clears the member form fields.
-     */
-    private void clearMemberForm() {
-        memberUsername.set("");
-        memberFirstName.set("");
-        memberLastName.set("");
-        memberEmail.set("");
-        memberPhone.set("");
-        memberSkills.set("");
-        memberIsLeader.set(false);
-        memberSubteam.set(null);
-        
-        // Clear error message
-        clearErrorMessage();
+        notes.set("");  // Notes is not directly mapped in the TeamMember entity
     }
     
     /**
      * Sets up the form for creating a new subteam.
      */
     public void initNewSubteam() {
-        selectedSubteam.set(null);
         isNewSubteam.set(true);
         
-        // Set default values
+        // Clear form fields
         subteamName.set("");
-        subteamColorCode.set("#0000FF"); // Default blue
-        subteamSpecialties.set("");
+        subteamColor.set("#2196F3"); // Default blue
+        subteamLead.set("");
+        subteamDescription.set("");
         
-        // Clear dirty flag and validate
+        // Clear dirty flag and error message
         setDirty(false);
-        validateSubteam();
+        clearErrorMessage();
     }
     
     /**
@@ -368,18 +476,13 @@ public class TeamViewModel extends BaseViewModel {
             throw new IllegalArgumentException("Subteam cannot be null");
         }
         
-        selectedSubteam.set(subteam);
         isNewSubteam.set(false);
         
-        // Update form from subteam
         updateSubteamForm(subteam);
         
-        // Load subteam members
-        loadSubteamMembers();
-        
-        // Clear dirty flag and validate
+        // Clear dirty flag and error message
         setDirty(false);
-        validateSubteam();
+        clearErrorMessage();
     }
     
     /**
@@ -389,20 +492,9 @@ public class TeamViewModel extends BaseViewModel {
      */
     private void updateSubteamForm(Subteam subteam) {
         subteamName.set(subteam.getName());
-        subteamColorCode.set(subteam.getColorCode());
-        subteamSpecialties.set(subteam.getSpecialties());
-    }
-    
-    /**
-     * Clears the subteam form fields.
-     */
-    private void clearSubteamForm() {
-        subteamName.set("");
-        subteamColorCode.set("#0000FF"); // Default blue
-        subteamSpecialties.set("");
-        
-        // Clear error message
-        clearErrorMessage();
+        subteamColor.set(subteam.getColor());
+        subteamLead.set("");  // Leader is not directly mapped in the Subteam entity
+        subteamDescription.set(subteam.getDescription());
     }
     
     /**
@@ -441,12 +533,9 @@ public class TeamViewModel extends BaseViewModel {
                     // Clear selection
                     selectedMember.set(null);
                     
-                    // If the deleted member was in the selected subteam, refresh the subteam members list
-                    if (selectedSubteam.get() != null) {
-                        loadSubteamMembers();
-                    }
+                    clearErrorMessage();
                 } else {
-                    setErrorMessage("Failed to delete team member: Operation returned false");
+                    setErrorMessage("Failed to delete team member: Operation unsuccessful");
                 }
             }
         } catch (Exception e) {
@@ -456,76 +545,87 @@ public class TeamViewModel extends BaseViewModel {
     }
     
     /**
-     * Saves the team member.
-     * Called when the save member command is executed.
+     * Deletes the specified team member.
+     * 
+     * @param member the team member to delete
+     * @return true if successful, false otherwise
      */
-    private void saveMember() {
-        if (!memberValid.get()) {
-            return;
+    public boolean deleteMember(TeamMember member) {
+        if (member == null) {
+            return false;
         }
         
+        try {
+            boolean success = teamMemberService.deleteById(member.getId());
+            
+            if (success) {
+                // Remove from members list
+                members.remove(member);
+                
+                // Clear selection if this was the selected member
+                if (selectedMember.get() != null && selectedMember.get().getId().equals(member.getId())) {
+                    selectedMember.set(null);
+                }
+                
+                clearErrorMessage();
+                return true;
+            } else {
+                setErrorMessage("Failed to delete team member: Operation unsuccessful");
+                return false;
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error deleting team member", e);
+            setErrorMessage("Failed to delete team member: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Saves the current team member.
+     * Called when the save member command is executed.
+     * 
+     * @return true if the member was saved successfully, false otherwise
+     */
+    public boolean saveMember() {
         try {
             TeamMember member;
             
             if (isNewMember.get()) {
                 // Create new team member
-                member = teamMemberService.createTeamMember(
-                    memberUsername.get(),
-                    memberFirstName.get(),
-                    memberLastName.get(),
-                    memberEmail.get(),
-                    memberPhone.get(),
-                    memberIsLeader.get()
-                );
-                
-                // Update additional fields
-                if (memberSkills.get() != null && !memberSkills.get().isEmpty()) {
-                    member = teamMemberService.updateSkills(
-                        member.getId(),
-                        memberSkills.get()
-                    );
-                }
-                
-                // Add to members list
-                members.add(member);
+                member = new TeamMember();
             } else {
-                // Update existing member
+                // Update existing team member
                 member = selectedMember.get();
-                
-                // Update name and leader status
-                member.setFirstName(memberFirstName.get());
-                member.setLastName(memberLastName.get());
-                member.setLeader(memberIsLeader.get());
-                member = teamMemberService.save(member);
-                
-                // Update contact info
-                member = teamMemberService.updateContactInfo(
-                    member.getId(),
-                    memberEmail.get(),
-                    memberPhone.get()
-                );
-                
-                // Update skills
-                if (memberSkills.get() != null && !memberSkills.get().isEmpty()) {
-                    member = teamMemberService.updateSkills(
-                        member.getId(),
-                        memberSkills.get()
-                    );
-                }
-                
-                // Update in members list
-                int index = members.indexOf(selectedMember.get());
-                if (index >= 0) {
-                    members.set(index, member);
+                if (member == null) {
+                    setErrorMessage("No team member selected for update");
+                    return false;
                 }
             }
             
-            // Assign to subteam if one is selected
-            if (memberSubteam.get() != null) {
-                member = teamMemberService.assignToSubteam(
-                    member.getId(),
-                    memberSubteam.get().getId()
-                );
+            // Update fields
+            member.setFirstName(firstName.get());
+            member.setLastName(lastName.get());
+            member.setEmail(email.get());
+            member.setPhone(phone.get());
+            if (role.get() != null) {
+                member.setRole(role.get().toString());
+            }
+            member.setSkills(skills.get());
+            member.setLeader(isLeader.get());
+            member.setSubteam(memberSubteam.get());
+            
+            // Save to database
+            member = teamMemberService.save(member);
+            
+            if (isNewMember.get()) {
+                // Add to members list
+                members.add(member);
+            } else {
+                // Update in members list
+                int index = findMemberIndex(selectedMember.get());
+                if (index >= 0) {
+                    members.set(index, member);
+                }
             }
             
             // Update selected member
@@ -533,15 +633,13 @@ public class TeamViewModel extends BaseViewModel {
             
             // Clear dirty flag
             setDirty(false);
+            clearErrorMessage();
             
-            // If member was added to the selected subteam, refresh the subteam members list
-            if (selectedSubteam.get() != null && selectedSubteam.get().equals(memberSubteam.get())) {
-                loadSubteamMembers();
-            }
-            
+            return true;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error saving team member", e);
             setErrorMessage("Failed to save team member: " + e.getMessage());
+            return false;
         }
     }
     
@@ -572,13 +670,6 @@ public class TeamViewModel extends BaseViewModel {
         try {
             Subteam subteam = selectedSubteam.get();
             if (subteam != null) {
-                // Check if the subteam has members
-                List<TeamMember> subteamMembers = teamMemberService.findBySubteam(subteam);
-                if (subteamMembers != null && !subteamMembers.isEmpty()) {
-                    setErrorMessage("Cannot delete subteam that has members assigned to it. Reassign members first.");
-                    return;
-                }
-                
                 boolean success = subteamService.deleteById(subteam.getId());
                 
                 if (success) {
@@ -587,8 +678,10 @@ public class TeamViewModel extends BaseViewModel {
                     
                     // Clear selection
                     selectedSubteam.set(null);
+                    
+                    clearErrorMessage();
                 } else {
-                    setErrorMessage("Failed to delete subteam: Operation returned false");
+                    setErrorMessage("Failed to delete subteam: Operation unsuccessful");
                 }
             }
         } catch (Exception e) {
@@ -598,44 +691,77 @@ public class TeamViewModel extends BaseViewModel {
     }
     
     /**
-     * Saves the subteam.
-     * Called when the save subteam command is executed.
+     * Deletes the specified subteam.
+     * 
+     * @param subteam the subteam to delete
+     * @return true if successful, false otherwise
      */
-    private void saveSubteam() {
-        if (!subteamValid.get()) {
-            return;
+    public boolean deleteSubteam(Subteam subteam) {
+        if (subteam == null) {
+            return false;
         }
         
+        try {
+            boolean success = subteamService.deleteById(subteam.getId());
+            
+            if (success) {
+                // Remove from subteams list
+                subteams.remove(subteam);
+                
+                // Clear selection if this was the selected subteam
+                if (selectedSubteam.get() != null && selectedSubteam.get().getId().equals(subteam.getId())) {
+                    selectedSubteam.set(null);
+                }
+                
+                clearErrorMessage();
+                return true;
+            } else {
+                setErrorMessage("Failed to delete subteam: Operation unsuccessful");
+                return false;
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error deleting subteam", e);
+            setErrorMessage("Failed to delete subteam: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Saves the current subteam.
+     * Called when the save subteam command is executed.
+     * 
+     * @return true if the subteam was saved successfully, false otherwise
+     */
+    public boolean saveSubteam() {
         try {
             Subteam subteam;
             
             if (isNewSubteam.get()) {
                 // Create new subteam
-                subteam = subteamService.createSubteam(
-                    subteamName.get(),
-                    subteamColorCode.get(),
-                    subteamSpecialties.get()
-                );
-                
-                // Add to subteams list
-                subteams.add(subteam);
+                subteam = new Subteam();
             } else {
                 // Update existing subteam
                 subteam = selectedSubteam.get();
-                
-                // Update color code and specialties
-                subteam = subteamService.updateColorCode(
-                    subteam.getId(),
-                    subteamColorCode.get()
-                );
-                
-                subteam = subteamService.updateSpecialties(
-                    subteam.getId(),
-                    subteamSpecialties.get()
-                );
-                
+                if (subteam == null) {
+                    setErrorMessage("No subteam selected for update");
+                    return false;
+                }
+            }
+            
+            // Update fields
+            subteam.setName(subteamName.get());
+            subteam.setColor(subteamColor.get());
+            subteam.setDescription(subteamDescription.get());
+            
+            // Save to database
+            subteam = subteamService.save(subteam);
+            
+            if (isNewSubteam.get()) {
+                // Add to subteams list
+                subteams.add(subteam);
+            } else {
                 // Update in subteams list
-                int index = subteams.indexOf(selectedSubteam.get());
+                int index = findSubteamIndex(selectedSubteam.get());
                 if (index >= 0) {
                     subteams.set(index, subteam);
                 }
@@ -646,29 +772,131 @@ public class TeamViewModel extends BaseViewModel {
             
             // Clear dirty flag
             setDirty(false);
+            clearErrorMessage();
             
+            return true;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error saving subteam", e);
             setErrorMessage("Failed to save subteam: " + e.getMessage());
+            return false;
         }
     }
     
     /**
-     * Checks if the save member command can be executed.
+     * Imports team members from a CSV file.
+     * For the MVP, this is just a placeholder.
      * 
-     * @return true if the member form is valid, false otherwise
+     * @return true if import was successful, false otherwise
      */
-    private boolean canSaveMember() {
-        return memberValid.get();
+    public boolean importMembersFromCSV() {
+        LOGGER.info("Import members from CSV action triggered");
+        // This would be implemented in a future version
+        return false;
     }
     
     /**
-     * Checks if the delete member command can be executed.
+     * Exports team members to a CSV file.
+     * For the MVP, this is just a placeholder.
      * 
-     * @return true if a member is selected, false otherwise
+     * @return true if export was successful, false otherwise
      */
-    private boolean canDeleteMember() {
-        return selectedMember.get() != null;
+    public boolean exportMembersToCSV() {
+        LOGGER.info("Export members to CSV action triggered");
+        // This would be implemented in a future version
+        return false;
+    }
+    
+    /**
+     * Gets the member count for a specific subteam.
+     * 
+     * @param subteam the subteam
+     * @return the number of members in the subteam
+     */
+    public int getMemberCountForSubteam(Subteam subteam) {
+        if (subteam == null) {
+            return 0;
+        }
+        
+        return (int) members.stream()
+            .filter(m -> m.getSubteam() != null && m.getSubteam().getId().equals(subteam.getId()))
+            .count();
+    }
+    
+    /**
+     * Gets the total member count.
+     * 
+     * @return the total number of members
+     */
+    public int getTotalMemberCount() {
+        return members.size();
+    }
+    
+    /**
+     * Gets the filtered member count.
+     * 
+     * @return the number of filtered members
+     */
+    public int getFilteredMemberCount() {
+        return filteredMembers.size();
+    }
+    
+    /**
+     * Finds the index of a member in the members list.
+     * 
+     * @param member the member to find
+     * @return the index, or -1 if not found
+     */
+    private int findMemberIndex(TeamMember member) {
+        if (member == null || member.getId() == null) {
+            return -1;
+        }
+        
+        for (int i = 0; i < members.size(); i++) {
+            if (members.get(i).getId().equals(member.getId())) {
+                return i;
+            }
+        }
+        
+        return -1;
+    }
+    
+    /**
+     * Finds the index of a subteam in the subteams list.
+     * 
+     * @param subteam the subteam to find
+     * @return the index, or -1 if not found
+     */
+    private int findSubteamIndex(Subteam subteam) {
+        if (subteam == null || subteam.getId() == null) {
+            return -1;
+        }
+        
+        for (int i = 0; i < subteams.size(); i++) {
+            if (subteams.get(i).getId().equals(subteam.getId())) {
+                return i;
+            }
+        }
+        
+        return -1;
+    }
+    
+    /**
+     * Checks if the member is valid for saving.
+     * 
+     * @return true if the member is valid, false otherwise
+     */
+    private boolean isValidMember() {
+        return (firstName.get() != null && !firstName.get().trim().isEmpty()) ||
+               (lastName.get() != null && !lastName.get().trim().isEmpty());
+    }
+    
+    /**
+     * Checks if the subteam is valid for saving.
+     * 
+     * @return true if the subteam is valid, false otherwise
+     */
+    private boolean isValidSubteam() {
+        return subteamName.get() != null && !subteamName.get().trim().isEmpty();
     }
     
     /**
@@ -681,306 +909,9 @@ public class TeamViewModel extends BaseViewModel {
     }
     
     /**
-     * Checks if the save subteam command can be executed.
+     * Checks if the delete member command can be executed.
      * 
-     * @return true if the subteam form is valid, false otherwise
+     * @return true if a member is selected, false otherwise
      */
-    private boolean canSaveSubteam() {
-        return subteamValid.get();
-    }
-    
-    /**
-     * Checks if the delete subteam command can be executed.
-     * 
-     * @return true if a subteam is selected, false otherwise
-     */
-    private boolean canDeleteSubteam() {
-        return selectedSubteam.get() != null;
-    }
-    
-    /**
-     * Checks if the edit subteam command can be executed.
-     * 
-     * @return true if a subteam is selected, false otherwise
-     */
-    private boolean canEditSubteam() {
-        return selectedSubteam.get() != null;
-    }
-    
-    /**
-     * Checks if the load subteam members command can be executed.
-     * 
-     * @return true if a subteam is selected, false otherwise
-     */
-    private boolean canLoadSubteamMembers() {
-        return selectedSubteam.get() != null;
-    }
-    
-    // Property accessors for team members
-    
-    public StringProperty memberUsernameProperty() {
-        return memberUsername;
-    }
-    
-    public StringProperty memberFirstNameProperty() {
-        return memberFirstName;
-    }
-    
-    public StringProperty memberLastNameProperty() {
-        return memberLastName;
-    }
-    
-    public StringProperty memberEmailProperty() {
-        return memberEmail;
-    }
-    
-    public StringProperty memberPhoneProperty() {
-        return memberPhone;
-    }
-    
-    public StringProperty memberSkillsProperty() {
-        return memberSkills;
-    }
-    
-    public BooleanProperty memberIsLeaderProperty() {
-        return memberIsLeader;
-    }
-    
-    public ObjectProperty<Subteam> memberSubteamProperty() {
-        return memberSubteam;
-    }
-    
-    public ObjectProperty<TeamMember> selectedMemberProperty() {
-        return selectedMember;
-    }
-    
-    public ObservableList<TeamMember> getMembers() {
-        return members;
-    }
-    
-    public BooleanProperty isNewMemberProperty() {
-        return isNewMember;
-    }
-    
-    public BooleanProperty memberValidProperty() {
-        return memberValid;
-    }
-    
-    // Property accessors for subteams
-    
-    public StringProperty subteamNameProperty() {
-        return subteamName;
-    }
-    
-    public StringProperty subteamColorCodeProperty() {
-        return subteamColorCode;
-    }
-    
-    public StringProperty subteamSpecialtiesProperty() {
-        return subteamSpecialties;
-    }
-    
-    public ObjectProperty<Subteam> selectedSubteamProperty() {
-        return selectedSubteam;
-    }
-    
-    public ObservableList<Subteam> getSubteams() {
-        return subteams;
-    }
-    
-    public ObservableList<TeamMember> getSubteamMembers() {
-        return subteamMembers;
-    }
-    
-    public BooleanProperty isNewSubteamProperty() {
-        return isNewSubteam;
-    }
-    
-    public BooleanProperty subteamValidProperty() {
-        return subteamValid;
-    }
-    
-    // Command accessors
-    
-    public Command getCreateNewMemberCommand() {
-        return createNewMemberCommand;
-    }
-    
-    public Command getDeleteMemberCommand() {
-        return deleteMemberCommand;
-    }
-    
-    public Command getEditMemberCommand() {
-        return editMemberCommand;
-    }
-    
-    public Command getSaveMemberCommand() {
-        return saveMemberCommand;
-    }
-    
-    public Command getCreateNewSubteamCommand() {
-        return createNewSubteamCommand;
-    }
-    
-    public Command getDeleteSubteamCommand() {
-        return deleteSubteamCommand;
-    }
-    
-    public Command getEditSubteamCommand() {
-        return editSubteamCommand;
-    }
-    
-    public Command getSaveSubteamCommand() {
-        return saveSubteamCommand;
-    }
-    
-    public Command getLoadSubteamMembersCommand() {
-        return loadSubteamMembersCommand;
-    }
-    
-    // Getters and setters
-    
-    public String getMemberUsername() {
-        return memberUsername.get();
-    }
-    
-    public void setMemberUsername(String username) {
-        memberUsername.set(username);
-    }
-    
-    public String getMemberFirstName() {
-        return memberFirstName.get();
-    }
-    
-    public void setMemberFirstName(String firstName) {
-        memberFirstName.set(firstName);
-    }
-    
-    public String getMemberLastName() {
-        return memberLastName.get();
-    }
-    
-    public void setMemberLastName(String lastName) {
-        memberLastName.set(lastName);
-    }
-    
-    public String getMemberEmail() {
-        return memberEmail.get();
-    }
-    
-    public void setMemberEmail(String email) {
-        memberEmail.set(email);
-    }
-    
-    public String getMemberPhone() {
-        return memberPhone.get();
-    }
-    
-    public void setMemberPhone(String phone) {
-        memberPhone.set(phone);
-    }
-    
-    public String getMemberSkills() {
-        return memberSkills.get();
-    }
-    
-    public void setMemberSkills(String skills) {
-        memberSkills.set(skills);
-    }
-    
-    public boolean getMemberIsLeader() {
-        return memberIsLeader.get();
-    }
-    
-    public void setMemberIsLeader(boolean isLeader) {
-        memberIsLeader.set(isLeader);
-    }
-    
-    public Subteam getMemberSubteam() {
-        return memberSubteam.get();
-    }
-    
-    public void setMemberSubteam(Subteam subteam) {
-        memberSubteam.set(subteam);
-    }
-    
-    public TeamMember getSelectedMember() {
-        return selectedMember.get();
-    }
-    
-    public void setSelectedMember(TeamMember member) {
-        selectedMember.set(member);
-    }
-    
-    public boolean isNewMember() {
-        return isNewMember.get();
-    }
-    
-    public boolean isMemberValid() {
-        return memberValid.get();
-    }
-    
-    public String getSubteamName() {
-        return subteamName.get();
-    }
-    
-    public void setSubteamName(String name) {
-        subteamName.set(name);
-    }
-    
-    public String getSubteamColorCode() {
-        return subteamColorCode.get();
-    }
-    
-    public void setSubteamColorCode(String colorCode) {
-        subteamColorCode.set(colorCode);
-    }
-    
-    public String getSubteamSpecialties() {
-        return subteamSpecialties.get();
-    }
-    
-    public void setSubteamSpecialties(String specialties) {
-        subteamSpecialties.set(specialties);
-    }
-    
-    public Subteam getSelectedSubteam() {
-        return selectedSubteam.get();
-    }
-    
-    public void setSelectedSubteam(Subteam subteam) {
-        selectedSubteam.set(subteam);
-    }
-    
-    public boolean isNewSubteam() {
-        return isNewSubteam.get();
-    }
-    
-    public boolean isSubteamValid() {
-        return subteamValid.get();
-    }
-    
-    /**
-     * Clears the error message.
-     * Public method to be accessed by the controller.
-     */
-    @Override
-    public void clearErrorMessage() {
-        super.clearErrorMessage();
-    }
-    
-    /**
-     * Override the cleanupResources method from BaseViewModel
-     * to clean up any additional resources specific to this ViewModel.
-     */
-    @Override
-    public void cleanupResources() {
-        // Call super to cleanup tracked listeners
-        super.cleanupResources();
-        
-        // Clear collections to help garbage collection
-        members.clear();
-        subteams.clear();
-        subteamMembers.clear();
-    }
-}
+    private boolean canDeleteMember() {
+        return selectedMember.get()

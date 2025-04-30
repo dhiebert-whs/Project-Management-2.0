@@ -267,8 +267,8 @@ public class TeamPresenter implements Initializable {
                                    viewModel.getMemberCountForSubteam(subteam) + ")");
                             
                             // Set a background color based on the subteam's color if available
-                            if (subteam.getColor() != null && !subteam.getColor().isEmpty()) {
-                                setStyle("-fx-background-color: " + subteam.getColor() + "25;"); // 25 is hex for 15% opacity
+                            if (subteam.getColorCode() != null && !subteam.getColorCode().isEmpty()) {
+                                setStyle("-fx-background-color: " + subteam.getColorCode() + "25;"); // 25 is hex for 15% opacity
                             } else {
                                 setStyle("");
                             }
