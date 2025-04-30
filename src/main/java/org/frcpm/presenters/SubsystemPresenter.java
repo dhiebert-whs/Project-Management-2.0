@@ -1,3 +1,4 @@
+// src/main/java/org/frcpm/presenters/SubsystemPresenter.java
 package org.frcpm.presenters;
 
 import javafx.fxml.FXML;
@@ -184,6 +185,10 @@ public class SubsystemPresenter implements Initializable {
                 }
             }
         });
+        
+        // Add task selection listener
+        tasksTable.getSelectionModel().selectedItemProperty().addListener(
+                (obs, oldVal, newVal) -> viewModel.setSelectedTask(newVal));
     }
 
     /**
@@ -223,14 +228,10 @@ public class SubsystemPresenter implements Initializable {
             completionProgressBar.progressProperty().bind(
                     viewModel.completionPercentageProperty().divide(100.0));
             
-            // Bind buttons
+            // Bind buttons to commands
             ViewModelBinding.bindCommandButton(saveButton, viewModel.getSaveCommand());
             ViewModelBinding.bindCommandButton(addTaskButton, viewModel.getAddTaskCommand());
             ViewModelBinding.bindCommandButton(viewTaskButton, viewModel.getViewTaskCommand());
-            
-            // Setup selection changes
-            tasksTable.getSelectionModel().selectedItemProperty().addListener(
-                    (obs, oldVal, newVal) -> viewModel.setSelectedTask(newVal));
             
             // Handle cancel button
             cancelButton.setOnAction(event -> closeDialog());
@@ -301,6 +302,7 @@ public class SubsystemPresenter implements Initializable {
     
     /**
      * Handles the add task action.
+     * This method is called by the AddTaskCommand.
      */
     @FXML
     private void handleAddTask() {
@@ -316,7 +318,11 @@ public class SubsystemPresenter implements Initializable {
                 getWindow());
         
         if (presenter != null) {
-            presenter.initNewTask(new Task("", subsystem.getProject(), subsystem));
+            // Create a new task associated with just the subsystem
+            // The project association will be handled by the task presenter
+            Task newTask = new Task();
+            newTask.setSubsystem(subsystem);
+            presenter.initNewTask(newTask);
             
             // Refresh the tasks
             viewModel.loadTasks();
@@ -325,6 +331,7 @@ public class SubsystemPresenter implements Initializable {
     
     /**
      * Handles the view task action.
+     * This method is called by the ViewTaskCommand.
      */
     @FXML
     private void handleViewTask() {
@@ -364,6 +371,10 @@ public class SubsystemPresenter implements Initializable {
      */
     private void closeDialog() {
         try {
+            // Clean up resources
+            cleanup();
+            
+            // Close the window
             if (saveButton != null && saveButton.getScene() != null && 
                 saveButton.getScene().getWindow() != null) {
                 
@@ -372,6 +383,15 @@ public class SubsystemPresenter implements Initializable {
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error closing dialog", e);
+        }
+    }
+    
+    /**
+     * Cleans up resources.
+     */
+    public void cleanup() {
+        if (viewModel != null) {
+            viewModel.cleanupResources();
         }
     }
 

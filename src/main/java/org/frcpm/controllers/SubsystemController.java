@@ -182,11 +182,16 @@ public class SubsystemController {
                 TableRow<Task> row = new TableRow<>();
                 row.setOnMouseClicked(event -> {
                     if (event.getClickCount() == 2 && !row.isEmpty()) {
-                        handleViewTask(row.getItem());
+                        viewModel.setSelectedTask(row.getItem());
+                        handleViewTask();
                     }
                 });
                 return row;
             });
+            
+            // Set selection handling
+            tasksTable.getSelectionModel().selectedItemProperty().addListener(
+                    (obs, oldVal, newVal) -> viewModel.setSelectedTask(newVal));
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error setting up tasks table", e);
             showErrorAlert("Setup Error", "Failed to set up tasks table: " + e.getMessage());
@@ -215,6 +220,9 @@ public class SubsystemController {
 
             // Bind combo boxes
             ViewModelBinding.bindComboBox(statusComboBox, viewModel.statusProperty());
+            
+            // Set up the subteam combo box
+            responsibleSubteamComboBox.setItems(viewModel.getAvailableSubteams());
             ViewModelBinding.bindComboBox(responsibleSubteamComboBox, viewModel.responsibleSubteamProperty());
 
             // Bind table items
@@ -228,17 +236,13 @@ public class SubsystemController {
             completionProgressBar.progressProperty().bind(
                     viewModel.completionPercentageProperty().divide(100.0));
 
-            // Bind buttons
+            // Bind buttons to commands
             ViewModelBinding.bindCommandButton(saveButton, viewModel.getSaveCommand());
             ViewModelBinding.bindCommandButton(addTaskButton, viewModel.getAddTaskCommand());
             ViewModelBinding.bindCommandButton(viewTaskButton, viewModel.getViewTaskCommand());
 
             // Handle cancel button
             cancelButton.setOnAction(event -> closeDialog());
-
-            // Task selection listener
-            tasksTable.getSelectionModel().selectedItemProperty().addListener(
-                (obs, oldValue, newValue) -> viewModel.setSelectedTask(newValue));
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error setting up bindings", e);
             showErrorAlert("Setup Error", "Failed to set up bindings: " + e.getMessage());
@@ -267,7 +271,6 @@ public class SubsystemController {
                         // Fallback to dialog if label is not available
                         showErrorAlert("Error", newValue);
                     }
-                    viewModel.errorMessageProperty().set("");
                 } else if (errorLabel != null) {
                     // Clear error message
                     errorLabel.setText("");
@@ -323,43 +326,79 @@ public class SubsystemController {
     }
 
     /**
-     * Extracted method for better testability.
-     * Protected for testability.
-     * 
-     * @param task the task to show in MainController
+     * Handles the add task action.
+     * This method is bound to the Add Task button.
      */
-    protected void showTaskInMainController(Task task) {
+    @FXML
+    public void handleAddTask() {
         try {
+            Subsystem subsystem = viewModel.getSelectedSubsystem();
+            if (subsystem == null) {
+                showErrorAlert("Error", "Please save the subsystem before adding tasks");
+                return;
+            }
+            
+            // Create a new task
+            Task newTask = new Task();
+            newTask.setSubsystem(subsystem);
+            
+            // Show task dialog
+            TaskController controller = showTaskDialog(newTask);
+            if (controller != null) {
+                // Refresh tasks after dialog closes
+                viewModel.loadTasks();
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error adding task", e);
+            showErrorAlert("Error", "Failed to add task: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Handles the view task action.
+     * This method is bound to the View Task button.
+     */
+    @FXML
+    public void handleViewTask() {
+        Task selectedTask = viewModel.getSelectedTask();
+        if (selectedTask == null) {
+            selectedTask = getSelectedTask();
+            if (selectedTask == null) {
+                showInfoAlert("No Selection", "Please select a task to view");
+                return;
+            }
+            viewModel.setSelectedTask(selectedTask);
+        }
+        
+        // Show task dialog
+        TaskController controller = showTaskDialog(selectedTask);
+        if (controller != null) {
+            // Refresh tasks after dialog closes
+            viewModel.loadTasks();
+        }
+    }
+    
+    /**
+     * Shows the task dialog.
+     * 
+     * @param task the task to edit
+     * @return the task controller
+     */
+    protected TaskController showTaskDialog(Task task) {
+        try {
+            // Show task in main controller if available
             MainController mainController = MainController.getInstance();
             if (mainController != null) {
                 mainController.showTaskDialog(task, null);
+                return null; // Can't return controller in this case
             } else {
-                // Alternative for when MainController instance isn't available
-                openTaskDialogDirectly(task);
+                // Open dialog directly
+                return openTaskDialogDirectly(task);
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error showing task dialog", e);
             showErrorAlert("Error", "Failed to open task dialog: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Handles viewing/editing a task.
-     * 
-     * @param task the task to view/edit
-     */
-    protected void handleViewTask(Task task) {
-        if (task == null) {
-            LOGGER.warning("Cannot view null task");
-            return;
-        }
-        
-        // Show task dialog
-        showTaskInMainController(task);
-        
-        // Reload tasks after dialog is closed
-        if (viewModel != null && viewModel.getLoadTasksCommand() != null) {
-            viewModel.getLoadTasksCommand().execute();
+            return null;
         }
     }
     
@@ -368,14 +407,15 @@ public class SubsystemController {
      * Protected for testability.
      * 
      * @param task the task to edit
+     * @return the task controller
      */
-    protected void openTaskDialogDirectly(Task task) {
+    protected TaskController openTaskDialogDirectly(Task task) {
         try {
             if (saveButton == null || saveButton.getScene() == null || 
                 saveButton.getScene().getWindow() == null) {
                 
                 LOGGER.warning("Cannot open task dialog - UI components not initialized");
-                return;
+                return null;
             }
             
             // Load the task dialog
@@ -387,18 +427,20 @@ public class SubsystemController {
 
             // Get the controller
             TaskController controller = loader.getController();
-            controller.initExistingTask(task);
+            if (task.getId() == null) {
+                controller.initNewTask(task);
+            } else {
+                controller.initExistingTask(task);
+            }
 
             // Show the dialog
             showAndWaitDialog(dialogStage);
-
-            // Reload tasks
-            if (viewModel != null && viewModel.getLoadTasksCommand() != null) {
-                viewModel.getLoadTasksCommand().execute();
-            }
+            
+            return controller;
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Error loading task dialog directly", e);
             showErrorAlert("Error", "Failed to open task dialog: " + e.getMessage());
+            return null;
         }
     }
 
@@ -585,6 +627,15 @@ public class SubsystemController {
         return null;
     }
 
+    /**
+     * Cleanup resources when the controller is no longer needed.
+     */
+    public void cleanup() {
+        if (viewModel != null) {
+            viewModel.cleanupResources();
+        }
+    }
+    
     /**
      * Public method to access initialize for testing.
      */
