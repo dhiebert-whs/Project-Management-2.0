@@ -17,17 +17,19 @@ public class TeamMemberController implements Initializable {
     
     private static final Logger LOGGER = Logger.getLogger(TeamMemberController.class.getName());
     
-    private TeamMemberPresenter presenter;
+    protected TeamMemberPresenter presenter;
     private Parent view;
     
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         try {
-            // Load the presenter/view using AfterburnerFX
-            view = ViewLoader.load(TeamMemberView.class);
-            presenter = (TeamMemberPresenter) ViewLoader.getPresenter();
+            // Use an instance of TeamMemberView
+            TeamMemberView teamMemberView = new TeamMemberView();
+            view = teamMemberView.getView();
+            presenter = (TeamMemberPresenter) teamMemberView.getPresenter();
         } catch (Exception e) {
             LOGGER.severe("Error loading TeamMemberView: " + e.getMessage());
+            e.printStackTrace();
         }
     }
     

@@ -1,6 +1,8 @@
 package org.frcpm.views;
 
-public class TeamMemberView {
-    // This class is used by the AfterburnerFX framework to load the view
-    // It doesn't need any implementation
+import com.airhacks.afterburner.views.FXMLView;
+
+public class TeamMemberView extends FXMLView {
+    // This class extends FXMLView from AfterburnerFX
+    // It follows the convention-based loading of FXML files
 }
