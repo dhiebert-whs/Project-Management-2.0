@@ -60,7 +60,7 @@ public class SubsystemManagementPresenter implements Initializable {
     // Injected services
     @Inject
     private SubsystemService subsystemService;
-    
+
     @Inject
     private DialogService dialogService;
 
@@ -71,39 +71,39 @@ public class SubsystemManagementPresenter implements Initializable {
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         LOGGER.info("Initializing SubsystemManagementPresenter with resource bundle");
-        
+
         this.resources = resources;
-        
+
         // Create ViewModel with injected service
         viewModel = new SubsystemManagementViewModel(subsystemService);
 
         // Set up table columns
         setupTableColumns();
-        
+
         // Set up bindings
         setupBindings();
-        
+
         // Set up row double-click handler
         setupRowHandler();
-        
+
         // Load subsystems
         loadSubsystems();
     }
-    
+
     /**
      * Sets up the table columns.
      */
     private void setupTableColumns() {
         if (subsystemsTable == null || nameColumn == null || statusColumn == null ||
                 subteamColumn == null || tasksColumn == null || completionColumn == null) {
-            
+
             LOGGER.warning("Table components not initialized - likely in test environment");
             return;
         }
 
         nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         statusColumn.setCellValueFactory(new PropertyValueFactory<>("status"));
-        
+
         statusColumn.setCellFactory(column -> new TableCell<Subsystem, Subsystem.Status>() {
             @Override
             protected void updateItem(Subsystem.Status status, boolean empty) {
@@ -115,7 +115,7 @@ public class SubsystemManagementPresenter implements Initializable {
                 }
             }
         });
-        
+
         // Set up subteam column
         subteamColumn.setCellValueFactory(cellData -> {
             Subsystem subsystem = cellData.getValue();
@@ -125,21 +125,21 @@ public class SubsystemManagementPresenter implements Initializable {
                 return new javafx.beans.property.SimpleStringProperty("None");
             }
         });
-        
+
         // Set up tasks column
         tasksColumn.setCellValueFactory(cellData -> {
             Subsystem subsystem = cellData.getValue();
             int taskCount = viewModel.getTaskCount(subsystem);
             return new javafx.beans.property.SimpleObjectProperty<>(taskCount);
         });
-        
+
         // Set up completion column
         completionColumn.setCellValueFactory(cellData -> {
             Subsystem subsystem = cellData.getValue();
             double percentage = viewModel.getCompletionPercentage(subsystem);
             return new javafx.beans.property.SimpleObjectProperty<>(percentage);
         });
-        
+
         completionColumn.setCellFactory(column -> new TableCell<Subsystem, Double>() {
             @Override
             protected void updateItem(Double percentage, boolean empty) {
@@ -156,14 +156,14 @@ public class SubsystemManagementPresenter implements Initializable {
             }
         });
     }
-    
+
     /**
      * Sets up the bindings between the view model and UI controls.
      */
     private void setupBindings() {
-        if (subsystemsTable == null || addSubsystemButton == null || 
-            editSubsystemButton == null || deleteSubsystemButton == null || closeButton == null) {
-            
+        if (subsystemsTable == null || addSubsystemButton == null ||
+                editSubsystemButton == null || deleteSubsystemButton == null || closeButton == null) {
+
             LOGGER.warning("UI components not initialized - likely in test environment");
             return;
         }
@@ -181,7 +181,7 @@ public class SubsystemManagementPresenter implements Initializable {
         editSubsystemButton.setOnAction(event -> handleEditSubsystem());
         deleteSubsystemButton.setOnAction(event -> handleDeleteSubsystem());
         closeButton.setOnAction(event -> handleClose());
-        
+
         // Bind selection changes
         if (subsystemsTable.getSelectionModel() != null) {
             subsystemsTable.getSelectionModel().selectedItemProperty().addListener(
@@ -196,7 +196,7 @@ public class SubsystemManagementPresenter implements Initializable {
             }
         });
     }
-    
+
     /**
      * Sets up the double-click handler for table rows.
      */
@@ -217,14 +217,14 @@ public class SubsystemManagementPresenter implements Initializable {
             return row;
         });
     }
-    
+
     /**
      * Loads subsystems from the database.
      */
     private void loadSubsystems() {
         viewModel.loadSubsystems();
     }
-    
+
     /**
      * Handles adding a new subsystem.
      */
@@ -232,13 +232,13 @@ public class SubsystemManagementPresenter implements Initializable {
     private void handleAddSubsystem() {
         try {
             // Use ViewLoader for AfterburnerFX integration
-            SubsystemPresenter presenter = ViewLoader.showDialog(SubsystemView.class, 
-                    resources.getString("subsystem.new.title"), 
+            SubsystemPresenter presenter = ViewLoader.showDialog(SubsystemView.class,
+                    resources.getString("subsystem.new.title"),
                     getWindow());
-            
+
             if (presenter != null) {
                 presenter.initNewSubsystem();
-                
+
                 // Refresh the subsystems list after dialog closes
                 viewModel.loadSubsystems();
             }
@@ -260,7 +260,7 @@ public class SubsystemManagementPresenter implements Initializable {
             showInfoAlert("No Selection", "Please select a subsystem to edit");
         }
     }
-    
+
     /**
      * Handles editing a specific subsystem.
      * 
@@ -273,13 +273,13 @@ public class SubsystemManagementPresenter implements Initializable {
 
         try {
             // Use ViewLoader for AfterburnerFX integration
-            SubsystemPresenter presenter = ViewLoader.showDialog(SubsystemView.class, 
-                    resources.getString("subsystem.edit.title"), 
+            SubsystemPresenter presenter = ViewLoader.showDialog(SubsystemView.class,
+                    resources.getString("subsystem.edit.title"),
                     getWindow());
-            
+
             if (presenter != null) {
                 presenter.initExistingSubsystem(subsystem);
-                
+
                 // Refresh the subsystems list after dialog closes
                 viewModel.loadSubsystems();
             }
@@ -288,7 +288,7 @@ public class SubsystemManagementPresenter implements Initializable {
             showErrorAlert("Error", "Failed to open subsystem dialog: " + e.getMessage());
         }
     }
-    
+
     /**
      * Handles deleting the selected subsystem.
      */
@@ -299,11 +299,11 @@ public class SubsystemManagementPresenter implements Initializable {
             showInfoAlert("No Selection", "Please select a subsystem to delete");
             return;
         }
-        
+
         boolean confirmed = showConfirmationAlert(
-                "Delete Subsystem", 
+                "Delete Subsystem",
                 "Are you sure you want to delete the subsystem '" + selectedSubsystem.getName() + "'?");
-        
+
         if (confirmed) {
             boolean success = viewModel.deleteSubsystem(selectedSubsystem);
             if (success) {
@@ -312,23 +312,23 @@ public class SubsystemManagementPresenter implements Initializable {
             }
         }
     }
-    
+
     /**
      * Handles closing the window.
      */
     @FXML
     private void handleClose() {
         try {
-            if (closeButton != null && closeButton.getScene() != null && 
-                closeButton.getScene().getWindow() != null) {
-                
+            if (closeButton != null && closeButton.getScene() != null &&
+                    closeButton.getScene().getWindow() != null) {
+
                 closeButton.getScene().getWindow().hide();
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error closing window", e);
         }
     }
-    
+
     /**
      * Gets the window for this presenter.
      * 
@@ -344,7 +344,7 @@ public class SubsystemManagementPresenter implements Initializable {
     /**
      * Shows an error alert with the given message.
      * 
-     * @param title the title of the alert
+     * @param title   the title of the alert
      * @param message the error message
      */
     private void showErrorAlert(String title, String message) {
@@ -359,7 +359,7 @@ public class SubsystemManagementPresenter implements Initializable {
     /**
      * Shows an information alert with the given message.
      * 
-     * @param title the title of the alert
+     * @param title   the title of the alert
      * @param message the message
      */
     private void showInfoAlert(String title, String message) {
@@ -370,11 +370,11 @@ public class SubsystemManagementPresenter implements Initializable {
             LOGGER.log(Level.INFO, "Alert would show: {0} - {1}", new Object[] { title, message });
         }
     }
-    
+
     /**
      * Shows a confirmation alert dialog.
      * 
-     * @param title the title
+     * @param title   the title
      * @param message the message
      * @return true if confirmed, false otherwise
      */
@@ -387,7 +387,7 @@ public class SubsystemManagementPresenter implements Initializable {
             return false;
         }
     }
-    
+
     /**
      * Gets the ViewModel.
      * 
