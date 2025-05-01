@@ -7,6 +7,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import org.frcpm.binding.ViewModelBinding;
+import org.frcpm.di.DialogFactory;
 import org.frcpm.di.ViewLoader;
 import org.frcpm.models.Project;
 import org.frcpm.services.DialogService;
@@ -153,10 +154,12 @@ public class ProjectListPresenter implements Initializable {
     public void handleNewProject() {
         try {
             // Use AfterburnerFX ViewLoader to create the dialog
-            NewProjectPresenter presenter = ViewLoader.showDialog(
+            NewProjectPresenter presenter = DialogFactory.showDialog(
                 NewProjectDialogView.class, 
                 resources.getString("project.new.title"), 
-                projectListView.getScene().getWindow());
+                projectListView.getScene().getWindow(),
+                resources,
+                null);
             
             // After dialog closes, check if a project was created
             if (presenter != null) {

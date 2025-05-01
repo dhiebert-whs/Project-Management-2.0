@@ -7,6 +7,7 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 import org.frcpm.binding.ViewModelBinding;
+import org.frcpm.di.DialogFactory;
 import org.frcpm.di.ViewLoader;
 import org.frcpm.models.*;
 import org.frcpm.services.*;
@@ -244,9 +245,12 @@ public class TaskPresenter implements Initializable {
     @FXML
     private void handleAddComponent() {
         // Example of using ViewLoader with AfterburnerFX
-        ComponentPresenter presenter = ViewLoader.showDialog(ComponentView.class, 
-                resources.getString("component.select.title"), 
-                saveButton.getScene().getWindow());
+        ComponentPresenter presenter = DialogFactory.showDialog(
+            ComponentView.class, 
+            resources.getString("component.select.title"), 
+            saveButton.getScene().getWindow(),
+            resources,
+            null);
         
         if (presenter != null) {
             Component component = presenter.getComponent();
