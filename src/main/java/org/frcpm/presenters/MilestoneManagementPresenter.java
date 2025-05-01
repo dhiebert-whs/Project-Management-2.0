@@ -7,6 +7,7 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.VBox;
 import javafx.stage.Window;
 import org.frcpm.binding.ViewModelBinding;
+import org.frcpm.di.DialogFactory;
 import org.frcpm.di.ViewLoader;
 import org.frcpm.models.Milestone;
 import org.frcpm.models.Project;
@@ -333,11 +334,13 @@ public class MilestoneManagementPresenter implements Initializable {
         }
         
         try {
-            // Use ViewLoader to show dialog
-            MilestonePresenter presenter = ViewLoader.showDialog(MilestoneView.class, 
+            // Use ViewLoader for dialog creation (consistent with other parts of the app)
+            MilestonePresenter presenter = ViewLoader.showDialog(
+                    MilestoneView.class, 
                     resources.getString("milestone.new.title"), 
                     getWindow());
             
+            // Initialize presenter with new milestone
             if (presenter != null) {
                 presenter.initNewMilestone(currentProject);
                 
@@ -361,11 +364,13 @@ public class MilestoneManagementPresenter implements Initializable {
         }
         
         try {
-            // Use ViewLoader to show dialog
-            MilestonePresenter presenter = ViewLoader.showDialog(MilestoneView.class, 
+            // Use ViewLoader for dialog creation
+            MilestonePresenter presenter = ViewLoader.showDialog(
+                    MilestoneView.class, 
                     resources.getString("milestone.edit.title"), 
                     getWindow());
             
+            // Initialize presenter with existing milestone
             if (presenter != null) {
                 presenter.initExistingMilestone(milestone);
                 
@@ -375,6 +380,19 @@ public class MilestoneManagementPresenter implements Initializable {
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error editing milestone", e);
             showErrorAlert("Error", "Failed to open milestone dialog: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Handles the Edit button click event.
+     */
+    @FXML
+    private void handleEditMilestone() {
+        Milestone selectedMilestone = milestonesTable.getSelectionModel().getSelectedItem();
+        if (selectedMilestone != null) {
+            handleEditMilestone(selectedMilestone);
+        } else {
+            showInfoAlert("No Selection", "Please select a milestone to edit");
         }
     }
     

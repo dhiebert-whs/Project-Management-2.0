@@ -5,6 +5,7 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import org.frcpm.binding.ViewModelBinding;
+import org.frcpm.di.DialogFactory;
 import org.frcpm.di.ServiceProvider;
 import org.frcpm.di.ViewLoader;
 import org.frcpm.models.*;
@@ -318,6 +319,7 @@ public class ProjectPresenter implements Initializable {
         viewModel.initNewProject();
     }
     
+
     /**
      * Handles editing a task.
      * 
@@ -330,16 +332,18 @@ public class ProjectPresenter implements Initializable {
         
         try {
             // Use ViewLoader to show dialog with localized title
-            TaskPresenter presenter = ViewLoader.showDialog(TaskView.class, 
+            TaskPresenter presenter = ViewLoader.showDialog(
+                    TaskView.class, 
                     resources.getString("task.edit.title"), 
                     tasksTable.getScene().getWindow());
             
             // Initialize task in presenter
-            presenter.initExistingTask(task);
-            
-            // Reload tasks
-            viewModel.getLoadTasksCommand().execute();
-            
+            if (presenter != null) {
+                presenter.initExistingTask(task);
+                
+                // Reload tasks
+                viewModel.getLoadTasksCommand().execute();
+            }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error editing task", e);
             dialogService.showErrorAlert(
@@ -347,7 +351,7 @@ public class ProjectPresenter implements Initializable {
                 resources.getString("error.task.edit.failed"));
         }
     }
-    
+
     /**
      * Handles editing a milestone.
      * 
@@ -360,16 +364,18 @@ public class ProjectPresenter implements Initializable {
         
         try {
             // Use ViewLoader to show dialog with localized title
-            MilestonePresenter presenter = ViewLoader.showDialog(MilestoneView.class, 
+            MilestonePresenter presenter = ViewLoader.showDialog(
+                    MilestoneView.class, 
                     resources.getString("milestone.edit.title"), 
                     milestonesTable.getScene().getWindow());
             
             // Initialize milestone in presenter
-            presenter.initExistingMilestone(milestone);
-            
-            // Reload milestones
-            viewModel.getLoadMilestonesCommand().execute();
-            
+            if (presenter != null) {
+                presenter.initExistingMilestone(milestone);
+                
+                // Reload milestones
+                viewModel.getLoadMilestonesCommand().execute();
+            }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error editing milestone", e);
             dialogService.showErrorAlert(
@@ -390,16 +396,18 @@ public class ProjectPresenter implements Initializable {
         
         try {
             // Use ViewLoader to show dialog with localized title
-            MeetingPresenter presenter = ViewLoader.showDialog(MeetingView.class, 
+            MeetingPresenter presenter = ViewLoader.showDialog(
+                    MeetingView.class, 
                     resources.getString("meeting.edit.title"), 
                     meetingsTable.getScene().getWindow());
             
             // Initialize meeting in presenter
-            presenter.initExistingMeeting(meeting);
-            
-            // Reload meetings
-            viewModel.getLoadMeetingsCommand().execute();
-            
+            if (presenter != null) {
+                presenter.initExistingMeeting(meeting);
+                
+                // Reload meetings
+                viewModel.getLoadMeetingsCommand().execute();
+            }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error editing meeting", e);
             dialogService.showErrorAlert(

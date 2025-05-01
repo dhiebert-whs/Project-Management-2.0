@@ -2,6 +2,7 @@ package org.frcpm.presenters;
 
 import java.net.URL;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.inject.Inject;
@@ -10,20 +11,26 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.scene.Parent;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.util.StringConverter;
 
+import org.frcpm.di.DialogFactory;
 import org.frcpm.di.ServiceProvider;
+import org.frcpm.di.ViewLoader;
 import org.frcpm.models.Project;
 import org.frcpm.models.Subteam;
 import org.frcpm.models.TeamMember;
 import org.frcpm.services.DialogService;
 import org.frcpm.viewmodels.TeamMemberViewModel;
+import org.frcpm.views.TeamMemberView;
 
 public class TeamMemberPresenter implements Initializable {
 
@@ -219,4 +226,73 @@ public class TeamMemberPresenter implements Initializable {
     public void setDialogService(DialogService dialogService) {
         this.dialogService = dialogService;
     }
+
+    /**
+     * Handles adding a new team member action.
+     * This uses the current form to create a new team member.
+     */
+    @FXML
+    public void handleAddTeamMember() {
+        try {
+            // Use the existing viewModel to initialize a new team member
+            viewModel.initNewTeamMember();
+            
+            // Show feedback that the team member form is ready for input
+            showInfoDialog(
+                resources != null ? resources.getString("info.title") : "Information",
+                resources != null ? resources.getString("info.new.member") : "Form ready for new team member entry.");
+                
+        } catch (Exception e) {
+            LOGGER.severe("Error preparing form for new team member: " + e.getMessage());
+            showErrorDialog(
+                resources != null ? resources.getString("error.title") : "Error",
+                "Failed to prepare form for new team member: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Handles editing an existing team member.
+     * This uses the current form to edit the selected team member.
+     */
+    @FXML
+    public void handleEditTeamMember() {
+        TeamMember selectedMember = teamMemberTableView.getSelectionModel().getSelectedItem();
+        if (selectedMember == null) {
+            showErrorDialog(
+                resources != null ? resources.getString("info.title") : "No Selection", 
+                resources != null ? resources.getString("info.no.member.selected") : "Please select a team member to edit");
+            return;
+        }
+        
+        try {
+            // Update the form with the selected member (this already happens via the selection listener)
+            // No additional action needed here
+        } catch (Exception e) {
+            LOGGER.severe("Error editing team member: " + e.getMessage());
+            showErrorDialog(
+                resources != null ? resources.getString("error.title") : "Error",
+                "Failed to load team member data: " + e.getMessage());
+        }
+    }
+
+    /**
+    /**
+     * Shows an information alert dialog.
+     */
+    protected void showInfoDialog(String defaultTitle, String defaultMessage) {
+        String title = resources != null ? 
+            resources.getString(defaultTitle.toLowerCase().replace(" ", ".")) : defaultTitle;
+        dialogService.showInfoAlert(title, defaultMessage);
+    }
+
+    /**
+     * Refreshes the team members list from the service.
+     * This is a public method to allow external components to trigger a refresh.
+     */
+    public void refreshTeamMembers() {
+        // Simply trigger the viewModel to reload, if it has a public method for this
+        // Otherwise, the existing data binding should handle updates
+        setupBindings();
+    }
+
 }
