@@ -258,7 +258,7 @@ public class TeamController {
         try {
             subteamNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
             subteamColorColumn.setCellValueFactory(new PropertyValueFactory<>("colorCode"));
-            subteamSpecialtiesColumn.setCellValueFactory(new PropertyValueFactory<>("description"));
+            subteamSpecialtiesColumn.setCellValueFactory(new PropertyValueFactory<>("specialties"));
     
             // Create a cell factory for the color column (colored rectangle)
             subteamColorColumn.setCellFactory(column -> new TableCell<Subteam, String>() {
@@ -363,13 +363,9 @@ public class TeamController {
 
         if (confirmed) {
             try {
-                // Delete the member
-                boolean success = viewModel.deleteMember(selectedMember);
-                
-                if (success) {
-                    showInfoAlert("Member Deleted", "Team member deleted successfully");
-                    // No need to refresh, view model has already updated the list
-                }
+                // Delete the member using the command pattern
+                viewModel.getDeleteMemberCommand().execute();
+                showInfoAlert("Member Deleted", "Team member deleted successfully");
             } catch (Exception e) {
                 LOGGER.log(Level.SEVERE, "Error deleting team member", e);
                 showErrorAlert("Error", "Failed to delete team member: " + e.getMessage());
@@ -431,13 +427,9 @@ public class TeamController {
 
         if (confirmed) {
             try {
-                // Delete the subteam
-                boolean success = viewModel.deleteSubteam(selectedSubteam);
-                
-                if (success) {
-                    showInfoAlert("Subteam Deleted", "Subteam deleted successfully");
-                    // No need to refresh, view model has already updated the list
-                }
+                // Delete the subteam using the command pattern
+                viewModel.getDeleteSubteamCommand().execute();
+                showInfoAlert("Subteam Deleted", "Subteam deleted successfully");
             } catch (Exception e) {
                 LOGGER.log(Level.SEVERE, "Error deleting subteam", e);
                 showErrorAlert("Error", "Failed to delete subteam: " + e.getMessage());
@@ -480,8 +472,8 @@ public class TeamController {
         TextField phoneField = new TextField();
         phoneField.setPromptText("Phone");
 
-        ComboBox<TeamMember.Role> roleComboBox = new ComboBox<>();
-        roleComboBox.getItems().addAll(TeamMember.Role.values());
+        ComboBox<String> roleComboBox = new ComboBox<>();
+        roleComboBox.getItems().addAll("MENTOR", "STUDENT", "CAPTAIN", "LEADER");
         roleComboBox.setPromptText("Select Role");
 
         ComboBox<Subteam> subteamComboBox = new ComboBox<>();
@@ -518,12 +510,8 @@ public class TeamController {
             emailField.setText(member.getEmail());
             phoneField.setText(member.getPhone());
             
-            if (member.getRole() != null && !member.getRole().isEmpty()) {
-                try {
-                    roleComboBox.setValue(TeamMember.Role.valueOf(member.getRole()));
-                } catch (IllegalArgumentException e) {
-                    // Invalid role value, leave unselected
-                }
+            if (member.getSkills() != null && !member.getSkills().isEmpty()) {
+                roleComboBox.setValue(member.getSkills());
             }
             
             subteamComboBox.setValue(member.getSubteam());
@@ -554,7 +542,7 @@ public class TeamController {
                 result.setPhone(phoneField.getText().trim());
                 
                 if (roleComboBox.getValue() != null) {
-                    result.setRole(roleComboBox.getValue().toString());
+                    result.setSkills(roleComboBox.getValue().toString());
                 }
                 
                 result.setLeader(leaderCheckBox.isSelected());
@@ -599,17 +587,17 @@ public class TeamController {
         javafx.scene.control.ColorPicker colorPicker = new javafx.scene.control.ColorPicker();
         colorPicker.setPromptText("Select Color");
 
-        TextArea descriptionArea = new TextArea();
-        descriptionArea.setPromptText("Description");
-        descriptionArea.setPrefRowCount(3);
+        TextArea specialtiesArea = new TextArea();
+        specialtiesArea.setPromptText("Specialties");
+        specialtiesArea.setPrefRowCount(3);
 
         // Add fields to the grid
         grid.add(new Label("Name:"), 0, 0);
         grid.add(nameField, 1, 0);
         grid.add(new Label("Color:"), 0, 1);
         grid.add(colorPicker, 1, 1);
-        grid.add(new Label("Description:"), 0, 2);
-        grid.add(descriptionArea, 1, 2);
+        grid.add(new Label("Specialties:"), 0, 2);
+        grid.add(specialtiesArea, 1, 2);
 
         // Initialize form with subteam data if editing
         if (subteam != null) {
@@ -625,7 +613,7 @@ public class TeamController {
                 colorPicker.setValue(Color.web("#2196F3")); // Default blue
             }
             
-            descriptionArea.setText(subteam.getDescription());
+            specialtiesArea.setText(subteam.getSpecialties());
         } else {
             colorPicker.setValue(Color.web("#2196F3")); // Default blue
         }
@@ -657,7 +645,7 @@ public class TeamController {
                         (int) (color.getBlue() * 255));
                 result.setColorCode(colorCode);
                 
-                result.setDescription(descriptionArea.getText().trim());
+                result.setSpecialties(specialtiesArea.getText().trim());
                 
                 // Save the subteam
                 Subteam savedSubteam = viewModel.saveSubteam(result);
