@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.frcpm.viewmodels.MeetingViewModelTest
--------------------------------------------------------------------------------
-Tests run: 20, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.041 s -- in org.frcpm.viewmodels.MeetingViewModelTest

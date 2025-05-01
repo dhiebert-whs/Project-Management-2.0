@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.frcpm.repositories.impl.JpaRepositoryImplTest
--------------------------------------------------------------------------------
-Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.171 s -- in org.frcpm.repositories.impl.JpaRepositoryImplTest

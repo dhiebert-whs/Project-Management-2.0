@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.frcpm.viewmodels.SubsystemViewModelTest
--------------------------------------------------------------------------------
-Tests run: 15, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.132 s -- in org.frcpm.viewmodels.SubsystemViewModelTest
