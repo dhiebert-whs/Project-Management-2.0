@@ -1,5 +1,3 @@
-// src/main/java/org/frcpm/views/ProjectListView.java
-
 package org.frcpm.views;
 
 import com.airhacks.afterburner.views.FXMLView;

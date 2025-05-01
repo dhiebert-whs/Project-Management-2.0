@@ -1,5 +1,3 @@
-// src/main/java/org/frcpm/presenters/ProjectListPresenter.java
-
 package org.frcpm.presenters;
 
 import javafx.fxml.FXML;
