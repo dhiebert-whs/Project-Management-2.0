@@ -1,3 +1,4 @@
+// src/main/java/org/frcpm/controllers/TeamController.java
 package org.frcpm.controllers;
 
 import javafx.application.Platform;
@@ -8,6 +9,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import org.frcpm.binding.ViewModelBinding;
+import org.frcpm.models.Project;
 import org.frcpm.models.Subteam;
 import org.frcpm.models.TeamMember;
 import org.frcpm.services.DialogService;
@@ -85,6 +87,9 @@ public class TeamController {
 
     // Dialog service for UI interactions
     private DialogService dialogService = ServiceFactory.getDialogService();
+    
+    // Project reference
+    private Project currentProject;
 
     /**
      * Initializes the controller.
@@ -94,26 +99,28 @@ public class TeamController {
     private void initialize() {
         LOGGER.info("Initializing TeamController");
 
-        // Initialize tables
-        setupMembersTable();
-        setupSubteamsTable();
-
-        // Set up bindings
-        setupBindings();
-
-        // Set up row selection handlers
-        setupSelectionHandlers();
-
-        // Set up row double-click handlers
-        setupRowFactories();
-
-        // Set initial selection
-        if (!viewModel.getMembers().isEmpty()) {
-            membersTable.getSelectionModel().select(0);
+        // Check UI components for testability
+        if (membersTable == null || subteamsTable == null || tabPane == null) {
+            LOGGER.warning("UI components not initialized - likely in test environment");
+            return;
         }
 
-        if (!viewModel.getSubteams().isEmpty()) {
-            subteamsTable.getSelectionModel().select(0);
+        try {
+            // Initialize tables
+            setupMembersTable();
+            setupSubteamsTable();
+    
+            // Set up bindings
+            setupBindings();
+    
+            // Set up row selection handlers
+            setupSelectionHandlers();
+    
+            // Set up row double-click handlers
+            setupRowFactories();
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error initializing TeamController", e);
+            showErrorAlert("Initialization Error", "Failed to initialize controller: " + e.getMessage());
         }
     }
 
@@ -121,116 +128,181 @@ public class TeamController {
      * Sets up bindings between UI controls and ViewModel properties.
      */
     private void setupBindings() {
-        // Bind tables to the ViewModel's ObservableLists
-        membersTable.setItems(viewModel.getMembers());
-        subteamsTable.setItems(viewModel.getSubteams());
-
-        // Bind buttons to commands
-        ViewModelBinding.bindCommandButton(addMemberButton, viewModel.getCreateNewMemberCommand());
-        ViewModelBinding.bindCommandButton(editMemberButton, viewModel.getEditMemberCommand());
-        ViewModelBinding.bindCommandButton(deleteMemberButton, viewModel.getDeleteMemberCommand());
-
-        ViewModelBinding.bindCommandButton(addSubteamButton, viewModel.getCreateNewSubteamCommand());
-        ViewModelBinding.bindCommandButton(editSubteamButton, viewModel.getEditSubteamCommand());
-        ViewModelBinding.bindCommandButton(deleteSubteamButton, viewModel.getDeleteSubteamCommand());
-
-        // Bind error messages
-        viewModel.errorMessageProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue != null && !newValue.isEmpty()) {
-                showErrorAlert("Error", newValue);
-                viewModel.clearErrorMessage();
-            }
-        });
+        try {
+            // Bind tables to the ViewModel's ObservableLists
+            membersTable.setItems(viewModel.getMembers());
+            subteamsTable.setItems(viewModel.getSubteams());
+    
+            // Bind buttons to commands
+            ViewModelBinding.bindCommandButton(addMemberButton, viewModel.getAddMemberCommand());
+            ViewModelBinding.bindCommandButton(editMemberButton, viewModel.getEditMemberCommand());
+            ViewModelBinding.bindCommandButton(deleteMemberButton, viewModel.getDeleteMemberCommand());
+    
+            ViewModelBinding.bindCommandButton(addSubteamButton, viewModel.getAddSubteamCommand());
+            ViewModelBinding.bindCommandButton(editSubteamButton, viewModel.getEditSubteamCommand());
+            ViewModelBinding.bindCommandButton(deleteSubteamButton, viewModel.getDeleteSubteamCommand());
+    
+            // Bind error messages
+            viewModel.errorMessageProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue != null && !newValue.isEmpty()) {
+                    showErrorAlert("Error", newValue);
+                    viewModel.clearErrorMessage();
+                }
+            });
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up bindings", e);
+            showErrorAlert("Setup Error", "Failed to set up bindings: " + e.getMessage());
+        }
     }
 
     /**
      * Sets up selection handlers for tables.
      */
     private void setupSelectionHandlers() {
-        // Set up row selection handlers
-        membersTable.getSelectionModel().selectedItemProperty().addListener(
-                (observable, oldValue, newValue) -> viewModel.setSelectedMember(newValue));
-
-        subteamsTable.getSelectionModel().selectedItemProperty().addListener(
-                (observable, oldValue, newValue) -> viewModel.setSelectedSubteam(newValue));
+        try {
+            // Set up row selection handlers
+            membersTable.getSelectionModel().selectedItemProperty().addListener(
+                    (observable, oldValue, newValue) -> viewModel.setSelectedMember(newValue));
+    
+            subteamsTable.getSelectionModel().selectedItemProperty().addListener(
+                    (observable, oldValue, newValue) -> viewModel.setSelectedSubteam(newValue));
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up selection handlers", e);
+        }
     }
 
     /**
      * Sets up row factories for double-click handling.
      */
     private void setupRowFactories() {
-        // Set up row double-click handlers
-        membersTable.setRowFactory(tv -> {
-            TableRow<TeamMember> row = new TableRow<>();
-            row.setOnMouseClicked(event -> {
-                if (event.getClickCount() == 2 && !row.isEmpty()) {
-                    handleEditMember();
-                }
+        try {
+            // Set up row double-click handlers
+            membersTable.setRowFactory(tv -> {
+                TableRow<TeamMember> row = new TableRow<>();
+                row.setOnMouseClicked(event -> {
+                    if (event.getClickCount() == 2 && !row.isEmpty()) {
+                        handleEditMember();
+                    }
+                });
+                return row;
             });
-            return row;
-        });
-
-        subteamsTable.setRowFactory(tv -> {
-            TableRow<Subteam> row = new TableRow<>();
-            row.setOnMouseClicked(event -> {
-                if (event.getClickCount() == 2 && !row.isEmpty()) {
-                    handleEditSubteam();
-                }
+    
+            subteamsTable.setRowFactory(tv -> {
+                TableRow<Subteam> row = new TableRow<>();
+                row.setOnMouseClicked(event -> {
+                    if (event.getClickCount() == 2 && !row.isEmpty()) {
+                        handleEditSubteam();
+                    }
+                });
+                return row;
             });
-            return row;
-        });
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up row factories", e);
+        }
     }
 
     /**
      * Sets up the members table columns and cell factories.
      */
     private void setupMembersTable() {
-        memberUsernameColumn.setCellValueFactory(new PropertyValueFactory<>("username"));
-        memberNameColumn.setCellValueFactory(
-                cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getFullName()));
-        memberEmailColumn.setCellValueFactory(new PropertyValueFactory<>("email"));
-        memberSubteamColumn.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(
-                cellData.getValue().getSubteam() != null ? cellData.getValue().getSubteam().getName() : ""));
-        memberLeaderColumn.setCellValueFactory(new PropertyValueFactory<>("leader"));
-
-        // Create a cell factory for the leader column (checkbox)
-        memberLeaderColumn.setCellFactory(column -> new TableCell<TeamMember, Boolean>() {
-            @Override
-            protected void updateItem(Boolean item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setGraphic(null);
-                } else {
-                    CheckBox checkBox = new CheckBox();
-                    checkBox.setSelected(item);
-                    checkBox.setDisable(true); // Read-only in the table
-                    setGraphic(checkBox);
+        try {
+            memberUsernameColumn.setCellValueFactory(new PropertyValueFactory<>("username"));
+            
+            // Custom cell factory for full name
+            memberNameColumn.setCellValueFactory(
+                    cellData -> {
+                        TeamMember member = cellData.getValue();
+                        String firstName = member.getFirstName() != null ? member.getFirstName() : "";
+                        String lastName = member.getLastName() != null ? member.getLastName() : "";
+                        return new javafx.beans.property.SimpleStringProperty(
+                                (firstName + " " + lastName).trim());
+                    });
+                    
+            memberEmailColumn.setCellValueFactory(new PropertyValueFactory<>("email"));
+            
+            // Custom cell factory for subteam
+            memberSubteamColumn.setCellValueFactory(cellData -> {
+                TeamMember member = cellData.getValue();
+                Subteam subteam = member.getSubteam();
+                return new javafx.beans.property.SimpleStringProperty(
+                        subteam != null ? subteam.getName() : "");
+            });
+            
+            // Create a cell factory for the leader column (checkbox)
+            memberLeaderColumn.setCellValueFactory(new PropertyValueFactory<>("leader"));
+            memberLeaderColumn.setCellFactory(column -> new TableCell<TeamMember, Boolean>() {
+                @Override
+                protected void updateItem(Boolean item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) {
+                        setText(null);
+                        setGraphic(null);
+                    } else {
+                        CheckBox checkBox = new CheckBox();
+                        checkBox.setSelected(item);
+                        checkBox.setDisable(true); // Read-only in the table
+                        setGraphic(checkBox);
+                    }
                 }
-            }
-        });
+            });
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up members table", e);
+            showErrorAlert("Setup Error", "Failed to set up members table: " + e.getMessage());
+        }
     }
 
     /**
      * Sets up the subteams table columns and cell factories.
      */
     private void setupSubteamsTable() {
-        subteamNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
-        subteamColorColumn.setCellValueFactory(new PropertyValueFactory<>("colorCode"));
-        subteamSpecialtiesColumn.setCellValueFactory(new PropertyValueFactory<>("specialties"));
-
-        // Create a cell factory for the color column (colored rectangle)
-        subteamColorColumn.setCellFactory(column -> new TableCell<Subteam, String>() {
-            @Override
-            protected void updateItem(String colorCode, boolean empty) {
-                super.updateItem(colorCode, empty);
-                if (empty || colorCode == null) {
-                    setText(null);
-                    setGraphic(null);
-                } else {
-                    setText(colorCode);
-                    setStyle("-fx-background-color: " + colorCode + "; -fx-text-fill: white;");
+        try {
+            subteamNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
+            subteamColorColumn.setCellValueFactory(new PropertyValueFactory<>("colorCode"));
+            subteamSpecialtiesColumn.setCellValueFactory(new PropertyValueFactory<>("description"));
+    
+            // Create a cell factory for the color column (colored rectangle)
+            subteamColorColumn.setCellFactory(column -> new TableCell<Subteam, String>() {
+                @Override
+                protected void updateItem(String colorCode, boolean empty) {
+                    super.updateItem(colorCode, empty);
+                    if (empty || colorCode == null) {
+                        setText(null);
+                        setGraphic(null);
+                        setStyle("");
+                    } else {
+                        setText(colorCode);
+                        setStyle("-fx-background-color: " + colorCode + "25; -fx-text-fill: black;");
+                    }
                 }
+            });
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up subteams table", e);
+            showErrorAlert("Setup Error", "Failed to set up subteams table: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Sets the current project and loads related data.
+     * 
+     * @param project the project to set
+     */
+    public void setProject(Project project) {
+        if (project == null) {
+            LOGGER.warning("Cannot set null project");
+            return;
+        }
+        
+        this.currentProject = project;
+        viewModel.setProject(project);
+        
+        // Select first item in each table if available
+        Platform.runLater(() -> {
+            if (!viewModel.getMembers().isEmpty()) {
+                membersTable.getSelectionModel().select(0);
+            }
+    
+            if (!viewModel.getSubteams().isEmpty()) {
+                subteamsTable.getSelectionModel().select(0);
             }
         });
     }
@@ -240,12 +312,14 @@ public class TeamController {
      */
     @FXML
     public void handleAddMember() {
-        // Prepare the ViewModel for a new member
-        viewModel.initNewMember();
-
         // Create and show the dialog
-        Dialog<TeamMember> dialog = createMemberDialog();
-        showAndWaitDialog(dialog);
+        Dialog<TeamMember> dialog = createMemberDialog(null);
+        Optional<TeamMember> result = showAndWaitDialog(dialog);
+        
+        if (result.isPresent()) {
+            // Refresh the data
+            viewModel.loadMembers();
+        }
     }
 
     /**
@@ -259,12 +333,14 @@ public class TeamController {
             return;
         }
 
-        // Prepare the ViewModel for editing the selected member
-        viewModel.initExistingMember(selectedMember);
-
         // Create and show the dialog
-        Dialog<TeamMember> dialog = createMemberDialog();
-        showAndWaitDialog(dialog);
+        Dialog<TeamMember> dialog = createMemberDialog(selectedMember);
+        Optional<TeamMember> result = showAndWaitDialog(dialog);
+        
+        if (result.isPresent()) {
+            // Refresh the data
+            viewModel.loadMembers();
+        }
     }
 
     /**
@@ -281,15 +357,19 @@ public class TeamController {
         // Ask for confirmation
         boolean confirmed = showConfirmationAlert(
                 "Delete Team Member",
-                "Are you sure you want to delete " + selectedMember.getFullName() + "?");
+                "Are you sure you want to delete " + 
+                (selectedMember.getFirstName() != null ? selectedMember.getFirstName() : "") + " " +
+                (selectedMember.getLastName() != null ? selectedMember.getLastName() : "") + "?");
 
         if (confirmed) {
             try {
-                // Execute the delete command
-                viewModel.setSelectedMember(selectedMember);
-                viewModel.getDeleteMemberCommand().execute();
-
-                showInfoAlert("Member Deleted", "Team member deleted successfully");
+                // Delete the member
+                boolean success = viewModel.deleteMember(selectedMember);
+                
+                if (success) {
+                    showInfoAlert("Member Deleted", "Team member deleted successfully");
+                    // No need to refresh, view model has already updated the list
+                }
             } catch (Exception e) {
                 LOGGER.log(Level.SEVERE, "Error deleting team member", e);
                 showErrorAlert("Error", "Failed to delete team member: " + e.getMessage());
@@ -302,12 +382,14 @@ public class TeamController {
      */
     @FXML
     public void handleAddSubteam() {
-        // Prepare the ViewModel for a new subteam
-        viewModel.initNewSubteam();
-
         // Create and show the dialog
-        Dialog<Subteam> dialog = createSubteamDialog();
-        showAndWaitDialog(dialog);
+        Dialog<Subteam> dialog = createSubteamDialog(null);
+        Optional<Subteam> result = showAndWaitDialog(dialog);
+        
+        if (result.isPresent()) {
+            // Refresh the data
+            viewModel.loadSubteams();
+        }
     }
 
     /**
@@ -321,12 +403,14 @@ public class TeamController {
             return;
         }
 
-        // Prepare the ViewModel for editing the selected subteam
-        viewModel.initExistingSubteam(selectedSubteam);
-
         // Create and show the dialog
-        Dialog<Subteam> dialog = createSubteamDialog();
-        showAndWaitDialog(dialog);
+        Dialog<Subteam> dialog = createSubteamDialog(selectedSubteam);
+        Optional<Subteam> result = showAndWaitDialog(dialog);
+        
+        if (result.isPresent()) {
+            // Refresh the data
+            viewModel.loadSubteams();
+        }
     }
 
     /**
@@ -347,11 +431,13 @@ public class TeamController {
 
         if (confirmed) {
             try {
-                // Execute the delete command
-                viewModel.setSelectedSubteam(selectedSubteam);
-                viewModel.getDeleteSubteamCommand().execute();
-
-                showInfoAlert("Subteam Deleted", "Subteam deleted successfully");
+                // Delete the subteam
+                boolean success = viewModel.deleteSubteam(selectedSubteam);
+                
+                if (success) {
+                    showInfoAlert("Subteam Deleted", "Subteam deleted successfully");
+                    // No need to refresh, view model has already updated the list
+                }
             } catch (Exception e) {
                 LOGGER.log(Level.SEVERE, "Error deleting subteam", e);
                 showErrorAlert("Error", "Failed to delete subteam: " + e.getMessage());
@@ -363,13 +449,14 @@ public class TeamController {
      * Creates a dialog for adding or editing a team member.
      * Protected for testability.
      * 
+     * @param member the member to edit, or null for a new member
      * @return the dialog
      */
-    protected Dialog<TeamMember> createMemberDialog() {
+    protected Dialog<TeamMember> createMemberDialog(TeamMember member) {
         // Create the dialog
         Dialog<TeamMember> dialog = new Dialog<>();
-        dialog.setTitle(viewModel.isNewMember() ? "Add Team Member" : "Edit Team Member");
-        dialog.setHeaderText(viewModel.isNewMember() ? "Create a new team member" : "Edit team member details");
+        dialog.setTitle(member == null ? "Add Team Member" : "Edit Team Member");
+        dialog.setHeaderText(member == null ? "Create a new team member" : "Edit team member details");
 
         // Set the button types
         ButtonType saveButtonType = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
@@ -380,9 +467,6 @@ public class TeamController {
         grid.setHgap(10);
         grid.setVgap(10);
         grid.setPadding(new javafx.geometry.Insets(20, 150, 10, 10));
-
-        TextField usernameField = new TextField();
-        usernameField.setPromptText("Username");
 
         TextField firstNameField = new TextField();
         firstNameField.setPromptText("First Name");
@@ -396,9 +480,9 @@ public class TeamController {
         TextField phoneField = new TextField();
         phoneField.setPromptText("Phone");
 
-        TextArea skillsArea = new TextArea();
-        skillsArea.setPromptText("Skills");
-        skillsArea.setPrefRowCount(3);
+        ComboBox<TeamMember.Role> roleComboBox = new ComboBox<>();
+        roleComboBox.getItems().addAll(TeamMember.Role.values());
+        roleComboBox.setPromptText("Select Role");
 
         ComboBox<Subteam> subteamComboBox = new ComboBox<>();
         subteamComboBox.setItems(viewModel.getSubteams());
@@ -406,53 +490,79 @@ public class TeamController {
 
         CheckBox leaderCheckBox = new CheckBox("Is Team Leader");
 
+        TextArea notesArea = new TextArea();
+        notesArea.setPromptText("Notes");
+        notesArea.setPrefRowCount(3);
+
         // Add fields to the grid
-        grid.add(new Label("Username:"), 0, 0);
-        grid.add(usernameField, 1, 0);
-        grid.add(new Label("First Name:"), 0, 1);
-        grid.add(firstNameField, 1, 1);
-        grid.add(new Label("Last Name:"), 0, 2);
-        grid.add(lastNameField, 1, 2);
-        grid.add(new Label("Email:"), 0, 3);
-        grid.add(emailField, 1, 3);
-        grid.add(new Label("Phone:"), 0, 4);
-        grid.add(phoneField, 1, 4);
+        grid.add(new Label("First Name:"), 0, 0);
+        grid.add(firstNameField, 1, 0);
+        grid.add(new Label("Last Name:"), 0, 1);
+        grid.add(lastNameField, 1, 1);
+        grid.add(new Label("Email:"), 0, 2);
+        grid.add(emailField, 1, 2);
+        grid.add(new Label("Phone:"), 0, 3);
+        grid.add(phoneField, 1, 3);
+        grid.add(new Label("Role:"), 0, 4);
+        grid.add(roleComboBox, 1, 4);
         grid.add(new Label("Subteam:"), 0, 5);
         grid.add(subteamComboBox, 1, 5);
         grid.add(leaderCheckBox, 1, 6);
-        grid.add(new Label("Skills:"), 0, 7);
-        grid.add(skillsArea, 1, 7);
+        grid.add(new Label("Notes:"), 0, 7);
+        grid.add(notesArea, 1, 7);
 
-        // Bind UI elements to ViewModel properties
-        ViewModelBinding.bindTextField(usernameField, viewModel.memberUsernameProperty());
-        ViewModelBinding.bindTextField(firstNameField, viewModel.memberFirstNameProperty());
-        ViewModelBinding.bindTextField(lastNameField, viewModel.memberLastNameProperty());
-        ViewModelBinding.bindTextField(emailField, viewModel.memberEmailProperty());
-        ViewModelBinding.bindTextField(phoneField, viewModel.memberPhoneProperty());
-        ViewModelBinding.bindTextArea(skillsArea, viewModel.memberSkillsProperty());
-        ViewModelBinding.bindComboBox(subteamComboBox, viewModel.memberSubteamProperty());
-        leaderCheckBox.selectedProperty().bindBidirectional(viewModel.memberIsLeaderProperty());
-
-        // Disable username field if editing existing member
-        usernameField.setDisable(!viewModel.isNewMember());
+        // Initialize form with member data if editing
+        if (member != null) {
+            firstNameField.setText(member.getFirstName());
+            lastNameField.setText(member.getLastName());
+            emailField.setText(member.getEmail());
+            phoneField.setText(member.getPhone());
+            
+            if (member.getRole() != null && !member.getRole().isEmpty()) {
+                try {
+                    roleComboBox.setValue(TeamMember.Role.valueOf(member.getRole()));
+                } catch (IllegalArgumentException e) {
+                    // Invalid role value, leave unselected
+                }
+            }
+            
+            subteamComboBox.setValue(member.getSubteam());
+            leaderCheckBox.setSelected(member.isLeader());
+            notesArea.setText(""); // Notes not directly stored in TeamMember entity
+        }
 
         // Set the dialog content
         dialog.getDialogPane().setContent(grid);
 
-        // Request focus on the username field
-        Platform.runLater(() -> usernameField.requestFocus());
+        // Request focus on the first name field
+        Platform.runLater(() -> firstNameField.requestFocus());
 
         // Set the dialog result when the save button is clicked
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == saveButtonType) {
-                if (viewModel.memberValidProperty().get()) {
-                    viewModel.getSaveMemberCommand().execute();
-                    return viewModel.getSelectedMember();
-                } else {
-                    // Show error if validation fails
-                    showErrorAlert("Validation Error", viewModel.getErrorMessage());
+                // Validate fields
+                if (firstNameField.getText().trim().isEmpty() && lastNameField.getText().trim().isEmpty()) {
+                    showErrorAlert("Validation Error", "First name or last name is required");
                     return null;
                 }
+                
+                // Create/update member
+                TeamMember result = member != null ? member : new TeamMember();
+                result.setFirstName(firstNameField.getText().trim());
+                result.setLastName(lastNameField.getText().trim());
+                result.setEmail(emailField.getText().trim());
+                result.setPhone(phoneField.getText().trim());
+                
+                if (roleComboBox.getValue() != null) {
+                    result.setRole(roleComboBox.getValue().toString());
+                }
+                
+                result.setLeader(leaderCheckBox.isSelected());
+                result.setSubteam(subteamComboBox.getValue());
+                
+                // Save the member
+                TeamMember savedMember = viewModel.saveMember(result);
+                return savedMember;
             }
             return null;
         });
@@ -464,13 +574,14 @@ public class TeamController {
      * Creates a dialog for adding or editing a subteam.
      * Protected for testability.
      * 
+     * @param subteam the subteam to edit, or null for a new subteam
      * @return the dialog
      */
-    protected Dialog<Subteam> createSubteamDialog() {
+    protected Dialog<Subteam> createSubteamDialog(Subteam subteam) {
         // Create the dialog
         Dialog<Subteam> dialog = new Dialog<>();
-        dialog.setTitle(viewModel.isNewSubteam() ? "Add Subteam" : "Edit Subteam");
-        dialog.setHeaderText(viewModel.isNewSubteam() ? "Create a new subteam" : "Edit subteam details");
+        dialog.setTitle(subteam == null ? "Add Subteam" : "Edit Subteam");
+        dialog.setHeaderText(subteam == null ? "Create a new subteam" : "Edit subteam details");
 
         // Set the button types
         ButtonType saveButtonType = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
@@ -488,46 +599,36 @@ public class TeamController {
         javafx.scene.control.ColorPicker colorPicker = new javafx.scene.control.ColorPicker();
         colorPicker.setPromptText("Select Color");
 
-        TextArea specialtiesArea = new TextArea();
-        specialtiesArea.setPromptText("Specialties");
-        specialtiesArea.setPrefRowCount(3);
+        TextArea descriptionArea = new TextArea();
+        descriptionArea.setPromptText("Description");
+        descriptionArea.setPrefRowCount(3);
 
         // Add fields to the grid
         grid.add(new Label("Name:"), 0, 0);
         grid.add(nameField, 1, 0);
         grid.add(new Label("Color:"), 0, 1);
         grid.add(colorPicker, 1, 1);
-        grid.add(new Label("Specialties:"), 0, 2);
-        grid.add(specialtiesArea, 1, 2);
+        grid.add(new Label("Description:"), 0, 2);
+        grid.add(descriptionArea, 1, 2);
 
-        // Bind UI elements to ViewModel properties
-        ViewModelBinding.bindTextField(nameField, viewModel.subteamNameProperty());
-        ViewModelBinding.bindTextArea(specialtiesArea, viewModel.subteamSpecialtiesProperty());
-
-        // Custom binding for color picker
-        String colorCode = viewModel.getSubteamColorCode();
-        if (colorCode != null && !colorCode.isEmpty()) {
-            try {
-                Color color = Color.web(colorCode);
-                colorPicker.setValue(color);
-            } catch (Exception e) {
-                colorPicker.setValue(Color.BLUE);
+        // Initialize form with subteam data if editing
+        if (subteam != null) {
+            nameField.setText(subteam.getName());
+            
+            if (subteam.getColorCode() != null && !subteam.getColorCode().isEmpty()) {
+                try {
+                    colorPicker.setValue(Color.web(subteam.getColorCode()));
+                } catch (Exception e) {
+                    colorPicker.setValue(Color.web("#2196F3")); // Default blue
+                }
+            } else {
+                colorPicker.setValue(Color.web("#2196F3")); // Default blue
             }
+            
+            descriptionArea.setText(subteam.getDescription());
         } else {
-            colorPicker.setValue(Color.BLUE);
+            colorPicker.setValue(Color.web("#2196F3")); // Default blue
         }
-
-        // Update color code when color picker changes
-        colorPicker.valueProperty().addListener((observable, oldValue, newValue) -> {
-            String webColor = String.format("#%02X%02X%02X",
-                    (int) (newValue.getRed() * 255),
-                    (int) (newValue.getGreen() * 255),
-                    (int) (newValue.getBlue() * 255));
-            viewModel.setSubteamColorCode(webColor);
-        });
-
-        // Disable name field if editing existing subteam
-        nameField.setDisable(!viewModel.isNewSubteam());
 
         // Set the dialog content
         dialog.getDialogPane().setContent(grid);
@@ -538,14 +639,29 @@ public class TeamController {
         // Set the dialog result when the save button is clicked
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == saveButtonType) {
-                if (viewModel.subteamValidProperty().get()) {
-                    viewModel.getSaveSubteamCommand().execute();
-                    return viewModel.getSelectedSubteam();
-                } else {
-                    // Show error if validation fails
-                    showErrorAlert("Validation Error", viewModel.getErrorMessage());
+                // Validate fields
+                if (nameField.getText().trim().isEmpty()) {
+                    showErrorAlert("Validation Error", "Subteam name is required");
                     return null;
                 }
+                
+                // Create/update subteam
+                Subteam result = subteam != null ? subteam : new Subteam();
+                result.setName(nameField.getText().trim());
+                
+                // Convert color to hex string
+                Color color = colorPicker.getValue();
+                String colorCode = String.format("#%02X%02X%02X",
+                        (int) (color.getRed() * 255),
+                        (int) (color.getGreen() * 255),
+                        (int) (color.getBlue() * 255));
+                result.setColorCode(colorCode);
+                
+                result.setDescription(descriptionArea.getText().trim());
+                
+                // Save the subteam
+                Subteam savedSubteam = viewModel.saveSubteam(result);
+                return savedSubteam;
             }
             return null;
         });
@@ -562,7 +678,12 @@ public class TeamController {
      * @return an Optional containing the dialog result
      */
     protected <T> Optional<T> showAndWaitDialog(Dialog<T> dialog) {
-        return dialog.showAndWait();
+        try {
+            return dialog.showAndWait();
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error showing dialog", e);
+            return Optional.empty();
+        }
     }
 
     /**
@@ -570,9 +691,20 @@ public class TeamController {
      */
     @FXML
     public void handleClose() {
-        // Get the stage from any UI element
-        Stage stage = (Stage) tabPane.getScene().getWindow();
-        stage.close();
+        try {
+            // Clean up resources
+            cleanup();
+            
+            // Get the stage from any UI element
+            if (tabPane != null && tabPane.getScene() != null && 
+                tabPane.getScene().getWindow() != null) {
+                
+                Stage stage = (Stage) tabPane.getScene().getWindow();
+                stage.close();
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error closing window", e);
+        }
     }
 
     /**
@@ -583,7 +715,17 @@ public class TeamController {
      * @param message the message
      */
     protected void showErrorAlert(String title, String message) {
-        dialogService.showErrorAlert(title, message);
+        try {
+            if (dialogService != null) {
+                dialogService.showErrorAlert(title, message);
+            } else {
+                // Fallback for tests
+                LOGGER.log(Level.INFO, "Alert would show: {0} - {1}", new Object[] { title, message });
+            }
+        } catch (Exception e) {
+            // This can happen in tests when not on FX thread
+            LOGGER.log(Level.INFO, "Alert would show: {0} - {1}", new Object[] { title, message });
+        }
     }
 
     /**
@@ -594,7 +736,17 @@ public class TeamController {
      * @param message the message
      */
     protected void showInfoAlert(String title, String message) {
-        dialogService.showInfoAlert(title, message);
+        try {
+            if (dialogService != null) {
+                dialogService.showInfoAlert(title, message);
+            } else {
+                // Fallback for tests
+                LOGGER.log(Level.INFO, "Info alert would show: {0} - {1}", new Object[] { title, message });
+            }
+        } catch (Exception e) {
+            // This can happen in tests when not on FX thread
+            LOGGER.log(Level.INFO, "Info alert would show: {0} - {1}", new Object[] { title, message });
+        }
     }
 
     /**
@@ -606,7 +758,28 @@ public class TeamController {
      * @return true if confirmed, false otherwise
      */
     protected boolean showConfirmationAlert(String title, String message) {
-        return dialogService.showConfirmationAlert(title, message);
+        try {
+            if (dialogService != null) {
+                return dialogService.showConfirmationAlert(title, message);
+            } else {
+                // Fallback for tests
+                LOGGER.log(Level.INFO, "Confirmation alert would show: {0} - {1}", new Object[] { title, message });
+                return false;
+            }
+        } catch (Exception e) {
+            // This can happen in tests when not on FX thread
+            LOGGER.log(Level.INFO, "Confirmation alert would show: {0} - {1}", new Object[] { title, message });
+            return false;
+        }
+    }
+    
+    /**
+     * Cleans up resources when the controller is no longer needed.
+     */
+    public void cleanup() {
+        if (viewModel != null) {
+            viewModel.cleanupResources();
+        }
     }
 
     /**
@@ -615,7 +788,7 @@ public class TeamController {
      * 
      * @return the ViewModel
      */
-    TeamViewModel getViewModel() {
+    public TeamViewModel getViewModel() {
         return viewModel;
     }
 
@@ -626,7 +799,10 @@ public class TeamController {
      * @return the selected team member
      */
     protected TeamMember getSelectedTeamMember() {
-        return membersTable.getSelectionModel().getSelectedItem();
+        if (membersTable != null && membersTable.getSelectionModel() != null) {
+            return membersTable.getSelectionModel().getSelectedItem();
+        }
+        return null;
     }
 
     /**
@@ -636,7 +812,10 @@ public class TeamController {
      * @return the selected subteam
      */
     protected Subteam getSelectedSubteam() {
-        return subteamsTable.getSelectionModel().getSelectedItem();
+        if (subteamsTable != null && subteamsTable.getSelectionModel() != null) {
+            return subteamsTable.getSelectionModel().getSelectedItem();
+        }
+        return null;
     }
 
     /**
