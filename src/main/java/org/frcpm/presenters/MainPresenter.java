@@ -53,6 +53,8 @@ public class MainPresenter implements Initializable {
     
     @Inject
     private MainViewModel viewModel;
+
+    ResourceBundle resources;
     
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -132,7 +134,9 @@ public class MainPresenter implements Initializable {
      * Creates a new project.
      */
     private void newProject() {
-        ViewLoader.showDialog(ProjectView.class, "New Project", mainBorderPane.getScene().getWindow());
+        ViewLoader.showDialog(ProjectView.class, 
+            resources.getString("project.new.title"), 
+            mainBorderPane.getScene().getWindow());
         loadProjects(); // Reload after dialog closes
     }
     
@@ -142,8 +146,9 @@ public class MainPresenter implements Initializable {
     private void openProject() {
         Project selectedProject = projectListView.getSelectionModel().getSelectedItem();
         if (selectedProject != null) {
-            ViewLoader.showView(ProjectView.class, "Project: " + selectedProject.getName(), 
-                    mainBorderPane.getScene().getWindow());
+            ViewLoader.showView(ProjectView.class, 
+                resources.getString("project.view.title") + ": " + selectedProject.getName(), 
+                mainBorderPane.getScene().getWindow());
         }
     }
     
@@ -153,17 +158,21 @@ public class MainPresenter implements Initializable {
      * @param title the title of the dialog
      * @param message the error message
      */
-    private void showError(String title, String message) {
+    private void showError(String defaultTitle, String defaultMessage) {
         try {
+            String title = resources != null ? 
+                resources.getString("error.title") : defaultTitle;
+                
             javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
                     javafx.scene.control.Alert.AlertType.ERROR);
-            alert.setTitle("Error");
-            alert.setHeaderText(title);
-            alert.setContentText(message);
+            alert.setTitle(title);
+            alert.setHeaderText(defaultTitle);
+            alert.setContentText(defaultMessage);
             alert.showAndWait();
         } catch (Exception e) {
             // This can happen in tests when not on FX thread
-            LOGGER.log(Level.INFO, "Alert would show: {0} - {1}", new Object[] { title, message });
+            LOGGER.log(Level.INFO, "Alert would show: {0} - {1}", 
+                new Object[] { defaultTitle, defaultMessage });
         }
     }
     

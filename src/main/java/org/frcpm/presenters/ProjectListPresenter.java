@@ -170,7 +170,9 @@ public class ProjectListPresenter implements Initializable {
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error showing new project dialog", e);
-            ErrorHandler.showError("Error", "Failed to open new project dialog", e);
+            ErrorHandler.showError(
+                resources.getString("error.title"), 
+                resources.getString("error.project.dialog.failed"), e);
         }
     }
     
@@ -182,13 +184,15 @@ public class ProjectListPresenter implements Initializable {
         Project selectedProject = projectListView.getSelectionModel().getSelectedItem();
         
         if (selectedProject == null) {
-            ErrorHandler.showError("No Selection", "Please select a project to delete");
+            ErrorHandler.showError(
+                resources.getString("info.title"), 
+                resources.getString("info.no.selection.project"));
             return;
         }
         
         boolean confirmed = ErrorHandler.showConfirmation(
-            "Delete Project",
-            "Are you sure you want to delete project '" + selectedProject.getName() + "'?");
+            resources.getString("project.delete.title"),
+            resources.getString("project.delete.confirm") + " '" + selectedProject.getName() + "'?");
             
         if (confirmed) {
             try {
@@ -196,11 +200,15 @@ public class ProjectListPresenter implements Initializable {
                 if (viewModel.deleteProject(selectedProject)) {
                     refreshProjectList();
                 } else {
-                    ErrorHandler.showError("Error", "Failed to delete the project");
+                    ErrorHandler.showError(
+                        resources.getString("error.title"), 
+                        resources.getString("error.project.delete.failed"));
                 }
             } catch (Exception e) {
                 LOGGER.log(Level.SEVERE, "Error deleting project", e);
-                ErrorHandler.showError("Error", "Failed to delete the project", e);
+                ErrorHandler.showError(
+                    resources.getString("error.title"), 
+                    resources.getString("error.project.delete.failed"), e);
             }
         }
     }

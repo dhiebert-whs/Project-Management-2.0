@@ -288,10 +288,14 @@ public class AttendancePresenter implements Initializable {
                 }
             } catch (Exception e) {
                 LOGGER.log(Level.SEVERE, "Error setting time", e);
-                showErrorAlert("Error", "Failed to set time: " + e.getMessage());
+                showErrorAlert(
+                    resources.getString("error.title"), 
+                    resources.getString("error.time.set.failed") + e.getMessage());
             }
         } else {
-            showInfoAlert("No Selection", "Please select a team member first.");
+            showInfoAlert(
+                resources.getString("info.title"), 
+                resources.getString("info.no.selection.member"));
         }
     }
 
@@ -336,12 +340,16 @@ public class AttendancePresenter implements Initializable {
      * @param title   the title
      * @param message the message
      */
-    private void showErrorAlert(String title, String message) {
+    private void showErrorAlert(String defaultTitle, String defaultMessage) {
         try {
-            dialogService.showErrorAlert(title, message);
+            String title = resources != null ? 
+                resources.getString("error.title") : defaultTitle;
+                
+            dialogService.showErrorAlert(title, defaultMessage);
         } catch (Exception e) {
             // This can happen in tests when not on FX thread
-            LOGGER.log(Level.INFO, "Alert would show: {0} - {1}", new Object[] { title, message });
+            LOGGER.log(Level.INFO, "Alert would show: {0} - {1}", 
+                new Object[] { defaultTitle, defaultMessage });
         }
     }
 
@@ -351,12 +359,16 @@ public class AttendancePresenter implements Initializable {
      * @param title   the title
      * @param message the message
      */
-    private void showInfoAlert(String title, String message) {
+    private void showInfoAlert(String defaultTitle, String defaultMessage) {
         try {
-            dialogService.showInfoAlert(title, message);
+            String title = resources != null ? 
+                resources.getString("info.title") : defaultTitle;
+                
+            dialogService.showInfoAlert(title, defaultMessage);
         } catch (Exception e) {
             // This can happen in tests when not on FX thread
-            LOGGER.log(Level.INFO, "Alert would show: {0} - {1}", new Object[] { title, message });
+            LOGGER.log(Level.INFO, "Alert would show: {0} - {1}", 
+                new Object[] { defaultTitle, defaultMessage });
         }
     }
 

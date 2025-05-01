@@ -66,6 +66,8 @@ public class TeamMemberPresenter implements Initializable {
     @Inject
     private DialogService dialogService;
 
+    ResourceBundle resources;
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         // Check if we're in a testing environment and create fallbacks
@@ -176,7 +178,9 @@ public class TeamMemberPresenter implements Initializable {
     protected void setupErrorHandling() {
         viewModel.errorMessageProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null && !newVal.isEmpty()) {
-                showErrorDialog("Error", newVal);
+                showErrorDialog(
+                    resources != null ? resources.getString("error.title") : "Error", 
+                    newVal);
                 viewModel.clearErrorMessage();
             }
         });
@@ -189,12 +193,16 @@ public class TeamMemberPresenter implements Initializable {
         viewModel.initProject(project);
     }
 
-    protected boolean showConfirmationDialog(String title, String message) {
-        return dialogService.showConfirmationAlert(title, message);
+    protected boolean showConfirmationDialog(String defaultTitle, String defaultMessage) {
+        String title = resources != null ? 
+            resources.getString(defaultTitle.toLowerCase().replace(" ", ".")) : defaultTitle;
+        return dialogService.showConfirmationAlert(title, defaultMessage);
     }
 
-    protected void showErrorDialog(String title, String message) {
-        dialogService.showErrorAlert(title, message);
+    protected void showErrorDialog(String defaultTitle, String defaultMessage) {
+        String title = resources != null ? 
+            resources.getString(defaultTitle.toLowerCase().replace(" ", ".")) : defaultTitle;
+        dialogService.showErrorAlert(title, defaultMessage);
     }
 
     // Public for testing

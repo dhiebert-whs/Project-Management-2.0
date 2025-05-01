@@ -80,6 +80,9 @@ public class ProjectPresenter implements Initializable {
     private ProjectViewModel viewModel;
     
     private Project project;
+
+    // Resource bundle
+    private ResourceBundle resources;
     
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -326,8 +329,9 @@ public class ProjectPresenter implements Initializable {
         }
         
         try {
-            // Use ViewLoader to show dialog
-            TaskPresenter presenter = ViewLoader.showDialog(TaskView.class, "Edit Task", 
+            // Use ViewLoader to show dialog with localized title
+            TaskPresenter presenter = ViewLoader.showDialog(TaskView.class, 
+                    resources.getString("task.edit.title"), 
                     tasksTable.getScene().getWindow());
             
             // Initialize task in presenter
@@ -338,7 +342,9 @@ public class ProjectPresenter implements Initializable {
             
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error editing task", e);
-            dialogService.showErrorAlert("Error Editing Task", "Failed to open the task editing dialog.");
+            dialogService.showErrorAlert(
+                resources.getString("error.title"), 
+                resources.getString("error.task.edit.failed"));
         }
     }
     
@@ -353,8 +359,9 @@ public class ProjectPresenter implements Initializable {
         }
         
         try {
-            // Use ViewLoader to show dialog
-            MilestonePresenter presenter = ViewLoader.showDialog(MilestoneView.class, "Edit Milestone", 
+            // Use ViewLoader to show dialog with localized title
+            MilestonePresenter presenter = ViewLoader.showDialog(MilestoneView.class, 
+                    resources.getString("milestone.edit.title"), 
                     milestonesTable.getScene().getWindow());
             
             // Initialize milestone in presenter
@@ -365,7 +372,9 @@ public class ProjectPresenter implements Initializable {
             
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error editing milestone", e);
-            dialogService.showErrorAlert("Error Editing Milestone", "Failed to open the milestone editing dialog.");
+            dialogService.showErrorAlert(
+                resources.getString("error.title"), 
+                resources.getString("error.milestone.edit.failed"));
         }
     }
 
@@ -380,8 +389,9 @@ public class ProjectPresenter implements Initializable {
         }
         
         try {
-            // Use ViewLoader to show dialog
-            MeetingPresenter presenter = ViewLoader.showDialog(MeetingView.class, "Edit Meeting", 
+            // Use ViewLoader to show dialog with localized title
+            MeetingPresenter presenter = ViewLoader.showDialog(MeetingView.class, 
+                    resources.getString("meeting.edit.title"), 
                     meetingsTable.getScene().getWindow());
             
             // Initialize meeting in presenter
@@ -392,7 +402,9 @@ public class ProjectPresenter implements Initializable {
             
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error editing meeting", e);
-            dialogService.showErrorAlert("Error Editing Meeting", "Failed to open the meeting editing dialog.");
+            dialogService.showErrorAlert(
+                resources.getString("error.title"), 
+                resources.getString("error.meeting.edit.failed"));
         }
     }
     
