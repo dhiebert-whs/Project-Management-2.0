@@ -93,8 +93,10 @@ public class DailyViewPresenter implements Initializable {
     @Inject
     private DialogService dialogService;
 
-    // ViewModel and resources
+    // ViewModel - now injected
+    @Inject
     private DailyViewModel viewModel;
+    
     private ResourceBundle resources;
     private Project currentProject;
 
@@ -104,8 +106,11 @@ public class DailyViewPresenter implements Initializable {
         
         this.resources = resources;
         
-        // Create view model with injected services
-        viewModel = new DailyViewModel(taskService, meetingService);
+        // Check if we're in a testing environment and create fallbacks
+        if (viewModel == null) {
+            LOGGER.severe("ViewModel not injected - creating manually as fallback");
+            viewModel = new DailyViewModel(taskService, meetingService);
+        }
 
         // Setup table columns
         setupTasksTable();

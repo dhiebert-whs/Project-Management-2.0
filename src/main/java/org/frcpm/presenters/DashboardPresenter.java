@@ -120,8 +120,10 @@ public class DashboardPresenter implements Initializable {
     @Inject
     private DialogService dialogService;
 
-    // ViewModel and resources
+    // ViewModel - now injected
+    @Inject
     private DashboardViewModel viewModel;
+    
     private ResourceBundle resources;
     private Project currentProject;
 
@@ -131,8 +133,11 @@ public class DashboardPresenter implements Initializable {
         
         this.resources = resources;
         
-        // Create view model with injected services
-        viewModel = new DashboardViewModel(taskService, milestoneService, meetingService);
+        // Check if we're in a testing environment and create fallbacks
+        if (viewModel == null) {
+            LOGGER.severe("ViewModel not injected - creating manually as fallback");
+            viewModel = new DashboardViewModel(taskService, milestoneService, meetingService);
+        }
 
         // Setup table columns
         setupTasksTable();
