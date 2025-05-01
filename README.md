@@ -10,21 +10,21 @@ The FRC Project Management System is a desktop application purpose-built to supp
 
 ### **2\. Current Status and Transition Overview**
 
-The system has been fully transitioned away from the prior Django-based web application architecture. It is now implemented as a **single-user, desktop-only** JavaFX application. Python, Django, and related technologies are no longer part of the stack.
+The system has been fully transitioned away from the prior Django-based web application architecture. It is now implemented as a **single-user, desktop-only** JavaFX application using the **AfterburnerFX** dependency injection framework. Python, Django, and related technologies are no longer part of the stack.
 
 **Key differences from the previous plan:**
 
 * Entirely desktop-based, single-user system (multi-user collaboration deferred)
 
-* Architecture now adheres to the **Model-View-ViewModel (MVVM)** pattern
+* Architecture adheres to the **Model-View-ViewModel (MVVM)** pattern with **AfterburnerFX** for dependency injection
 
 * UI built using **JavaFX FXML**, styled with **custom CSS**, and editable via **Scene Builder**
 
-* Gantt chart and other visualizations will be rendered using **Chart.js** in an embedded WebView
+* Gantt chart and other visualizations currently use **Chart.js** in an embedded WebView (migration to native Chart-FX is in progress)
 
 * **H2 database** with **HikariCP** connection pooling and **JPA** for persistence
 
-* Manual repository implementations (dependency injection not yet implemented)
+* Conventional view/presenter structure following AfterburnerFX patterns
 
 ---
 
@@ -56,7 +56,7 @@ The system has been fully transitioned away from the prior Django-based web appl
 
 * **Attendance Logging**: Meeting attendance, real-time impact on tasks
 
-* **Visualization**: Gantt chart (via Chart.js), dashboards, task filtering
+* **Visualization**: Gantt chart (via Chart.js, with Chart-FX migration in progress), dashboards, task filtering
 
 * **Data Export/Import**: JSON-based full-project backups and templates
 
@@ -68,19 +68,23 @@ The system has been fully transitioned away from the prior Django-based web appl
 
 * **Model**: JPA entities representing domain data (Project, Task, TeamMember, etc.)
 
-* **View**: FXML-defined UIs styled with CSS; managed by JavaFX controllers
+* **View**: FXML-defined UIs styled with CSS, following AfterburnerFX conventions
 
 * **ViewModel**: Handles UI logic, state management, observable bindings, command actions
 
-* **Service Layer** (planned): Business logic and coordination between ViewModel and Repository
+* **Presenter**: AfterburnerFX-style controllers that coordinate between View and ViewModel
 
-* **Repository Layer**: Manual JPA repository implementations (HikariCP \+ H2)
+* **Service Layer**: Business logic and coordination between ViewModel and Repository
+
+* **Repository Layer**: JPA repository implementations with AfterburnerFX dependency injection
 
 #### **5.2 Technologies**
 
 * **UI**: JavaFX (FXML \+ CSS), Scene Builder
 
-* **Visualization**: Chart.js embedded in WebView (Gantt chart, dashboards)
+* **Dependency Injection**: AfterburnerFX framework
+
+* **Visualization**: Currently Chart.js embedded in WebView, migrating to Chart-FX
 
 * **Persistence**: JPA \+ H2 \+ HikariCP
 
@@ -88,17 +92,15 @@ The system has been fully transitioned away from the prior Django-based web appl
 
 * **Packaging**: JavaFX self-contained bundle (executable JAR or native image)
 
-#### **5.3 Dependency Injection (Planned)**
+#### **5.3 Dependency Injection**
 
-* Currently not using a DI framework
-
-* **Spring Framework** is the preferred candidate for DI:
-
-  * *Pros*: Industry standard, powerful lifecycle management, integrates well with JPA
-
-  * *Cons*: Larger footprint and steeper learning curve compared to lightweight DI frameworks
-
-  * *Integration Goal*: Use Spring context to manage service and repository beans; evaluate integration strategies with JavaFX lifecycle
+* Using **AfterburnerFX** lightweight dependency injection framework:
+  
+  * *Pros*: Lightweight, convention-based, specifically designed for JavaFX
+  
+  * *Cons*: Less robust than full Spring Framework, with some limitations
+  
+  * *Implementation*: All Views extend FXMLView, with conventional directory and naming structure
 
 ---
 
@@ -114,21 +116,29 @@ The system has been fully transitioned away from the prior Django-based web appl
 
 ---
 
-### **7\. Near-Term Goals**
+### **7\. Current Development Priorities**
 
-* Implement core modules (task tracking, subteam management, meeting scheduling)
+* Complete AfterburnerFX migration:
+  * Update ServiceProvider implementation
+  * Fix resource bundle loading
+  * Standardize View/Presenter naming conventions
+  * Refactor dialog creation
 
-* Add project deletion functionality
+* Implement Chart-FX integration to replace Chart.js in WebView
 
-* Finalize Chart.js Gantt integration
+* Enhance H2 database configuration with proper settings
 
-* Evaluate Spring for DI integration and maintainability
-
-* Add portable mode (no install, USB-friendly)
+* Implement task-based threading model for asynchronous processing
 
 ---
 
 ### **8\. Future Development Possibilities**
+
+#### **Architecture Enhancements**
+
+* Message/Event system for component communication
+* Comprehensive validation framework
+* Enhanced error handling framework
 
 #### **Multi-User Enhancements**
 
@@ -159,4 +169,3 @@ The system has been fully transitioned away from the prior Django-based web appl
 ---
 
 This overview serves as a living reference for current system direction and future planning. All implementation is guided by clarity, testability, and maintainability in a modern JavaFX environment.
-

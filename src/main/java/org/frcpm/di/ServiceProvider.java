@@ -1,8 +1,9 @@
+// src/main/java/org/frcpm/di/ServiceProvider.java
+
 package org.frcpm.di;
 
 import com.airhacks.afterburner.injection.Injector;
 import org.frcpm.services.*;
-import org.frcpm.repositories.*;
 import org.frcpm.repositories.specific.*;
 
 import java.util.logging.Level;
@@ -13,36 +14,40 @@ import java.util.logging.Logger;
  * This class should be used instead of ServiceFactory after migration.
  */
 public class ServiceProvider {
-    
+
     private static final Logger LOGGER = Logger.getLogger(ServiceProvider.class.getName());
-    
+
     /**
      * Gets a service instance by its interface class.
      * 
-     * @param <T> the type of service
+     * @param <T>          the type of service
      * @param serviceClass the interface class of the service
      * @return the service instance
      */
     public static <T> T getService(Class<T> serviceClass) {
         LOGGER.fine("Getting service: " + serviceClass.getSimpleName());
-        // Use the proper AfterburnerFX API
+
         try {
-            // First try to get from FrcpmModule's registered services
-            Object instance = null;
-            // Use proper AfterburnerFX API to get the instance
-            instance = Injector.instantiatePresenter(serviceClass);
+            // Get instance from AfterburnerFX Injector
+            // The correct way to get an instance from the Injector
+            T instance = Injector.instantiatePresenter(serviceClass);
+
             if (instance != null) {
-                return (T) instance;
+                return instance;
             }
-            
-            // If not found, create a new instance
-            return serviceClass.getDeclaredConstructor().newInstance();
+
+            // If not found in DI container, log a warning
+            LOGGER.warning("Service not registered in FrcpmModule: " + serviceClass.getSimpleName());
+
+            // Return null instead of trying to create a new instance
+            return null;
+
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error getting service: " + serviceClass.getSimpleName(), e);
             return null;
         }
     }
-    
+
     /**
      * Gets the project service.
      * 
@@ -51,7 +56,7 @@ public class ServiceProvider {
     public static ProjectService getProjectService() {
         return getService(ProjectService.class);
     }
-    
+
     /**
      * Gets the task service.
      * 
@@ -60,7 +65,7 @@ public class ServiceProvider {
     public static TaskService getTaskService() {
         return getService(TaskService.class);
     }
-    
+
     /**
      * Gets the team member service.
      * 
@@ -69,7 +74,7 @@ public class ServiceProvider {
     public static TeamMemberService getTeamMemberService() {
         return getService(TeamMemberService.class);
     }
-    
+
     /**
      * Gets the subteam service.
      * 
@@ -78,7 +83,7 @@ public class ServiceProvider {
     public static SubteamService getSubteamService() {
         return getService(SubteamService.class);
     }
-    
+
     /**
      * Gets the subsystem service.
      * 
@@ -87,7 +92,7 @@ public class ServiceProvider {
     public static SubsystemService getSubsystemService() {
         return getService(SubsystemService.class);
     }
-    
+
     /**
      * Gets the component service.
      * 
@@ -96,7 +101,7 @@ public class ServiceProvider {
     public static ComponentService getComponentService() {
         return getService(ComponentService.class);
     }
-    
+
     /**
      * Gets the meeting service.
      * 
@@ -105,7 +110,7 @@ public class ServiceProvider {
     public static MeetingService getMeetingService() {
         return getService(MeetingService.class);
     }
-    
+
     /**
      * Gets the attendance service.
      * 
@@ -114,7 +119,7 @@ public class ServiceProvider {
     public static AttendanceService getAttendanceService() {
         return getService(AttendanceService.class);
     }
-    
+
     /**
      * Gets the milestone service.
      * 
@@ -123,7 +128,7 @@ public class ServiceProvider {
     public static MilestoneService getMilestoneService() {
         return getService(MilestoneService.class);
     }
-    
+
     /**
      * Gets the dialog service.
      * 
@@ -132,7 +137,7 @@ public class ServiceProvider {
     public static DialogService getDialogService() {
         return getService(DialogService.class);
     }
-    
+
     /**
      * Gets the Gantt data service.
      * 
@@ -141,7 +146,7 @@ public class ServiceProvider {
     public static GanttDataService getGanttDataService() {
         return getService(GanttDataService.class);
     }
-    
+
     /**
      * Gets the WebView bridge service.
      * 
@@ -150,37 +155,40 @@ public class ServiceProvider {
     public static WebViewBridgeService getWebViewBridgeService() {
         return getService(WebViewBridgeService.class);
     }
-    
+
     // Repository accessor methods
-    
+
     /**
      * Gets a repository instance by its interface class.
      * 
-     * @param <T> the type of repository
+     * @param <T>             the type of repository
      * @param repositoryClass the interface class of the repository
      * @return the repository instance
      */
     public static <T> T getRepository(Class<T> repositoryClass) {
         LOGGER.fine("Getting repository: " + repositoryClass.getSimpleName());
-        // Use the proper AfterburnerFX API
+
         try {
-            // First try to get from FrcpmModule's registered repositories
-            Object instance = null;
-            // Use proper AfterburnerFX API to get the instance
-            instance = Injector.instantiatePresenter(repositoryClass);
+            // Get instance from AfterburnerFX Injector
+            // The correct way to get an instance from the Injector
+            T instance = Injector.instantiatePresenter(repositoryClass);
+
             if (instance != null) {
-                return (T) instance;
+                return instance;
             }
-            
-            // If not found, create a new instance
-            return repositoryClass.getDeclaredConstructor().newInstance();
+
+            // If not found in DI container, log a warning
+            LOGGER.warning("Repository not registered in FrcpmModule: " + repositoryClass.getSimpleName());
+
+            // Return null instead of trying to create a new instance
+            return null;
+
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error getting repository: " + repositoryClass.getSimpleName(), e);
             return null;
         }
     }
 
-    
     /**
      * Gets the project repository.
      * 
@@ -189,7 +197,7 @@ public class ServiceProvider {
     public static ProjectRepository getProjectRepository() {
         return getRepository(ProjectRepository.class);
     }
-    
+
     /**
      * Gets the task repository.
      * 
@@ -198,7 +206,7 @@ public class ServiceProvider {
     public static TaskRepository getTaskRepository() {
         return getRepository(TaskRepository.class);
     }
-    
+
     /**
      * Gets the team member repository.
      * 
@@ -207,7 +215,7 @@ public class ServiceProvider {
     public static TeamMemberRepository getTeamMemberRepository() {
         return getRepository(TeamMemberRepository.class);
     }
-    
+
     /**
      * Gets the subteam repository.
      * 
@@ -216,7 +224,7 @@ public class ServiceProvider {
     public static SubteamRepository getSubteamRepository() {
         return getRepository(SubteamRepository.class);
     }
-    
+
     /**
      * Gets the subsystem repository.
      * 
@@ -225,7 +233,7 @@ public class ServiceProvider {
     public static SubsystemRepository getSubsystemRepository() {
         return getRepository(SubsystemRepository.class);
     }
-    
+
     /**
      * Gets the component repository.
      * 
@@ -234,7 +242,7 @@ public class ServiceProvider {
     public static ComponentRepository getComponentRepository() {
         return getRepository(ComponentRepository.class);
     }
-    
+
     /**
      * Gets the meeting repository.
      * 
@@ -243,7 +251,7 @@ public class ServiceProvider {
     public static MeetingRepository getMeetingRepository() {
         return getRepository(MeetingRepository.class);
     }
-    
+
     /**
      * Gets the attendance repository.
      * 
@@ -252,7 +260,7 @@ public class ServiceProvider {
     public static AttendanceRepository getAttendanceRepository() {
         return getRepository(AttendanceRepository.class);
     }
-    
+
     /**
      * Gets the milestone repository.
      * 
