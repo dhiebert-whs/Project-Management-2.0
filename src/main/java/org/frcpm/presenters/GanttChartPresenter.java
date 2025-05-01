@@ -24,6 +24,7 @@ import java.util.logging.Logger;
 
 /**
  * Presenter for the Gantt chart view using AfterburnerFX pattern.
+ * Handles user interaction and delegates business logic to the ViewModel.
  */
 public class GanttChartPresenter implements Initializable {
     private static final Logger LOGGER = Logger.getLogger(GanttChartPresenter.class.getName());
@@ -60,10 +61,11 @@ public class GanttChartPresenter implements Initializable {
     
     /**
      * Initializes the presenter.
+     * This method is automatically called after the FXML has been loaded.
      */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        LOGGER.info("Initializing GanttChartPresenter with resource bundle");
+        LOGGER.info("Initializing GanttChartPresenter");
         
         this.resources = resources;
         
@@ -95,79 +97,101 @@ public class GanttChartPresenter implements Initializable {
     
     /**
      * Sets up the WebView component.
+     * Initializes the WebView and sets up the bridge between Java and JavaScript.
      */
     private void initializeWebView() {
-        WebEngine engine = webView.getEngine();
-        
-        // Enable JavaScript
-        engine.setJavaScriptEnabled(true);
-        
-        // Load the HTML file from resources
-        String htmlUrl = getClass().getResource("/web/gantt-chart.html").toExternalForm();
-        engine.load(htmlUrl);
-        
-        // Set up the bridge between Java and JavaScript
-        engine.getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
-            if (newState == javafx.concurrent.Worker.State.SUCCEEDED) {
-                // Initialize bridge service
-                bridgeService.initialize(engine, viewModel);
-                bridgeInitialized = true;
-                
-                // Set status message
-                viewModel.setStatusMessage(resources.getString("gantt.status.loaded"));
-                
-                // If we already have a project set, load the data
-                if (viewModel.getProject() != null) {
-                    // Give the bridge a moment to initialize fully
-                    CompletableFuture.runAsync(() -> {
-                        try {
-                            Thread.sleep(500);
-                            javafx.application.Platform.runLater(() -> {
-                                viewModel.getRefreshCommand().execute();
+        try {
+            WebEngine engine = webView.getEngine();
+            
+            // Enable JavaScript
+            engine.setJavaScriptEnabled(true);
+            
+            // Load the HTML file from resources
+            String htmlUrl = getClass().getResource("/web/gantt-chart.html").toExternalForm();
+            engine.load(htmlUrl);
+            
+            // Set up the bridge between Java and JavaScript
+            engine.getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
+                if (newState == javafx.concurrent.Worker.State.SUCCEEDED) {
+                    try {
+                        // Initialize bridge service
+                        bridgeService.initialize(engine, viewModel);
+                        bridgeInitialized = true;
+                        
+                        // Set status message
+                        viewModel.setStatusMessage(resources.getString("gantt.status.loaded"));
+                        
+                        // If we already have a project set, load the data
+                        if (viewModel.getProject() != null) {
+                            // Give the bridge a moment to initialize fully
+                            CompletableFuture.runAsync(() -> {
+                                try {
+                                    Thread.sleep(500);
+                                    javafx.application.Platform.runLater(() -> {
+                                        viewModel.getRefreshCommand().execute();
+                                    });
+                                } catch (InterruptedException e) {
+                                    Thread.currentThread().interrupt();
+                                    LOGGER.log(Level.WARNING, "Interrupted while waiting for bridge initialization", e);
+                                }
                             });
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
                         }
-                    });
+                    } catch (Exception e) {
+                        LOGGER.log(Level.SEVERE, "Error initializing WebView bridge", e);
+                        viewModel.setErrorMessage("Failed to initialize chart: " + e.getMessage());
+                    }
                 }
-            }
-        });
+            });
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up WebView", e);
+            viewModel.setErrorMessage("Failed to set up chart view: " + e.getMessage());
+        }
     }
     
     /**
-     * Sets up the combo boxes.
+     * Sets up the combo boxes with appropriate values.
      */
     private void setupComboBoxes() {
-        // Set up view mode options
-        viewModeComboBox.getItems().setAll(GanttChartViewModel.ViewMode.values());
-        viewModeComboBox.setValue(GanttChartViewModel.ViewMode.WEEK);
-        
-        // Set up filter options
-        filterComboBox.getItems().setAll(GanttChartViewModel.FilterOption.values());
-        filterComboBox.setValue(GanttChartViewModel.FilterOption.ALL_TASKS);
+        try {
+            // Set up view mode options
+            viewModeComboBox.getItems().setAll(GanttChartViewModel.ViewMode.values());
+            viewModeComboBox.setValue(GanttChartViewModel.ViewMode.WEEK);
+            
+            // Set up filter options
+            filterComboBox.getItems().setAll(GanttChartViewModel.FilterOption.values());
+            filterComboBox.setValue(GanttChartViewModel.FilterOption.ALL_TASKS);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up combo boxes", e);
+            viewModel.setErrorMessage("Failed to set up filter options: " + e.getMessage());
+        }
     }
     
     /**
      * Sets up data bindings between UI and ViewModel.
      */
     private void setupBindings() {
-        // Bind combo boxes
-        ViewModelBinding.bindComboBox(viewModeComboBox, viewModel.viewModeProperty());
-        ViewModelBinding.bindComboBox(filterComboBox, viewModel.filterOptionProperty());
-        
-        // Bind status label
-        ViewModelBinding.bindLabel(statusLabel, viewModel.statusMessageProperty());
-        
-        // Bind toggle buttons
-        ViewModelBinding.bindToggleButton(milestonesToggle, viewModel.showMilestonesProperty());
-        ViewModelBinding.bindToggleButton(dependenciesToggle, viewModel.showDependenciesProperty());
-        
-        // Bind commands to buttons
-        ViewModelBinding.bindCommandButton(refreshButton, viewModel.getRefreshCommand());
-        ViewModelBinding.bindCommandButton(zoomInButton, viewModel.getZoomInCommand());
-        ViewModelBinding.bindCommandButton(zoomOutButton, viewModel.getZoomOutCommand());
-        ViewModelBinding.bindCommandButton(exportButton, viewModel.getExportCommand());
-        ViewModelBinding.bindCommandButton(todayButton, viewModel.getTodayCommand());
+        try {
+            // Bind combo boxes
+            ViewModelBinding.bindComboBox(viewModeComboBox, viewModel.viewModeProperty());
+            ViewModelBinding.bindComboBox(filterComboBox, viewModel.filterOptionProperty());
+            
+            // Bind status label
+            ViewModelBinding.bindLabel(statusLabel, viewModel.statusMessageProperty());
+            
+            // Bind toggle buttons
+            ViewModelBinding.bindToggleButton(milestonesToggle, viewModel.showMilestonesProperty());
+            ViewModelBinding.bindToggleButton(dependenciesToggle, viewModel.showDependenciesProperty());
+            
+            // Bind commands to buttons
+            ViewModelBinding.bindCommandButton(refreshButton, viewModel.getRefreshCommand());
+            ViewModelBinding.bindCommandButton(zoomInButton, viewModel.getZoomInCommand());
+            ViewModelBinding.bindCommandButton(zoomOutButton, viewModel.getZoomOutCommand());
+            ViewModelBinding.bindCommandButton(exportButton, viewModel.getExportCommand());
+            ViewModelBinding.bindCommandButton(todayButton, viewModel.getTodayCommand());
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up bindings", e);
+            viewModel.setErrorMessage("Failed to set up UI bindings: " + e.getMessage());
+        }
     }
     
     /**
@@ -203,41 +227,46 @@ public class GanttChartPresenter implements Initializable {
     
     /**
      * Handles the refresh button click.
+     * This method is called when the refresh button is clicked.
      */
     @FXML
-    void handleRefresh() {
+    public void handleRefresh() {
         viewModel.getRefreshCommand().execute();
     }
     
     /**
      * Handles the zoom in button click.
+     * This method is called when the zoom in button is clicked.
      */
     @FXML
-    void handleZoomIn() {
+    public void handleZoomIn() {
         viewModel.getZoomInCommand().execute();
     }
     
     /**
      * Handles the zoom out button click.
+     * This method is called when the zoom out button is clicked.
      */
     @FXML
-    void handleZoomOut() {
+    public void handleZoomOut() {
         viewModel.getZoomOutCommand().execute();
     }
     
     /**
      * Handles the today button click.
+     * This method is called when the today button is clicked.
      */
     @FXML
-    void handleToday() {
+    public void handleToday() {
         viewModel.getTodayCommand().execute();
     }
     
     /**
      * Handles the export button click.
+     * This method is called when the export button is clicked.
      */
     @FXML
-    void handleExport() {
+    public void handleExport() {
         viewModel.getExportCommand().execute();
     }
     
@@ -258,11 +287,33 @@ public class GanttChartPresenter implements Initializable {
     
     /**
      * Gets the ViewModel.
+     * Useful for testing and programmatic access.
      * 
      * @return the ViewModel
      */
     public GanttChartViewModel getViewModel() {
         return viewModel;
+    }
+    
+    /**
+     * Cleans up resources.
+     * This method should be called when the presenter is no longer needed.
+     */
+    public void cleanup() {
+        if (viewModel != null) {
+            viewModel.cleanupResources();
+        }
+        
+        // Clean up WebView
+        if (webView != null) {
+            WebEngine engine = webView.getEngine();
+            if (engine != null) {
+                engine.load(null);
+            }
+            webView = null;
+        }
+        
+        bridgeInitialized = false;
     }
     
     /**
@@ -276,14 +327,25 @@ public class GanttChartPresenter implements Initializable {
         }
         
         // Setup bindings and error listener only
+        viewModel = new GanttChartViewModel(ganttDataService);
         setupBindings();
         setupErrorListener();
     }
-
+    
     /**
      * For testing only - sets the bridge initialization flag
      */
     void setBridgeInitializedForTesting(boolean value) {
         this.bridgeInitialized = value;
+    }
+    
+    /**
+     * For testing - sets the ViewModel
+     * 
+     * @param viewModel the ViewModel to set
+     */
+    void setViewModel(GanttChartViewModel viewModel) {
+        this.viewModel = viewModel;
+        setupBindings();
     }
 }

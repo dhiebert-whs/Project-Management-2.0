@@ -48,7 +48,7 @@ public abstract class BaseViewModel {
      * 
      * @param message the error message
      */
-    protected void setErrorMessage(String message) {
+    public void setErrorMessage(String message) {
         errorMessage.set(message);
     }
 
