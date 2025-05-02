@@ -168,7 +168,7 @@ public class AttendancePresenterTestFX extends BaseFxTest {
         WaitForAsyncUtils.waitForFxEvents();
         
         // Get the table view and verify it has the correct number of rows
-        TableView<?> attendanceTable = lookup("#attendanceTable").queryAs(TableView.class);
+        TableView<?> attendanceTable = lookup("#attendanceTable").queryTableView();
         assertEquals(2, attendanceTable.getItems().size(), "Table should have 2 attendance records");
     }
     
@@ -181,7 +181,7 @@ public class AttendancePresenterTestFX extends BaseFxTest {
         WaitForAsyncUtils.waitForFxEvents();
         
         // Get the table view
-        TableView<?> attendanceTable = lookup("#attendanceTable").queryAs(TableView.class);
+        TableView<?> attendanceTable = lookup("#attendanceTable").queryTableView();
         
         // Select the second row (absent member)
         attendanceTable.getSelectionModel().select(1);
@@ -215,8 +215,8 @@ public class AttendancePresenterTestFX extends BaseFxTest {
         attendanceTable.getSelectionModel().select(0);
         
         // Set arrival and departure times
-        TextField arrivalTimeField = lookup("#arrivalTimeField").queryAs(TextField.class);
-        TextField departureTimeField = lookup("#departureTimeField").queryAs(TextField.class);
+        TextField arrivalTimeField = lookup("#arrivalTimeField").queryTextInputControl();
+        TextField departureTimeField = lookup("#departureTimeField").queryTextInputControl();
         
         // Clear fields and enter new times
         arrivalTimeField.clear();
