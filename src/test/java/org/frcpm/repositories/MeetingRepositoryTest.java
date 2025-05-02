@@ -1,260 +1,481 @@
-package org.frcpm.presenters.testfx;
+package org.frcpm.repositories;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.List;
-
-import javafx.collections.FXCollections;
-import javafx.scene.Scene;
-import javafx.scene.control.*;
-import javafx.stage.Stage;
-
-import org.frcpm.models.Attendance;
+import org.frcpm.config.DatabaseConfig;
 import org.frcpm.models.Meeting;
 import org.frcpm.models.Project;
-import org.frcpm.models.TeamMember;
-import org.frcpm.presenters.AttendancePresenter;
-import org.frcpm.services.AttendanceService;
-import org.frcpm.services.DialogService;
-import org.frcpm.services.MeetingService;
-import org.frcpm.services.TeamMemberService;
-import org.frcpm.testfx.BaseFxTest;
-import org.frcpm.testfx.TestFXHeadlessConfig;
-import org.frcpm.viewmodels.AttendanceViewModel;
-import org.frcpm.views.AttendanceView;
-
+import org.frcpm.repositories.specific.MeetingRepository;
+import org.frcpm.repositories.specific.ProjectRepository;
+import org.frcpm.utils.TestEnvironmentSetup;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.testfx.util.WaitForAsyncUtils;
 
-/**
- * TestFX test for the AttendancePresenter class.
- */
-@ExtendWith(MockitoExtension.class)
-public class AttendancePresenterTestFX extends BaseFxTest {
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityTransaction;
 
-    @Mock
-    private AttendanceService attendanceService;
-    
-    @Mock
-    private MeetingService meetingService;
-    
-    @Mock
-    private TeamMemberService teamMemberService;
-    
-    @Mock
-    private DialogService dialogService;
-    
-    private AutoCloseable closeable;
-    private AttendanceView view;
-    private AttendancePresenter presenter;
-    private AttendanceViewModel viewModel;
-    
-    // Test data
-    private Meeting testMeeting;
-    private List<TeamMember> testMembers;
-    private List<Attendance> testAttendances;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.logging.Logger;
 
-    @Override
-    protected void initializeTestComponents(Stage stage) {
-        // Create view and presenter
-        view = new AttendanceView();
-        presenter = (AttendancePresenter) view.getPresenter();
-        
-        // Initialize the scene with our view
-        Scene scene = new Scene(view.getView(), 800, 600);
-        stage.setScene(scene);
-        
-        // Setup the presenter with mocked services
-        injectMockedServices();
-        
-        // Create test data
-        setupTestData();
-        
-        // Setup mocked service responses
-        setupMockResponses();
-    }
+import static org.junit.jupiter.api.Assertions.*;
+
+@ExtendWith({MockitoExtension.class, TestEnvironmentSetup.class})
+public class MeetingRepositoryTest {
+    
+    private static final Logger LOGGER = Logger.getLogger(MeetingRepositoryTest.class.getName());
+    
+    private MeetingRepository repository;
+    private ProjectRepository projectRepository;
+    private Project testProject;
     
     @BeforeEach
-    public void initMocks() {
-        closeable = MockitoAnnotations.openMocks(this);
+    public void setUp() {
+        // Force development mode for testing
+        System.setProperty("app.db.dev", "true");
         
-        // Allow access to the ViewModel for test verification
-        if (presenter != null) {
-            viewModel = presenter.getViewModel();
-        }
-    }
-    
-    private void injectMockedServices() {
+        // Initialize a clean database for each test
+        DatabaseConfig.reinitialize(true);
+        
+        repository = RepositoryFactory.getMeetingRepository();
+        projectRepository = RepositoryFactory.getProjectRepository();
+        
+        // Create test project in a transaction
+        EntityManager em = DatabaseConfig.getEntityManager();
+        EntityTransaction tx = em.getTransaction();
         try {
-            // Use reflection to inject mocked services
-            java.lang.reflect.Field attendanceServiceField = presenter.getClass().getDeclaredField("attendanceService");
-            attendanceServiceField.setAccessible(true);
-            attendanceServiceField.set(presenter, attendanceService);
+            tx.begin();
             
-            java.lang.reflect.Field meetingServiceField = presenter.getClass().getDeclaredField("meetingService");
-            meetingServiceField.setAccessible(true);
-            meetingServiceField.set(presenter, meetingService);
+            testProject = new Project(
+                "Test Meeting Project", 
+                LocalDate.now(), 
+                LocalDate.now().plusWeeks(6), 
+                LocalDate.now().plusWeeks(8)
+            );
             
-            java.lang.reflect.Field teamMemberServiceField = presenter.getClass().getDeclaredField("teamMemberService");
-            teamMemberServiceField.setAccessible(true);
-            teamMemberServiceField.set(presenter, teamMemberService);
+            em.persist(testProject);
+            tx.commit();
             
-            java.lang.reflect.Field dialogServiceField = presenter.getClass().getDeclaredField("dialogService");
-            dialogServiceField.setAccessible(true);
-            dialogServiceField.set(presenter, dialogService);
+            // Create test meetings in their own transaction
+            createTestMeetings();
+            
         } catch (Exception e) {
+            if (tx.isActive()) {
+                tx.rollback();
+            }
+            LOGGER.severe("Error setting up test data: " + e.getMessage());
             e.printStackTrace();
-            fail("Failed to inject mocked services: " + e.getMessage());
+            fail("Failed to set up test data: " + e.getMessage());
+        } finally {
+            em.close();
         }
     }
     
-    private void setupTestData() {
-        // Create a test meeting
-        Project testProject = new Project("Test Project", LocalDate.now(), LocalDate.now().plusWeeks(6), LocalDate.now().plusWeeks(8));
-        testProject.setId(1L);
-        
-        testMeeting = new Meeting(LocalDate.now(), LocalTime.of(18, 0), LocalTime.of(20, 0), testProject);
-        testMeeting.setId(1L);
-        
-        // Create test team members
-        testMembers = new ArrayList<>();
-        
-        TeamMember member1 = new TeamMember("testuser1", "Test", "User1", "test1@example.com");
-        member1.setId(1L);
-        
-        TeamMember member2 = new TeamMember("testuser2", "Test", "User2", "test2@example.com");
-        member2.setId(2L);
-        
-        testMembers.add(member1);
-        testMembers.add(member2);
-        
-        // Create test attendance records
-        testAttendances = new ArrayList<>();
-        
-        Attendance attendance1 = new Attendance(testMeeting, member1, true);
-        attendance1.setId(1L);
-        attendance1.setArrivalTime(LocalTime.of(18, 0));
-        attendance1.setDepartureTime(LocalTime.of(20, 0));
-        
-        Attendance attendance2 = new Attendance(testMeeting, member2, false);
-        attendance2.setId(2L);
-        
-        testAttendances.add(attendance1);
-        testAttendances.add(attendance2);
+    @AfterEach
+    public void tearDown() {
+        try {
+            // Clean up test data in reverse order
+            cleanupTestMeetings();
+            
+            EntityManager em = DatabaseConfig.getEntityManager();
+            EntityTransaction tx = em.getTransaction();
+            try {
+                tx.begin();
+                Project project = em.find(Project.class, testProject.getId());
+                if (project != null) {
+                    em.remove(project);
+                }
+                tx.commit();
+            } catch (Exception e) {
+                if (tx.isActive()) {
+                    tx.rollback();
+                }
+                LOGGER.warning("Error cleaning up test project: " + e.getMessage());
+            } finally {
+                em.close();
+            }
+        } finally {
+            DatabaseConfig.shutdown();
+        }
     }
     
-    private void setupMockResponses() {
-        // Configure the mock services
-        when(meetingService.findById(anyLong())).thenReturn(testMeeting);
-        when(teamMemberService.findAll()).thenReturn(testMembers);
-        when(attendanceService.findByMeeting(any(Meeting.class))).thenReturn(testAttendances);
+    private void createTestMeetings() {
+        EntityManager em = DatabaseConfig.getEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        try {
+            tx.begin();
+            
+            // Get a fresh reference to the project
+            Project project = em.find(Project.class, testProject.getId());
+            
+            Meeting meeting1 = new Meeting(
+                LocalDate.now().plusDays(1),
+                LocalTime.of(18, 0), // 6:00 PM
+                LocalTime.of(20, 0), // 8:00 PM
+                project
+            );
+            meeting1.setNotes("First meeting notes");
+            
+            Meeting meeting2 = new Meeting(
+                LocalDate.now().plusDays(3),
+                LocalTime.of(16, 0), // 4:00 PM
+                LocalTime.of(18, 30), // 6:30 PM
+                project
+            );
+            meeting2.setNotes("Second meeting notes");
+            
+            Meeting meeting3 = new Meeting(
+                LocalDate.now().plusDays(7),
+                LocalTime.of(10, 0), // 10:00 AM
+                LocalTime.of(12, 0), // 12:00 PM
+                project
+            );
+            meeting3.setNotes("Third meeting notes");
+            
+            em.persist(meeting1);
+            em.persist(meeting2);
+            em.persist(meeting3);
+            
+            tx.commit();
+        } catch (Exception e) {
+            if (tx.isActive()) {
+                tx.rollback();
+            }
+            LOGGER.severe("Error creating test meetings: " + e.getMessage());
+            e.printStackTrace();
+            fail("Failed to create test meetings: " + e.getMessage());
+        } finally {
+            em.close();
+        }
     }
     
-    @Test
-    public void testAttendanceTableInitialization() {
-        // Set the meeting for the presenter
-        presenter.setMeeting(testMeeting);
-        
-        // Wait for JavaFX thread to process
-        WaitForAsyncUtils.waitForFxEvents();
-        
-        // Get the table view and verify it has the correct number of rows
-        TableView<?> attendanceTable = lookup("#attendanceTable").queryAs(TableView.class);
-        assertEquals(2, attendanceTable.getItems().size(), "Table should have 2 attendance records");
-    }
-    
-    @Test
-    public void testToggleAttendance() {
-        // Set the meeting for the presenter
-        presenter.setMeeting(testMeeting);
-        
-        // Wait for JavaFX thread to process
-        WaitForAsyncUtils.waitForFxEvents();
-        
-        // Get the table view
-        TableView<?> attendanceTable = lookup("#attendanceTable").queryAs(TableView.class);
-        
-        // Select the second row (absent member)
-        attendanceTable.getSelectionModel().select(1);
-        
-        // Get the present column and click on the checkbox
-        TableColumn<?, ?> presentColumn = attendanceTable.getColumns().get(2); // Index 2 should be the "Present" column
-        
-        // Find checkbox in selected row of present column and click it
-        Node checkbox = lookup(".check-box").nth(2).query();
-        clickOn(checkbox);
-        
-        // Wait for JavaFX thread to process
-        WaitForAsyncUtils.waitForFxEvents();
-        
-        // Verify that the attendance service was called to update the attendance
-        verify(attendanceService).updateAttendance(eq(2L), eq(true), any(), any());
-    }
-    
-    @Test
-    public void testSetTimeButtonWhenMemberSelected() {
-        // Set the meeting for the presenter
-        presenter.setMeeting(testMeeting);
-        
-        // Wait for JavaFX thread to process
-        WaitForAsyncUtils.waitForFxEvents();
-        
-        // Get the table view
-        TableView<?> attendanceTable = lookup("#attendanceTable").queryAs(TableView.class);
-        
-        // Select the first row (present member)
-        attendanceTable.getSelectionModel().select(0);
-        
-        // Set arrival and departure times
-        TextField arrivalTimeField = lookup("#arrivalTimeField").queryAs(TextField.class);
-        TextField departureTimeField = lookup("#departureTimeField").queryAs(TextField.class);
-        
-        // Clear fields and enter new times
-        arrivalTimeField.clear();
-        clickOn(arrivalTimeField).write("18:15");
-        
-        departureTimeField.clear();
-        clickOn(departureTimeField).write("19:45");
-        
-        // Click set time button
-        clickOn("Set");
-        
-        // Wait for JavaFX thread to process
-        WaitForAsyncUtils.waitForFxEvents();
-        
-        // Verify that the attendance service was called to update the attendance
-        verify(attendanceService).updateAttendance(
-            eq(1L), 
-            eq(true), 
-            eq(LocalTime.of(18, 15)), 
-            eq(LocalTime.of(19, 45))
-        );
+    private void cleanupTestMeetings() {
+        EntityManager em = DatabaseConfig.getEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        try {
+            tx.begin();
+            
+            // Get a fresh reference to the project
+            Project project = em.find(Project.class, testProject.getId());
+            
+            // Use a native query to avoid cache issues
+            em.createQuery("DELETE FROM Meeting m WHERE m.project = :project")
+                .setParameter("project", project)
+                .executeUpdate();
+            
+            tx.commit();
+        } catch (Exception e) {
+            if (tx.isActive()) {
+                tx.rollback();
+            }
+            LOGGER.warning("Error cleaning up test meetings: " + e.getMessage());
+        } finally {
+            em.close();
+        }
     }
     
     @Test
-    public void testSaveButton() {
-        // Set the meeting for the presenter
-        presenter.setMeeting(testMeeting);
+    public void testFindAll() {
+        List<Meeting> meetings = repository.findAll();
+        assertNotNull(meetings);
+        assertTrue(meetings.size() >= 3);
+    }
+    
+    @Test
+    public void testFindById() {
+        // First, get a meeting ID from the DB
+        List<Meeting> meetings = repository.findByProject(testProject);
+        Meeting firstMeeting = meetings.get(0);
         
-        // Wait for JavaFX thread to process
-        WaitForAsyncUtils.waitForFxEvents();
+        // Now test findById
+        Optional<Meeting> found = repository.findById(firstMeeting.getId());
+        assertTrue(found.isPresent());
+        assertEquals(firstMeeting.getDate(), found.get().getDate());
+        assertEquals(firstMeeting.getStartTime(), found.get().getStartTime());
+    }
+    
+    @Test
+    public void testFindByProject() {
+        List<Meeting> meetings = repository.findByProject(testProject);
+        assertNotNull(meetings);
+        assertFalse(meetings.isEmpty());
+        assertTrue(meetings.stream().allMatch(m -> m.getProject().getId().equals(testProject.getId())));
+        assertEquals(3, meetings.size());
+    }
+    
+    @Test
+    public void testFindByDate() {
+        LocalDate meetingDate = LocalDate.now().plusDays(3);
+        List<Meeting> meetings = repository.findByDate(meetingDate);
+        assertFalse(meetings.isEmpty());
         
-        // Click the save button
-        clickOn("#saveButton");
+        for (Meeting meeting : meetings) {
+            assertEquals(meetingDate, meeting.getDate());
+        }
         
-        // Wait for JavaFX thread to process
-        WaitForAsyncUtils.waitForFxEvents();
+        // Should find exactly one meeting on this date
+        assertEquals(1, meetings.size());
+    }
+    
+    @Test
+    public void testFindByDateAfter() {
+        LocalDate cutoffDate = LocalDate.now().plusDays(2);
+        List<Meeting> meetings = repository.findByDateAfter(cutoffDate);
+        assertFalse(meetings.isEmpty());
         
-        // Verify that the dialog service was called to show confirmation
-        verify(dialogService).showInformation(anyString(), anyString());
+        for (Meeting meeting : meetings) {
+            assertTrue(meeting.getDate().isAfter(cutoffDate));
+        }
+        
+        // Should find the second and third meetings
+        assertEquals(2, meetings.size());
+    }
+    
+    @Test
+    public void testFindByDateBetween() {
+        LocalDate startDate = LocalDate.now().plusDays(2);
+        LocalDate endDate = LocalDate.now().plusDays(5);
+        
+        List<Meeting> meetings = repository.findByDateBetween(startDate, endDate);
+        assertFalse(meetings.isEmpty());
+        
+        for (Meeting meeting : meetings) {
+            assertTrue(!meeting.getDate().isBefore(startDate) && !meeting.getDate().isAfter(endDate));
+        }
+        
+        // Should find the second meeting
+        assertEquals(1, meetings.size());
+    }
+    
+    @Test
+    public void testSave() {
+        EntityManager em = DatabaseConfig.getEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        Meeting saved = null;
+        
+        try {
+            tx.begin();
+            // Get a fresh reference to the project
+            Project project = em.find(Project.class, testProject.getId());
+            
+            Meeting newMeeting = new Meeting(
+                LocalDate.now().plusDays(10),
+                LocalTime.of(14, 0), // 2:00 PM
+                LocalTime.of(16, 0), // 4:00 PM
+                project
+            );
+            newMeeting.setNotes("Test save meeting notes");
+            
+            em.persist(newMeeting);
+            tx.commit();
+            
+            // Need to set the ID field manually
+            saved = newMeeting;
+        } catch (Exception e) {
+            if (tx.isActive()) {
+                tx.rollback();
+            }
+            LOGGER.severe("Error saving test meeting: " + e.getMessage());
+            e.printStackTrace();
+            fail("Failed to save test meeting: " + e.getMessage());
+        } finally {
+            em.close();
+        }
+        
+        assertNotNull(saved.getId());
+        
+        // Verify it was saved
+        Optional<Meeting> found = repository.findById(saved.getId());
+        assertTrue(found.isPresent());
+        assertEquals(LocalDate.now().plusDays(10), found.get().getDate());
+        assertEquals(LocalTime.of(14, 0), found.get().getStartTime());
+        assertEquals("Test save meeting notes", found.get().getNotes());
+    }
+    
+    @Test
+    public void testUpdate() {
+        EntityManager em = DatabaseConfig.getEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        Meeting saved = null;
+        
+        try {
+            tx.begin();
+            // Get a fresh reference to the project
+            Project project = em.find(Project.class, testProject.getId());
+            
+            // First, create a meeting
+            Meeting meeting = new Meeting(
+                LocalDate.now().plusDays(15),
+                LocalTime.of(14, 0), // 2:00 PM
+                LocalTime.of(16, 0), // 4:00 PM
+                project
+            );
+            
+            em.persist(meeting);
+            em.flush();
+            
+            // Now update it
+            meeting.setDate(LocalDate.now().plusDays(16));
+            meeting.setStartTime(LocalTime.of(15, 0)); // 3:00 PM
+            meeting.setNotes("Updated meeting notes");
+            
+            em.merge(meeting);
+            tx.commit();
+            
+            // Need to set the ID field manually
+            saved = meeting;
+        } catch (Exception e) {
+            if (tx.isActive()) {
+                tx.rollback();
+            }
+            LOGGER.severe("Error updating test meeting: " + e.getMessage());
+            e.printStackTrace();
+            fail("Failed to update test meeting: " + e.getMessage());
+        } finally {
+            em.close();
+        }
+        
+        // Verify the update through the repository
+        Optional<Meeting> found = repository.findById(saved.getId());
+        assertTrue(found.isPresent());
+        assertEquals(LocalDate.now().plusDays(16), found.get().getDate());
+        assertEquals(LocalTime.of(15, 0), found.get().getStartTime());
+        assertEquals("Updated meeting notes", found.get().getNotes());
+    }
+    
+    @Test
+    public void testDelete() {
+        EntityManager em = DatabaseConfig.getEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        Meeting saved = null;
+        
+        try {
+            tx.begin();
+            // Get a fresh reference to the project
+            Project project = em.find(Project.class, testProject.getId());
+            
+            // First, create a meeting
+            Meeting meeting = new Meeting(
+                LocalDate.now().plusDays(20),
+                LocalTime.of(14, 0), // 2:00 PM
+                LocalTime.of(16, 0), // 4:00 PM
+                project
+            );
+            
+            em.persist(meeting);
+            tx.commit();
+            
+            // Need to set the ID field manually
+            saved = meeting;
+        } catch (Exception e) {
+            if (tx.isActive()) {
+                tx.rollback();
+            }
+            LOGGER.severe("Error creating meeting for delete test: " + e.getMessage());
+            e.printStackTrace();
+            fail("Failed to create meeting for delete test: " + e.getMessage());
+        } finally {
+            em.close();
+        }
+        
+        Long id = saved.getId();
+        
+        // Now delete it
+        repository.delete(saved);
+        
+        // Verify the deletion
+        Optional<Meeting> found = repository.findById(id);
+        assertFalse(found.isPresent());
+    }
+    
+    @Test
+    public void testDeleteById() {
+        EntityManager em = DatabaseConfig.getEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        Meeting saved = null;
+        
+        try {
+            tx.begin();
+            // Get a fresh reference to the project
+            Project project = em.find(Project.class, testProject.getId());
+            
+            // First, create a meeting
+            Meeting meeting = new Meeting(
+                LocalDate.now().plusDays(25),
+                LocalTime.of(14, 0), // 2:00 PM
+                LocalTime.of(16, 0), // 4:00 PM
+                project
+            );
+            
+            em.persist(meeting);
+            tx.commit();
+            
+            // Need to set the ID field manually
+            saved = meeting;
+        } catch (Exception e) {
+            if (tx.isActive()) {
+                tx.rollback();
+            }
+            LOGGER.severe("Error creating meeting for deleteById test: " + e.getMessage());
+            e.printStackTrace();
+            fail("Failed to create meeting for deleteById test: " + e.getMessage());
+        } finally {
+            em.close();
+        }
+        
+        Long id = saved.getId();
+        
+        // Now delete it by ID
+        boolean result = repository.deleteById(id);
+        assertTrue(result);
+        
+        // Verify the deletion
+        Optional<Meeting> found = repository.findById(id);
+        assertFalse(found.isPresent());
+    }
+    
+    @Test
+    public void testCount() {
+        long initialCount = repository.count();
+        
+        EntityManager em = DatabaseConfig.getEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        Meeting saved = null;
+        
+        try {
+            tx.begin();
+            // Get a fresh reference to the project
+            Project project = em.find(Project.class, testProject.getId());
+            
+            // Add a new meeting
+            Meeting meeting = new Meeting(
+                LocalDate.now().plusDays(30),
+                LocalTime.of(14, 0), // 2:00 PM
+                LocalTime.of(16, 0), // 4:00 PM
+                project
+            );
+            
+            em.persist(meeting);
+            tx.commit();
+            
+            // Need to set the ID field manually
+            saved = meeting;
+        } catch (Exception e) {
+            if (tx.isActive()) {
+                tx.rollback();
+            }
+            LOGGER.severe("Error creating meeting for count test: " + e.getMessage());
+            e.printStackTrace();
+            fail("Failed to create meeting for count test: " + e.getMessage());
+        } finally {
+            em.close();
+        }
+        
+        // Verify count increased
+        long newCount = repository.count();
+        assertEquals(initialCount + 1, newCount);
     }
 }

@@ -2,25 +2,37 @@ package org.frcpm.services;
 
 import org.frcpm.config.DatabaseConfig;
 import org.frcpm.models.Subteam;
+import org.frcpm.utils.TestEnvironmentSetup;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityTransaction;
+
 import java.util.List;
 import java.util.Optional;
+import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@ExtendWith(MockitoExtension.class)
+@ExtendWith({MockitoExtension.class, TestEnvironmentSetup.class})
 public class SubteamServiceTest {
+    
+    private static final Logger LOGGER = Logger.getLogger(SubteamServiceTest.class.getName());
     
     private SubteamService service;
     
     @BeforeEach
     public void setUp() {
-        DatabaseConfig.initialize();
+        // Force development mode for testing
+        System.setProperty("app.db.dev", "true");
+        
+        // Initialize a clean database for each test
+        DatabaseConfig.reinitialize(true);
+        
         service = ServiceFactory.getSubteamService();
         
         // Add test data
@@ -35,16 +47,51 @@ public class SubteamServiceTest {
     }
     
     private void createTestSubteams() {
-        service.createSubteam("Test Service Subteam 1", "#FF0000", "Java, Programming, Controls");
-        service.createSubteam("Test Service Subteam 2", "#00FF00", "CAD, Design, Fabrication");
+        EntityManager em = DatabaseConfig.getEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        try {
+            tx.begin();
+            
+            Subteam subteam1 = new Subteam("Test Service Subteam 1", "#FF0000");
+            subteam1.setSpecialties("Java, Programming, Controls");
+            
+            Subteam subteam2 = new Subteam("Test Service Subteam 2", "#00FF00");
+            subteam2.setSpecialties("CAD, Design, Fabrication");
+            
+            em.persist(subteam1);
+            em.persist(subteam2);
+            
+            tx.commit();
+        } catch (Exception e) {
+            if (tx.isActive()) {
+                tx.rollback();
+            }
+            LOGGER.severe("Error creating test subteams: " + e.getMessage());
+            e.printStackTrace();
+            fail("Failed to create test subteams: " + e.getMessage());
+        } finally {
+            em.close();
+        }
     }
     
     private void cleanupTestSubteams() {
-        List<Subteam> subteams = service.findAll();
-        for (Subteam subteam : subteams) {
-            if (subteam.getName().startsWith("Test Service Subteam")) {
-                service.delete(subteam);
+        EntityManager em = DatabaseConfig.getEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        try {
+            tx.begin();
+            
+            // Use a native query to avoid cache issues
+            em.createQuery("DELETE FROM Subteam s WHERE s.name LIKE 'Test Service Subteam%'")
+                .executeUpdate();
+            
+            tx.commit();
+        } catch (Exception e) {
+            if (tx.isActive()) {
+                tx.rollback();
             }
+            LOGGER.warning("Error cleaning up test subteams: " + e.getMessage());
+        } finally {
+            em.close();
         }
     }
     
@@ -61,7 +108,7 @@ public class SubteamServiceTest {
         List<Subteam> subteams = service.findAll();
         Subteam firstSubteam = subteams.stream()
             .filter(s -> s.getName().startsWith("Test Service Subteam"))
-            .findFirst().orElseThrow();
+            .findFirst().orElseThrow(() -> new AssertionError("No test subteams found"));
         
         // Now test findById
         Subteam found = service.findById(firstSubteam.getId());
@@ -110,11 +157,30 @@ public class SubteamServiceTest {
     @Test
     public void testUpdateSpecialties() {
         // First, create a subteam
-        Subteam created = service.createSubteam(
-            "Test Update Subteam", 
-            "#0000FF", 
-            "Original Specialties"
-        );
+        EntityManager em = DatabaseConfig.getEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        Subteam created = null;
+        
+        try {
+            tx.begin();
+            
+            Subteam subteam = new Subteam("Test Update Subteam", "#0000FF");
+            subteam.setSpecialties("Original Specialties");
+            
+            em.persist(subteam);
+            tx.commit();
+            
+            created = subteam;
+        } catch (Exception e) {
+            if (tx.isActive()) {
+                tx.rollback();
+            }
+            LOGGER.severe("Error creating subteam for update test: " + e.getMessage());
+            e.printStackTrace();
+            fail("Failed to create subteam for update test: " + e.getMessage());
+        } finally {
+            em.close();
+        }
         
         // Now update it
         Subteam updated = service.updateSpecialties(
@@ -135,11 +201,30 @@ public class SubteamServiceTest {
     @Test
     public void testUpdateColorCode() {
         // First, create a subteam
-        Subteam created = service.createSubteam(
-            "Test Color Update Subteam", 
-            "#0000FF", 
-            "Specialties"
-        );
+        EntityManager em = DatabaseConfig.getEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        Subteam created = null;
+        
+        try {
+            tx.begin();
+            
+            Subteam subteam = new Subteam("Test Color Update Subteam", "#0000FF");
+            subteam.setSpecialties("Specialties");
+            
+            em.persist(subteam);
+            tx.commit();
+            
+            created = subteam;
+        } catch (Exception e) {
+            if (tx.isActive()) {
+                tx.rollback();
+            }
+            LOGGER.severe("Error creating subteam for color update test: " + e.getMessage());
+            e.printStackTrace();
+            fail("Failed to create subteam for color update test: " + e.getMessage());
+        } finally {
+            em.close();
+        }
         
         // Now update it
         Subteam updated = service.updateColorCode(
@@ -160,11 +245,31 @@ public class SubteamServiceTest {
     @Test
     public void testDeleteById() {
         // First, create a subteam
-        Subteam created = service.createSubteam(
-            "Test DeleteById Subteam", 
-            "#0000FF", 
-            "Specialties"
-        );
+        EntityManager em = DatabaseConfig.getEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        Subteam created = null;
+        
+        try {
+            tx.begin();
+            
+            Subteam subteam = new Subteam("Test DeleteById Subteam", "#0000FF");
+            subteam.setSpecialties("Specialties");
+            
+            em.persist(subteam);
+            tx.commit();
+            
+            created = subteam;
+        } catch (Exception e) {
+            if (tx.isActive()) {
+                tx.rollback();
+            }
+            LOGGER.severe("Error creating subteam for deleteById test: " + e.getMessage());
+            e.printStackTrace();
+            fail("Failed to create subteam for deleteById test: " + e.getMessage());
+        } finally {
+            em.close();
+        }
+        
         Long id = created.getId();
         
         // Now delete it by ID
