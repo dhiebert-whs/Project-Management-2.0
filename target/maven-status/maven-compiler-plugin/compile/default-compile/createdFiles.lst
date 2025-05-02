@@ -105,13 +105,11 @@ org\frcpm\views\ProjectListView.class
 org\frcpm\utils\UpdatedErrorHandler.class
 org\frcpm\di\ViewLoader.class
 org\frcpm\models\Project.class
-org\frcpm\presenters\NewProjectPresenter.class
 org\frcpm\viewmodels\MetricsViewModel$1.class
 org\frcpm\presenters\AttendancePresenter.class
 org\frcpm\presenters\MilestoneManagementPresenter$1.class
 org\frcpm\repositories\impl\SubteamRepositoryImpl.class
 org\frcpm\services\impl\AbstractService.class
-org\frcpm\presenters\DailyViewPresenter.class
 org\frcpm\services\impl\MetricsCalculationService.class
 org\frcpm\services\GanttDataService.class
 org\frcpm\presenters\AttendancePresenter$3.class
@@ -120,7 +118,6 @@ org\frcpm\async\DatabaseTask.class
 org\frcpm\viewmodels\TeamMemberViewModel.class
 org\frcpm\services\impl\MilestoneServiceImpl.class
 org\frcpm\binding\ViewModelBinding.class
-org\frcpm\presenters\DailyViewPresenter$1.class
 org\frcpm\viewmodels\ComponentViewModel.class
 org\frcpm\services\ReportGenerationService.class
 org\frcpm\config\DatabaseConfig.class

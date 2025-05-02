@@ -25,7 +25,7 @@ C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\fr
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\presenters\AttendancePresenter.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\presenters\ComponentManagementPresenter.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\presenters\ComponentPresenter.java
-C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\presenters\DailyViewPresenter.java
+C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\presenters\DailyPresenter.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\presenters\DashboardPresenter.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\presenters\GanttChartPresenter.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\presenters\MainPresenter.java
@@ -33,7 +33,7 @@ C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\fr
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\presenters\MetricsPresenter.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\presenters\MilestoneManagementPresenter.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\presenters\MilestonePresenter.java
-C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\presenters\NewProjectPresenter.java
+C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\presenters\NewProjectDialogPresenter.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\presenters\ProjectListPresenter.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\presenters\ProjectPresenter.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\presenters\SubsystemManagementPresenter.java
