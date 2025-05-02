@@ -1,3 +1,5 @@
+// src/main/java/org/frcpm/presenters/TaskPresenter.java
+
 package org.frcpm.presenters;
 
 import javafx.fxml.FXML;
@@ -13,6 +15,7 @@ import org.frcpm.models.*;
 import org.frcpm.services.*;
 import org.frcpm.viewmodels.TaskViewModel;
 import org.frcpm.views.ComponentView;
+import org.frcpm.views.TeamMemberView;
 
 import javax.inject.Inject;
 import java.net.URL;
@@ -78,6 +81,7 @@ public class TaskPresenter implements Initializable {
     private DialogService dialogService;
 
     // ViewModel
+    @Inject
     private TaskViewModel viewModel;
     
     // Resource bundle for i18n
@@ -94,14 +98,20 @@ public class TaskPresenter implements Initializable {
             priorityComboBox.getItems().addAll(Task.Priority.values());
         }
 
-        // Create view model with injected services
-        viewModel = new TaskViewModel(taskService, teamMemberService, componentService);
+        // Check if we're in a testing environment and create fallbacks
+        if (viewModel == null) {
+            LOGGER.severe("TaskViewModel not injected - creating manually as fallback");
+            viewModel = new TaskViewModel(taskService, teamMemberService, componentService);
+        }
 
         // Set up table columns
         setupTableColumns();
 
         // Set up bindings
         setupBindings();
+        
+        // Set up error handling
+        setupErrorHandling();
     }
 
     /**
@@ -117,22 +127,51 @@ public class TaskPresenter implements Initializable {
             return;
         }
 
-        memberNameColumn
-                .setCellValueFactory(cellData -> javafx.beans.binding.Bindings.createStringBinding(() -> 
-                        cellData.getValue().getFullName()));
-        memberSubteamColumn.setCellValueFactory(
-                cellData -> javafx.beans.binding.Bindings.createStringBinding(() -> cellData.getValue().getSubteam() != null
-                        ? cellData.getValue().getSubteam().getName()
-                        : ""));
+        try {
+            memberNameColumn
+                    .setCellValueFactory(cellData -> javafx.beans.binding.Bindings.createStringBinding(() -> 
+                            cellData.getValue().getFullName()));
+            memberSubteamColumn.setCellValueFactory(
+                    cellData -> javafx.beans.binding.Bindings.createStringBinding(() -> cellData.getValue().getSubteam() != null
+                            ? cellData.getValue().getSubteam().getName()
+                            : ""));
+    
+            componentNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
+            componentPartNumberColumn.setCellValueFactory(new PropertyValueFactory<>("partNumber"));
+            componentDeliveredColumn.setCellValueFactory(new PropertyValueFactory<>("delivered"));
+            componentDeliveredColumn.setCellFactory(column -> new CheckBoxTableCell<>());
+    
+            dependencyTitleColumn.setCellValueFactory(new PropertyValueFactory<>("title"));
+            dependencyProgressColumn.setCellValueFactory(new PropertyValueFactory<>("progress"));
+            dependencyProgressColumn.setCellFactory(column -> new ProgressBarTableCell<>());
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up table columns", e);
+            throw new RuntimeException("Failed to set up table columns", e);
+        }
+    }
 
-        componentNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
-        componentPartNumberColumn.setCellValueFactory(new PropertyValueFactory<>("partNumber"));
-        componentDeliveredColumn.setCellValueFactory(new PropertyValueFactory<>("delivered"));
-        componentDeliveredColumn.setCellFactory(column -> new CheckBoxTableCell<>());
-
-        dependencyTitleColumn.setCellValueFactory(new PropertyValueFactory<>("title"));
-        dependencyProgressColumn.setCellValueFactory(new PropertyValueFactory<>("progress"));
-        dependencyProgressColumn.setCellFactory(column -> new ProgressBarTableCell<>());
+    /**
+     * Sets up error handling for the view model.
+     */
+    private void setupErrorHandling() {
+        if (viewModel == null) {
+            LOGGER.warning("ViewModel not initialized - cannot set up error handling");
+            return;
+        }
+        
+        try {
+            viewModel.errorMessageProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal != null && !newVal.isEmpty()) {
+                    showErrorAlert(
+                        resources != null ? resources.getString("error.title") : "Validation Error", 
+                        newVal);
+                    viewModel.errorMessageProperty().set("");
+                }
+            });
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up error handling", e);
+            throw new RuntimeException("Failed to set up error handling", e);
+        }
     }
 
     /**
@@ -152,72 +191,69 @@ public class TaskPresenter implements Initializable {
             return;
         }
 
-        // Bind text properties
-        taskTitleLabel.textProperty().bind(viewModel.titleProperty());
-        projectLabel.textProperty().bind(
-                javafx.beans.binding.Bindings.createStringBinding(
-                        () -> viewModel.getProject() != null ? viewModel.getProject().getName() : "",
-                        viewModel.projectProperty()));
-        subsystemLabel.textProperty().bind(
-                javafx.beans.binding.Bindings.createStringBinding(
-                        () -> viewModel.getSubsystem() != null ? viewModel.getSubsystem().getName() : "",
-                        viewModel.subsystemProperty()));
-
-        // Bind numeric fields with proper converters
-        javafx.util.StringConverter<Number> numberConverter = new javafx.util.converter.NumberStringConverter();
-        javafx.beans.binding.Bindings.bindBidirectional(estimatedHoursField.textProperty(), viewModel.estimatedHoursProperty(), numberConverter);
-        javafx.beans.binding.Bindings.bindBidirectional(actualHoursField.textProperty(), viewModel.actualHoursProperty(), numberConverter);
-
-        // Bind text area
-        ViewModelBinding.bindTextArea(descriptionArea, viewModel.descriptionProperty());
-
-        // Bind date pickers
-        ViewModelBinding.bindDatePicker(startDatePicker, viewModel.startDateProperty());
-        ViewModelBinding.bindDatePicker(endDatePicker, viewModel.endDateProperty());
-
-        // Bind combo box
-        ViewModelBinding.bindComboBox(priorityComboBox, viewModel.priorityProperty());
-
-        // Bind progress slider and completion
-        progressSlider.valueProperty().bindBidirectional(viewModel.progressProperty());
-        progressLabel.textProperty().bind(javafx.beans.binding.Bindings.format("%d%%", viewModel.progressProperty()));
-        completedCheckBox.selectedProperty().bindBidirectional(viewModel.completedProperty());
-
-        // Bind tables to view model collections
-        assignedMembersTable.setItems(viewModel.getAssignedMembers());
-        requiredComponentsTable.setItems(viewModel.getRequiredComponents());
-        dependenciesTable.setItems(viewModel.getPreDependencies());
-
-        // Bind buttons to commands
-        ViewModelBinding.bindCommandButton(saveButton, viewModel.getSaveCommand());
-        ViewModelBinding.bindCommandButton(cancelButton, viewModel.getCancelCommand());
-        ViewModelBinding.bindCommandButton(addMemberButton, viewModel.getAddMemberCommand());
-        ViewModelBinding.bindCommandButton(removeMemberButton, viewModel.getRemoveMemberCommand());
-        ViewModelBinding.bindCommandButton(addComponentButton, viewModel.getAddComponentCommand());
-        ViewModelBinding.bindCommandButton(removeComponentButton, viewModel.getRemoveComponentCommand());
-        ViewModelBinding.bindCommandButton(addDependencyButton, viewModel.getAddDependencyCommand());
-        ViewModelBinding.bindCommandButton(removeDependencyButton, viewModel.getRemoveDependencyCommand());
-
-        // Setup selection changes
-        assignedMembersTable.getSelectionModel().selectedItemProperty().addListener(
-                (obs, oldVal, newVal) -> viewModel.setSelectedMember(newVal));
-
-        requiredComponentsTable.getSelectionModel().selectedItemProperty().addListener(
-                (obs, oldVal, newVal) -> viewModel.setSelectedComponent(newVal));
-
-        dependenciesTable.getSelectionModel().selectedItemProperty().addListener(
-                (obs, oldVal, newVal) -> viewModel.setSelectedDependency(newVal));
-
-        // Set up error message binding
-        viewModel.errorMessageProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal != null && !newVal.isEmpty()) {
-                showErrorAlert("Validation Error", newVal);
-                viewModel.errorMessageProperty().set("");
-            }
-        });
-
-        // Set up cancel button override to close dialog
-        cancelButton.setOnAction(event -> closeDialog());
+        try {
+            // Bind text properties
+            taskTitleLabel.textProperty().bind(viewModel.titleProperty());
+            projectLabel.textProperty().bind(
+                    javafx.beans.binding.Bindings.createStringBinding(
+                            () -> viewModel.getProject() != null ? viewModel.getProject().getName() : "",
+                            viewModel.projectProperty()));
+            subsystemLabel.textProperty().bind(
+                    javafx.beans.binding.Bindings.createStringBinding(
+                            () -> viewModel.getSubsystem() != null ? viewModel.getSubsystem().getName() : "",
+                            viewModel.subsystemProperty()));
+    
+            // Bind numeric fields with proper converters
+            javafx.util.StringConverter<Number> numberConverter = new javafx.util.converter.NumberStringConverter();
+            javafx.beans.binding.Bindings.bindBidirectional(estimatedHoursField.textProperty(), viewModel.estimatedHoursProperty(), numberConverter);
+            javafx.beans.binding.Bindings.bindBidirectional(actualHoursField.textProperty(), viewModel.actualHoursProperty(), numberConverter);
+    
+            // Bind text area
+            ViewModelBinding.bindTextArea(descriptionArea, viewModel.descriptionProperty());
+    
+            // Bind date pickers
+            ViewModelBinding.bindDatePicker(startDatePicker, viewModel.startDateProperty());
+            ViewModelBinding.bindDatePicker(endDatePicker, viewModel.endDateProperty());
+    
+            // Bind combo box
+            ViewModelBinding.bindComboBox(priorityComboBox, viewModel.priorityProperty());
+    
+            // Bind progress slider and completion
+            progressSlider.valueProperty().bindBidirectional(viewModel.progressProperty());
+            progressLabel.textProperty().bind(javafx.beans.binding.Bindings.format("%d%%", viewModel.progressProperty()));
+            completedCheckBox.selectedProperty().bindBidirectional(viewModel.completedProperty());
+    
+            // Bind tables to view model collections
+            assignedMembersTable.setItems(viewModel.getAssignedMembers());
+            requiredComponentsTable.setItems(viewModel.getRequiredComponents());
+            dependenciesTable.setItems(viewModel.getPreDependencies());
+    
+            // Bind buttons to commands
+            ViewModelBinding.bindCommandButton(saveButton, viewModel.getSaveCommand());
+            ViewModelBinding.bindCommandButton(cancelButton, viewModel.getCancelCommand());
+            ViewModelBinding.bindCommandButton(addMemberButton, viewModel.getAddMemberCommand());
+            ViewModelBinding.bindCommandButton(removeMemberButton, viewModel.getRemoveMemberCommand());
+            ViewModelBinding.bindCommandButton(addComponentButton, viewModel.getAddComponentCommand());
+            ViewModelBinding.bindCommandButton(removeComponentButton, viewModel.getRemoveComponentCommand());
+            ViewModelBinding.bindCommandButton(addDependencyButton, viewModel.getAddDependencyCommand());
+            ViewModelBinding.bindCommandButton(removeDependencyButton, viewModel.getRemoveDependencyCommand());
+    
+            // Setup selection changes
+            assignedMembersTable.getSelectionModel().selectedItemProperty().addListener(
+                    (obs, oldVal, newVal) -> viewModel.setSelectedMember(newVal));
+    
+            requiredComponentsTable.getSelectionModel().selectedItemProperty().addListener(
+                    (obs, oldVal, newVal) -> viewModel.setSelectedComponent(newVal));
+    
+            dependenciesTable.getSelectionModel().selectedItemProperty().addListener(
+                    (obs, oldVal, newVal) -> viewModel.setSelectedDependency(newVal));
+    
+            // Set up cancel button override to close dialog
+            cancelButton.setOnAction(event -> closeDialog());
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up bindings", e);
+            throw new RuntimeException("Failed to set up bindings", e);
+        }
     }
 
     /**
@@ -226,8 +262,15 @@ public class TaskPresenter implements Initializable {
      * @param task the new task to create
      */
     public void initNewTask(Task task) {
-        viewModel.initNewTask(task.getProject(), task.getSubsystem());
-        viewModel.titleProperty().set(task.getTitle());
+        try {
+            viewModel.initNewTask(task.getProject(), task.getSubsystem());
+            viewModel.titleProperty().set(task.getTitle());
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error initializing new task", e);
+            showErrorAlert(
+                resources != null ? resources.getString("error.title") : "Initialization Error",
+                resources != null ? resources.getString("error.task.init.failed") : "Failed to initialize new task: " + e.getMessage());
+        }
     }
 
     /**
@@ -236,7 +279,14 @@ public class TaskPresenter implements Initializable {
      * @param task the task to edit
      */
     public void initExistingTask(Task task) {
-        viewModel.initExistingTask(task);
+        try {
+            viewModel.initExistingTask(task);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error initializing existing task", e);
+            showErrorAlert(
+                resources != null ? resources.getString("error.title") : "Initialization Error",
+                resources != null ? resources.getString("error.task.init.failed") : "Failed to initialize task: " + e.getMessage());
+        }
     }
     
     /**
@@ -244,19 +294,93 @@ public class TaskPresenter implements Initializable {
      */
     @FXML
     private void handleAddComponent() {
-        // Example of using ViewLoader with AfterburnerFX
-        ComponentPresenter presenter = DialogFactory.showDialog(
-            ComponentView.class, 
-            resources.getString("component.select.title"), 
-            saveButton.getScene().getWindow(),
-            resources,
-            null);
-        
-        if (presenter != null) {
-            Component component = presenter.getComponent();
-            if (component != null) {
-                viewModel.addComponent(component);
+        try {
+            // Use DialogFactory with resources for localization
+            ComponentPresenter presenter = DialogFactory.showDialog(
+                ComponentView.class, 
+                resources != null ? resources.getString("component.select.title") : "Select Component", 
+                saveButton.getScene().getWindow(),
+                resources,
+                null);
+            
+            if (presenter != null) {
+                Component component = presenter.getComponent();
+                if (component != null) {
+                    viewModel.addComponent(component);
+                    if (resources != null) {
+                        showInfoAlert(
+                            resources.getString("info.title"),
+                            resources.getString("component.added.success"));
+                    }
+                }
             }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error adding component", e);
+            showErrorAlert(
+                resources != null ? resources.getString("error.title") : "Error",
+                resources != null ? resources.getString("component.add.failed") : "Failed to add component: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Handler for the add team member button.
+     */
+    @FXML
+    private void handleAddTeamMember() {
+        try {
+            // Use ViewLoader with resources for consistency with other dialogs
+            TeamMemberPresenter presenter = ViewLoader.showDialog(
+                TeamMemberView.class, 
+                resources != null ? resources.getString("member.select.title") : "Select Team Member", 
+                saveButton.getScene().getWindow());
+            
+            if (presenter != null) {
+                TeamMember member = presenter.getViewModel().getTeamMember();
+                if (member != null) {
+                    viewModel.addMember(member);
+                    if (resources != null) {
+                        showInfoAlert(
+                            resources.getString("info.title"),
+                            resources.getString("member.added.success"));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error adding team member", e);
+            showErrorAlert(
+                resources != null ? resources.getString("error.title") : "Error",
+                resources != null ? resources.getString("member.add.failed") : "Failed to add team member: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Handler for the add dependency button.
+     */
+    @FXML
+    private void handleAddDependency() {
+        try {
+            // Use ViewLoader for consistency
+            TaskPresenter presenter = ViewLoader.showDialog(
+                TeamMemberView.class, 
+                resources != null ? resources.getString("task.dependency.select") : "Select Dependency", 
+                saveButton.getScene().getWindow());
+            
+            if (presenter != null) {
+                Task dependency = presenter.getTask();
+                if (dependency != null) {
+                    viewModel.addDependency(dependency);
+                    if (resources != null) {
+                        showInfoAlert(
+                            resources.getString("info.title"),
+                            resources.getString("dependency.added.success"));
+                        }
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error adding dependency", e);
+            showErrorAlert(
+                resources != null ? resources.getString("error.title") : "Error",
+                resources != null ? resources.getString("dependency.add.failed") : "Failed to add dependency: " + e.getMessage());
         }
     }
 
@@ -274,13 +398,35 @@ public class TaskPresenter implements Initializable {
             LOGGER.log(Level.INFO, "Alert would show: {0} - {1}", new Object[] { title, message });
         }
     }
+    
+    /**
+     * Shows an information alert with the given message.
+     * 
+     * @param title the title of the alert
+     * @param message the information message
+     */
+    private void showInfoAlert(String title, String message) {
+        try {
+            dialogService.showInfoAlert(title, message);
+        } catch (Exception e) {
+            // This can happen in tests when not on FX thread
+            LOGGER.log(Level.INFO, "Alert would show: {0} - {1}", new Object[] { title, message });
+        }
+    }
 
     /**
      * Closes the dialog.
      */
     private void closeDialog() {
         try {
-            if (saveButton != null && saveButton.getScene() != null) {
+            if (saveButton != null && saveButton.getScene() != null && 
+                saveButton.getScene().getWindow() != null) {
+                
+                // Clean up resources
+                if (viewModel != null) {
+                    viewModel.cleanupResources();
+                }
+                
                 Stage stage = (Stage) saveButton.getScene().getWindow();
                 stage.close();
             }
@@ -325,6 +471,26 @@ public class TaskPresenter implements Initializable {
      */
     public TaskViewModel getViewModel() {
         return viewModel;
+    }
+    
+    /**
+     * Sets the ViewModel (for testing purposes).
+     * 
+     * @param viewModel the view model to set
+     */
+    public void setViewModel(TaskViewModel viewModel) {
+        this.viewModel = viewModel;
+        setupBindings();
+        setupErrorHandling();
+    }
+    
+    /**
+     * Clean up resources when the presenter is no longer needed.
+     */
+    public void cleanup() {
+        if (viewModel != null) {
+            viewModel.cleanupResources();
+        }
     }
 
     /**

@@ -7,7 +7,7 @@
 <?import javafx.scene.layout.*?>
 
 <BorderPane prefWidth="500" prefHeight="350" xmlns="http://javafx.com/javafx/11"
-            xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.frcpm.presenters.NewProjectPresenter">
+            xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.frcpm.presenters.NewProjectDialogPresenter">
     
     <padding>
         <Insets top="10" right="10" bottom="10" left="10"/>

@@ -21,9 +21,9 @@ import java.util.logging.Logger;
 /**
  * Presenter for the new project dialog in AfterburnerFX pattern.
  */
-public class NewProjectPresenter implements Initializable {
+public class NewProjectDialogPresenter implements Initializable {
 
-    private static final Logger LOGGER = Logger.getLogger(NewProjectPresenter.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(NewProjectDialogPresenter.class.getName());
 
     @FXML
     private TextField nameField;

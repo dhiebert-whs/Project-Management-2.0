@@ -154,7 +154,7 @@ public class ProjectListPresenter implements Initializable {
     public void handleNewProject() {
         try {
             // Use AfterburnerFX ViewLoader to create the dialog
-            NewProjectPresenter presenter = DialogFactory.showDialog(
+            NewProjectDialogPresenter presenter = DialogFactory.showDialog(
                 NewProjectDialogView.class, 
                 resources.getString("project.new.title"), 
                 projectListView.getScene().getWindow(),

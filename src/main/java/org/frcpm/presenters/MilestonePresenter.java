@@ -1,3 +1,5 @@
+// src/main/java/org/frcpm/presenters/MilestonePresenter.java
+
 package org.frcpm.presenters;
 
 import javafx.fxml.FXML;
@@ -5,6 +7,8 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
 import org.frcpm.binding.ViewModelBinding;
+import org.frcpm.di.DialogFactory;
+import org.frcpm.di.ViewLoader;
 import org.frcpm.models.Milestone;
 import org.frcpm.models.Project;
 import org.frcpm.services.DialogService;
@@ -53,25 +57,32 @@ public class MilestonePresenter implements Initializable {
         
         this.resources = resources;
         
-        // Verify injections
+        // Verify injections - create fallback if needed
         if (viewModel == null) {
             LOGGER.severe("MilestoneViewModel not injected - creating manually as fallback");
             viewModel = new MilestoneViewModel(milestoneService);
         }
         
-        // Set up bindings
-        setupBindings();
-        
-        // Set up error message display
-        setupErrorHandling();
-        
-        // Hide error label initially
-        if (errorLabel != null) {
-            errorLabel.setVisible(false);
+        try {
+            // Set up bindings
+            setupBindings();
+            
+            // Set up error message display
+            setupErrorHandling();
+            
+            // Hide error label initially
+            if (errorLabel != null) {
+                errorLabel.setVisible(false);
+            }
+            
+            // Set the close dialog action
+            viewModel.setCloseDialogAction(this::closeDialog);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error initializing presenter", e);
+            showErrorAlert(
+                resources != null ? resources.getString("error.title") : "Initialization Error",
+                "Failed to initialize milestone view: " + e.getMessage());
         }
-        
-        // Set the close dialog action
-        viewModel.setCloseDialogAction(this::closeDialog);
     }
     
     /**
@@ -103,9 +114,14 @@ public class MilestonePresenter implements Initializable {
             // Bind buttons to commands
             ViewModelBinding.bindCommandButton(saveButton, viewModel.getSaveCommand());
             ViewModelBinding.bindCommandButton(cancelButton, viewModel.getCancelCommand());
+            
+            // Set up cancel button override to close dialog
+            cancelButton.setOnAction(event -> closeDialog());
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error setting up bindings", e);
-            showErrorAlert("Setup Error", "Failed to initialize bindings: " + e.getMessage());
+            showErrorAlert(
+                resources != null ? resources.getString("error.title") : "Setup Error", 
+                "Failed to initialize bindings: " + e.getMessage());
         }
     }
     
@@ -128,7 +144,9 @@ public class MilestonePresenter implements Initializable {
                         errorLabel.setVisible(true);
                     } else {
                         // Fall back to dialog
-                        showErrorAlert("Validation Error", newValue);
+                        showErrorAlert(
+                            resources != null ? resources.getString("error.title") : "Validation Error", 
+                            newValue);
                     }
                 } else if (errorLabel != null) {
                     // Hide error label when no error
@@ -137,7 +155,9 @@ public class MilestonePresenter implements Initializable {
             });
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error setting up error listener", e);
-            showErrorAlert("Setup Error", "Failed to initialize error handling: " + e.getMessage());
+            showErrorAlert(
+                resources != null ? resources.getString("error.title") : "Setup Error", 
+                "Failed to initialize error handling: " + e.getMessage());
         }
     }
     
@@ -149,6 +169,9 @@ public class MilestonePresenter implements Initializable {
     public void initNewMilestone(Project project) {
         if (project == null) {
             LOGGER.warning("Cannot initialize new milestone with null project");
+            showErrorAlert(
+                resources != null ? resources.getString("error.title") : "Initialization Error",
+                resources != null ? resources.getString("error.milestone.project.null") : "Cannot create milestone without a project");
             return;
         }
         
@@ -157,7 +180,9 @@ public class MilestonePresenter implements Initializable {
             viewModel.initNewMilestone(project);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error initializing new milestone", e);
-            showErrorAlert("Initialization Error", "Failed to initialize new milestone: " + e.getMessage());
+            showErrorAlert(
+                resources != null ? resources.getString("error.title") : "Initialization Error", 
+                resources != null ? resources.getString("error.milestone.init.failed") : "Failed to initialize new milestone: " + e.getMessage());
         }
     }
     
@@ -169,6 +194,9 @@ public class MilestonePresenter implements Initializable {
     public void initExistingMilestone(Milestone milestone) {
         if (milestone == null) {
             LOGGER.warning("Cannot initialize with null milestone");
+            showErrorAlert(
+                resources != null ? resources.getString("error.title") : "Initialization Error", 
+                resources != null ? resources.getString("error.milestone.null") : "Cannot edit a null milestone");
             return;
         }
         
@@ -177,7 +205,9 @@ public class MilestonePresenter implements Initializable {
             viewModel.initExistingMilestone(milestone);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error initializing existing milestone", e);
-            showErrorAlert("Initialization Error", "Failed to initialize milestone: " + e.getMessage());
+            showErrorAlert(
+                resources != null ? resources.getString("error.title") : "Initialization Error", 
+                resources != null ? resources.getString("error.milestone.init.failed") : "Failed to initialize milestone: " + e.getMessage());
         }
     }
     
@@ -189,6 +219,11 @@ public class MilestonePresenter implements Initializable {
         try {
             if (saveButton != null && saveButton.getScene() != null && 
                 saveButton.getScene().getWindow() != null) {
+                
+                // Clean up resources
+                if (viewModel != null) {
+                    viewModel.cleanupResources();
+                }
                 
                 Stage stage = (Stage) saveButton.getScene().getWindow();
                 stage.close();
@@ -213,7 +248,22 @@ public class MilestonePresenter implements Initializable {
         }
     }
     
-/**
+    /**
+     * Shows an information alert dialog.
+     * 
+     * @param title the title
+     * @param message the message
+     */
+    private void showInfoAlert(String title, String message) {
+        try {
+            dialogService.showInfoAlert(title, message);
+        } catch (Exception e) {
+            // This can happen in tests when not on FX thread
+            LOGGER.log(Level.INFO, "Alert would show: {0} - {1}", new Object[] { title, message });
+        }
+    }
+    
+    /**
      * Gets the milestone.
      * 
      * @return the milestone from the view model
@@ -250,8 +300,7 @@ public class MilestonePresenter implements Initializable {
     }
     
     /**
-     * Method for testing and legacy compatibility
-     * Allows setting a mock view model for testing
+     * Sets the view model (for testing and legacy compatibility).
      * 
      * @param viewModel the view model to set
      */
@@ -259,5 +308,33 @@ public class MilestonePresenter implements Initializable {
         this.viewModel = viewModel;
         setupBindings();
         setupErrorHandling();
+    }
+    
+    /**
+     * Method for legacy code compatibility.
+     * 
+     * @param milestone the milestone to edit
+     */
+    public void setMilestone(Milestone milestone) {
+        initExistingMilestone(milestone);
+    }
+    
+    /**
+     * Method for legacy code compatibility.
+     * 
+     * @param project the project
+     */
+    public void setProject(Project project) {
+        // Create a new milestone for this project
+        initNewMilestone(project);
+    }
+    
+    /**
+     * Clean up resources when the presenter is no longer needed.
+     */
+    public void cleanup() {
+        if (viewModel != null) {
+            viewModel.cleanupResources();
+        }
     }
 }

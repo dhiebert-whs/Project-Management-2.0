@@ -30,9 +30,9 @@ import java.util.logging.Logger;
  * Presenter for the daily view using AfterburnerFX pattern.
  * Shows tasks and meetings scheduled for the current day.
  */
-public class DailyViewPresenter implements Initializable {
+public class DailyPresenter implements Initializable {
 
-    private static final Logger LOGGER = Logger.getLogger(DailyViewPresenter.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(DailyPresenter.class.getName());
 
     // FXML UI components
     @FXML
