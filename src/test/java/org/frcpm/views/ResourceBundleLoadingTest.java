@@ -6,35 +6,15 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.util.Locale;
 import java.util.ResourceBundle;
 
-import org.frcpm.di.FrcpmModule;
-import org.frcpm.presenters.DailyPresenter;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.airhacks.afterburner.injection.Injector;
-
 @ExtendWith(MockitoExtension.class)
 public class ResourceBundleLoadingTest {
     
-    @BeforeEach
-    public void setUp() {
-        FrcpmModule.initialize();
-    }
-    
-    @AfterEach
-    public void tearDown() {
-        Injector.forgetAll();
-        FrcpmModule.shutdown();
-    }
-    
     @Test
     public void testDailyViewResourceBundle() {
-        // Arrange - set the default locale
-        Locale defaultLocale = Locale.getDefault();
-        
         // Act
         ResourceBundle bundle = ResourceBundle.getBundle("org.frcpm.views.dailyview");
         
@@ -53,9 +33,6 @@ public class ResourceBundleLoadingTest {
     
     @Test
     public void testTeamMemberViewResourceBundle() {
-        // Arrange - set the default locale
-        Locale defaultLocale = Locale.getDefault();
-        
         // Act
         ResourceBundle bundle = ResourceBundle.getBundle("org.frcpm.views.teammemberview");
         
@@ -94,22 +71,5 @@ public class ResourceBundleLoadingTest {
             assertEquals("Information", bundle.getString("info.title"), 
                         "Bundle " + bundleName + " should have standard info title");
         }
-    }
-    
-    @Test
-    public void testAfterburnerFXResourceBundleAccess() {
-        // Create a test view
-        DailyView view = new DailyView();
-        
-        // Get the presenter
-        DailyPresenter presenter = (DailyPresenter) view.getPresenter();
-        
-        // Check if the presenter is created
-        assertNotNull(presenter, "Presenter should be created by AfterburnerFX");
-        
-        // Check if the presenter can access resources
-        // This is an indirect test since we can't directly access the resources field
-        // Just check that the view model was created, which requires resources
-        assertNotNull(presenter.getViewModel(), "ViewModel should be created which requires resources");
     }
 }

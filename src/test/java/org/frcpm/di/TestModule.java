@@ -5,8 +5,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 
-import com.airhacks.afterburner.injection.Injector;
-
 /**
  * Test module that extends FrcpmModule for easier testing with mocked dependencies.
  */
@@ -24,18 +22,6 @@ public class TestModule {
         // Clear any existing services
         TEST_SERVICES.clear();
         
-        // Reset AfterburnerFX state
-        Injector.forgetAll();
-        
-        // Configure afterburner for testing
-        Map<String, Object> testConfig = new HashMap<>();
-        testConfig.put("test.mode", true);
-        testConfig.put("application.name", "FRC Project Management System - TEST");
-        testConfig.put("application.version", "TEST");
-        
-        Injector.setConfigurationSource(testConfig::get);
-        Injector.setInstanceSupplier(TestModule::getTestImplementation);
-        
         LOGGER.info("TestModule initialization complete");
     }
     
@@ -52,13 +38,15 @@ public class TestModule {
     }
     
     /**
-     * Implementation supplier for AfterburnerFX.
+     * Gets a registered mock for testing.
      * 
-     * @param clazz the class to get an implementation for
-     * @return the test implementation or null if not found
+     * @param <T> the type of the service
+     * @param serviceClass the class of the service
+     * @return the registered mock or null if not found
      */
-    private static Object getTestImplementation(Class<?> clazz) {
-        return TEST_SERVICES.get(clazz);
+    @SuppressWarnings("unchecked")
+    public static <T> T getRegisteredMock(Class<T> serviceClass) {
+        return (T) TEST_SERVICES.get(serviceClass);
     }
     
     /**
@@ -67,6 +55,5 @@ public class TestModule {
     public static void shutdown() {
         LOGGER.info("Shutting down TestModule");
         TEST_SERVICES.clear();
-        Injector.forgetAll();
     }
 }
