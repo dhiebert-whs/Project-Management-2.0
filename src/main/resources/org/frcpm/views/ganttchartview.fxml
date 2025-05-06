@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.scene.layout.BorderPane?>
-   <?import javafx.scene.web.WebView?>
    <?import javafx.scene.control.ToolBar?>
    <?import javafx.scene.control.Button?>
    <?import javafx.scene.control.ComboBox?>
@@ -10,7 +9,7 @@
    <?import javafx.scene.control.Separator?>
    <?import javafx.scene.layout.HBox?>
    <?import javafx.geometry.Insets?>
-      
+         
    <BorderPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" 
               fx:controller="org.frcpm.presenters.GanttChartPresenter">
      <top>
@@ -35,7 +34,7 @@
         </ToolBar>
      </top>
      <center>
-        <WebView fx:id="webView" prefHeight="600.0" prefWidth="800.0" />
+        <BorderPane fx:id="chartContainer" prefHeight="600.0" prefWidth="800.0" />
      </center>
      <bottom>
         <HBox spacing="10" alignment="CENTER_LEFT">

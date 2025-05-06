@@ -17,6 +17,8 @@
         <junit.version>5.10.2</junit.version>
     </properties>
 
+
+
     <dependencies>
         <!-- JavaFX -->
         <dependency>
@@ -181,13 +183,13 @@
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-controls</artifactId>
-            <version>17.0.2</version>
+            <version>${javafx.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-fxml</artifactId>
-            <version>17.0.2</version>
+            <version>${javafx.version}</version>
         </dependency>
 
         <!-- Monocle for headless testing -->
@@ -197,6 +199,14 @@
             <version>jdk-12.0.1+2</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- Chart-FX for visualization -->
+        <dependency>
+            <groupId>de.gsi.chart</groupId>
+            <artifactId>chartfx-chart</artifactId>
+            <version>11.2.7</version>
+        </dependency>
+
 
     </dependencies>
 

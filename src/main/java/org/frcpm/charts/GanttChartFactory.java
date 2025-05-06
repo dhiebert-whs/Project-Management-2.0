@@ -29,6 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.frcpm.models.GanttChartData;
+
 /**
  * Factory for creating Gantt chart visualizations with native JavaFX components.
  * This class creates horizontal bar charts for tasks and specialized markers for milestones.
@@ -385,7 +387,7 @@ public class GanttChartFactory {
             diamond.setStroke(Color.web(milestone.getColor()).darker());
         } else {
             diamond.setFill(Color.PURPLE);
-            diamond.setStroke(Color.DARKPURPLE);
+            diamond.setStroke(Color.DARKPURPLE);  
         }
         
         diamond.setStrokeWidth(1);
@@ -421,231 +423,394 @@ public class GanttChartFactory {
                 
                 // Create dependency line
                 Line line = new Line(startX, startY, endX, endY);
-                                
+                
                 // Add arrow at the end
                 double arrowSize = 6;
                 double angle = Math.atan2(endY - startY, endX - startX);
-
+                
                 Polygon arrow = new Polygon();
                 arrow.getPoints().addAll(
                     endX, endY,
                     endX - arrowSize * Math.cos(angle - Math.PI / 6), endY - arrowSize * Math.sin(angle - Math.PI / 6),
                     endX - arrowSize * Math.cos(angle + Math.PI / 6), endY - arrowSize * Math.sin(angle + Math.PI / 6)
                 );
-
+                
                 // Style the dependency line and arrow
                 ChartStyler.styleDependencyLine(line);
                 arrow.setFill(Color.GRAY);
-
+                
                 // Add to chart
                 chartArea.getChildren().addAll(line, arrow);
             }
         }
     }
-
+    
     /**
-    * Creates a chart for visualizing task and milestone data on a specific date.
-    * This is useful for daily views.
-    *
-    * @param tasks the list of tasks active on the specified date
-    * @param milestones the list of milestones on the specified date
-    * @param date the date to visualize
-    * @return a pane containing the chart
-    */
+     * Creates a chart for visualizing task and milestone data on a specific date.
+     * This is useful for daily views.
+     *
+     * @param tasks the list of tasks active on the specified date
+     * @param milestones the list of milestones on the specified date
+     * @param date the date to visualize
+     * @return a pane containing the chart
+     */
     public static Pane createDailyChart(List<TaskChartItem> tasks, List<TaskChartItem> milestones, LocalDate date) {
         VBox dailyChart = new VBox(10);
         dailyChart.setPadding(new Insets(20));
         dailyChart.getStyleClass().add("daily-chart");
-
+        
         // Add date header
         Label dateHeader = new Label(date.format(DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy")));
         dateHeader.getStyleClass().add("date-header");
         dateHeader.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
         dailyChart.getChildren().add(dateHeader);
-
+        
         // Add tasks section
         if (tasks != null && !tasks.isEmpty()) {
-        Label tasksHeader = new Label("Tasks");
-        tasksHeader.getStyleClass().add("section-header");
-        tasksHeader.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
-        dailyChart.getChildren().add(tasksHeader);
-
+            Label tasksHeader = new Label("Tasks");
+            tasksHeader.getStyleClass().add("section-header");
+            tasksHeader.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+            dailyChart.getChildren().add(tasksHeader);
+            
             for (TaskChartItem task : tasks) {
-            HBox taskItem = createDailyTaskItem(task);
-            dailyChart.getChildren().add(taskItem);
+                HBox taskItem = createDailyTaskItem(task);
+                dailyChart.getChildren().add(taskItem);
             }
         }
-
+        
         // Add milestones section
         if (milestones != null && !milestones.isEmpty()) {
-        Label milestonesHeader = new Label("Milestones");
-        milestonesHeader.getStyleClass().add("section-header");
-        milestonesHeader.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
-        dailyChart.getChildren().add(milestonesHeader);
-
+            Label milestonesHeader = new Label("Milestones");
+            milestonesHeader.getStyleClass().add("section-header");
+            milestonesHeader.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+            dailyChart.getChildren().add(milestonesHeader);
+            
             for (TaskChartItem milestone : milestones) {
-            HBox milestoneItem = createDailyMilestoneItem(milestone);
-            dailyChart.getChildren().add(milestoneItem);
+                HBox milestoneItem = createDailyMilestoneItem(milestone);
+                dailyChart.getChildren().add(milestoneItem);
             }
         }
-
+        
         // Add empty message if no tasks or milestones
         if ((tasks == null || tasks.isEmpty()) && (milestones == null || milestones.isEmpty())) {
-        Label emptyMessage = new Label("No tasks or milestones scheduled for this date.");
-        emptyMessage.setStyle("-fx-font-style: italic;");
-        dailyChart.getChildren().add(emptyMessage);
+            Label emptyMessage = new Label("No tasks or milestones scheduled for this date.");
+            emptyMessage.setStyle("-fx-font-style: italic;");
+            dailyChart.getChildren().add(emptyMessage);
         }
-
+        
         return dailyChart;
     }
-
+    
     /**
-    * Creates an item for displaying a task in a daily view.
-    *
-    * @param task the task data
-    * @return an HBox containing the task information
-    */
+     * Creates an item for displaying a task in a daily view.
+     *
+     * @param task the task data
+     * @return an HBox containing the task information
+     */
     private static HBox createDailyTaskItem(TaskChartItem task) {
         HBox taskItem = new HBox(10);
         taskItem.setPadding(new Insets(5));
         taskItem.getStyleClass().add("daily-task-item");
-
+        
         // Add color indicator
         Rectangle colorIndicator = new Rectangle(10, 20);
         if (task.getColor() != null && !task.getColor().isEmpty()) {
-        colorIndicator.setFill(Color.web(task.getColor()));
+            colorIndicator.setFill(Color.web(task.getColor()));
         } else {
-        colorIndicator.setFill(Color.BLUE);
+            colorIndicator.setFill(Color.BLUE);
         }
-
+        
         // Add task title
         Label titleLabel = new Label(task.getTitle());
         titleLabel.setStyle("-fx-font-weight: bold;");
-
+        
         // Add progress indicator
         Label progressLabel = new Label(task.getProgress() + "%");
-
+        
         // Add subsystem if available
         Label subsystemLabel = null;
         if (task.getSubsystem() != null && !task.getSubsystem().isEmpty()) {
-        subsystemLabel = new Label(task.getSubsystem());
-        subsystemLabel.setStyle("-fx-font-style: italic;");
+            subsystemLabel = new Label(task.getSubsystem());
+            subsystemLabel.setStyle("-fx-font-style: italic;");
         }
-
+        
         // Add assignee if available
         Label assigneeLabel = null;
         if (task.getAssignee() != null && !task.getAssignee().isEmpty()) {
-        assigneeLabel = new Label(task.getAssignee());
+            assigneeLabel = new Label(task.getAssignee());
         }
-
+        
         // Add components to task item
         taskItem.getChildren().add(colorIndicator);
         taskItem.getChildren().add(titleLabel);
         taskItem.getChildren().add(progressLabel);
-
+        
         if (subsystemLabel != null) {
-        taskItem.getChildren().add(subsystemLabel);
+            taskItem.getChildren().add(subsystemLabel);
         }
-
+        
         if (assigneeLabel != null) {
-        taskItem.getChildren().add(assigneeLabel);
+            taskItem.getChildren().add(assigneeLabel);
         }
-
-     return taskItem;
+        
+        return taskItem;
     }
-
+    
     /**
-    * Creates an item for displaying a milestone in a daily view.
-    *
-    * @param milestone the milestone data
-    * @return an HBox containing the milestone information
-    */
+     * Creates an item for displaying a milestone in a daily view.
+     *
+     * @param milestone the milestone data
+     * @return an HBox containing the milestone information
+     */
     private static HBox createDailyMilestoneItem(TaskChartItem milestone) {
         HBox milestoneItem = new HBox(10);
         milestoneItem.setPadding(new Insets(5));
         milestoneItem.getStyleClass().add("daily-milestone-item");
-
+        
         // Add color indicator
         Polygon diamond = new Polygon();
         diamond.getPoints().addAll(5.0, 0.0, 10.0, 5.0, 5.0, 10.0, 0.0, 5.0);
-
+        
         if (milestone.getColor() != null && !milestone.getColor().isEmpty()) {
             diamond.setFill(Color.web(milestone.getColor()));
         } else {
             diamond.setFill(Color.PURPLE);
         }
-
+        
         // Add milestone title
         Label titleLabel = new Label(milestone.getTitle());
         titleLabel.setStyle("-fx-font-weight: bold;");
-
+        
         // Add status
         Label statusLabel = new Label(milestone.getStatus());
-
+        
         // Add components to milestone item
         milestoneItem.getChildren().add(diamond);
         milestoneItem.getChildren().add(titleLabel);
         milestoneItem.getChildren().add(statusLabel);
+        
+        return milestoneItem;
+    }
+    
+    /**
+     * Helper method to convert tasks from the GanttChartData format to TaskChartItem format.
+     *
+     * @param chartDataList the list of GanttChartData objects
+     * @return a list of TaskChartItem objects
+     */
+    public static List<TaskChartItem> convertGanttChartDataToTaskChartItems(List<org.frcpm.models.GanttChartData> chartDataList) {
+        if (chartDataList == null) {
+            return new ArrayList<>();
+        }
+        
+        return chartDataList.stream()
+            .map(TaskChartItem::fromGanttChartData)
+            .collect(Collectors.toList());
+    }
+    
+    /**
+     * Filters tasks for a specific date range.
+     *
+     * @param tasks the list of tasks
+     * @param startDate the start date of the range
+     * @param endDate the end date of the range
+     * @return a list of tasks that overlap with the date range
+     */
+    public static List<TaskChartItem> filterTasksByDateRange(List<TaskChartItem> tasks, LocalDate startDate, LocalDate endDate) {
+        if (tasks == null) {
+            return new ArrayList<>();
+        }
+        
+        return tasks.stream()
+            .filter(task -> {
+                // Task starts before range ends and ends after range starts
+                return !task.getStartDate().isAfter(endDate) && !task.getEndDate().isBefore(startDate);
+            })
+            .collect(Collectors.toList());
+    }
+    
+    /**
+     * Filters milestones for a specific date range.
+     *
+     * @param milestones the list of milestones
+     * @param startDate the start date of the range
+     * @param endDate the end date of the range
+     * @return a list of milestones that fall within the date range
+     */
+    public static List<TaskChartItem> filterMilestonesByDateRange(List<TaskChartItem> milestones, LocalDate startDate, LocalDate endDate) {
+        if (milestones == null) {
+            return new ArrayList<>();
+        }
+        
+        return milestones.stream()
+            .filter(milestone -> {
+                // Milestone date is within range
+                LocalDate milestoneDate = milestone.getStartDate();
+                return !milestoneDate.isBefore(startDate) && !milestoneDate.isAfter(endDate);
+            })
+            .collect(Collectors.toList());
+    }
 
+
+    /**
+     * Creates a chart for visualizing task and milestone data on a specific date.
+     *
+     * @param tasks the list of tasks active on the specified date
+     * @param milestones the list of milestones on the specified date
+     * @param date the date to visualize
+     * @return a pane containing the chart
+     */
+    public static Pane createDailyChart(List<TaskChartItem> tasks, List<TaskChartItem> milestones, LocalDate date) {
+        VBox dailyChart = new VBox(10);
+        dailyChart.setPadding(new Insets(20));
+        dailyChart.getStyleClass().add("daily-chart");
+        
+        // Add date header
+        Label dateHeader = new Label(date.format(DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy")));
+        dateHeader.getStyleClass().add("date-header");
+        dateHeader.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+        dailyChart.getChildren().add(dateHeader);
+        
+        // Add tasks section
+        if (tasks != null && !tasks.isEmpty()) {
+            Label tasksHeader = new Label("Tasks");
+            tasksHeader.getStyleClass().add("section-header");
+            tasksHeader.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+            dailyChart.getChildren().add(tasksHeader);
+            
+            for (TaskChartItem task : tasks) {
+                HBox taskItem = createDailyTaskItem(task);
+                dailyChart.getChildren().add(taskItem);
+            }
+        }
+        
+        // Add milestones section
+        if (milestones != null && !milestones.isEmpty()) {
+            Label milestonesHeader = new Label("Milestones");
+            milestonesHeader.getStyleClass().add("section-header");
+            milestonesHeader.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+            dailyChart.getChildren().add(milestonesHeader);
+            
+            for (TaskChartItem milestone : milestones) {
+                HBox milestoneItem = createDailyMilestoneItem(milestone);
+                dailyChart.getChildren().add(milestoneItem);
+            }
+        }
+        
+        // Add empty message if no tasks or milestones
+        if ((tasks == null || tasks.isEmpty()) && (milestones == null || milestones.isEmpty())) {
+            Label emptyMessage = new Label("No tasks or milestones scheduled for this date.");
+            emptyMessage.setStyle("-fx-font-style: italic;");
+            dailyChart.getChildren().add(emptyMessage);
+        }
+        
+        return dailyChart;
+    }
+
+    /**
+     * Creates an item for displaying a task in a daily view.
+     *
+     * @param task the task data
+     * @return an HBox containing the task information
+     */
+    private static HBox createDailyTaskItem(TaskChartItem task) {
+        HBox taskItem = new HBox(10);
+        taskItem.setPadding(new Insets(5));
+        taskItem.getStyleClass().add("daily-task-item");
+        
+        // Add color indicator
+        Rectangle colorIndicator = new Rectangle(10, 20);
+        if (task.getColor() != null && !task.getColor().isEmpty()) {
+            colorIndicator.setFill(Color.web(task.getColor()));
+        } else {
+            colorIndicator.setFill(Color.BLUE);
+        }
+        
+        // Add task title
+        Label titleLabel = new Label(task.getTitle());
+        titleLabel.setStyle("-fx-font-weight: bold;");
+        
+        // Add progress indicator
+        Label progressLabel = new Label(task.getProgress() + "%");
+        
+        // Add subsystem if available
+        Label subsystemLabel = null;
+        if (task.getSubsystem() != null && !task.getSubsystem().isEmpty()) {
+            subsystemLabel = new Label(task.getSubsystem());
+            subsystemLabel.setStyle("-fx-font-style: italic;");
+        }
+        
+        // Add assignee if available
+        Label assigneeLabel = null;
+        if (task.getAssignee() != null && !task.getAssignee().isEmpty()) {
+            assigneeLabel = new Label(task.getAssignee());
+        }
+        
+        // Add components to task item
+        taskItem.getChildren().add(colorIndicator);
+        taskItem.getChildren().add(titleLabel);
+        taskItem.getChildren().add(progressLabel);
+        
+        if (subsystemLabel != null) {
+            taskItem.getChildren().add(subsystemLabel);
+        }
+        
+        if (assigneeLabel != null) {
+            taskItem.getChildren().add(assigneeLabel);
+        }
+        
+        return taskItem;
+    }
+
+    /**
+     * Creates an item for displaying a milestone in a daily view.
+     *
+     * @param milestone the milestone data
+     * @return an HBox containing the milestone information
+     */
+    private static HBox createDailyMilestoneItem(TaskChartItem milestone) {
+        HBox milestoneItem = new HBox(10);
+        milestoneItem.setPadding(new Insets(5));
+        milestoneItem.getStyleClass().add("daily-milestone-item");
+        
+        // Add color indicator
+        Polygon diamond = new Polygon();
+        diamond.getPoints().addAll(5.0, 0.0, 10.0, 5.0, 5.0, 10.0, 0.0, 5.0);
+        
+        if (milestone.getColor() != null && !milestone.getColor().isEmpty()) {
+            diamond.setFill(Color.web(milestone.getColor()));
+        } else {
+            diamond.setFill(Color.PURPLE);
+        }
+        
+        // Add milestone title
+        Label titleLabel = new Label(milestone.getTitle());
+        titleLabel.setStyle("-fx-font-weight: bold;");
+        
+        // Add status
+        Label statusLabel = new Label(milestone.getStatus());
+        
+        // Add components to milestone item
+        milestoneItem.getChildren().add(diamond);
+        milestoneItem.getChildren().add(titleLabel);
+        milestoneItem.getChildren().add(statusLabel);
+        
         return milestoneItem;
     }
 
     /**
-    * Helper method to convert tasks from the GanttChartData format to TaskChartItem format.
-    *
-    * @param chartDataList the list of GanttChartData objects
-    * @return a list of TaskChartItem objects
-    */
-    public static List<TaskChartItem> convertGanttChartDataToTaskChartItems(List<org.frcpm.models.GanttChartData> chartDataList) {
+     * Helper method to convert tasks from the GanttChartData format to TaskChartItem format.
+     *
+     * @param chartDataList the list of GanttChartData objects
+     * @return a list of TaskChartItem objects
+     */
+    public static List<TaskChartItem> convertGanttChartDataToTaskChartItems(List<GanttChartData> chartDataList) {
         if (chartDataList == null) {
-        return new ArrayList<>();
+            return new ArrayList<>();
         }
-
+        
         return chartDataList.stream()
-        .map(TaskChartItem::fromGanttChartData)
-        .collect(Collectors.toList());
+            .map(TaskChartItem::fromGanttChartData)
+            .collect(Collectors.toList());
     }
-
-    /**
-    * Filters tasks for a specific date range.
-    *
-    * @param tasks the list of tasks
-    * @param startDate the start date of the range
-    * @param endDate the end date of the range
-    * @return a list of tasks that overlap with the date range
-    */
-    public static List<TaskChartItem> filterTasksByDateRange(List<TaskChartItem> tasks, LocalDate startDate, LocalDate endDate) {
-        if (tasks == null) {
-        return new ArrayList<>();
-        }
-
-        return tasks.stream()
-        .filter(task -> {
-            // Task starts before range ends and ends after range starts
-            return !task.getStartDate().isAfter(endDate) && !task.getEndDate().isBefore(startDate);
-        })
-        .collect(Collectors.toList());
-    }
-
-    /**
-    * Filters milestones for a specific date range.
-    *
-    * @param milestones the list of milestones
-    * @param startDate the start date of the range
-    * @param endDate the end date of the range
-    * @return a list of milestones that fall within the date range
-    */
-    public static List<TaskChartItem> filterMilestonesByDateRange(List<TaskChartItem> milestones, LocalDate startDate, LocalDate endDate) {
-        if (milestones == null) {
-        return new ArrayList<>();
-        }
-
-        return milestones.stream()
-        .filter(milestone -> {
-            // Milestone date is within range
-            LocalDate milestoneDate = milestone.getStartDate();
-            return !milestoneDate.isBefore(startDate) && !milestoneDate.isAfter(endDate);
-        })
-        .collect(Collectors.toList());
-    }   
 }

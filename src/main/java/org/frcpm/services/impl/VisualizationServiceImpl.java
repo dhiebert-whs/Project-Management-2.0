@@ -1,4 +1,4 @@
-// src/main/java/org/frcpm/services/impl/VisualizationServiceImpl.java
+// src/main/java/org/frcpm/services/impl/VisualizationServiceImpl.java (updated)
 package org.frcpm.services.impl;
 
 import java.time.LocalDate;
@@ -69,17 +69,7 @@ public class VisualizationServiceImpl implements VisualizationService {
         this.transformationService = new GanttChartTransformationService();
     }
     
-    /**
-     * Creates a Gantt chart pane for the specified project and date range.
-     *
-     * @param projectId the ID of the project
-     * @param startDate the start date of the chart
-     * @param endDate the end date of the chart
-     * @param viewMode the view mode (DAY, WEEK, MONTH)
-     * @param showMilestones whether to show milestones
-     * @param showDependencies whether to show dependencies
-     * @return a pane containing the Gantt chart
-     */
+    @Override
     public Pane createGanttChartPane(
             Long projectId,
             LocalDate startDate,
@@ -103,8 +93,19 @@ public class VisualizationServiceImpl implements VisualizationService {
         List<GanttChartData> milestones = (List<GanttChartData>) ganttData.get("milestones");
         
         // Convert to TaskChartItem lists
-        List<TaskChartItem> taskItems = GanttChartFactory.convertGanttChartDataToTaskChartItems(tasks);
-        List<TaskChartItem> milestoneItems = GanttChartFactory.convertGanttChartDataToTaskChartItems(milestones);
+        List<TaskChartItem> taskItems = new ArrayList<>();
+        if (tasks != null) {
+            for (GanttChartData data : tasks) {
+                taskItems.add(TaskChartItem.fromGanttChartData(data));
+            }
+        }
+        
+        List<TaskChartItem> milestoneItems = new ArrayList<>();
+        if (milestones != null) {
+            for (GanttChartData data : milestones) {
+                milestoneItems.add(TaskChartItem.fromGanttChartData(data));
+            }
+        }
         
         // Create chart with Chart-FX
         return GanttChartFactory.createGanttChart(
@@ -117,13 +118,7 @@ public class VisualizationServiceImpl implements VisualizationService {
         );
     }
     
-    /**
-     * Creates a daily chart pane for the specified project and date.
-     *
-     * @param projectId the ID of the project
-     * @param date the date to visualize
-     * @return a pane containing the daily chart
-     */
+    @Override
     public Pane createDailyChartPane(Long projectId, LocalDate date) {
         // Get Gantt data for the specific date
         Map<String, Object> ganttData = ganttDataService.getGanttDataForDate(projectId, date);
@@ -140,8 +135,19 @@ public class VisualizationServiceImpl implements VisualizationService {
         List<GanttChartData> milestones = (List<GanttChartData>) ganttData.get("milestones");
         
         // Convert to TaskChartItem lists
-        List<TaskChartItem> taskItems = GanttChartFactory.convertGanttChartDataToTaskChartItems(tasks);
-        List<TaskChartItem> milestoneItems = GanttChartFactory.convertGanttChartDataToTaskChartItems(milestones);
+        List<TaskChartItem> taskItems = new ArrayList<>();
+        if (tasks != null) {
+            for (GanttChartData data : tasks) {
+                taskItems.add(TaskChartItem.fromGanttChartData(data));
+            }
+        }
+        
+        List<TaskChartItem> milestoneItems = new ArrayList<>();
+        if (milestones != null) {
+            for (GanttChartData data : milestones) {
+                milestoneItems.add(TaskChartItem.fromGanttChartData(data));
+            }
+        }
         
         // Create daily chart
         return GanttChartFactory.createDailyChart(taskItems, milestoneItems, date);
@@ -326,8 +332,15 @@ public class VisualizationServiceImpl implements VisualizationService {
             
             Project project = projectOpt.get();
             
-            // Get subsystems for project
-            List<Subsystem> subsystems = subsystemRepository.findByProject(project);
+            // Get subsystems for project - fix for missing findByProject method
+            List<Subsystem> subsystems = new ArrayList<>();
+            // This will need to be adjusted based on your actual repository implementation
+            // Assume all subsystems are retrieved and filtered by project
+            for (Subsystem subsystem : subsystemRepository.findAll()) {
+                if (project.equals(subsystem.getProject())) {
+                    subsystems.add(subsystem);
+                }
+            }
             
             // Get tasks for project
             List<Task> allTasks = taskRepository.findByProject(project);
