@@ -1,0 +1,95 @@
+<!-- src/main/resources/org/frcpm/views/metricsview.fxml -->
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+    <?import javafx.scene.chart.*?>
+    <?import javafx.scene.control.*?>
+    <?import javafx.scene.layout.*?>
+    
+    <BorderPane xmlns="http://javafx.com/javafx/11"
+                xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.frcpm.presenters.MetricsPresenter">
+        
+        <padding>
+            <Insets top="10" right="10" bottom="10" left="10"/>
+        </padding>
+        
+        <top>
+            <VBox spacing="10">
+                <Label text="%metrics.title" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+                
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="%metrics.project"/>
+                    <Label fx:id="projectNameLabel" style="-fx-font-weight: bold;"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Label text="%metrics.date.range"/>
+                    <DatePicker fx:id="startDatePicker" promptText="%metrics.date.start"/>
+                    <Label text="%metrics.date.to"/>
+                    <DatePicker fx:id="endDatePicker" promptText="%metrics.date.end"/>
+                    <Button fx:id="refreshButton" text="%button.refresh"/>
+                </HBox>
+                
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="%metrics.metric.type"/>
+                    <ComboBox fx:id="metricTypeComboBox" prefWidth="200"/>
+                    <Label text="%metrics.filter.subsystem"/>
+                    <ComboBox fx:id="subsystemFilterComboBox" prefWidth="200"/>
+                </HBox>
+                
+                <Separator/>
+            </VBox>
+        </top>
+        
+        <center>
+            <StackPane>
+                <VBox fx:id="chartsContainer" spacing="20" alignment="CENTER">
+                    <!-- Pie Chart for Task Distribution -->
+                    <PieChart fx:id="taskDistributionChart" title="%metrics.chart.taskDistribution"
+                             legendSide="RIGHT" prefHeight="400" visible="false"/>
+                    
+                    <!-- Bar Chart for Subsystem Progress -->
+                    <BarChart fx:id="subsystemProgressChart" title="%metrics.chart.subsystemProgress"
+                             legendSide="RIGHT" prefHeight="400" visible="false">
+                        <xAxis>
+                            <CategoryAxis label="%metrics.axis.subsystem"/>
+                        </xAxis>
+                        <yAxis>
+                            <NumberAxis label="%metrics.axis.progress" lowerBound="0" upperBound="100" tickUnit="10"/>
+                        </yAxis>
+                    </BarChart>
+                    
+                    <!-- Line Chart for Team Velocity -->
+                    <LineChart fx:id="velocityChart" title="%metrics.chart.teamVelocity"
+                              legendSide="RIGHT" prefHeight="400" visible="false">
+                        <xAxis>
+                            <NumberAxis label="%metrics.axis.week" tickUnit="1"/>
+                        </xAxis>
+                        <yAxis>
+                            <NumberAxis label="%metrics.axis.velocity"/>
+                        </yAxis>
+                    </LineChart>
+                    
+                    <!-- Stacked Bar Chart for Member Contributions -->
+                    <StackedBarChart fx:id="memberContributionChart" title="%metrics.chart.memberContributions"
+                                   legendSide="RIGHT" prefHeight="400" visible="false">
+                        <xAxis>
+                            <CategoryAxis label="%metrics.axis.member"/>
+                        </xAxis>
+                        <yAxis>
+                            <NumberAxis label="%metrics.axis.tasks"/>
+                        </yAxis>
+                    </StackedBarChart>
+                </VBox>
+                
+                <Label fx:id="noDataLabel" text="%metrics.no.data" visible="false"
+                      style="-fx-font-size: 16; -fx-text-fill: gray;"/>
+            </StackPane>
+        </center>
+        
+        <bottom>
+            <HBox spacing="10" alignment="CENTER_RIGHT">
+                <Button fx:id="exportDataButton" text="%button.export"/>
+                <Button fx:id="generateReportButton" text="%button.generateReport"/>
+            </HBox>
+        </bottom>
+        
+    </BorderPane>

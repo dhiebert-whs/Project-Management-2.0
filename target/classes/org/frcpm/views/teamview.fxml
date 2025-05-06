@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+    <?import javafx.scene.control.*?>
+    <?import javafx.scene.layout.*?>
+    
+    <BorderPane prefWidth="800" prefHeight="600" xmlns="http://javafx.com/javafx/11"
+                xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.frcpm.presenters.TeamPresenter">
+        
+        <padding>
+            <Insets top="10" right="10" bottom="10" left="10"/>
+        </padding>
+        
+        <top>
+            <VBox spacing="10">
+                <Label text="%team.management.title" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+            </VBox>
+        </top>
+        
+        <center>
+            <TabPane fx:id="tabPane">
+                <tabs>
+                    <Tab text="%team.tab.members" closable="false">
+                        <VBox spacing="10">
+                            <HBox alignment="CENTER_RIGHT" spacing="10">
+                                <Button fx:id="addMemberButton" text="%team.button.addMember"/>
+                                <Button fx:id="editMemberButton" text="%team.button.editMember"/>
+                                <Button fx:id="deleteMemberButton" text="%team.button.deleteMember"/>
+                            </HBox>
+                            <TableView fx:id="membersTable" VBox.vgrow="ALWAYS">
+                                <columns>
+                                    <TableColumn fx:id="memberUsernameColumn" text="%team.column.memberUsername" prefWidth="120"/>
+                                    <TableColumn fx:id="memberNameColumn" text="%team.column.memberName" prefWidth="150"/>
+                                    <TableColumn fx:id="memberEmailColumn" text="%team.column.memberEmail" prefWidth="200"/>
+                                    <TableColumn fx:id="memberSubteamColumn" text="%team.column.memberSubteam" prefWidth="150"/>
+                                    <TableColumn fx:id="memberLeaderColumn" text="%team.column.memberLeader" prefWidth="80"/>
+                                </columns>
+                                <placeholder>
+                                    <Label text="%team.no.members"/>
+                                </placeholder>
+                            </TableView>
+                        </VBox>
+                    </Tab>
+                    
+                    <Tab text="%team.tab.subteams" closable="false">
+                        <VBox spacing="10">
+                            <HBox alignment="CENTER_RIGHT" spacing="10">
+                                <Button fx:id="addSubteamButton" text="%team.button.addSubteam"/>
+                                <Button fx:id="editSubteamButton" text="%team.button.editSubteam"/>
+                                <Button fx:id="deleteSubteamButton" text="%team.button.deleteSubteam"/>
+                            </HBox>
+                            <TableView fx:id="subteamsTable" VBox.vgrow="ALWAYS">
+                                <columns>
+                                    <TableColumn fx:id="subteamNameColumn" text="%team.column.subteamName" prefWidth="150"/>
+                                    <TableColumn fx:id="subteamColorColumn" text="%team.column.subteamColor" prefWidth="100"/>
+                                    <TableColumn fx:id="subteamSpecialtiesColumn" text="%team.column.subteamSpecialties" prefWidth="350"/>
+                                </columns>
+                                <placeholder>
+                                    <Label text="%team.no.subteams"/>
+                                </placeholder>
+                            </TableView>
+                        </VBox>
+                    </Tab>
+                </tabs>
+            </TabPane>
+        </center>
+        
+        <bottom>
+            <HBox alignment="CENTER_RIGHT" spacing="10">
+                <Button text="%button.close" onAction="#handleClose"/>
+            </HBox>
+        </bottom>
+        
+    </BorderPane>

@@ -11,6 +11,7 @@ import org.frcpm.charts.TaskChartItem;
 import org.frcpm.models.GanttChartData;
 
 import javafx.geometry.Insets;
+import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;

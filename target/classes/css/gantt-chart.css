@@ -1,0 +1,122 @@
+/* Gantt chart container styles */
+.gantt-chart-container {
+    -fx-background-color: white;
+    -fx-border-color: #cccccc;
+    -fx-border-width: 1;
+}
+
+/* Timeline axis styles */
+.timeline-axis {
+    -fx-background-color: #f0f0f0;
+    -fx-border-color: #cccccc;
+    -fx-border-width: 0 0 1 0;
+}
+
+.timeline-axis .label {
+    -fx-font-size: 10px;
+    -fx-padding: 2;
+    -fx-alignment: center;
+}
+
+.timeline-axis .weekend-label {
+    -fx-text-fill: #999999;
+    -fx-background-color: #f5f5f5;
+}
+
+/* Task bar styles */
+.task-bar {
+    -fx-stroke-width: 1;
+    -fx-arc-width: 5;
+    -fx-arc-height: 5;
+}
+
+.task-bar.completed {
+    -fx-opacity: 0.8;
+}
+
+.task-bar.in-progress {
+    -fx-opacity: 1.0;
+}
+
+/* Milestone marker styles */
+.milestone-marker {
+    -fx-stroke-width: 1;
+}
+
+.milestone-marker.completed {
+    -fx-opacity: 0.8;
+}
+
+.milestone-marker.in-progress {
+    -fx-opacity: 1.0;
+}
+
+/* Dependency line styles */
+.dependency-line {
+    -fx-stroke: #999999;
+    -fx-stroke-width: 1.5;
+    -fx-stroke-dash-array: 5 5;
+    -fx-opacity: 0.7;
+}
+
+/* Today line styles */
+.today-line {
+    -fx-stroke: #ff4444;
+    -fx-stroke-width: 2;
+    -fx-stroke-dash-array: 5 5;
+}
+
+/* Daily view styles */
+.daily-chart {
+    -fx-background-color: white;
+    -fx-border-color: #cccccc;
+    -fx-border-width: 1;
+    -fx-padding: 10;
+}
+
+.daily-task-item, .daily-milestone-item {
+    -fx-background-color: #f9f9f9;
+    -fx-background-radius: 3;
+    -fx-padding: 5;
+    -fx-spacing: 5;
+    -fx-alignment: center-left;
+}
+
+.daily-task-item:hover, .daily-milestone-item:hover {
+    -fx-background-color: #f0f0f0;
+}
+
+/* Priority color indicators */
+.priority-low {
+    -fx-fill: #28a745; /* Green */
+}
+
+.priority-medium {
+    -fx-fill: #ffc107; /* Yellow */
+}
+
+.priority-high {
+    -fx-fill: #fd7e14; /* Orange */
+}
+
+.priority-critical {
+    -fx-fill: #dc3545; /* Red */
+}
+
+/* Status colors */
+.status-not-started {
+    -fx-fill: #ced4da; /* Gray */
+}
+
+.status-in-progress {
+    -fx-fill: #17a2b8; /* Cyan */
+}
+
+.status-completed {
+    -fx-fill: #28a745; /* Green */
+}
+
+/* Progress indicator styles */
+.progress-indicator {
+    -fx-opacity: 0.8;
+}

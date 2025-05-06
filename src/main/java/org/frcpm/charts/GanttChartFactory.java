@@ -387,7 +387,7 @@ public class GanttChartFactory {
             diamond.setStroke(Color.web(milestone.getColor()).darker());
         } else {
             diamond.setFill(Color.PURPLE);
-            diamond.setStroke(Color.DARKPURPLE);  
+            diamond.setStroke(Color.DARKVIOLET);  
         }
         
         diamond.setStrokeWidth(1);

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.BorderPane?>
+   <?import javafx.scene.control.ToolBar?>
+   <?import javafx.scene.control.Button?>
+   <?import javafx.scene.control.ComboBox?>
+   <?import javafx.scene.control.Label?>
+   <?import javafx.scene.control.ToggleButton?>
+   <?import javafx.scene.control.Separator?>
+   <?import javafx.scene.layout.HBox?>
+   <?import javafx.geometry.Insets?>
+         
+   <BorderPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" 
+              fx:controller="org.frcpm.presenters.GanttChartPresenter">
+     <top>
+        <ToolBar>
+           <items>
+              <Button fx:id="refreshButton" text="%gantt.button.refresh" onAction="#handleRefresh" />
+              <Separator orientation="VERTICAL" />
+              <Label text="%gantt.view" />
+              <ComboBox fx:id="viewModeComboBox" />
+              <Label text="%gantt.filter" />
+              <ComboBox fx:id="filterComboBox" />
+              <Separator orientation="VERTICAL" />
+              <Button fx:id="zoomInButton" text="+" onAction="#handleZoomIn" />
+              <Button fx:id="zoomOutButton" text="-" onAction="#handleZoomOut" />
+              <Button fx:id="todayButton" text="%gantt.button.today" onAction="#handleToday" />
+              <Separator orientation="VERTICAL" />
+              <ToggleButton fx:id="milestonesToggle" text="%gantt.toggle.milestones" selected="true" />
+              <ToggleButton fx:id="dependenciesToggle" text="%gantt.toggle.dependencies" selected="true" />
+              <Separator orientation="VERTICAL" />
+              <Button fx:id="exportButton" text="%gantt.button.export" onAction="#handleExport" />
+           </items>
+        </ToolBar>
+     </top>
+     <center>
+        <BorderPane fx:id="chartContainer" prefHeight="600.0" prefWidth="800.0" />
+     </center>
+     <bottom>
+        <HBox spacing="10" alignment="CENTER_LEFT">
+           <padding>
+              <Insets top="5" right="5" bottom="5" left="5"/>
+           </padding>
+           <Label fx:id="statusLabel" text="%gantt.status.ready" />
+        </HBox>
+     </bottom>
+   </BorderPane>
