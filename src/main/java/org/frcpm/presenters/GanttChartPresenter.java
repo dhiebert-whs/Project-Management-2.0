@@ -203,9 +203,6 @@ public class GanttChartPresenter implements Initializable {
         });
     }
     
-    /**
-     * Updates the chart view with the current data from the view model.
-     */
     private void updateChartView() {
         try {
             // Clear the existing chart

@@ -19,12 +19,41 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Polygon;
 import javafx.scene.shape.Rectangle;
 
+
 /**
  * Service interface for visualization-related operations.
  * This service provides methods to generate visualization data for
  * various charts and dashboard components.
  */
 public interface VisualizationService {
+
+    /**
+     * Creates a Gantt chart pane for the specified project and date range.
+     *
+     * @param projectId the ID of the project
+     * @param startDate the start date of the chart
+     * @param endDate the end date of the chart
+     * @param viewMode the view mode (DAY, WEEK, MONTH)
+     * @param showMilestones whether to show milestones
+     * @param showDependencies whether to show dependencies
+     * @return a pane containing the Gantt chart
+     */
+    Pane createGanttChartPane(
+            Long projectId,
+            LocalDate startDate,
+            LocalDate endDate,
+            String viewMode,
+            boolean showMilestones,
+            boolean showDependencies);
+    
+    /**
+     * Creates a daily chart pane for the specified project and date.
+     *
+     * @param projectId the ID of the project
+     * @param date the date to visualize
+     * @return a pane containing the daily chart
+     */
+    Pane createDailyChartPane(Long projectId, LocalDate date);
 
     /**
      * Get project completion percentage data.

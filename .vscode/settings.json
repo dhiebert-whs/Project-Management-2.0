@@ -1,5 +1,7 @@
 {
     "java.configuration.updateBuildConfiguration": "interactive",
     "maven.view": "hierarchical",
-    "java.jdt.ls.vmargs": "-XX:+UseParallelGC -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true -Xmx2G -Xms100m -Xlog:disable"
+    "java.jdt.ls.vmargs": "-Xms512m -Xmx2G -XX:+UseG1GC -XX:+UseStringDeduplication -Dsun.zip.disableMemoryMapping=true"
+
+
 }

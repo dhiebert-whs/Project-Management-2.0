@@ -24,6 +24,8 @@ import org.frcpm.repositories.specific.TaskRepository;
 import org.frcpm.services.GanttChartTransformationService;
 import org.frcpm.services.GanttDataService;
 import org.frcpm.services.VisualizationService;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  * Implementation of the VisualizationService interface.
@@ -332,18 +334,14 @@ public class VisualizationServiceImpl implements VisualizationService {
             
             Project project = projectOpt.get();
             
-            // Get subsystems for project - fix for missing findByProject method
-            List<Subsystem> subsystems = new ArrayList<>();
-            // This will need to be adjusted based on your actual repository implementation
-            // Assume all subsystems are retrieved and filtered by project
-            for (Subsystem subsystem : subsystemRepository.findAll()) {
-                if (project.equals(subsystem.getProject())) {
-                    subsystems.add(subsystem);
-                }
-            }
-            
-            // Get tasks for project
+            // Get tasks for project first
             List<Task> allTasks = taskRepository.findByProject(project);
+            
+            // Extract all unique subsystems from the tasks
+            Set<Subsystem> subsystems = allTasks.stream()
+                .map(Task::getSubsystem)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
             
             // Calculate progress for each subsystem
             for (Subsystem subsystem : subsystems) {
