@@ -1,17 +1,23 @@
 package org.frcpm.db;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 /**
  * Utility class for managing database backups.
@@ -20,11 +26,13 @@ public class BackupManager {
     
     private static final Logger LOGGER = Logger.getLogger(BackupManager.class.getName());
     private static final Pattern BACKUP_PATTERN = Pattern.compile("(.+)_(\\d{8}_\\d{6})\\.zip");
+    private static final String BACKUP_DIR_PATH = System.getProperty("user.home") + "/.frcpm/backups";
+    private static final int BUFFER_SIZE = 4096;
     
     /**
      * Represents a database backup file.
      */
-    public static class Backup {
+    public static class Backup implements Comparable<Backup> {
         private final String fileName;
         private final String databaseName;
         private final Date timestamp;
@@ -91,14 +99,45 @@ public class BackupManager {
             return dateFormat.format(timestamp);
         }
         
+        /**
+         * Gets the file size in bytes.
+         * 
+         * @return the file size
+         */
+        public long getFileSize() {
+            return file.length();
+        }
+        
+        /**
+         * Gets a formatted representation of the file size.
+         * 
+         * @return the formatted file size
+         */
+        public String getFormattedFileSize() {
+            long size = getFileSize();
+            if (size < 1024) {
+                return size + " B";
+            } else if (size < 1024 * 1024) {
+                return String.format("%.2f KB", size / 1024.0);
+            } else {
+                return String.format("%.2f MB", size / (1024.0 * 1024.0));
+            }
+        }
+        
         @Override
         public String toString() {
-            return databaseName + " - " + getFormattedTimestamp();
+            return databaseName + " - " + getFormattedTimestamp() + " (" + getFormattedFileSize() + ")";
+        }
+        
+        @Override
+        public int compareTo(Backup other) {
+            // Sort from newest to oldest
+            return other.timestamp.compareTo(this.timestamp);
         }
     }
     
     /**
-     * Gets all available backups.
+     * Gets all available backups sorted by timestamp (newest first).
      * 
      * @return a list of backups
      */
@@ -106,8 +145,7 @@ public class BackupManager {
         List<Backup> backups = new ArrayList<>();
         
         // Get backup directory
-        String userHome = System.getProperty("user.home");
-        File backupDir = new File(userHome, ".frcpm/backups");
+        File backupDir = new File(BACKUP_DIR_PATH);
         
         // Check if directory exists
         if (!backupDir.exists() || !backupDir.isDirectory()) {
@@ -117,22 +155,28 @@ public class BackupManager {
         // Parse backup files
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
         
-        for (File file : backupDir.listFiles()) {
-            if (file.isFile() && file.getName().endsWith(".zip")) {
-                Matcher matcher = BACKUP_PATTERN.matcher(file.getName());
-                if (matcher.matches()) {
-                    String databaseName = matcher.group(1);
-                    String timestampStr = matcher.group(2);
-                    
-                    try {
-                        Date timestamp = dateFormat.parse(timestampStr);
-                        backups.add(new Backup(file.getName(), databaseName, timestamp, file));
-                    } catch (ParseException e) {
-                        LOGGER.log(Level.WARNING, "Error parsing backup timestamp: " + timestampStr, e);
+        File[] files = backupDir.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                if (file.isFile() && file.getName().endsWith(".zip")) {
+                    Matcher matcher = BACKUP_PATTERN.matcher(file.getName());
+                    if (matcher.matches()) {
+                        String databaseName = matcher.group(1);
+                        String timestampStr = matcher.group(2);
+                        
+                        try {
+                            Date timestamp = dateFormat.parse(timestampStr);
+                            backups.add(new Backup(file.getName(), databaseName, timestamp, file));
+                        } catch (ParseException e) {
+                            LOGGER.log(Level.WARNING, "Error parsing backup timestamp: " + timestampStr, e);
+                        }
                     }
                 }
             }
         }
+        
+        // Sort backups by timestamp (newest first)
+        backups.sort(Comparator.naturalOrder());
         
         return backups;
     }
@@ -145,10 +189,15 @@ public class BackupManager {
     public static Backup createBackup() {
         String backupPath = DatabaseConfigurer.createBackup();
         if (backupPath == null) {
+            LOGGER.warning("Failed to create backup");
             return null;
         }
         
         File backupFile = new File(backupPath);
+        if (!backupFile.exists()) {
+            LOGGER.warning("Backup file not created at expected path: " + backupPath);
+            return null;
+        }
         
         // Parse backup file name
         Matcher matcher = BACKUP_PATTERN.matcher(backupFile.getName());
@@ -159,14 +208,17 @@ public class BackupManager {
             try {
                 SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
                 Date timestamp = dateFormat.parse(timestampStr);
-                return new Backup(backupFile.getName(), databaseName, timestamp, backupFile);
+                Backup backup = new Backup(backupFile.getName(), databaseName, timestamp, backupFile);
+                LOGGER.info("Created backup: " + backup);
+                return backup;
             } catch (ParseException e) {
                 LOGGER.log(Level.WARNING, "Error parsing backup timestamp: " + timestampStr, e);
                 return null;
             }
+        } else {
+            LOGGER.warning("Backup file name does not match expected pattern: " + backupFile.getName());
+            return null;
         }
-        
-        return null;
     }
     
     /**
@@ -177,9 +229,11 @@ public class BackupManager {
      */
     public static boolean restoreBackup(Backup backup) {
         if (backup == null || !backup.getFile().exists()) {
+            LOGGER.warning("Cannot restore non-existent backup");
             return false;
         }
         
+        LOGGER.info("Restoring backup: " + backup);
         return DatabaseConfigurer.restoreFromBackup(backup.getFile().getAbsolutePath());
     }
     
@@ -191,10 +245,18 @@ public class BackupManager {
      */
     public static boolean deleteBackup(Backup backup) {
         if (backup == null || !backup.getFile().exists()) {
+            LOGGER.warning("Cannot delete non-existent backup");
             return false;
         }
         
-        return backup.getFile().delete();
+        boolean success = backup.getFile().delete();
+        if (success) {
+            LOGGER.info("Deleted backup: " + backup);
+        } else {
+            LOGGER.warning("Failed to delete backup: " + backup);
+        }
+        
+        return success;
     }
     
     /**
@@ -206,11 +268,13 @@ public class BackupManager {
      */
     public static boolean exportBackup(Backup backup, File destination) {
         if (backup == null || !backup.getFile().exists()) {
+            LOGGER.warning("Cannot export non-existent backup");
             return false;
         }
         
         try {
             Files.copy(backup.getFile().toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            LOGGER.info("Exported backup to: " + destination.getAbsolutePath());
             return true;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error exporting backup", e);
@@ -226,12 +290,12 @@ public class BackupManager {
      */
     public static Backup importBackup(File source) {
         if (source == null || !source.exists() || !source.isFile()) {
+            LOGGER.warning("Cannot import non-existent backup file");
             return null;
         }
         
         // Get backup directory
-        String userHome = System.getProperty("user.home");
-        File backupDir = new File(userHome, ".frcpm/backups");
+        File backupDir = new File(BACKUP_DIR_PATH);
         
         // Create backup directory if it doesn't exist
         if (!backupDir.exists()) {
@@ -254,14 +318,17 @@ public class BackupManager {
                 try {
                     SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
                     Date timestamp = dateFormat.parse(timestampStr);
-                    return new Backup(destination.getName(), databaseName, timestamp, destination);
+                    Backup backup = new Backup(destination.getName(), databaseName, timestamp, destination);
+                    LOGGER.info("Imported backup: " + backup);
+                    return backup;
                 } catch (ParseException e) {
                     LOGGER.log(Level.WARNING, "Error parsing backup timestamp: " + timestampStr, e);
                     return null;
                 }
+            } else {
+                LOGGER.warning("Imported file name does not match backup pattern: " + source.getName());
+                return null;
             }
-            
-            return null;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error importing backup", e);
             return null;
@@ -282,9 +349,6 @@ public class BackupManager {
             return 0;
         }
         
-        // Sort backups by timestamp (newest first)
-        backups.sort((b1, b2) -> b2.getTimestamp().compareTo(b1.getTimestamp()));
-        
         // Delete oldest backups
         int deleted = 0;
         for (int i = maxBackups; i < backups.size(); i++) {
@@ -293,6 +357,136 @@ public class BackupManager {
             }
         }
         
+        LOGGER.info("Cleaned up " + deleted + " old backups, keeping " + maxBackups + " recent backups");
         return deleted;
+    }
+    
+    /**
+     * Creates a compressed backup of the database.
+     * 
+     * @param databasePath the path to the database file
+     * @param backupPath the path to save the compressed backup
+     * @return true if the backup was successful, false otherwise
+     */
+    public static boolean createCompressedBackup(String databasePath, String backupPath) {
+        try {
+            // Create output ZIP file
+            try (ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(backupPath))) {
+                File databaseFile = new File(databasePath);
+                
+                // Only backup the file if it exists
+                if (databaseFile.exists()) {
+                    try (FileInputStream fis = new FileInputStream(databaseFile)) {
+                        ZipEntry zipEntry = new ZipEntry(databaseFile.getName());
+                        zipOut.putNextEntry(zipEntry);
+                        
+                        byte[] buffer = new byte[BUFFER_SIZE];
+                        int length;
+                        while ((length = fis.read(buffer)) > 0) {
+                            zipOut.write(buffer, 0, length);
+                        }
+                    }
+                } else {
+                    LOGGER.warning("Database file not found for backup: " + databasePath);
+                    return false;
+                }
+            }
+            
+            LOGGER.info("Compressed backup created at: " + backupPath);
+            return true;
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error creating compressed backup", e);
+            return false;
+        }
+    }
+    
+    /**
+     * Extracts a compressed backup.
+     * 
+     * @param backupPath the path to the compressed backup
+     * @param extractPath the path to extract the backup to
+     * @return true if the extraction was successful, false otherwise
+     */
+    public static boolean extractCompressedBackup(String backupPath, String extractPath) {
+        try {
+            File backupFile = new File(backupPath);
+            
+            // Verify backup file exists
+            if (!backupFile.exists()) {
+                LOGGER.warning("Backup file does not exist: " + backupPath);
+                return false;
+            }
+            
+            // Create extraction directory if it doesn't exist
+            File extractDir = new File(extractPath);
+            if (!extractDir.exists()) {
+                extractDir.mkdirs();
+            }
+            
+            // Extract files from ZIP
+            try (ZipInputStream zipIn = new ZipInputStream(new FileInputStream(backupFile))) {
+                ZipEntry entry = zipIn.getNextEntry();
+                
+                while (entry != null) {
+                    File outputFile = new File(extractPath, entry.getName());
+                    
+                    // Create output directory if it doesn't exist
+                    if (entry.isDirectory()) {
+                        outputFile.mkdirs();
+                    } else {
+                        // Create parent directories if they don't exist
+                        if (outputFile.getParentFile() != null) {
+                            outputFile.getParentFile().mkdirs();
+                        }
+                        
+                        // Extract file
+                        try (FileOutputStream fos = new FileOutputStream(outputFile)) {
+                            byte[] buffer = new byte[BUFFER_SIZE];
+                            int length;
+                            while ((length = zipIn.read(buffer)) > 0) {
+                                fos.write(buffer, 0, length);
+                            }
+                        }
+                    }
+                    
+                    zipIn.closeEntry();
+                    entry = zipIn.getNextEntry();
+                }
+            }
+            
+            LOGGER.info("Backup extracted to: " + extractPath);
+            return true;
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error extracting compressed backup", e);
+            return false;
+        }
+    }
+    
+    /**
+     * Gets the backup directory path.
+     * 
+     * @return the backup directory path
+     */
+    public static String getBackupDirPath() {
+        return BACKUP_DIR_PATH;
+    }
+    
+    /**
+     * Ensures the backup directory exists.
+     * 
+     * @return true if the directory exists or was created, false otherwise
+     */
+    public static boolean ensureBackupDirExists() {
+        File backupDir = new File(BACKUP_DIR_PATH);
+        if (!backupDir.exists()) {
+            boolean created = backupDir.mkdirs();
+            if (created) {
+                LOGGER.info("Created backup directory: " + BACKUP_DIR_PATH);
+            } else {
+                LOGGER.warning("Failed to create backup directory: " + BACKUP_DIR_PATH);
+            }
+            return created;
+        }
+        return true;
     }
 }

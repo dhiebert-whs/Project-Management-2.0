@@ -92,7 +92,7 @@ public abstract class JpaRepositoryImpl<T, ID> implements Repository<T, ID> {
             if (em.getTransaction().isActive()) {
                 em.getTransaction().rollback();
             }
-            LOGGER.log(Level.SEVERE, "Error saving entity", e);
+            LOGGER.log(Level.SEVERE, "Error saving entity: " + e.getMessage(), e);
             throw new RuntimeException("Failed to save entity", e);
         } finally {
             em.close();
@@ -159,56 +159,143 @@ public abstract class JpaRepositoryImpl<T, ID> implements Repository<T, ID> {
         try {
             em.getTransaction().begin();
             
-            // If entity is Component, handle related tasks first
-            if (entityClass.equals(org.frcpm.models.Component.class)) {
-                Long entityId = getEntityId(entity);
-                if (entityId != null) {
-                    // Remove component references from tasks
-                    em.createNativeQuery(
-                        "DELETE FROM task_components WHERE component_id = :componentId")
-                      .setParameter("componentId", entityId)
-                      .executeUpdate();
-                }
+            // Enhanced cascading deletion with pre-deletion hooks for specific entity types
+            if (entityClass.equals(org.frcpm.models.Project.class)) {
+                handleProjectDeletion(entity, em);
+            } else if (entityClass.equals(org.frcpm.models.Task.class)) {
+                handleTaskDeletion(entity, em);
+            } else if (entityClass.equals(org.frcpm.models.Component.class)) {
+                handleComponentDeletion(entity, em);
+            } else if (entityClass.equals(org.frcpm.models.TeamMember.class)) {
+                handleTeamMemberDeletion(entity, em);
+            } else {
+                // Default deletion behavior
+                T managedEntity = em.contains(entity) ? entity : em.merge(entity);
+                em.remove(managedEntity);
             }
             
-            // If entity is Task, handle dependencies and components
-            if (entityClass.equals(org.frcpm.models.Task.class)) {
-                Long entityId = getEntityId(entity);
-                if (entityId != null) {
-                    // Remove dependencies
-                    em.createNativeQuery(
-                        "DELETE FROM task_dependencies WHERE task_id = :taskId OR dependency_id = :taskId")
-                      .setParameter("taskId", entityId)
-                      .executeUpdate();
-                    
-                    // Remove component relationships
-                    em.createNativeQuery(
-                        "DELETE FROM task_components WHERE task_id = :taskId")
-                      .setParameter("taskId", entityId)
-                      .executeUpdate();
-                    
-                    // Remove assignments
-                    em.createNativeQuery(
-                        "DELETE FROM task_assignments WHERE task_id = :taskId")
-                      .setParameter("taskId", entityId)
-                      .executeUpdate();
-                }
-            }
-            
-            // If entity is not managed, merge it first
-            T managedEntity = em.contains(entity) ? entity : em.merge(entity);
-            em.remove(managedEntity);
-            
+            em.flush(); // Force SQL execution to detect any errors
             em.getTransaction().commit();
         } catch (Exception e) {
             if (em.getTransaction().isActive()) {
                 em.getTransaction().rollback();
             }
-            LOGGER.log(Level.SEVERE, "Error deleting entity", e);
+            LOGGER.log(Level.SEVERE, "Error deleting entity: " + e.getMessage(), e);
             throw new RuntimeException("Failed to delete entity", e);
         } finally {
             em.close();
         }
+    }
+
+    /**
+ * Handles the deletion of a Project entity with proper cascade operations.
+ * 
+ * @param entity the Project entity to delete
+ * @param em the EntityManager
+ */
+private void handleProjectDeletion(T entity, EntityManager em) {
+    Long entityId = getEntityId(entity);
+    if (entityId != null) {
+        // Delete related tasks first
+        em.createQuery("SELECT t FROM Task t WHERE t.project.id = :projectId")
+          .setParameter("projectId", entityId)
+          .getResultList()
+          .forEach(task -> handleTaskDeletion((T) task, em));
+        
+        // Delete related milestones
+        em.createQuery("DELETE FROM Milestone m WHERE m.project.id = :projectId")
+          .setParameter("projectId", entityId)
+          .executeUpdate();
+        
+        // Delete related meetings
+        em.createQuery("DELETE FROM Meeting m WHERE m.project.id = :projectId")
+          .setParameter("projectId", entityId)
+          .executeUpdate();
+    }
+    
+    // Now delete the project
+    T managedEntity = em.contains(entity) ? entity : em.merge(entity);
+    em.remove(managedEntity);
+}
+
+    /**
+     * Handles the deletion of a Task entity with proper relationship cleaning.
+     * 
+     * @param entity the Task entity to delete
+     * @param em the EntityManager
+     */
+    private void handleTaskDeletion(T entity, EntityManager em) {
+        Long entityId = getEntityId(entity);
+        if (entityId != null) {
+            // Remove dependencies
+            em.createNativeQuery(
+                "DELETE FROM task_dependencies WHERE task_id = :taskId OR dependency_id = :taskId")
+            .setParameter("taskId", entityId)
+            .executeUpdate();
+            
+            // Remove component relationships
+            em.createNativeQuery(
+                "DELETE FROM task_components WHERE task_id = :taskId")
+            .setParameter("taskId", entityId)
+            .executeUpdate();
+            
+            // Remove assignments
+            em.createNativeQuery(
+                "DELETE FROM task_assignments WHERE task_id = :taskId")
+            .setParameter("taskId", entityId)
+            .executeUpdate();
+        }
+        
+        // Now delete the task
+        T managedEntity = em.contains(entity) ? entity : em.merge(entity);
+        em.remove(managedEntity);
+    }
+
+    /**
+     * Handles the deletion of a Component entity with proper relationship cleaning.
+     * 
+     * @param entity the Component entity to delete
+     * @param em the EntityManager
+     */
+    private void handleComponentDeletion(T entity, EntityManager em) {
+        Long entityId = getEntityId(entity);
+        if (entityId != null) {
+            // Remove component references from tasks
+            em.createNativeQuery(
+                "DELETE FROM task_components WHERE component_id = :componentId")
+            .setParameter("componentId", entityId)
+            .executeUpdate();
+        }
+        
+        // Now delete the component
+        T managedEntity = em.contains(entity) ? entity : em.merge(entity);
+        em.remove(managedEntity);
+    }
+
+    /**
+     * Handles the deletion of a TeamMember entity with proper relationship cleaning.
+     * 
+     * @param entity the TeamMember entity to delete
+     * @param em the EntityManager
+     */
+    private void handleTeamMemberDeletion(T entity, EntityManager em) {
+        Long entityId = getEntityId(entity);
+        if (entityId != null) {
+            // Remove task assignments
+            em.createNativeQuery(
+                "DELETE FROM task_assignments WHERE team_member_id = :memberId")
+            .setParameter("memberId", entityId)
+            .executeUpdate();
+            
+            // Remove attendance records
+            em.createQuery("DELETE FROM Attendance a WHERE a.member.id = :memberId")
+            .setParameter("memberId", entityId)
+            .executeUpdate();
+        }
+        
+        // Now delete the team member
+        T managedEntity = em.contains(entity) ? entity : em.merge(entity);
+        em.remove(managedEntity);
     }
     
     @Override
