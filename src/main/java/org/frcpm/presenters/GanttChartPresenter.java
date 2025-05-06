@@ -1,3 +1,4 @@
+// src/main/java/org/frcpm/presenters/GanttChartPresenter.java (updated)
 package org.frcpm.presenters;
 
 import javafx.fxml.FXML;
@@ -6,31 +7,32 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ToggleButton;
-import javafx.scene.web.WebEngine;
-import javafx.scene.web.WebView;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Pane;
 import org.frcpm.binding.ViewModelBinding;
 import org.frcpm.models.Project;
 import org.frcpm.services.DialogService;
 import org.frcpm.services.GanttDataService;
-import org.frcpm.services.WebViewBridgeService;
+import org.frcpm.services.VisualizationService;
+import org.frcpm.services.impl.VisualizationServiceImpl;
 import org.frcpm.viewmodels.GanttChartViewModel;
 
 import javax.inject.Inject;
 import java.net.URL;
 import java.util.ResourceBundle;
-import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * Presenter for the Gantt chart view using AfterburnerFX pattern.
  * Handles user interaction and delegates business logic to the ViewModel.
+ * Updated to use Chart-FX instead of WebView for visualization.
  */
 public class GanttChartPresenter implements Initializable {
     private static final Logger LOGGER = Logger.getLogger(GanttChartPresenter.class.getName());
     
     // FXML UI components
-    @FXML private WebView webView;
+    @FXML private BorderPane chartContainer; // Replaces the WebView
     @FXML private Button refreshButton;
     @FXML private ComboBox<GanttChartViewModel.ViewMode> viewModeComboBox;
     @FXML private ComboBox<GanttChartViewModel.FilterOption> filterComboBox;
@@ -47,17 +49,14 @@ public class GanttChartPresenter implements Initializable {
     private GanttDataService ganttDataService;
     
     @Inject
-    private WebViewBridgeService bridgeService;
-    
-    @Inject
     private DialogService dialogService;
     
     // ViewModel and resources
     private GanttChartViewModel viewModel;
     private ResourceBundle resources;
     
-    // Bridge interface initialization flag
-    private boolean bridgeInitialized = false;
+    // Visualization service for chart creation
+    private VisualizationService visualizationService;
     
     /**
      * Initializes the presenter.
@@ -72,8 +71,11 @@ public class GanttChartPresenter implements Initializable {
         // Create view model with injected services
         viewModel = new GanttChartViewModel(ganttDataService);
         
+        // Create visualization service
+        visualizationService = new VisualizationServiceImpl();
+        
         // Always include comprehensive null checks for UI components
-        if (webView == null || refreshButton == null || viewModeComboBox == null || 
+        if (chartContainer == null || refreshButton == null || viewModeComboBox == null || 
             filterComboBox == null || zoomInButton == null || zoomOutButton == null || 
             exportButton == null || todayButton == null || milestonesToggle == null ||
             dependenciesToggle == null || statusLabel == null) {
@@ -81,9 +83,6 @@ public class GanttChartPresenter implements Initializable {
             LOGGER.warning("UI components not initialized - likely in test environment");
             return;
         }
-        
-        // Initialize WebView
-        initializeWebView();
         
         // Set up comboboxes
         setupComboBoxes();
@@ -93,59 +92,12 @@ public class GanttChartPresenter implements Initializable {
         
         // Set up error message listener
         setupErrorListener();
-    }
-    
-    /**
-     * Sets up the WebView component.
-     * Initializes the WebView and sets up the bridge between Java and JavaScript.
-     */
-    private void initializeWebView() {
-        try {
-            WebEngine engine = webView.getEngine();
-            
-            // Enable JavaScript
-            engine.setJavaScriptEnabled(true);
-            
-            // Load the HTML file from resources
-            String htmlUrl = getClass().getResource("/web/gantt-chart.html").toExternalForm();
-            engine.load(htmlUrl);
-            
-            // Set up the bridge between Java and JavaScript
-            engine.getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
-                if (newState == javafx.concurrent.Worker.State.SUCCEEDED) {
-                    try {
-                        // Initialize bridge service
-                        bridgeService.initialize(engine, viewModel);
-                        bridgeInitialized = true;
-                        
-                        // Set status message
-                        viewModel.setStatusMessage(resources.getString("gantt.status.loaded"));
-                        
-                        // If we already have a project set, load the data
-                        if (viewModel.getProject() != null) {
-                            // Give the bridge a moment to initialize fully
-                            CompletableFuture.runAsync(() -> {
-                                try {
-                                    Thread.sleep(500);
-                                    javafx.application.Platform.runLater(() -> {
-                                        viewModel.getRefreshCommand().execute();
-                                    });
-                                } catch (InterruptedException e) {
-                                    Thread.currentThread().interrupt();
-                                    LOGGER.log(Level.WARNING, "Interrupted while waiting for bridge initialization", e);
-                                }
-                            });
-                        }
-                    } catch (Exception e) {
-                        LOGGER.log(Level.SEVERE, "Error initializing WebView bridge", e);
-                        viewModel.setErrorMessage("Failed to initialize chart: " + e.getMessage());
-                    }
-                }
-            });
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error setting up WebView", e);
-            viewModel.setErrorMessage("Failed to set up chart view: " + e.getMessage());
-        }
+        
+        // Set status message
+        viewModel.setStatusMessage(resources.getString("gantt.status.ready"));
+        
+        // Initialize view model listeners
+        setupViewModelListeners();
     }
     
     /**
@@ -207,6 +159,86 @@ public class GanttChartPresenter implements Initializable {
     }
     
     /**
+     * Sets up listeners for the view model properties.
+     */
+    private void setupViewModelListeners() {
+        // Listen for chart data changes
+        viewModel.chartDataProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                updateChartView();
+            }
+        });
+        
+        // Listen for date range changes
+        viewModel.startDateProperty().addListener((obs, oldVal, newVal) -> {
+            if (viewModel.getChartData() != null) {
+                updateChartView();
+            }
+        });
+        
+        viewModel.endDateProperty().addListener((obs, oldVal, newVal) -> {
+            if (viewModel.getChartData() != null) {
+                updateChartView();
+            }
+        });
+        
+        // Listen for view mode changes
+        viewModel.viewModeProperty().addListener((obs, oldVal, newVal) -> {
+            if (viewModel.getChartData() != null) {
+                updateChartView();
+            }
+        });
+        
+        // Listen for visibility changes
+        viewModel.showMilestonesProperty().addListener((obs, oldVal, newVal) -> {
+            if (viewModel.getChartData() != null) {
+                updateChartView();
+            }
+        });
+        
+        viewModel.showDependenciesProperty().addListener((obs, oldVal, newVal) -> {
+            if (viewModel.getChartData() != null) {
+                updateChartView();
+            }
+        });
+    }
+    
+    /**
+     * Updates the chart view with the current data from the view model.
+     */
+    private void updateChartView() {
+        try {
+            // Clear the existing chart
+            chartContainer.setCenter(null);
+            
+            // Get the current data and settings from the view model
+            Project project = viewModel.getProject();
+            if (project == null) {
+                return;
+            }
+            
+            // Create a new chart using the visualization service
+            Pane chartPane = visualizationService.createGanttChartPane(
+                project.getId(),
+                viewModel.getStartDate(),
+                viewModel.getEndDate(),
+                viewModel.getViewMode().toString(),
+                viewModel.isShowMilestones(),
+                viewModel.isShowDependencies()
+            );
+            
+            // Add the chart to the container
+            chartContainer.setCenter(chartPane);
+            
+            // Update status message
+            viewModel.setStatusMessage(resources.getString("gantt.status.loaded"));
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error updating chart view", e);
+            viewModel.setErrorMessage("Failed to update chart view: " + e.getMessage());
+        }
+    }
+    
+    /**
      * Sets the project to display.
      * 
      * @param project the project
@@ -219,10 +251,8 @@ public class GanttChartPresenter implements Initializable {
         
         viewModel.setProject(project);
         
-        // If bridge is already initialized, refresh the data
-        if (bridgeInitialized) {
-            viewModel.getRefreshCommand().execute();
-        }
+        // Refresh the data
+        viewModel.getRefreshCommand().execute();
     }
     
     /**
@@ -304,39 +334,21 @@ public class GanttChartPresenter implements Initializable {
             viewModel.cleanupResources();
         }
         
-        // Clean up WebView
-        if (webView != null) {
-            WebEngine engine = webView.getEngine();
-            if (engine != null) {
-                engine.load(null);
-            }
-            webView = null;
+        // Clear the chart container
+        if (chartContainer != null) {
+            chartContainer.setCenter(null);
         }
-        
-        bridgeInitialized = false;
     }
     
     /**
-     * For testing only - avoids initializing WebView components
+     * For testing only - avoids initializing UI components
      */
     void initializeForTesting() {
-        // Skip WebView initialization in tests
-        if (this.webView == null) {
-            // Already skipping initialization
-            return;
-        }
-        
         // Setup bindings and error listener only
         viewModel = new GanttChartViewModel(ganttDataService);
+        visualizationService = new VisualizationServiceImpl();
         setupBindings();
         setupErrorListener();
-    }
-    
-    /**
-     * For testing only - sets the bridge initialization flag
-     */
-    void setBridgeInitializedForTesting(boolean value) {
-        this.bridgeInitialized = value;
     }
     
     /**
