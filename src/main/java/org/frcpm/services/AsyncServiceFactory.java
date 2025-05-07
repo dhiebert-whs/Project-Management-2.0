@@ -4,6 +4,7 @@ package org.frcpm.services;
 
 import org.frcpm.services.impl.MilestoneServiceAsyncImpl;
 import org.frcpm.services.impl.ProjectServiceAsyncImpl;
+import org.frcpm.services.impl.SubsystemServiceAsyncImpl;
 import org.frcpm.services.impl.TaskServiceAsyncImpl;
 import org.frcpm.services.impl.TeamMemberServiceAsyncImpl;
 
@@ -17,6 +18,7 @@ public class AsyncServiceFactory {
     private static final TaskServiceAsyncImpl taskService = new TaskServiceAsyncImpl();
     private static final MilestoneServiceAsyncImpl milestoneService = new MilestoneServiceAsyncImpl();
     private static final TeamMemberServiceAsyncImpl teamMemberService = new TeamMemberServiceAsyncImpl();
+    private static final SubsystemServiceAsyncImpl subsystemService = new SubsystemServiceAsyncImpl();
     
     // More async service implementations will be added here as they are created
     
@@ -38,7 +40,7 @@ public class AsyncServiceFactory {
         return taskService;
     }
     
-    /**
+/**
      * Gets the milestone service with async capabilities.
      * 
      * @return the milestone service with async methods
@@ -54,6 +56,15 @@ public class AsyncServiceFactory {
      */
     public static TeamMemberServiceAsyncImpl getTeamMemberService() {
         return teamMemberService;
+    }
+    
+    /**
+     * Gets the subsystem service with async capabilities.
+     * 
+     * @return the subsystem service with async methods
+     */
+    public static SubsystemServiceAsyncImpl getSubsystemService() {
+        return subsystemService;
     }
     
     /**
