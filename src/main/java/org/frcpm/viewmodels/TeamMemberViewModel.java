@@ -203,7 +203,7 @@ public class TeamMemberViewModel extends BaseViewModel {
         return teamMember != null && teamMember.getId() != null;
     }
 
-    private boolean isValid() {
+    protected boolean isValid() {
         return valid.get();
     }
 
