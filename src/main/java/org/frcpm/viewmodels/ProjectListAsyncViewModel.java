@@ -162,13 +162,13 @@ public class ProjectListAsyncViewModel extends ProjectListViewModel {
     }
     
     /**
-     * Sets the error message.
-     * 
-     * @param message the error message
-     */
-    private void setErrorMessage(String message) {
-        Platform.runLater(() -> {
-            super.setErrorMessage(message);
-        });
-    }
+         * Sets the error message.
+         * 
+         * @param message the error message
+         */
+        public void setErrorMessage(String message) {
+            Platform.runLater(() -> {
+                super.setErrorMessage(message);
+            });
+        }
 }

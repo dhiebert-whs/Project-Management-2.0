@@ -315,8 +315,8 @@ public class TaskServiceAsyncImpl extends AbstractAsyncService<Task, Long, TaskR
      * @return a CompletableFuture that will be completed with the list of tasks
      */
     public CompletableFuture<List<Task>> findByProjectAsync(Project project,
-                                                          Consumer<List<Task>> onSuccess,
-                                                          Consumer<Throwable> onFailure) {
+                                                       Consumer<List<Task>> onSuccess,
+                                                       Consumer<Throwable> onFailure) {
         if (project == null) {
             CompletableFuture<List<Task>> future = new CompletableFuture<>();
             future.completeExceptionally(new IllegalArgumentException("Project cannot be null"));
@@ -324,7 +324,11 @@ public class TaskServiceAsyncImpl extends AbstractAsyncService<Task, Long, TaskR
         }
 
         return executeAsync("Find Tasks By Project: " + project.getId(), em -> {
-            return repository.findByProject(project, em);
+            // Use the EntityManager directly instead of calling repository method with EntityManager
+            return em.createQuery(
+                "SELECT t FROM Task t WHERE t.project.id = :projectId", Task.class)
+                .setParameter("projectId", project.getId())
+                .getResultList();
         }, onSuccess, onFailure);
     }
 
@@ -345,9 +349,9 @@ public class TaskServiceAsyncImpl extends AbstractAsyncService<Task, Long, TaskR
      * @return a CompletableFuture that will be completed with the created task
      */
     public CompletableFuture<Task> createTaskAsync(String title, Project project, Subsystem subsystem,
-                                                 double estimatedHours, Task.Priority priority,
-                                                 LocalDate startDate, LocalDate endDate,
-                                                 Consumer<Task> onSuccess, Consumer<Throwable> onFailure) {
+                                              double estimatedHours, Task.Priority priority,
+                                              LocalDate startDate, LocalDate endDate,
+                                              Consumer<Task> onSuccess, Consumer<Throwable> onFailure) {
         try {
             if (title == null || title.trim().isEmpty()) {
                 throw new IllegalArgumentException("Task title cannot be empty");
@@ -384,7 +388,9 @@ public class TaskServiceAsyncImpl extends AbstractAsyncService<Task, Long, TaskR
                     task.setEndDate(endDate);
                 }
 
-                return repository.save(task, em);
+                // Use the EntityManager directly instead of calling repository method with EntityManager
+                em.persist(task);
+                return task;
             }, onSuccess, onFailure);
         } catch (Exception e) {
             CompletableFuture<Task> future = new CompletableFuture<>();

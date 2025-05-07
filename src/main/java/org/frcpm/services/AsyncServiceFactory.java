@@ -1,7 +1,8 @@
-// src/main/java/org/frcpm/services/AsyncServiceFactory.java (updated)
+// src/main/java/org/frcpm/services/AsyncServiceFactory.java
 
 package org.frcpm.services;
 
+import org.frcpm.services.impl.MilestoneServiceAsyncImpl;
 import org.frcpm.services.impl.ProjectServiceAsyncImpl;
 import org.frcpm.services.impl.TaskServiceAsyncImpl;
 
@@ -13,6 +14,7 @@ public class AsyncServiceFactory {
     
     private static final ProjectServiceAsyncImpl projectService = new ProjectServiceAsyncImpl();
     private static final TaskServiceAsyncImpl taskService = new TaskServiceAsyncImpl();
+    private static final MilestoneServiceAsyncImpl milestoneService = new MilestoneServiceAsyncImpl();
     
     // More async service implementations will be added here as they are created
     
@@ -32,6 +34,15 @@ public class AsyncServiceFactory {
      */
     public static TaskServiceAsyncImpl getTaskService() {
         return taskService;
+    }
+    
+    /**
+     * Gets the milestone service with async capabilities.
+     * 
+     * @return the milestone service with async methods
+     */
+    public static MilestoneServiceAsyncImpl getMilestoneService() {
+        return milestoneService;
     }
     
     /**
