@@ -1,5 +1,4 @@
 // src/main/java/org/frcpm/viewmodels/SubsystemAsyncViewModel.java
-
 package org.frcpm.viewmodels;
 
 import javafx.application.Platform;
@@ -38,6 +37,16 @@ public class SubsystemAsyncViewModel extends SubsystemViewModel {
     private Command asyncLoadTasksCommand;
     
     /**
+     * Creates a new SubsystemAsyncViewModel with default services.
+     */
+    public SubsystemAsyncViewModel() {
+        super();
+        this.subsystemServiceAsync = AsyncServiceFactory.getSubsystemService();
+        this.taskServiceAsync = AsyncServiceFactory.getTaskService();
+        initAsyncCommands();
+    }
+    
+    /**
      * Creates a new SubsystemAsyncViewModel with the specified services.
      * 
      * @param subsystemService the subsystem service
@@ -51,16 +60,35 @@ public class SubsystemAsyncViewModel extends SubsystemViewModel {
         this.subsystemServiceAsync = AsyncServiceFactory.getSubsystemService();
         this.taskServiceAsync = AsyncServiceFactory.getTaskService();
         
-        // Initialize async commands with proper lambdas instead of method references
+        initAsyncCommands();
+    }
+    
+    /**
+     * Initialize async commands
+     */
+    private void initAsyncCommands() {
+        // Initialize async commands with proper lambdas
         asyncSaveCommand = new Command(
-    () -> this.saveAsync(), 
-    () -> super.validProperty().get() && super.dirtyProperty().get()
-);
+            this::saveAsync, 
+            () -> {
+                try {
+                    // Access the valid property via reflection since it's private
+                    java.lang.reflect.Field validField = SubsystemViewModel.class.getDeclaredField("valid");
+                    validField.setAccessible(true);
+                    BooleanProperty validProperty = (BooleanProperty) validField.get(this);
+                    
+                    return validProperty.get() && this.isDirty();
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Error accessing valid field", e);
+                    return false;
+                }
+            }
+        );
         
-        asyncLoadSubteamsCommand = new Command(() -> loadSubteamsAsync());
+        asyncLoadSubteamsCommand = new Command(this::loadSubteamsAsync);
         asyncLoadTasksCommand = new Command(
-            () -> loadTasksAsync(),
-            () -> super.selectedSubsystemProperty().get() != null
+            this::loadTasksAsync,
+            () -> getSelectedSubsystem() != null
         );
     }
     
@@ -74,7 +102,7 @@ public class SubsystemAsyncViewModel extends SubsystemViewModel {
         try {
             // In a real implementation, this would use a SubteamServiceAsync
             // Since we don't have that, we'll just use a synchronous call in a try-catch
-            List<Subteam> subteamList = super.getAvailableSubteams();
+            super.loadSubteams();
             Platform.runLater(() -> {
                 loading.set(false);
                 LOGGER.info("Loaded subteams asynchronously");
@@ -92,7 +120,7 @@ public class SubsystemAsyncViewModel extends SubsystemViewModel {
      * Loads tasks for the selected subsystem asynchronously.
      */
     public void loadTasksAsync() {
-        Subsystem subsystem = super.getSelectedSubsystem();
+        Subsystem subsystem = getSelectedSubsystem();
         if (subsystem == null) {
             return;
         }
@@ -139,19 +167,50 @@ public class SubsystemAsyncViewModel extends SubsystemViewModel {
     }
     
     /**
+     * Override parent's loadTasks method to use async version
+     */
+    @Override
+    public void loadTasks() {
+        loadTasksAsync();
+    }
+    
+    /**
      * Saves the subsystem asynchronously.
      */
     public void saveAsync() {
-        if (!super.validProperty().get()) {
-            return;
-        }
-        
-        loading.set(true);
-        
         try {
-            Subsystem subsystem;
+            // Revalidate since we're calling directly
+            validate();
             
-            if (super.isNewSubsystem.get()) {
+            // Check if valid by getting the value from the field
+            boolean isValid = false;
+            try {
+                java.lang.reflect.Field validField = SubsystemViewModel.class.getDeclaredField("valid");
+                validField.setAccessible(true);
+                BooleanProperty validProperty = (BooleanProperty) validField.get(this);
+                isValid = validProperty.get();
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, "Error accessing valid field", e);
+            }
+            
+            if (!isValid) {
+                return;
+            }
+            
+            loading.set(true);
+            
+            // Get if this is a new subsystem
+            boolean isNewSubsystem = false;
+            try {
+                java.lang.reflect.Field isNewSubsystemField = SubsystemViewModel.class.getDeclaredField("isNewSubsystem");
+                isNewSubsystemField.setAccessible(true);
+                BooleanProperty isNewSubsystemProperty = (BooleanProperty) isNewSubsystemField.get(this);
+                isNewSubsystem = isNewSubsystemProperty.get();
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, "Error accessing isNewSubsystem field", e);
+            }
+            
+            if (isNewSubsystem) {
                 // Create new subsystem
                 subsystemServiceAsync.createSubsystemAsync(
                     getSubsystemName(),
@@ -179,7 +238,7 @@ public class SubsystemAsyncViewModel extends SubsystemViewModel {
                 );
             } else {
                 // Update existing subsystem
-                subsystem = getSelectedSubsystem();
+                Subsystem subsystem = getSelectedSubsystem();
                 if (subsystem == null) {
                     LOGGER.warning("No subsystem selected for update");
                     loading.set(false);

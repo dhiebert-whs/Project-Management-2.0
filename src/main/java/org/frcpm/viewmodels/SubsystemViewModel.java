@@ -40,7 +40,7 @@ public class SubsystemViewModel extends BaseViewModel {
     private final ObservableList<Subsystem> subsystems = FXCollections.observableArrayList();
     private final ObservableList<Task> tasks = FXCollections.observableArrayList();
     private final ObservableList<Subteam> availableSubteams = FXCollections.observableArrayList();
-    private final BooleanProperty isNewSubsystem = new SimpleBooleanProperty(true);
+    protected final BooleanProperty isNewSubsystem = new SimpleBooleanProperty(true);
     private final BooleanProperty valid = new SimpleBooleanProperty(false);
     private final ObjectProperty<Task> selectedTask = new SimpleObjectProperty<>();
     
