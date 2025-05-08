@@ -45,7 +45,6 @@ org\frcpm\presenters\AttendancePresenter$1.class
 org\frcpm\repositories\impl\SubsystemRepositoryImpl.class
 org\frcpm\services\GanttChartTransformationService.class
 org\frcpm\viewmodels\SubsystemManagementViewModel.class
-org\frcpm\views\ProjectList.class
 org\frcpm\views\SubsystemView.class
 org\frcpm\viewmodels\DailyViewModel.class
 org\frcpm\presenters\ComponentManagementPresenter$1.class
@@ -167,6 +166,7 @@ org\frcpm\services\VisualizationService.class
 org\frcpm\repositories\impl\MilestoneRepositoryImpl.class
 org\frcpm\presenters\ComponentPresenter$1.class
 org\frcpm\viewmodels\DashboardViewModel.class
+org\frcpm\views\SimpleProjectListView.class
 org\frcpm\viewmodels\SubteamAsyncViewModel.class
 org\frcpm\repositories\specific\MilestoneRepository.class
 org\frcpm\presenters\TeamPresenter$1.class

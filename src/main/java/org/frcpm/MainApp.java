@@ -3,12 +3,14 @@
 package org.frcpm;
 
 import javafx.application.Application;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import org.frcpm.di.FrcpmModule;
 import org.frcpm.di.ViewLoader;
 import org.frcpm.utils.ErrorHandler;
 import org.frcpm.views.ProjectListView;
+import org.frcpm.views.SimpleProjectListView;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -39,8 +41,20 @@ public class MainApp extends Application {
             // Set the application title
             primaryStage.setTitle("FRC Project Management System");
             
-            // Load the project list view
-            primaryStage.setScene(new Scene(ViewLoader.loadView(ProjectListView.class)));
+            // Load the view using our simple loader instead of AfterburnerFX
+            try {
+                SimpleProjectListView simpleView = new SimpleProjectListView();
+                Parent root = simpleView.getView();
+                
+                if (root != null) {
+                    primaryStage.setScene(new Scene(root));
+                } else {
+                    throw new RuntimeException("Failed to load the view");
+                }
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error loading view directly", e);
+                throw e;
+            }
             
             // Show the stage
             primaryStage.show();
