@@ -9,7 +9,7 @@ import org.frcpm.binding.Command;
 import org.frcpm.models.Subteam;
 import org.frcpm.models.TeamMember;
 import org.frcpm.services.TeamMemberService;
-import org.frcpm.services.impl.SubsystemServiceAsyncImpl;
+import org.frcpm.services.impl.SubteamServiceAsyncImpl; // Changed from SubsystemServiceAsyncImpl
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -26,7 +26,7 @@ public class SubteamAsyncViewModel extends SubteamViewModel {
     private static final Logger LOGGER = Logger.getLogger(SubteamAsyncViewModel.class.getName());
     
     // Services
-    private final SubsystemServiceAsyncImpl subteamServiceAsync;
+    private final SubteamServiceAsyncImpl subteamServiceAsync; // Changed from SubsystemServiceAsyncImpl
     private final TeamMemberService teamMemberService;
     
     // UI state
@@ -42,7 +42,7 @@ public class SubteamAsyncViewModel extends SubteamViewModel {
      * @param subteamServiceAsync the asynchronous subteam service
      * @param teamMemberService the team member service
      */
-    public SubteamAsyncViewModel(SubsystemServiceAsyncImpl subteamServiceAsync, 
+    public SubteamAsyncViewModel(SubteamServiceAsyncImpl subteamServiceAsync, // Changed from SubsystemServiceAsyncImpl
                               TeamMemberService teamMemberService) {
         // Initialize with standard services for the parent class
         super(null, teamMemberService);
