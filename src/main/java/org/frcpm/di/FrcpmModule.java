@@ -31,6 +31,9 @@ public class FrcpmModule {
         
         // Register all services and repositories
         registerDependencies();
+
+        // Ensure critical services are registered directly
+        ensureCriticalServices();
         
         // Register custom producers
         Map<String, Object> customConfig = new HashMap<>();
@@ -136,5 +139,24 @@ public class FrcpmModule {
     public static void shutdown() {
         LOGGER.info("Shutting down FrcpmModule");
         CUSTOM_SERVICES.clear();
+    }
+
+    /**
+     * Ensures critical services are properly registered directly with the Injector.
+     * This is a more explicit approach to avoid issues with dependency injection.
+     */
+    private static void ensureCriticalServices() {
+        // Get the singleton instances from ServiceFactory
+        ProjectService projectService = ServiceFactory.getProjectService();
+        DialogService dialogService = ServiceFactory.getDialogService();
+        
+        // Set them directly with the Injector as a fallback
+        if (projectService != null) {
+            Injector.setModelOrService(ProjectService.class, projectService);
+        }
+        
+        if (dialogService != null) {
+            Injector.setModelOrService(DialogService.class, dialogService);
+        }
     }
 }

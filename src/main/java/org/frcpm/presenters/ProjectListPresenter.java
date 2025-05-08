@@ -34,72 +34,64 @@ public class ProjectListPresenter implements Initializable {
     // FXML UI components
     @FXML
     private ListView<Project> projectListView;
-
+    
     @FXML
     private Button newProjectButton;
-
+    
     @FXML
     private Button openProjectButton;
-
+    
     @FXML
     private Button importProjectButton;
-
+    
     @FXML
     private Button deleteProjectButton;
-
+    
     // Injected services
+    @Inject
     private ProjectService projectService;
-
+    
+    @Inject
     private DialogService dialogService;
 
     // ViewModel and resources
     private ProjectListViewModel viewModel;
     private ResourceBundle resources;
 
-    // Default constructor required by AfterburnerFX
+    /**
+     * Default constructor required by AfterburnerFX.
+     */
     public ProjectListPresenter() {
         LOGGER.info("ProjectListPresenter constructor called");
-    }
-
-    // Inject methods for AfterburnerFX
-    @Inject
-    public void setProjectService(ProjectService projectService) {
-        LOGGER.info("ProjectService injected: " + (projectService != null));
-        this.projectService = projectService;
-    }
-
-    @Inject
-    public void setDialogService(DialogService dialogService) {
-        LOGGER.info("DialogService injected: " + (dialogService != null));
-        this.dialogService = dialogService;
     }
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         LOGGER.info("Initializing ProjectListPresenter with resource bundle");
-
+        
         this.resources = resources;
-
-        // Create view model with injected service - make this more robust
+        
         try {
+            // Create view model with injected service
             if (projectService == null) {
                 LOGGER.warning("ProjectService was null in initialize - attempting to create fallback");
-                // This is just a fallback - ideally injection should work
+                // Fallback only if injection failed
                 projectService = new ProjectServiceImpl();
             }
-
-            // Create view model
+            
+            // Create view model and initialize it
             viewModel = new ProjectListViewModel(projectService);
 
-            // Set up bindings
+            // Set up bindings between UI and ViewModel
             setupBindings();
-
-            // Load projects
+            
+            // Load the project list
             refreshProjectList();
+            
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error during initialization", e);
-            ErrorHandler.showError("Initialization Error",
-                    "Failed to initialize the project list: " + e.getMessage(), e);
+            ErrorHandler.showError("Initialization Error", 
+                "Failed to initialize the project list: " + e.getMessage(), e);
         }
     }
 
@@ -108,8 +100,8 @@ public class ProjectListPresenter implements Initializable {
      */
     private void setupBindings() {
         // Check for null UI components for testability
-        if (projectListView == null || newProjectButton == null || openProjectButton == null ||
-                importProjectButton == null || deleteProjectButton == null) {
+        if (projectListView == null || newProjectButton == null || openProjectButton == null || 
+            importProjectButton == null || deleteProjectButton == null) {
             LOGGER.warning("UI components not initialized - likely in test environment");
             return;
         }
@@ -127,11 +119,11 @@ public class ProjectListPresenter implements Initializable {
                 }
             }
         });
-
+        
         // Setup selection handling
         projectListView.getSelectionModel().selectedItemProperty().addListener(
-                (observable, oldValue, newValue) -> viewModel.setSelectedProject(newValue));
-
+            (observable, oldValue, newValue) -> viewModel.setSelectedProject(newValue));
+        
         // Setup double-click handler for opening projects
         projectListView.setOnMouseClicked(event -> {
             if (event.getClickCount() == 2) {
@@ -141,12 +133,13 @@ public class ProjectListPresenter implements Initializable {
                 }
             }
         });
-
+        
         // Set up button handlers
         newProjectButton.setOnAction(event -> handleNewProject());
         openProjectButton.setOnAction(event -> handleOpenProject());
+        importProjectButton.setOnAction(event -> {/* TODO: Implement import */});
         deleteProjectButton.setOnAction(event -> handleDeleteProject());
-
+        
         // Enable the open project button
         openProjectButton.setDisable(false);
     }
@@ -159,11 +152,11 @@ public class ProjectListPresenter implements Initializable {
             viewModel.loadProjects();
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error loading projects", e);
-            ErrorHandler.showError("Error Loading Projects",
-                    "Failed to load the list of projects: " + e.getMessage(), e);
+            ErrorHandler.showError("Error Loading Projects", 
+                "Failed to load the list of projects: " + e.getMessage(), e);
         }
     }
-
+    
     /**
      * Opens the selected project.
      */
@@ -176,7 +169,7 @@ public class ProjectListPresenter implements Initializable {
             ErrorHandler.showError("No Selection", "Please select a project to open");
         }
     }
-
+    
     /**
      * Creates a new project.
      */
@@ -185,12 +178,12 @@ public class ProjectListPresenter implements Initializable {
         try {
             // Use AfterburnerFX ViewLoader to create the dialog
             NewProjectDialogPresenter presenter = DialogFactory.showDialog(
-                    NewProjectDialogView.class,
-                    resources.getString("project.new.title"),
-                    projectListView.getScene().getWindow(),
-                    resources,
-                    null);
-
+                NewProjectDialogView.class, 
+                resources != null ? resources.getString("project.new.title") : "New Project", 
+                projectListView.getScene().getWindow(),
+                resources,
+                null);
+            
             // After dialog closes, check if a project was created
             if (presenter != null) {
                 Project createdProject = presenter.getCreatedProject();
@@ -204,34 +197,30 @@ public class ProjectListPresenter implements Initializable {
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error showing new project dialog", e);
             ErrorHandler.showError(
-                    resources != null ? resources.getString("error.title") : "Error",
-                    resources != null ? resources.getString("error.project.dialog.failed")
-                            : "Failed to open project dialog",
-                    e);
+                resources != null ? resources.getString("error.title") : "Error", 
+                resources != null ? resources.getString("error.project.dialog.failed") : "Failed to open project dialog", e);
         }
     }
-
+    
     /**
      * Handles the delete project action.
      */
     @FXML
     public void handleDeleteProject() {
         Project selectedProject = projectListView.getSelectionModel().getSelectedItem();
-
+        
         if (selectedProject == null) {
             ErrorHandler.showError(
-                    resources != null ? resources.getString("info.title") : "Information",
-                    resources != null ? resources.getString("info.no.selection.project")
-                            : "Please select a project first");
+                resources != null ? resources.getString("info.title") : "Information", 
+                resources != null ? resources.getString("info.no.selection.project") : "Please select a project first");
             return;
         }
-
+        
         boolean confirmed = ErrorHandler.showConfirmation(
-                resources != null ? resources.getString("project.delete.title") : "Delete Project",
-                (resources != null ? resources.getString("project.delete.confirm")
-                        : "Are you sure you want to delete the project")
-                        + " '" + selectedProject.getName() + "'?");
-
+            resources != null ? resources.getString("project.delete.title") : "Delete Project",
+            (resources != null ? resources.getString("project.delete.confirm") : "Are you sure you want to delete the project") 
+                + " '" + selectedProject.getName() + "'?");
+            
         if (confirmed) {
             try {
                 viewModel.setSelectedProject(selectedProject);
@@ -239,21 +228,18 @@ public class ProjectListPresenter implements Initializable {
                     refreshProjectList();
                 } else {
                     ErrorHandler.showError(
-                            resources != null ? resources.getString("error.title") : "Error",
-                            resources != null ? resources.getString("error.project.delete.failed")
-                                    : "Failed to delete project");
+                        resources != null ? resources.getString("error.title") : "Error", 
+                        resources != null ? resources.getString("error.project.delete.failed") : "Failed to delete project");
                 }
             } catch (Exception e) {
                 LOGGER.log(Level.SEVERE, "Error deleting project", e);
                 ErrorHandler.showError(
-                        resources != null ? resources.getString("error.title") : "Error",
-                        resources != null ? resources.getString("error.project.delete.failed")
-                                : "Failed to delete project",
-                        e);
+                    resources != null ? resources.getString("error.title") : "Error", 
+                    resources != null ? resources.getString("error.project.delete.failed") : "Failed to delete project", e);
             }
         }
     }
-
+    
     /**
      * Opens a project.
      * 
@@ -262,36 +248,36 @@ public class ProjectListPresenter implements Initializable {
     private void openProject(Project project) {
         try {
             // Ensure the project has all required fields
-            if (project.getStartDate() == null || project.getGoalEndDate() == null ||
-                    project.getHardDeadline() == null) {
+            if (project.getStartDate() == null || project.getGoalEndDate() == null || 
+                project.getHardDeadline() == null) {
                 ErrorHandler.showError("Invalid Project", "The project is missing required date fields");
                 return;
             }
-
+            
             // Validate competition date/deadline
             if (project.getHardDeadline() == null) {
                 ErrorHandler.showError("Invalid Project", "Competition date is required");
                 return;
             }
-
+            
             // Use AfterburnerFX ViewLoader to load the project view
             Parent root = ViewLoader.loadView(ProjectView.class);
-
+            
             // Get the controller and set the project
             ProjectPresenter presenter = ViewLoader.loadController(ProjectView.class);
             presenter.setProject(project);
-
+            
             // Show the project view
             Stage stage = (Stage) projectListView.getScene().getWindow();
             stage.setTitle("FRC Project Management - " + project.getName());
             stage.setScene(new Scene(root));
-
+            
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error opening project", e);
             ErrorHandler.showError("Error", "Failed to open project", e);
         }
     }
-
+    
     /**
      * Gets the ViewModel.
      * 
@@ -300,7 +286,7 @@ public class ProjectListPresenter implements Initializable {
     public ProjectListViewModel getViewModel() {
         return viewModel;
     }
-
+    
     /**
      * Sets the ViewModel (for testing).
      * 
@@ -309,7 +295,7 @@ public class ProjectListPresenter implements Initializable {
     public void setViewModel(ProjectListViewModel viewModel) {
         this.viewModel = viewModel;
     }
-
+    
     /**
      * Gets the project service.
      * 
@@ -318,18 +304,16 @@ public class ProjectListPresenter implements Initializable {
     public ProjectService getProjectService() {
         return projectService;
     }
-
+    
     /**
      * Sets the project service (for testing).
      * 
      * @param projectService the project service
-     *
-     *                       public void setProjectService(ProjectService
-     *                       projectService) {
-     *                       this.projectService = projectService;
-     *                       }
      */
-
+    public void setProjectService(ProjectService projectService) {
+        this.projectService = projectService;
+    }
+    
     /**
      * Gets the dialog service.
      * 
@@ -338,15 +322,13 @@ public class ProjectListPresenter implements Initializable {
     public DialogService getDialogService() {
         return dialogService;
     }
-
+    
     /**
      * Sets the dialog service (for testing).
      * 
      * @param dialogService the dialog service
-     *
-     *                      public void setDialogService(DialogService
-     *                      dialogService) {
-     *                      this.dialogService = dialogService;
-     *                      }
      */
+    public void setDialogService(DialogService dialogService) {
+        this.dialogService = dialogService;
+    }
 }
