@@ -350,17 +350,17 @@ public class AttendanceAsyncViewModel extends AttendanceViewModel {
     // Override parent methods to use async implementations
     
     @Override
-    public void loadMeetings() {
+    protected void loadMeetings() {
         loadMeetingsAsync();
     }
     
     @Override
-    public void loadTeamMembers() {
+    protected void loadTeamMembers() {
         loadTeamMembersAsync();
     }
     
     @Override
-    public void loadAttendance() {
+    protected void loadAttendance() {
         loadAttendanceAsync();
     }
     
@@ -370,7 +370,7 @@ public class AttendanceAsyncViewModel extends AttendanceViewModel {
     }
     
     @Override
-    public void generateReport() {
+    protected void generateReport() {
         generateReportAsync();
     }
 }
