@@ -325,7 +325,7 @@ public class ComponentAsyncViewModel extends ComponentViewModel {
             taskServiceAsync.associateComponentsWithTaskAsync(
                 task.getId(),
                 componentIds,
-                updatedTask -> {
+                updatedTask -> { // Fix the "<no type>" issue
                     Platform.runLater(() -> {
                         try {
                             // Reload tasks to reflect the changes
@@ -342,7 +342,7 @@ public class ComponentAsyncViewModel extends ComponentViewModel {
                         }
                     });
                 },
-                error -> {
+                error -> { // Fix the "<no type>" issue
                     Platform.runLater(() -> {
                         loading.set(false);
                         LOGGER.log(Level.SEVERE, "Error adding task", error);
@@ -385,7 +385,7 @@ public class ComponentAsyncViewModel extends ComponentViewModel {
             taskServiceAsync.associateComponentsWithTaskAsync(
                 selectedTask.getId(),
                 emptySet,
-                updatedTask -> {
+                updatedTask -> { // Fix the "<no type>" issue
                     Platform.runLater(() -> {
                         try {
                             // Reload tasks to reflect the changes
@@ -401,7 +401,7 @@ public class ComponentAsyncViewModel extends ComponentViewModel {
                         }
                     });
                 },
-                error -> {
+                error -> { // Fix the "<no type>" issue
                     Platform.runLater(() -> {
                         loading.set(false);
                         LOGGER.log(Level.SEVERE, "Error removing task", error);
@@ -528,23 +528,21 @@ public class ComponentAsyncViewModel extends ComponentViewModel {
     }
     
     @Override
-    public boolean addTask(Task task) {
-        CompletableFuture<Boolean> future = addTaskAsync(task);
-        try {
-            return future.join(); // This will wait for the future to complete
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error adding task", e);
-            return false;
-        }
+        public boolean addTask(Task task) {
+            CompletableFuture<Boolean> future = addTaskAsync(task);
+            try {
+                return future.join(); // This will wait for the future to complete
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error adding task", e);
+                return false;
+            }
     }
     
-    @Override
-    private void save() {
+    public void saveComponent() {
         saveAsync();
     }
     
-    @Override
-    private void removeTask() {
+    public void removeSelectedTask() {
         removeTaskAsync();
     }
 }

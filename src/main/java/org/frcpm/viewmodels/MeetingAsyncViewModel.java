@@ -236,20 +236,20 @@ public class MeetingAsyncViewModel extends MeetingViewModel {
     }
     
     /**
-     * Helper method to parse time from string.
-     * 
-     * @param timeStr the time string (HH:MM)
-     * @return the parsed LocalTime or null if invalid
-     */
-    private static LocalTime parseTime(String timeStr) {
-        try {
-            // Use reflection to access the static method in MeetingViewModel
-            return (LocalTime) MeetingViewModel.class.getMethod("parseTime", String.class).invoke(null, timeStr);
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Error parsing time", e);
-            return null;
+         * Helper method to parse time from string.
+         * 
+         * @param timeStr the time string (HH:MM)
+         * @return the parsed LocalTime or null if invalid
+         */
+        public static LocalTime parseTime(String timeStr) {
+            try {
+                // Use reflection to access the static method in MeetingViewModel
+                return (LocalTime) MeetingViewModel.class.getMethod("parseTime", String.class).invoke(null, timeStr);
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, "Error parsing time", e);
+                return null;
+            }
         }
-    }
     
     /**
      * Gets the loading property.
@@ -280,7 +280,7 @@ public class MeetingAsyncViewModel extends MeetingViewModel {
     
     // Override save method to use async implementation
     @Override
-    private void save() {
+    protected void save() {
         saveAsync();
     }
 }

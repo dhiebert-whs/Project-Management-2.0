@@ -25,6 +25,7 @@ public class AsyncServiceFactory {
     private static final ComponentServiceAsyncImpl componentService = new ComponentServiceAsyncImpl();
     private static final MeetingServiceAsyncImpl meetingService = new MeetingServiceAsyncImpl();
     private static final AttendanceServiceAsyncImpl attendanceService = new AttendanceServiceAsyncImpl();
+    private static final SubteamServiceAsyncImpl subteamService = new SubteamServiceAsyncImpl();
 
     // Private constructor to prevent instantiation
     private AsyncServiceFactory() {
@@ -102,6 +103,22 @@ public class AsyncServiceFactory {
         return attendanceService;
     }
 
+    public static SubteamServiceAsyncImpl getSubteamService() {
+        return subteamService;
+    }
+
+    /**
+     * Gets the subteam service with async capabilities.
+     * 
+     * @return the subteam service with async methods
+     *
+    public static SubteamServiceAsyncImpl getSubteamService() {
+        return (SubteamServiceAsyncImpl) SERVICE_INSTANCES.computeIfAbsent(
+            SubteamService.class,
+            k -> new SubteamServiceAsyncImpl()
+        );
+    }*/
+
     /**
      * Generic method to get async service by type.
      * 
@@ -128,7 +145,9 @@ public class AsyncServiceFactory {
                 return (T) getMeetingService();
             } else if (serviceType == AttendanceService.class) {
                 return (T) getAttendanceService();
-            } else {
+            } else if (serviceType == SubteamService.class) {
+                return (T) getSubteamService();
+            }else {
                 LOGGER.warning("Unknown service type: " + serviceType);
                 return null;
             }

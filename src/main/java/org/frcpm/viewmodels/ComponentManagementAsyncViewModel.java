@@ -11,6 +11,7 @@ import org.frcpm.models.Component;
 import org.frcpm.services.impl.ComponentServiceAsyncImpl;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -67,7 +68,7 @@ public class ComponentManagementAsyncViewModel extends ComponentManagementViewMo
             }
         );
     }
-    
+
     /**
      * Asynchronously loads all components.
      */
@@ -75,8 +76,9 @@ public class ComponentManagementAsyncViewModel extends ComponentManagementViewMo
         try {
             loading.set(true);
             
-            componentServiceAsync.findAllAsync()
-                .thenAccept(components -> {
+            componentServiceAsync.findAllAsync(
+                // Success callback
+                components -> {
                     Platform.runLater(() -> {
                         try {
                             // Get the allComponents field via reflection
@@ -96,15 +98,16 @@ public class ComponentManagementAsyncViewModel extends ComponentManagementViewMo
                             loading.set(false);
                         }
                     });
-                })
-                .exceptionally(error -> {
+                },
+                // Error callback
+                error -> {
                     Platform.runLater(() -> {
                         loading.set(false);
                         LOGGER.log(Level.SEVERE, "Error loading components", error);
                         setErrorMessage("Failed to load components: " + error.getMessage());
                     });
-                    return null;
-                });
+                }
+            );
             
         } catch (Exception e) {
             loading.set(false);
@@ -148,8 +151,10 @@ public class ComponentManagementAsyncViewModel extends ComponentManagementViewMo
             
             loading.set(true);
             
-            componentServiceAsync.deleteByIdAsync(component.getId())
-                .thenAccept(result -> {
+            componentServiceAsync.deleteByIdAsync(
+                component.getId(),
+                // Success callback
+                result -> {
                     Platform.runLater(() -> {
                         try {
                             if (result) {
@@ -181,30 +186,22 @@ public class ComponentManagementAsyncViewModel extends ComponentManagementViewMo
                             loading.set(false);
                         }
                     });
-                })
-                .exceptionally(error -> {
+                },
+                // Error callback
+                error -> {
                     Platform.runLater(() -> {
                         loading.set(false);
                         LOGGER.log(Level.SEVERE, "Error deleting component", error);
                         setErrorMessage("Failed to delete component: " + error.getMessage());
                     });
-                    return null;
-                });
+                }
+            );
             
         } catch (Exception e) {
             loading.set(false);
             LOGGER.log(Level.SEVERE, "Error deleting component", e);
             setErrorMessage("Failed to delete component: " + e.getMessage());
         }
-    }
-    
-    /**
-     * Gets the loading property.
-     * 
-     * @return the loading property
-     */
-    public BooleanProperty loadingProperty() {
-        return loading;
     }
     
     /**

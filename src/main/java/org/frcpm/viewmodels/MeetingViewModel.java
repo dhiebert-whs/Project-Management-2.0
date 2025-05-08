@@ -222,7 +222,7 @@ public class MeetingViewModel extends BaseViewModel {
     /**
      * Saves the meeting
      */
-    private void save() {
+    protected void save() {
         if (!valid.get() || !isDirty()) {
             return;
         }

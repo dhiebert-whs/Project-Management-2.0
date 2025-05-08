@@ -441,6 +441,57 @@ public class TaskServiceAsyncImpl extends AbstractAsyncService<Task, Long, TaskR
     }
     
     /**
+     * Associates components with a task asynchronously.
+     * 
+     * @param taskId the task ID
+     * @param componentIds the component IDs to associate
+     * @param onSuccess the callback to run on success
+     * @param onFailure the callback to run on failure
+     * @return a CompletableFuture that will be completed with the updated task
+     */
+    public CompletableFuture<Task> associateComponentsWithTaskAsync(Long taskId, Set<Long> componentIds,
+                                                        Consumer<Task> onSuccess, Consumer<Throwable> onFailure) {
+        if (taskId == null) {
+            CompletableFuture<Task> future = new CompletableFuture<>();
+            future.completeExceptionally(new IllegalArgumentException("Task ID cannot be null"));
+            return future;
+        }
+
+        return executeAsync("Associate Components With Task: " + taskId, em -> {
+            // Get a managed instance of the task
+            Task task = em.find(Task.class, taskId);
+            if (task == null) {
+                LOGGER.log(Level.WARNING, "Task not found with ID: {0}", taskId);
+                return null;
+            }
+            
+            // Clear existing components but maintain managed references
+            // Get a copy first to avoid concurrent modification
+            Set<org.frcpm.models.Component> currentComponents = new HashSet<>(task.getRequiredComponents());
+            for (org.frcpm.models.Component component : currentComponents) {
+                task.getRequiredComponents().remove(component);
+                component.getRequiredForTasks().remove(task);
+            }
+            
+            // Add new components
+            if (componentIds != null && !componentIds.isEmpty()) {
+                for (Long componentId : componentIds) {
+                    org.frcpm.models.Component component = em.find(org.frcpm.models.Component.class, componentId);
+                    if (component != null) {
+                        // Use the entity helper method to maintain both sides of the relationship
+                        task.addRequiredComponent(component);
+                    } else {
+                        LOGGER.log(Level.WARNING, "Component not found with ID: {0}", componentId);
+                    }
+                }
+            }
+            
+            em.merge(task);
+            return task;
+        }, onSuccess, onFailure);
+    }
+    
+    /**
      * Assigns members to a task asynchronously.
      * 
      * @param taskId the task ID
