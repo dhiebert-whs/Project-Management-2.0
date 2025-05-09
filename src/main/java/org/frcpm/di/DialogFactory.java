@@ -123,4 +123,44 @@ public class DialogFactory {
             throw new RuntimeException("Failed to create dialog: " + e.getMessage(), e);
         }
     }
+
+    /**
+     * Debug method to check FXML file existence and path resolution.
+     * 
+     * @param viewClass the view class to check
+     * @return information about file resolution
+     */
+    public static String debugViewResolution(Class<? extends FXMLView> viewClass) {
+        StringBuilder debug = new StringBuilder();
+        debug.append("Debugging view resolution for ").append(viewClass.getName()).append("\n");
+        
+        // Get class name and derive expected FXML name according to AfterburnerFX convention
+        String simpleName = viewClass.getSimpleName();
+        // Remove "View" suffix if present
+        String baseName = simpleName.endsWith("View") ? 
+                simpleName.substring(0, simpleName.length() - 4).toLowerCase() : 
+                simpleName.toLowerCase();
+        
+        debug.append("Base name for FXML lookup: ").append(baseName).append("\n");
+        
+        // Check for presence of files
+        String packagePath = viewClass.getPackage().getName().replace('.', '/');
+        String resourceName = "/" + packagePath + "/" + baseName + ".fxml";
+        debug.append("Looking for resource: ").append(resourceName).append("\n");
+        
+        boolean resourceExists = viewClass.getResource(resourceName) != null;
+        debug.append("Resource exists: ").append(resourceExists).append("\n");
+        
+        // Check for variants
+        String variantWithView = "/" + packagePath + "/" + baseName + "view.fxml";
+        boolean variantExists = viewClass.getResource(variantWithView) != null;
+        debug.append("Variant with 'view' suffix exists: ").append(variantExists).append(" (").append(variantWithView).append(")\n");
+        
+        // Check for properties file
+        String propertiesName = "/" + packagePath + "/" + baseName + ".properties";
+        boolean propertiesExist = viewClass.getResource(propertiesName) != null;
+        debug.append("Properties file exists: ").append(propertiesExist).append(" (").append(propertiesName).append(")\n");
+        
+        return debug.toString();
+    }
 }
