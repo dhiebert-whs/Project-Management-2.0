@@ -164,6 +164,21 @@
             <artifactId>chartfx-chart</artifactId>
             <version>11.2.7</version>
         </dependency>
+
+        <!-- MVVMFx Core -->
+        <dependency>
+            <groupId>de.saxsys</groupId>
+            <artifactId>mvvmfx</artifactId>
+            <version>1.8.0</version>
+        </dependency>
+        
+        <!-- MVVMFx Testing Support -->
+        <dependency>
+            <groupId>de.saxsys</groupId>
+            <artifactId>mvvmfx-testing-utils</artifactId>
+            <version>1.8.0</version>
+            <scope>test</scope>
+        </dependency>
     
     </dependencies>
     
