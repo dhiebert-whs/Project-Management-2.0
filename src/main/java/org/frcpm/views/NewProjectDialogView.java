@@ -21,6 +21,6 @@ public class NewProjectDialogView extends FXMLView {
      * @param resources the resource bundle
      */
     public NewProjectDialogView(ResourceBundle resources) {
-        super(resources);
+        super();
     }
 }
