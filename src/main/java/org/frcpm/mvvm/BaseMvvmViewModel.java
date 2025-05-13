@@ -91,7 +91,7 @@ public abstract class BaseMvvmViewModel implements ViewModel {
      * 
      * @param value the new dirty value
      */
-    protected void setDirty(boolean value) {
+    public void setDirty(boolean value) {
         dirty.set(value);
     }
     

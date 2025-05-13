@@ -1,0 +1,78 @@
+<!-- src/main/resources/org/frcpm/views/mvvm/attendancemvvm.fxml -->
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+    <?import javafx.scene.control.*?>
+    <?import javafx.scene.layout.*?>
+    
+    <BorderPane prefWidth="800" prefHeight="600" xmlns="http://javafx.com/javafx/17"
+                xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.frcpm.mvvm.views.AttendanceMvvmView">
+        
+        <padding>
+            <Insets top="10" right="10" bottom="10" left="10"/>
+        </padding>
+        
+        <top>
+            <VBox spacing="10">
+                <Label fx:id="meetingTitleLabel" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+                
+                <GridPane hgap="10" vgap="5">
+                    <columnConstraints>
+                        <ColumnConstraints minWidth="80" prefWidth="80"/>
+                        <ColumnConstraints minWidth="150" prefWidth="150"/>
+                        <ColumnConstraints minWidth="80" prefWidth="80"/>
+                        <ColumnConstraints minWidth="150" prefWidth="150"/>
+                    </columnConstraints>
+                    
+                    <Label text="%attendance.date" GridPane.rowIndex="0" GridPane.columnIndex="0" 
+                           style="-fx-font-weight: bold;"/>
+                    <Label fx:id="dateLabel" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                    
+                    <Label text="%attendance.time" GridPane.rowIndex="0" GridPane.columnIndex="2" 
+                           style="-fx-font-weight: bold;"/>
+                    <Label fx:id="timeLabel" GridPane.rowIndex="0" GridPane.columnIndex="3"/>
+                </GridPane>
+                
+                <Separator/>
+            </VBox>
+        </top>
+        
+        <center>
+            <VBox spacing="10">
+                <Label text="%attendance.title" style="-fx-font-size: 14; -fx-font-weight: bold;"/>
+                
+                <TableView fx:id="attendanceTable" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="nameColumn" text="%attendance.column.name" prefWidth="200"/>
+                        <TableColumn fx:id="subteamColumn" text="%attendance.column.subteam" prefWidth="150"/>
+                        <TableColumn fx:id="presentColumn" text="%attendance.column.present" prefWidth="100"/>
+                        <TableColumn fx:id="arrivalColumn" text="%attendance.column.arrival" prefWidth="150"/>
+                        <TableColumn fx:id="departureColumn" text="%attendance.column.departure" prefWidth="150"/>
+                    </columns>
+                    <placeholder>
+                        <Label text="%attendance.no.members"/>
+                    </placeholder>
+                </TableView>
+                
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="%attendance.selected.time" style="-fx-font-weight: bold;"/>
+                    <Label text="%attendance.arrival"/>
+                    <TextField fx:id="arrivalTimeField" promptText="HH:MM" prefWidth="100"/>
+                    <Label text="%attendance.departure"/>
+                    <TextField fx:id="departureTimeField" promptText="HH:MM" prefWidth="100"/>
+                    <Button fx:id="setTimeButton" text="%attendance.set"/>
+                    <ProgressIndicator fx:id="loadingIndicator" prefHeight="20.0" prefWidth="20.0" visible="false" />
+                </HBox>
+                
+                <Label fx:id="errorLabel" style="-fx-text-fill: red;" visible="false" />
+            </VBox>
+        </center>
+        
+        <bottom>
+            <HBox alignment="CENTER_RIGHT" spacing="10">
+                <Button fx:id="cancelButton" text="%button.cancel" cancelButton="true"/>
+                <Button fx:id="saveButton" text="%button.save" defaultButton="true"/>
+            </HBox>
+        </bottom>
+        
+    </BorderPane>
