@@ -327,30 +327,30 @@ public class GanttChartMvvmViewModel extends BaseMvvmViewModel {
             return;
         }
         
-        //loading.set(true);
+        // No need to set loading flag here as it's handled by MvvmAsyncHelper
         
         try {
             // Run this asynchronously
             Thread.ofVirtual().start(() -> {
                 try {
                     // Get data from service
-                    Map<String, Object> data = ganttDataService.formatTasksForGantt(
+                    final Map<String, Object> rawData = ganttDataService.formatTasksForGantt(
                             currentProject.getId(), startDate.get(), endDate.get());
                     
-                    // Apply any active filters
-                    data = applyFilterToData(data);
+                    // Apply any active filters - create a new final variable for the filtered data
+                    final Map<String, Object> filteredData = applyFilterToData(rawData);
                     
                     // Update on JavaFX thread
                     Platform.runLater(() -> {
-                        // Update chart data property
-                        chartData.set(data);
+                        // Update chart data property with the filtered data
+                        chartData.set(filteredData);
                         dataLoaded.set(true);
                         
                         // Create chart view
                         updateChartView();
                         
                         statusMessage.set("Chart data loaded successfully");
-                        loading.set(false);
+                        // No need to set loading to false here as it's handled by MvvmAsyncHelper
                     });
                     
                     // Load critical path if needed
@@ -363,7 +363,7 @@ public class GanttChartMvvmViewModel extends BaseMvvmViewModel {
                         statusMessage.set("Error loading chart data: " + e.getMessage());
                         setErrorMessage("Error loading chart data: " + e.getMessage());
                         dataLoaded.set(false);
-                        loading.set(false);
+                        // No need to set loading to false here as it's handled by MvvmAsyncHelper
                     });
                 }
             });
@@ -372,7 +372,7 @@ public class GanttChartMvvmViewModel extends BaseMvvmViewModel {
             statusMessage.set("Error loading chart data: " + e.getMessage());
             setErrorMessage("Error loading chart data: " + e.getMessage());
             dataLoaded.set(false);
-            loading.set(false);
+            // No need to set loading to false here as it's handled by MvvmAsyncHelper
         }
     }
     
