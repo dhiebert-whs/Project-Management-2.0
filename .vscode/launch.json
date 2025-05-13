@@ -4,7 +4,13 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-
+        {
+            "type": "java",
+            "name": "MvvmMainApp",
+            "request": "launch",
+            "mainClass": "org.frcpm.MvvmMainApp",
+            "projectName": "frc-project-manager"
+        },
         {
             "type": "java",
             "name": "Current File",
@@ -17,7 +23,7 @@
             "request": "launch",
             "mainClass": "org.frcpm.MainApp",
             "projectName": "frc-project-manager"
-        },        
+        },
         {
             "type": "java",
             "name": "Launch FRC Project Manager",
@@ -33,7 +39,6 @@
                 "engineLogging": false,
                 "trace": true,
                 "traceResponse": true,
-                "engineLogging": false,
                 "moduleLoad": false,
                 "exceptions": true,
                 "browswerStdOut": false,
