@@ -18,7 +18,7 @@ public class ServiceFactory {
     private static final AttendanceService attendanceService = new AttendanceServiceImpl();
     private static final MilestoneService milestoneService = new MilestoneServiceImpl();
     private static final GanttDataService ganttDataService = new GanttDataServiceImpl();
-    private static final WebViewBridgeService webViewBridgeService = new WebViewBridgeServiceImpl();
+
 
     
     /**
@@ -120,12 +120,5 @@ public class ServiceFactory {
         return ganttDataService;
     }
 
-    /**
-     * Gets the WebView bridge service instance.
-     * 
-     * @return the WebView bridge service
-     */
-    public static WebViewBridgeService getWebViewBridgeService() {
-        return webViewBridgeService;
-    }
+
 }
