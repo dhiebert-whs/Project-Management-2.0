@@ -37,6 +37,7 @@
                                 <MenuItem fx:id="viewGanttMenuItem" text="%menu.view.gantt"/>
                                 <MenuItem fx:id="viewCalendarMenuItem" text="%menu.view.calendar"/>
                                 <MenuItem fx:id="viewDailyMenuItem" text="%menu.view.daily"/>
+                                <MenuItem fx:id="viewMetricsMenuItem" text="%menu.view.metrics"/>
                                 <SeparatorMenuItem />
                                 <MenuItem fx:id="refreshMenuItem" text="%menu.view.refresh" accelerator="F5"/>
                             </items>

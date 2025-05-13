@@ -37,6 +37,7 @@ import org.frcpm.models.Project;
 import org.frcpm.mvvm.CommandAdapter;
 import org.frcpm.mvvm.viewmodels.DailyMvvmViewModel;
 import org.frcpm.mvvm.viewmodels.MainMvvmViewModel;
+import org.frcpm.mvvm.viewmodels.MetricsMvvmViewModel;
 import org.frcpm.mvvm.viewmodels.ProjectListMvvmViewModel;
 
 /**
@@ -106,6 +107,8 @@ public class MainMvvmView implements FxmlView<MainMvvmViewModel>, Initializable 
     @FXML private Label statusLabel;
     @FXML private Label versionLabel;
     @FXML private ProgressIndicator loadingIndicator;
+
+    @FXML private MenuItem viewMetricsMenuItem;
     
     @InjectViewModel
     private MainMvvmViewModel viewModel;
@@ -261,6 +264,10 @@ public class MainMvvmView implements FxmlView<MainMvvmViewModel>, Initializable 
             // Tools menu
             bindMenuItem(settingsMenuItem, viewModel.getSettingsCommand());
             bindMenuItem(databaseManagementMenuItem, viewModel.getDatabaseManagementCommand());
+
+            // Metrics menu
+            bindMenuItem(viewMetricsMenuItem, viewModel.getViewMetricsCommand());
+            viewMetricsMenuItem.setOnAction(e -> handleViewMetrics());
             
             // Help menu
             bindMenuItem(userGuideMenuItem, viewModel.getUserGuideCommand());
@@ -434,6 +441,57 @@ public class MainMvvmView implements FxmlView<MainMvvmViewModel>, Initializable 
         }
     }
     
+    private void handleViewMetrics() {
+        Project project = viewModel.getSelectedProject();
+        if (project == null) {
+            showInfoAlert(resources.getString("info.title"), 
+                        resources.getString("info.no.selection.project"));
+            return;
+        }
+        
+        try {
+            // Load the metrics view
+            ViewTuple<MetricsMvvmView, MetricsMvvmViewModel> viewTuple = 
+                FluentViewLoader.fxmlView(MetricsMvvmView.class)
+                    .resourceBundle(resources)
+                    .load();
+            
+            // Initialize the view with the project
+            MetricsMvvmView metricsView = viewTuple.getCodeBehind();
+            metricsView.setProject(project);
+            
+            // Create a stage for the metrics view
+            Stage metricsStage = new Stage();
+            metricsStage.setTitle(resources.getString("metrics.title") + ": " + project.getName());
+            metricsStage.initModality(Modality.WINDOW_MODAL);
+            metricsStage.initOwner(mainPane.getScene().getWindow());
+            
+            // Create the scene
+            Scene scene = new Scene(viewTuple.getView(), 900, 700);
+            
+            // Add stylesheets if needed
+            try {
+                URL cssUrl = getClass().getResource("/css/styles.css");
+                if (cssUrl != null) {
+                    scene.getStylesheets().add(cssUrl.toExternalForm());
+                }
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, "Could not load CSS", e);
+            }
+            
+            metricsStage.setScene(scene);
+            
+            // Show the stage
+            metricsStage.show();
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error viewing metrics", e);
+            showErrorAlert(resources.getString("error.title"), 
+                        "Failed to open Metrics view: " + e.getMessage());
+        }
+    }
+
+
     /**
      * Handles opening an existing project.
      */

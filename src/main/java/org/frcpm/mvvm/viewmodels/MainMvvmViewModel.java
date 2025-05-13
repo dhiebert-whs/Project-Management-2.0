@@ -91,6 +91,8 @@ public class MainMvvmViewModel extends BaseMvvmViewModel {
     private Command databaseManagementCommand;
     private Command userGuideCommand;
     private Command aboutCommand;
+
+    private Command viewMetricsCommand;
     
     /**
      * Creates a new MainMvvmViewModel.
@@ -414,6 +416,14 @@ public class MainMvvmViewModel extends BaseMvvmViewModel {
                 LOGGER.info("About command executed");
             },
             () -> true
+        );
+
+        viewMetricsCommand = createValidOnlyCommand(
+            () -> {
+                // This will be handled by the view/controller
+                LOGGER.info("View metrics command executed");
+            },
+            () -> selectedProject.get() != null && !loading.get()
         );
     }
     
@@ -756,6 +766,10 @@ public class MainMvvmViewModel extends BaseMvvmViewModel {
     
     public Command getAboutCommand() {
         return aboutCommand;
+    }
+
+    public Command getViewMetricsCommand() {
+        return viewMetricsCommand;
     }
     
     /**
