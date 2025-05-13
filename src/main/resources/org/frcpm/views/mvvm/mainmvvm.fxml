@@ -1,0 +1,151 @@
+<!-- src/main/resources/org/frcpm/views/mvvm/mainmvvm.fxml -->
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+    <?import javafx.scene.layout.*?>
+    
+    <BorderPane fx:id="mainPane" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" 
+                fx:controller="org.frcpm.mvvm.views.MainMvvmView" prefHeight="768.0" prefWidth="1024.0">
+        
+        <top>
+            <VBox>
+                <MenuBar>
+                    <menus>
+                        <!-- File Menu -->
+                        <Menu text="%menu.file">
+                            <items>
+                                <MenuItem fx:id="newProjectMenuItem" text="%menu.file.new" accelerator="Ctrl+N"/>
+                                <MenuItem fx:id="openProjectMenuItem" text="%menu.file.open" accelerator="Ctrl+O"/>
+                                <MenuItem fx:id="closeProjectMenuItem" text="%menu.file.close" accelerator="Ctrl+W"/>
+                                <SeparatorMenuItem />
+                                <MenuItem fx:id="saveMenuItem" text="%menu.file.save" accelerator="Ctrl+S"/>
+                                <MenuItem fx:id="saveAsMenuItem" text="%menu.file.saveAs" accelerator="Ctrl+Shift+S"/>
+                                <SeparatorMenuItem />
+                                <MenuItem fx:id="importProjectMenuItem" text="%menu.file.import"/>
+                                <MenuItem fx:id="exportProjectMenuItem" text="%menu.file.export"/>
+                                <SeparatorMenuItem />
+                                <Menu fx:id="recentProjectsMenu" text="%menu.file.recent"/>
+                                <SeparatorMenuItem />
+                                <MenuItem fx:id="exitMenuItem" text="%menu.file.exit" accelerator="Alt+F4"/>
+                            </items>
+                        </Menu>
+                        
+                        <!-- View Menu -->
+                        <Menu text="%menu.view">
+                            <items>
+                                <MenuItem fx:id="viewDashboardMenuItem" text="%menu.view.dashboard"/>
+                                <MenuItem fx:id="viewGanttMenuItem" text="%menu.view.gantt"/>
+                                <MenuItem fx:id="viewCalendarMenuItem" text="%menu.view.calendar"/>
+                                <MenuItem fx:id="viewDailyMenuItem" text="%menu.view.daily"/>
+                                <SeparatorMenuItem />
+                                <MenuItem fx:id="refreshMenuItem" text="%menu.view.refresh" accelerator="F5"/>
+                            </items>
+                        </Menu>
+                        
+                        <!-- Project Menu -->
+                        <Menu fx:id="projectMenu" text="%menu.project">
+                            <items>
+                                <MenuItem fx:id="projectPropertiesMenuItem" text="%menu.project.properties" accelerator="Alt+Enter"/>
+                                <SeparatorMenuItem />
+                                <MenuItem fx:id="addMilestoneMenuItem" text="%menu.project.addMilestone" accelerator="Ctrl+Shift+M"/>
+                                <MenuItem fx:id="scheduleMeetingMenuItem" text="%menu.project.scheduleMeeting" accelerator="Ctrl+Shift+E"/>
+                                <MenuItem fx:id="addTaskMenuItem" text="%menu.project.addTask" accelerator="Ctrl+T"/>
+                                <SeparatorMenuItem />
+                                <MenuItem fx:id="projectStatisticsMenuItem" text="%menu.project.statistics"/>
+                            </items>
+                        </Menu>
+                        
+                        <!-- Team Menu -->
+                        <Menu text="%menu.team">
+                            <items>
+                                <MenuItem fx:id="subteamsMenuItem" text="%menu.team.subteams"/>
+                                <MenuItem fx:id="membersMenuItem" text="%menu.team.members"/>
+                                <SeparatorMenuItem />
+                                <MenuItem fx:id="takeAttendanceMenuItem" text="%menu.team.attendance" accelerator="Ctrl+Shift+A"/>
+                                <MenuItem fx:id="attendanceHistoryMenuItem" text="%menu.team.history"/>
+                                <SeparatorMenuItem />
+                                <MenuItem fx:id="subsystemsMenuItem" text="%menu.team.subsystems"/>
+                            </items>
+                        </Menu>
+                        
+                        <!-- Tools Menu -->
+                        <Menu text="%menu.tools">
+                            <items>
+                                <MenuItem fx:id="settingsMenuItem" text="%menu.tools.settings"/>
+                                <MenuItem fx:id="databaseManagementMenuItem" text="%menu.tools.database"/>
+                            </items>
+                        </Menu>
+                        
+                        <!-- Help Menu -->
+                        <Menu text="%menu.help">
+                            <items>
+                                <MenuItem fx:id="userGuideMenuItem" text="%menu.help.guide" accelerator="F1"/>
+                                <MenuItem fx:id="aboutMenuItem" text="%menu.help.about"/>
+                            </items>
+                        </Menu>
+                    </menus>
+                </MenuBar>
+                
+                <!-- Toolbar -->
+                <ToolBar>
+                    <items>
+                        <Button fx:id="newProjectButton" text="%button.newProject"/>
+                        <Button fx:id="openProjectButton" text="%button.openProject"/>
+                        <Separator orientation="VERTICAL"/>
+                        <Button fx:id="importProjectButton" text="%button.importProject"/>
+                    </items>
+                </ToolBar>
+            </VBox>
+        </top>
+        
+        <center>
+            <TabPane fx:id="mainTabPane">
+                <tabs>
+                    <Tab fx:id="dashboardTab" text="%tab.dashboard" closable="false">
+                        <VBox spacing="10" style="-fx-padding: 10;">
+                            <Label text="%main.title" style="-fx-font-size: 20; -fx-font-weight: bold;"/>
+                            <Label text="%dashboard.welcome" />
+                            
+                            <TitledPane text="%dashboard.currentProjects" collapsible="false">
+                                <TableView fx:id="projectsTable">
+                                    <columns>
+                                        <TableColumn fx:id="projectNameColumn" text="%dashboard.column.projectName" prefWidth="250"/>
+                                        <TableColumn fx:id="projectStartColumn" text="%dashboard.column.projectStart" prefWidth="150"/>
+                                        <TableColumn fx:id="projectGoalColumn" text="%dashboard.column.projectGoal" prefWidth="150"/>
+                                        <TableColumn fx:id="projectDeadlineColumn" text="%dashboard.column.projectDeadline" prefWidth="150"/>
+                                    </columns>
+                                    <placeholder>
+                                        <Label text="%placeholder.noProjects" />
+                                    </placeholder>
+                                </TableView>
+                            </TitledPane>
+                            
+                            <HBox spacing="10">
+                                <Button fx:id="dashboardNewButton" text="%button.newProject"/>
+                                <Button fx:id="dashboardOpenButton" text="%button.openProject"/>
+                                <Button fx:id="dashboardImportButton" text="%button.importProject"/>
+                            </HBox>
+                        </VBox>
+                    </Tab>
+                    <Tab fx:id="projectTab" text="%tab.projectDetails" closable="false">
+                        <Label text="%placeholder.noProject" style="-fx-padding: 20;"/>
+                    </Tab>
+                </tabs>
+            </TabPane>
+        </center>
+        
+        <bottom>
+            <BorderPane style="-fx-padding: 5; -fx-background-color: #f0f0f0;">
+                <left>
+                    <Label fx:id="statusLabel" text="%status.ready" />
+                </left>
+                <right>
+                    <HBox spacing="10" alignment="CENTER_RIGHT">
+                        <ProgressIndicator fx:id="loadingIndicator" prefHeight="16.0" prefWidth="16.0" visible="false" />
+                        <Label fx:id="versionLabel" text="%status.version" />
+                    </HBox>
+                </right>
+            </BorderPane>
+        </bottom>
+        
+    </BorderPane>

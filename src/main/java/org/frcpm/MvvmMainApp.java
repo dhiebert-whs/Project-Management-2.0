@@ -1,19 +1,19 @@
-// src/main/java/org/frcpm/MvvmMainApp.java
+// src/main/java/org/frcpm/MvvmMainApp.java (Updated)
 
 package org.frcpm;
 
 import de.saxsys.mvvmfx.FluentViewLoader;
-import de.saxsys.mvvmfx.MvvmFX;
 import de.saxsys.mvvmfx.ViewTuple;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import org.frcpm.di.FrcpmModule;
 import org.frcpm.mvvm.MvvmConfig;
-import org.frcpm.mvvm.viewmodels.ProjectListMvvmViewModel;
-import org.frcpm.mvvm.views.ProjectListMvvmView;
+import org.frcpm.mvvm.viewmodels.MainMvvmViewModel;
+import org.frcpm.mvvm.views.MainMvvmView;
 import org.frcpm.utils.ErrorHandler;
 
+import java.net.URL;
 import java.util.Locale;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
@@ -50,11 +50,11 @@ public class MvvmMainApp extends Application {
             primaryStage.setTitle("FRC Project Management System (MVVMFx)");
             
             // Load resource bundle
-            ResourceBundle resources = ResourceBundle.getBundle("org.frcpm.mvvm.views.projectlistmvvm", Locale.getDefault());
+            ResourceBundle resources = ResourceBundle.getBundle("org.frcpm.views.mvvm.mainmvvm", Locale.getDefault());
             
             // Load the view using MVVMFx
-            ViewTuple<ProjectListMvvmView, ProjectListMvvmViewModel> viewTuple = 
-                FluentViewLoader.fxmlView(ProjectListMvvmView.class)
+            ViewTuple<MainMvvmView, MainMvvmViewModel> viewTuple = 
+                FluentViewLoader.fxmlView(MainMvvmView.class)
                     .resourceBundle(resources)
                     .load();
             
@@ -63,8 +63,10 @@ public class MvvmMainApp extends Application {
             
             // Add CSS stylesheets if needed
             try {
-                String css = MvvmMainApp.class.getResource("/styles/application.css").toExternalForm();
-                scene.getStylesheets().add(css);
+                URL cssUrl = getClass().getResource("/css/styles.css");
+                if (cssUrl != null) {
+                    scene.getStylesheets().add(cssUrl.toExternalForm());
+                }
             } catch (Exception e) {
                 LOGGER.log(Level.WARNING, "Could not load CSS. Will use default styling.", e);
             }
