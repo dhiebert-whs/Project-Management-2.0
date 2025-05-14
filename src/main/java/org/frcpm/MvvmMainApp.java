@@ -1,4 +1,4 @@
-// src/main/java/org/frcpm/MvvmMainApp.java (Updated)
+// src/main/java/org/frcpm/MvvmMainApp.java
 
 package org.frcpm;
 
@@ -34,7 +34,7 @@ public class MvvmMainApp extends Application {
             LOGGER.info("Starting FRC Project Management System with MVVMFx");
             
             // Initialize the AfterburnerFX module first (needed during migration phase)
-            //FrcpmModule.initialize();
+            FrcpmModule.initialize();
             
             // Initialize MVVMFx
             MvvmConfig.initialize();
@@ -50,7 +50,7 @@ public class MvvmMainApp extends Application {
             primaryStage.setTitle("FRC Project Management System (MVVMFx)");
             
             // Load resource bundle
-            ResourceBundle resources = ResourceBundle.getBundle("org.frcpm.views.mvvm.mainmvvm", Locale.getDefault());
+            ResourceBundle resources = ResourceBundle.getBundle("org.frcpm.mvvm.views.MainMvvmView", Locale.getDefault());
             
             // Load the view using MVVMFx
             ViewTuple<MainMvvmView, MainMvvmViewModel> viewTuple = 

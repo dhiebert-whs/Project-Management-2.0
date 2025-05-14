@@ -10,7 +10,31 @@ import org.frcpm.repositories.specific.*;
 import org.frcpm.services.*;
 import org.frcpm.services.impl.*;
 import org.frcpm.di.ServiceProvider;
+import org.frcpm.mvvm.viewmodels.AttendanceMvvmViewModel;
+import org.frcpm.mvvm.viewmodels.ComponentDetailMvvmViewModel;
+import org.frcpm.mvvm.viewmodels.ComponentListMvvmViewModel;
+import org.frcpm.mvvm.viewmodels.DailyMvvmViewModel;
+import org.frcpm.mvvm.viewmodels.DashboardMvvmViewModel;
+import org.frcpm.mvvm.viewmodels.GanttChartMvvmViewModel;
+import org.frcpm.mvvm.viewmodels.MainMvvmViewModel;
+import org.frcpm.mvvm.viewmodels.MeetingDetailMvvmViewModel;
+import org.frcpm.mvvm.viewmodels.MeetingListMvvmViewModel;
+import org.frcpm.mvvm.viewmodels.MetricsMvvmViewModel;
+import org.frcpm.mvvm.viewmodels.MilestoneDetailMvvmViewModel;
+import org.frcpm.mvvm.viewmodels.MilestoneListMvvmViewModel;
+import org.frcpm.mvvm.viewmodels.ProjectListMvvmViewModel;
+import org.frcpm.mvvm.viewmodels.SubsystemDetailMvvmViewModel;
+import org.frcpm.mvvm.viewmodels.SubsystemListMvvmViewModel;
+import org.frcpm.mvvm.viewmodels.SubteamDetailMvvmViewModel;
+import org.frcpm.mvvm.viewmodels.SubteamListMvvmViewModel;
+import org.frcpm.mvvm.viewmodels.TaskDetailMvvmViewModel;
+import org.frcpm.mvvm.viewmodels.TaskListMvvmViewModel;
+import org.frcpm.mvvm.viewmodels.TaskSelectionMvvmViewModel;
+import org.frcpm.mvvm.viewmodels.TeamMemberDetailMvvmViewModel;
+import org.frcpm.mvvm.viewmodels.TeamMemberListMvvmViewModel;
+import org.frcpm.mvvm.viewmodels.TeamMemberSelectionMvvmViewModel;
 
+import java.util.ResourceBundle;
 import java.util.logging.Logger;
 
 /**
@@ -36,6 +60,18 @@ public class MvvmConfig {
      */
     public static void initialize() {
         LOGGER.info("Initializing MVVMFx framework");
+        
+        // Configure resource bundle path for MVVMFx framework
+        try {
+            // Set up a global resource bundle with common properties
+            ResourceBundle commonBundle = ResourceBundle.getBundle("org.frcpm.mvvm.views.common");
+            MvvmFX.setGlobalResourceBundle(commonBundle);
+            
+            // Configure the default path for resource bundles
+            System.setProperty("mvvmfx.resource.bundle.path", "org.frcpm.mvvm.views");
+        } catch (Exception e) {
+            LOGGER.warning("Could not set up resource bundles: " + e.getMessage());
+        }
         
         // Configure dependency injection
         registerServices();
@@ -105,7 +141,90 @@ public class MvvmConfig {
                 }
                 
                 // ViewModels
-                // This will be expanded as more ViewModels are created
+                else if (type == AttendanceMvvmViewModel.class) {
+                    return new AttendanceMvvmViewModel(
+                        ServiceProvider.getAttendanceService(),
+                        ServiceProvider.getTeamMemberService(),
+                        ServiceProvider.getMeetingService());
+                } else if (type == ComponentDetailMvvmViewModel.class) {
+                    return new ComponentDetailMvvmViewModel(
+                        ServiceProvider.getComponentService(),
+                        ServiceProvider.getTaskService());
+                } else if (type == ComponentListMvvmViewModel.class) {
+                    return new ComponentListMvvmViewModel(
+                        ServiceProvider.getComponentService());
+                } else if (type == DailyMvvmViewModel.class) {
+                    return new DailyMvvmViewModel(
+                        ServiceProvider.getTaskService(),
+                        ServiceProvider.getMeetingService());
+                } else if (type == DashboardMvvmViewModel.class) {
+                    return new DashboardMvvmViewModel(
+                        ServiceProvider.getTaskService(),
+                        ServiceProvider.getMilestoneService(),
+                        ServiceProvider.getMeetingService());
+                } else if (type == GanttChartMvvmViewModel.class) {
+                    return new GanttChartMvvmViewModel(
+                        ServiceProvider.getGanttDataService());
+                } else if (type == MainMvvmViewModel.class) {
+                    return new MainMvvmViewModel(
+                        ServiceProvider.getProjectService());
+                } else if (type == MeetingDetailMvvmViewModel.class) {
+                    return new MeetingDetailMvvmViewModel(
+                        ServiceProvider.getMeetingService());
+                } else if (type == MeetingListMvvmViewModel.class) {
+                    return new MeetingListMvvmViewModel(
+                        ServiceProvider.getMeetingService());
+                } else if (type == MetricsMvvmViewModel.class) {
+                    return new MetricsMvvmViewModel(
+                        ServiceProvider.getProjectService(),
+                        ServiceProvider.getSubsystemService(),
+                        ServiceProvider.getTeamMemberService());
+                } else if (type == MilestoneDetailMvvmViewModel.class) {
+                    return new MilestoneDetailMvvmViewModel(
+                        ServiceProvider.getMilestoneService());
+                } else if (type == MilestoneListMvvmViewModel.class) {
+                    return new MilestoneListMvvmViewModel(
+                        ServiceProvider.getMilestoneService());
+                } else if (type == ProjectListMvvmViewModel.class) {
+                    return new ProjectListMvvmViewModel(
+                        ServiceProvider.getProjectService());
+                } else if (type == SubsystemDetailMvvmViewModel.class) {
+                    return new SubsystemDetailMvvmViewModel(
+                        ServiceProvider.getSubsystemService(),
+                        ServiceProvider.getSubteamService(),
+                        ServiceProvider.getTaskService());
+                } else if (type == SubsystemListMvvmViewModel.class) {
+                    return new SubsystemListMvvmViewModel(
+                        ServiceProvider.getSubsystemService());
+                } else if (type == SubteamDetailMvvmViewModel.class) {
+                    return new SubteamDetailMvvmViewModel(
+                        ServiceProvider.getSubteamService(),
+                        ServiceProvider.getTeamMemberService());
+                } else if (type == SubteamListMvvmViewModel.class) {
+                    return new SubteamListMvvmViewModel(
+                        ServiceProvider.getSubteamService());
+                } else if (type == TaskDetailMvvmViewModel.class) {
+                    return new TaskDetailMvvmViewModel(
+                        ServiceProvider.getTaskService(),
+                        ServiceProvider.getTeamMemberService(),
+                        ServiceProvider.getComponentService());
+                } else if (type == TaskListMvvmViewModel.class) {
+                    return new TaskListMvvmViewModel(
+                        ServiceProvider.getTaskService());
+                } else if (type == TaskSelectionMvvmViewModel.class) {
+                    return new TaskSelectionMvvmViewModel(
+                        ServiceProvider.getTaskService());
+                } else if (type == TeamMemberDetailMvvmViewModel.class) {
+                    return new TeamMemberDetailMvvmViewModel(
+                        ServiceProvider.getTeamMemberService(),
+                        ServiceProvider.getSubteamService());
+                } else if (type == TeamMemberListMvvmViewModel.class) {
+                    return new TeamMemberListMvvmViewModel(
+                        ServiceProvider.getTeamMemberService());
+                } else if (type == TeamMemberSelectionMvvmViewModel.class) {
+                    return new TeamMemberSelectionMvvmViewModel(
+                        ServiceProvider.getTeamMemberService());
+                }
                 
                 // Return null for unknown types
                 return null;
