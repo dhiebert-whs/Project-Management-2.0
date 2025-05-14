@@ -143,13 +143,7 @@
             <artifactId>jgrapht-core</artifactId>
             <version>1.5.2</version>
         </dependency>
-    
-        <!-- Dependency Injection + Lightweight MVVM Framework for JavaFX -->
-        <dependency>
-            <groupId>com.airhacks</groupId>
-            <artifactId>afterburner.fx</artifactId>
-            <version>1.7.0</version>
-        </dependency>
+
     
         <!-- Required for @PostConstruct and similar annotations (JSR-250) -->
         <dependency>

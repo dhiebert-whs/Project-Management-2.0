@@ -3,16 +3,24 @@
 package org.frcpm;
 
 import de.saxsys.mvvmfx.FluentViewLoader;
+import de.saxsys.mvvmfx.MvvmFX;
 import de.saxsys.mvvmfx.ViewTuple;
 import javafx.application.Application;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import org.frcpm.di.FrcpmModule;
 import org.frcpm.mvvm.MvvmConfig;
 import org.frcpm.mvvm.viewmodels.MainMvvmViewModel;
 import org.frcpm.mvvm.views.MainMvvmView;
+import org.frcpm.repositories.impl.ProjectRepositoryImpl;
+import org.frcpm.repositories.specific.ProjectRepository;
+import org.frcpm.services.ProjectService;
+import org.frcpm.services.impl.ProjectServiceImpl;
 import org.frcpm.utils.ErrorHandler;
 
+import java.lang.reflect.Field;
 import java.net.URL;
 import java.util.Locale;
 import java.util.ResourceBundle;
@@ -28,73 +36,91 @@ public class MvvmMainApp extends Application {
 
     private static final Logger LOGGER = Logger.getLogger(MvvmMainApp.class.getName());
 
-    @Override
+   @Override
     public void start(Stage primaryStage) {
         try {
             LOGGER.info("Starting FRC Project Management System with MVVMFx");
-
-            LOGGER.info("MainMvvmView class location: " + 
-                MainMvvmView.class.getProtectionDomain().getCodeSource().getLocation());
-
-            LOGGER.info("MainMvvmView class loader: " + MainMvvmView.class.getClassLoader());
-
-            LOGGER.info("MainMvvmView interfaces: ");
-            for (Class<?> iface : MainMvvmView.class.getInterfaces()) {
-                LOGGER.info(" - " + iface.getName());
-            }
-
-            LOGGER.info("MainMvvmView constructors: ");
-            for (java.lang.reflect.Constructor<?> ctor : MainMvvmView.class.getDeclaredConstructors()) {
-                LOGGER.info(" - " + ctor.toString());
-            }
-
-            // Before loading with MVVMFx:
-            LOGGER.info("About to load view with MVVMFx. MainMvvmView.class = " + MainMvvmView.class);
             
-            // Initialize the AfterburnerFX module first (needed during migration phase)
-            FrcpmModule.initialize();
+            // Log diagnostic information
+            URL directFxmlUrl = getClass().getClassLoader().getResource("org/frcpm/mvvm/views/MainMvvmView.fxml");
+            LOGGER.info("Direct FXML URL from resources: " + directFxmlUrl);
             
-            // Initialize MVVMFx
+            // Initialize MVVMFx configuration only
             MvvmConfig.initialize();
             
-            // Set up error handler
-            Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
-                LOGGER.log(Level.SEVERE, "Uncaught exception", throwable);
-                ErrorHandler.showError("Application Error", 
-                    "An unexpected error occurred: " + throwable.getMessage(), throwable);
-            });
+            // Use direct JavaFX loading for now
+            try {
+                if (directFxmlUrl != null) {
+                    // Create the loader
+                    FXMLLoader loader = new FXMLLoader(directFxmlUrl);
+                    
+                    // Load resource bundle
+                    ResourceBundle resources = ResourceBundle.getBundle("org.frcpm.mvvm.views.MainMvvmView");
+                    loader.setResources(resources);
+                    
+                    // Load the view
+                    Parent root = loader.load();
+                    
+                    // Get the controller
+                    MainMvvmView controller = loader.getController();
+                    
+                    // Create view model directly using MVVMFx's dependency injection
+                    // Do not use FrcpmModule (AfterburnerFX)
+                    MainMvvmViewModel viewModel = MvvmFX.getCustomDependencyInjector()
+                        .call(MainMvvmViewModel.class);
+                    
+                    if (viewModel == null) {
+                        LOGGER.warning("ViewModel was not created by MVVMFx dependency injector. Creating manually.");
+                        // Fallback to manual creation with ProjectService
+                        ProjectService projectService = MvvmFX.getCustomDependencyInjector()
+                            .call(ProjectService.class);
+                        
+                        if (projectService == null) {
+                            LOGGER.warning("ProjectService not available from MVVMFx injector. Creating directly.");
+                            // Create services manually as a last resort
+                            ProjectRepository projectRepository = new ProjectRepositoryImpl();
+                            projectService = new ProjectServiceImpl(projectRepository);
+                        }
+                        
+                        viewModel = new MainMvvmViewModel(projectService);
+                    }
+                    
+                    // Use reflection to inject the view model
+                    Field viewModelField = MainMvvmView.class.getDeclaredField("viewModel");
+                    viewModelField.setAccessible(true);
+                    viewModelField.set(controller, viewModel);
+                    
+                    // Set up the scene
+                    Scene scene = new Scene(root);
+                    
+                    // Add CSS stylesheets if needed
+                    URL cssUrl = getClass().getResource("/css/styles.css");
+                    if (cssUrl != null) {
+                        scene.getStylesheets().add(cssUrl.toExternalForm());
+                    }
+                    
+                    primaryStage.setTitle("FRC Project Management System (Direct Loading)");
+                    primaryStage.setScene(scene);
+                    primaryStage.show();
+                    
+                    LOGGER.info("Application started successfully with direct FXML loading");
+                    return;
+                }
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error with direct loading, trying MVVMFx", e);
+            }
             
-            // Set the application title
-            primaryStage.setTitle("FRC Project Management System (MVVMFx)");
-            
-            // Load resource bundle
-            ResourceBundle resources = ResourceBundle.getBundle("org.frcpm.mvvm.views.MainMvvmView", Locale.getDefault());
-            
-            // Load the view using MVVMFx
+            // If direct loading fails, try MVVMFx as a backup
             ViewTuple<MainMvvmView, MainMvvmViewModel> viewTuple = 
                 FluentViewLoader.fxmlView(MainMvvmView.class)
-                    .resourceBundle(resources)
+                    .resourceBundle(ResourceBundle.getBundle("org.frcpm.mvvm.views.MainMvvmView"))
                     .load();
             
             // Set up the scene
             Scene scene = new Scene(viewTuple.getView());
-            
-            // Add CSS stylesheets if needed
-            try {
-                URL cssUrl = getClass().getResource("/css/styles.css");
-                if (cssUrl != null) {
-                    scene.getStylesheets().add(cssUrl.toExternalForm());
-                }
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, "Could not load CSS. Will use default styling.", e);
-            }
-            
+            primaryStage.setTitle("FRC Project Management System (MVVMFx)");
             primaryStage.setScene(scene);
-            
-            // Show the stage
             primaryStage.show();
-            
-            LOGGER.info("Application started successfully with MVVMFx");
             
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error starting application", e);
@@ -109,8 +135,7 @@ public class MvvmMainApp extends Application {
             // Shut down MVVMFx
             MvvmConfig.shutdown();
             
-            // Shut down the module and clean up resources
-            FrcpmModule.shutdown();
+            // No more AfterburnerFX shutdown needed
             
             LOGGER.info("Application stopped");
         } catch (Exception e) {
