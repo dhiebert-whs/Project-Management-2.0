@@ -4,7 +4,7 @@
 <?import javafx.scene.layout.*?>
     
     <BorderPane fx:id="mainPane" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" 
-    fx:controller="org.frcpm.mvvm.views.MainMvvmView" prefHeight="768.0" prefWidth="1024.0">
+                fx:controller="org.frcpm.mvvm.views.MainMvvmView" prefHeight="768.0" prefWidth="1024.0">
         
         <top>
             <VBox>
