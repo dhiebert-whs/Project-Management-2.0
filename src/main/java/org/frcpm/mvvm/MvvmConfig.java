@@ -66,11 +66,15 @@ public class MvvmConfig {
             // Set up a global resource bundle with common properties
             ResourceBundle commonBundle = ResourceBundle.getBundle("org.frcpm.mvvm.views.common");
             MvvmFX.setGlobalResourceBundle(commonBundle);
+            LOGGER.info("Set global resource bundle: " + commonBundle);
             
             // Configure the default path for resource bundles
             System.setProperty("mvvmfx.resource.bundle.path", "org.frcpm.mvvm.views");
+            LOGGER.info("Set mvvmfx.resource.bundle.path to: org.frcpm.mvvm.views");
+            
         } catch (Exception e) {
             LOGGER.warning("Could not set up resource bundles: " + e.getMessage());
+            e.printStackTrace();
         }
         
         // Configure dependency injection

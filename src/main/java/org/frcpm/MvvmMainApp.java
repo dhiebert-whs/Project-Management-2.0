@@ -32,6 +32,24 @@ public class MvvmMainApp extends Application {
     public void start(Stage primaryStage) {
         try {
             LOGGER.info("Starting FRC Project Management System with MVVMFx");
+
+            LOGGER.info("MainMvvmView class location: " + 
+                MainMvvmView.class.getProtectionDomain().getCodeSource().getLocation());
+
+            LOGGER.info("MainMvvmView class loader: " + MainMvvmView.class.getClassLoader());
+
+            LOGGER.info("MainMvvmView interfaces: ");
+            for (Class<?> iface : MainMvvmView.class.getInterfaces()) {
+                LOGGER.info(" - " + iface.getName());
+            }
+
+            LOGGER.info("MainMvvmView constructors: ");
+            for (java.lang.reflect.Constructor<?> ctor : MainMvvmView.class.getDeclaredConstructors()) {
+                LOGGER.info(" - " + ctor.toString());
+            }
+
+            // Before loading with MVVMFx:
+            LOGGER.info("About to load view with MVVMFx. MainMvvmView.class = " + MainMvvmView.class);
             
             // Initialize the AfterburnerFX module first (needed during migration phase)
             FrcpmModule.initialize();
