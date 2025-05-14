@@ -204,7 +204,7 @@
                     <execution>
                         <id>default-cli</id>
                         <configuration>
-                            <mainClass>org.frcpm.MainApp</mainClass>
+                            <mainClass>org.frcpm.MvvmMainApp</mainClass>
                         </configuration>
                     </execution>
                 </executions>

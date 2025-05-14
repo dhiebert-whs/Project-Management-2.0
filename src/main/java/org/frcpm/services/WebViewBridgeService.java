@@ -2,7 +2,9 @@
 package org.frcpm.services;
 
 import javafx.scene.web.WebEngine;
-import org.frcpm.viewmodels.GanttChartViewModel;
+
+import org.frcpm.mvvm.viewmodels.GanttChartMvvmViewModel;
+
 
 /**
  * Service interface for the bridge between JavaFX and JavaScript.
@@ -17,7 +19,7 @@ public interface WebViewBridgeService {
      * @param engine the WebEngine to initialize
      * @param viewModel the ViewModel to connect
      */
-    void initialize(WebEngine engine, GanttChartViewModel viewModel);
+    void initialize(WebEngine engine, GanttChartMvvmViewModel viewModel);
     
     /**
      * Updates the chart data in the WebView.

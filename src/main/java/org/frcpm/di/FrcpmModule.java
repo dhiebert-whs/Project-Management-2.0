@@ -94,7 +94,7 @@ public class FrcpmModule {
         register(MilestoneService.class, ServiceFactory.getMilestoneService());
         register(DialogService.class, ServiceFactory.getDialogService());
         register(GanttDataService.class, ServiceFactory.getGanttDataService());
-        register(WebViewBridgeService.class, ServiceFactory.getWebViewBridgeService());
+        //register(WebViewBridgeService.class, ServiceFactory.getWebViewBridgeService());
         
         // Fix: Get transformation service from GanttDataService instance
         GanttDataService ganttDataService = ServiceFactory.getGanttDataService();

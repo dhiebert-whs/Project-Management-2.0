@@ -7,9 +7,10 @@ import javafx.scene.web.WebEngine;
 import netscape.javascript.JSObject;
 import org.frcpm.services.ServiceFactory;
 import org.frcpm.services.TaskService;
+import org.frcpm.mvvm.viewmodels.GanttChartMvvmViewModel;
 import org.frcpm.services.MilestoneService;
 import org.frcpm.services.WebViewBridgeService;
-import org.frcpm.viewmodels.GanttChartViewModel;
+
 
 import java.util.Map;
 import java.util.logging.Level;
@@ -24,7 +25,7 @@ public class WebViewBridgeServiceImpl implements WebViewBridgeService {
     private static final Logger LOGGER = Logger.getLogger(WebViewBridgeServiceImpl.class.getName());
     
     private WebEngine webEngine;
-    private GanttChartViewModel viewModel;
+    private GanttChartMvvmViewModel viewModel;
     private final TaskService taskService;
     private final MilestoneService milestoneService;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -50,7 +51,7 @@ public class WebViewBridgeServiceImpl implements WebViewBridgeService {
     }
     
     @Override
-    public void initialize(WebEngine engine, GanttChartViewModel viewModel) {
+    public void initialize(WebEngine engine, GanttChartMvvmViewModel viewModel) {
         this.webEngine = engine;
         this.viewModel = viewModel;
         
@@ -326,4 +327,6 @@ public class WebViewBridgeServiceImpl implements WebViewBridgeService {
             updateDependenciesVisibility(viewModel.isShowDependencies());
         }
     }
+
+
 }

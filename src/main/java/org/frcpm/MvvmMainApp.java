@@ -34,7 +34,7 @@ public class MvvmMainApp extends Application {
             LOGGER.info("Starting FRC Project Management System with MVVMFx");
             
             // Initialize the AfterburnerFX module first (needed during migration phase)
-            FrcpmModule.initialize();
+            //FrcpmModule.initialize();
             
             // Initialize MVVMFx
             MvvmConfig.initialize();
