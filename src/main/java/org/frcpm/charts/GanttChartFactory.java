@@ -474,7 +474,7 @@ public class GanttChartFactory {
         } else {
             diamond.setFill(Color.PURPLE);
             //diamond.setStrokeColor(Color.DARKPURPLE);
-            diamond.setStrokeColor(Color.DARKPURPLE);
+            diamond.setStrokeColor(Color.MEDIUMPURPLE);
         }
 
         // Add style class based on status
@@ -584,7 +584,8 @@ public class GanttChartFactory {
         Line todayLine = new Line(position, 0, position, chartPane.getHeight());
         todayLine.getStyleClass().add("today-line");
         todayLine.setStrokeWidth(2);
-        todayLine.setStrokeColor(Color.RED);
+        todayLine.setStroke(Color.RED);
+
 
         // Add line to chart
         chartPane.add(todayLine, 1, 0, 1, chartPane.getRowCount());
