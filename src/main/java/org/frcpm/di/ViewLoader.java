@@ -219,10 +219,10 @@ public class ViewLoader {
      * Helps identify path issues and missing resources.
      * 
      * @param <V> the view type
-     * @param viewClass the class of the view to check
+     * @param viewClass the class to check
      * @return diagnostic information as a string
      */
-    public static <V extends ViewTuple> String diagnoseViewLoading(Class<V> viewClass) {
+    public static <V> String diagnoseViewLoading(Class<V> viewClass) {
         StringBuilder diagnosis = new StringBuilder();
         diagnosis.append("View Loading Diagnosis for: ").append(viewClass.getName()).append("\n\n");
         
@@ -256,12 +256,14 @@ public class ViewLoader {
         diagnosis.append("Alternative exists: ").append(viewClass.getResource(alternativePath) != null).append("\n");
         
         try {
-            // Try loading directly with FluentViewLoader - but modify to avoid type issues
+            // Try loading directly with FluentViewLoader - only if it's an FxmlView
             diagnosis.append("\nAttempting to load view with FluentViewLoader: ");
-            if (viewClass.isAssignableFrom(de.saxsys.mvvmfx.FxmlView.class)) {
-                // Only try loading if it's really an FxmlView
-                FluentViewLoader.fxmlView((Class<? extends de.saxsys.mvvmfx.FxmlView<?>>) viewClass).load();
-                diagnosis.append("SUCCESS\n");
+            if (de.saxsys.mvvmfx.FxmlView.class.isAssignableFrom(viewClass)) {
+                // Comment out the problematic part for now since we can't easily fix the generic typing
+                diagnosis.append("SKIPPED - FluentViewLoader.fxmlView() has type compatibility issues\n");
+                
+                // Instead of trying to load, just report that it's an FxmlView
+                diagnosis.append("Class is confirmed to be an FxmlView implementation\n");
             } else {
                 diagnosis.append("SKIPPED - class is not an FxmlView\n");
             }

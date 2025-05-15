@@ -8,7 +8,6 @@ import org.frcpm.repositories.impl.*;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -85,20 +84,19 @@ public class ServiceLocator {
      * Registers all services.
      */
     private static void registerServices() {
-        // Create service instances
-        projectService = new ProjectServiceImpl(getProjectRepository());
-        taskService = new TaskServiceImpl(getTaskRepository());
-        teamMemberService = new TeamMemberServiceImpl(getTeamMemberRepository());
-        subteamService = new SubteamServiceImpl(getSubteamRepository());
-        subsystemService = new SubsystemServiceImpl(getSubsystemRepository());
-        componentService = new ComponentServiceImpl(getComponentRepository());
-        meetingService = new MeetingServiceImpl(getMeetingRepository());
-        attendanceService = new AttendanceServiceImpl(getAttendanceRepository());
-        milestoneService = new MilestoneServiceImpl(getMilestoneRepository());
+        // Create service instances without repository parameters
+        projectService = new ProjectServiceImpl();
+        taskService = new TaskServiceImpl();
+        teamMemberService = new TeamMemberServiceImpl();
+        subteamService = new SubteamServiceImpl();
+        subsystemService = new SubsystemServiceImpl();
+        componentService = new ComponentServiceImpl();
+        meetingService = new MeetingServiceImpl();
+        attendanceService = new AttendanceServiceImpl();
+        milestoneService = new MilestoneServiceImpl();
         dialogService = new JavaFXDialogService();
         ganttDataService = new GanttDataServiceImpl();
-   
-        
+    
         // Get transformation service from Gantt data service
         if (ganttDataService != null) {
             transformationService = ganttDataService.getTransformationService();
