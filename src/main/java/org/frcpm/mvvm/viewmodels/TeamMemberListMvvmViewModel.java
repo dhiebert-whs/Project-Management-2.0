@@ -11,7 +11,6 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
-import javax.inject.Inject;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -52,7 +51,7 @@ public class TeamMemberListMvvmViewModel extends BaseMvvmViewModel {
      * 
      * @param teamMemberService the team member service
      */
-    @Inject
+  
     public TeamMemberListMvvmViewModel(TeamMemberService teamMemberService) {
         this.teamMemberService = teamMemberService;
         

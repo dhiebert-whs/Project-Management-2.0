@@ -8,7 +8,8 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.layout.Pane;
 
-import javax.inject.Inject;
+
+
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
@@ -106,7 +107,7 @@ public class GanttChartMvvmViewModel extends BaseMvvmViewModel {
      * 
      * @param ganttDataService the Gantt data service
      */
-    @Inject
+  
     public GanttChartMvvmViewModel(GanttDataService ganttDataService) {
         this.ganttDataService = ganttDataService;
         this.visualizationService = new VisualizationServiceImpl();

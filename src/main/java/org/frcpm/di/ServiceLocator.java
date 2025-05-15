@@ -33,7 +33,6 @@ public class ServiceLocator {
     private static MilestoneService milestoneService;
     private static DialogService dialogService;
     private static GanttDataService ganttDataService;
-    private static WebViewBridgeService webViewBridgeService;
     private static GanttChartTransformationService transformationService;
     
     /**
@@ -98,7 +97,7 @@ public class ServiceLocator {
         milestoneService = new MilestoneServiceImpl(getMilestoneRepository());
         dialogService = new JavaFXDialogService();
         ganttDataService = new GanttDataServiceImpl();
-        webViewBridgeService = new WebViewBridgeServiceImpl();
+   
         
         // Get transformation service from Gantt data service
         if (ganttDataService != null) {
@@ -117,7 +116,6 @@ public class ServiceLocator {
         register(MilestoneService.class, milestoneService);
         register(DialogService.class, dialogService);
         register(GanttDataService.class, ganttDataService);
-        register(WebViewBridgeService.class, webViewBridgeService);
         register(GanttChartTransformationService.class, transformationService);
     }
     
@@ -202,10 +200,7 @@ public class ServiceLocator {
         return ganttDataService;
     }
     
-    public static WebViewBridgeService getWebViewBridgeService() {
-        if (!initialized) initialize();
-        return webViewBridgeService;
-    }
+
     
     public static GanttChartTransformationService getTransformationService() {
         if (!initialized) initialize();
@@ -277,7 +272,6 @@ public class ServiceLocator {
         milestoneService = null;
         dialogService = null;
         ganttDataService = null;
-        webViewBridgeService = null;
         transformationService = null;
         
         initialized = false;

@@ -126,8 +126,6 @@ public class MvvmConfig {
                     return ServiceLocator.getGanttDataService();
                 } else if (type == GanttChartTransformationService.class) {
                     return ServiceLocator.getTransformationService();
-                } else if (type == WebViewBridgeService.class) {
-                    return ServiceLocator.getWebViewBridgeService();
                 }
                 
                 // Repositories - using ServiceLocator instead of ServiceProvider

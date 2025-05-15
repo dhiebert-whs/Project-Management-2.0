@@ -12,7 +12,6 @@ import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 
-import javax.inject.Inject;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
@@ -81,7 +80,7 @@ public class MeetingListMvvmViewModel extends BaseMvvmViewModel {
      * 
      * @param meetingService the meeting service
      */
-    @Inject
+    
     public MeetingListMvvmViewModel(MeetingService meetingService) {
         this.meetingService = meetingService;
         this.meetingServiceAsync = (MeetingServiceAsyncImpl) meetingService;

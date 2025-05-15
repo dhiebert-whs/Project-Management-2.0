@@ -13,7 +13,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 
-import javax.inject.Inject;
+
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -57,7 +57,7 @@ public class TeamMemberSelectionMvvmViewModel extends BaseMvvmViewModel {
      * 
      * @param teamMemberService the team member service
      */
-    @Inject
+  
     public TeamMemberSelectionMvvmViewModel(TeamMemberService teamMemberService) {
         this.teamMemberService = teamMemberService;
         this.teamMemberServiceAsync = (TeamMemberServiceAsyncImpl) teamMemberService;

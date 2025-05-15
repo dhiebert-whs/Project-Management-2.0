@@ -8,7 +8,7 @@ import javafx.beans.property.*;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
-import javax.inject.Inject;
+
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -62,7 +62,7 @@ public class TeamMemberDetailMvvmViewModel extends BaseMvvmViewModel {
      * @param teamMemberService the team member service
      * @param subteamService the subteam service
      */
-    @Inject
+    
     public TeamMemberDetailMvvmViewModel(TeamMemberService teamMemberService, SubteamService subteamService) {
         this.teamMemberService = teamMemberService;
         this.teamMemberServiceAsync = (TeamMemberServiceAsyncImpl) teamMemberService;

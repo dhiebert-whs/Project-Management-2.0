@@ -11,7 +11,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
-import javax.inject.Inject;
+
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -52,7 +52,7 @@ public class TaskListMvvmViewModel extends BaseMvvmViewModel {
      * 
      * @param taskService the task service
      */
-    @Inject
+   
     public TaskListMvvmViewModel(TaskService taskService) {
         this.taskService = taskService;
         

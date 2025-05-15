@@ -12,7 +12,6 @@ import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
-import javax.inject.Inject;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -73,7 +72,6 @@ public class ComponentDetailMvvmViewModel extends BaseMvvmViewModel {
      * @param componentService the component service
      * @param taskService the task service
      */
-    @Inject
     public ComponentDetailMvvmViewModel(ComponentService componentService, TaskService taskService) {
         this.componentService = componentService;
         this.componentServiceAsync = (ComponentServiceAsyncImpl) componentService;

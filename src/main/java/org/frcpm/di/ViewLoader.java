@@ -222,7 +222,7 @@ public class ViewLoader {
      * @param viewClass the class of the view to check
      * @return diagnostic information as a string
      */
-    public static <V extends de.saxsys.mvvmfx.ViewType> String diagnoseViewLoading(Class<V> viewClass) {
+    public static <V extends ViewTuple> String diagnoseViewLoading(Class<V> viewClass) {
         StringBuilder diagnosis = new StringBuilder();
         diagnosis.append("View Loading Diagnosis for: ").append(viewClass.getName()).append("\n\n");
         

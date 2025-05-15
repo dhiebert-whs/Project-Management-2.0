@@ -16,7 +16,7 @@ import javafx.beans.property.IntegerProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
-import javax.inject.Inject;
+
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -84,7 +84,7 @@ public class SubsystemDetailMvvmViewModel extends BaseMvvmViewModel {
      * @param subteamService the subteam service
      * @param taskService the task service
      */
-    @Inject
+   
     public SubsystemDetailMvvmViewModel(
             SubsystemService subsystemService, 
             SubteamService subteamService,

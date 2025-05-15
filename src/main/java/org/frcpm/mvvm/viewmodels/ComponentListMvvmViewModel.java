@@ -12,7 +12,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 
-import javax.inject.Inject;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.logging.Level;
@@ -78,7 +77,7 @@ public class ComponentListMvvmViewModel extends BaseMvvmViewModel {
      * 
      * @param componentService the component service
      */
-    @Inject
+   
     public ComponentListMvvmViewModel(ComponentService componentService) {
         this.componentService = componentService;
         
