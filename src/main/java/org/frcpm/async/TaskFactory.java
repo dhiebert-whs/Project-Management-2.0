@@ -4,7 +4,7 @@ import javafx.concurrent.Task;
 import org.frcpm.models.Project;
 import org.frcpm.models.Task.Priority;
 import org.frcpm.services.*;
-import org.frcpm.di.ServiceProvider;
+import org.frcpm.di.ServiceLocator; // Changed from ServiceProvider
 
 import java.time.LocalDate;
 import java.util.List;
@@ -30,7 +30,7 @@ public class TaskFactory {
     public static CompletableFuture<List<Project>> loadProjects(
             Consumer<List<Project>> onSuccess, Consumer<Throwable> onFailure) {
 
-        ProjectService projectService = ServiceProvider.getProjectService();
+        ProjectService projectService = ServiceLocator.getProjectService(); // Changed
 
         return TaskExecutor.executeAsync(
                 "Load Projects",
@@ -50,7 +50,7 @@ public class TaskFactory {
     public static CompletableFuture<Project> loadProject(
             Long projectId, Consumer<Project> onSuccess, Consumer<Throwable> onFailure) {
 
-        ProjectService projectService = ServiceProvider.getProjectService();
+        ProjectService projectService = ServiceLocator.getProjectService(); // Changed
 
         return TaskExecutor.executeAsync(
                 "Load Project " + projectId,
@@ -70,7 +70,7 @@ public class TaskFactory {
     public static CompletableFuture<Project> saveProject(
             Project project, Consumer<Project> onSuccess, Consumer<Throwable> onFailure) {
 
-        ProjectService projectService = ServiceProvider.getProjectService();
+        ProjectService projectService = ServiceLocator.getProjectService(); // Changed
 
         return TaskExecutor.executeAsync(
                 "Save Project " + (project.getId() == null ? "New" : project.getId()),
@@ -95,7 +95,7 @@ public class TaskFactory {
             String name, LocalDate startDate, LocalDate goalEndDate, LocalDate hardDeadline,
             String description, Consumer<Project> onSuccess, Consumer<Throwable> onFailure) {
 
-        ProjectService projectService = ServiceProvider.getProjectService();
+        ProjectService projectService = ServiceLocator.getProjectService(); // Changed
 
         return TaskExecutor.executeAsync(
                 "Create Project " + name,
@@ -120,7 +120,7 @@ public class TaskFactory {
     public static CompletableFuture<Boolean> deleteProject(
             Long projectId, Consumer<Boolean> onSuccess, Consumer<Throwable> onFailure) {
 
-        ProjectService projectService = ServiceProvider.getProjectService();
+        ProjectService projectService = ServiceLocator.getProjectService(); // Changed
 
         return TaskExecutor.executeAsync(
                 "Delete Project " + projectId,
@@ -148,7 +148,7 @@ public class TaskFactory {
             double estimatedHours, Priority priority, LocalDate startDate, LocalDate endDate,
             Consumer<org.frcpm.models.Task> onSuccess, Consumer<Throwable> onFailure) {
 
-        TaskService taskService = ServiceProvider.getTaskService();
+        TaskService taskService = ServiceLocator.getTaskService(); // Changed
 
         return TaskExecutor.executeAsync(
                 "Create Task " + title,

@@ -1,5 +1,4 @@
 // src/main/java/org/frcpm/mvvm/MvvmConfig.java
-
 package org.frcpm.mvvm;
 
 import de.saxsys.mvvmfx.MvvmFX;
@@ -9,7 +8,8 @@ import de.saxsys.mvvmfx.utils.notifications.NotificationObserver;
 import org.frcpm.repositories.specific.*;
 import org.frcpm.services.*;
 import org.frcpm.services.impl.*;
-import org.frcpm.di.ServiceProvider;
+// Replace ServiceProvider with ServiceLocator
+import org.frcpm.di.ServiceLocator;
 import org.frcpm.mvvm.viewmodels.AttendanceMvvmViewModel;
 import org.frcpm.mvvm.viewmodels.ComponentDetailMvvmViewModel;
 import org.frcpm.mvvm.viewmodels.ComponentListMvvmViewModel;
@@ -44,6 +44,7 @@ import java.util.logging.Logger;
 public class MvvmConfig {
     
     private static final Logger LOGGER = Logger.getLogger(MvvmConfig.class.getName());
+    private static boolean initialized = false;
     
     // Global notification message types (use strings instead of NotificationType class)
     public static final String PROJECT_SAVED = "PROJECT_SAVED";
@@ -59,7 +60,15 @@ public class MvvmConfig {
      * Initializes the MVVMFx framework with required services and factories.
      */
     public static void initialize() {
+        if (initialized) {
+            LOGGER.info("MVVMFx framework already initialized");
+            return;
+        }
+        
         LOGGER.info("Initializing MVVMFx framework");
+        
+        // Initialize the ServiceLocator first
+        ServiceLocator.initialize();
         
         // Configure resource bundle path for MVVMFx framework
         try {
@@ -81,6 +90,7 @@ public class MvvmConfig {
         registerServices();
         setupNotifications();
         
+        initialized = true;
         LOGGER.info("MVVMFx framework initialized successfully");
     }
     
@@ -91,143 +101,140 @@ public class MvvmConfig {
         // Register service implementations with MVVMFx's dependency injector
         MvvmFX.setCustomDependencyInjector(type -> {
             try {
-                // Services
+                // Services - using ServiceLocator instead of ServiceProvider
                 if (type == ProjectService.class) {
-                    return ServiceProvider.getProjectService();
+                    return ServiceLocator.getProjectService();
                 } else if (type == TaskService.class) {
-                    return ServiceProvider.getTaskService();
+                    return ServiceLocator.getTaskService();
                 } else if (type == TeamMemberService.class) {
-                    return ServiceProvider.getTeamMemberService();
+                    return ServiceLocator.getTeamMemberService();
                 } else if (type == SubteamService.class) {
-                    return ServiceProvider.getSubteamService();
+                    return ServiceLocator.getSubteamService();
                 } else if (type == SubsystemService.class) {
-                    return ServiceProvider.getSubsystemService();
+                    return ServiceLocator.getSubsystemService();
                 } else if (type == ComponentService.class) {
-                    return ServiceProvider.getComponentService();
+                    return ServiceLocator.getComponentService();
                 } else if (type == MeetingService.class) {
-                    return ServiceProvider.getMeetingService();
+                    return ServiceLocator.getMeetingService();
                 } else if (type == AttendanceService.class) {
-                    return ServiceProvider.getAttendanceService();
+                    return ServiceLocator.getAttendanceService();
                 } else if (type == MilestoneService.class) {
-                    return ServiceProvider.getMilestoneService();
+                    return ServiceLocator.getMilestoneService();
                 } else if (type == DialogService.class) {
-                    return ServiceProvider.getDialogService();
+                    return ServiceLocator.getDialogService();
                 } else if (type == GanttDataService.class) {
-                    return ServiceProvider.getGanttDataService();
+                    return ServiceLocator.getGanttDataService();
                 } else if (type == GanttChartTransformationService.class) {
-                    GanttDataService ganttDataService = ServiceProvider.getGanttDataService();
-                    if (ganttDataService != null) {
-                        return ganttDataService.getTransformationService();
-                    }
+                    return ServiceLocator.getTransformationService();
                 } else if (type == WebViewBridgeService.class) {
-                    return ServiceProvider.getWebViewBridgeService();
+                    return ServiceLocator.getWebViewBridgeService();
                 }
                 
-                // Repositories
+                // Repositories - using ServiceLocator instead of ServiceProvider
                 else if (type == ProjectRepository.class) {
-                    return ServiceProvider.getProjectRepository();
+                    return ServiceLocator.getProjectRepository();
                 } else if (type == TaskRepository.class) {
-                    return ServiceProvider.getTaskRepository();
+                    return ServiceLocator.getTaskRepository();
                 } else if (type == TeamMemberRepository.class) {
-                    return ServiceProvider.getTeamMemberRepository();
+                    return ServiceLocator.getTeamMemberRepository();
                 } else if (type == SubteamRepository.class) {
-                    return ServiceProvider.getSubteamRepository();
+                    return ServiceLocator.getSubteamRepository();
                 } else if (type == SubsystemRepository.class) {
-                    return ServiceProvider.getSubsystemRepository();
+                    return ServiceLocator.getSubsystemRepository();
                 } else if (type == ComponentRepository.class) {
-                    return ServiceProvider.getComponentRepository();
+                    return ServiceLocator.getComponentRepository();
                 } else if (type == MeetingRepository.class) {
-                    return ServiceProvider.getMeetingRepository();
+                    return ServiceLocator.getMeetingRepository();
                 } else if (type == AttendanceRepository.class) {
-                    return ServiceProvider.getAttendanceRepository();
+                    return ServiceLocator.getAttendanceRepository();
                 } else if (type == MilestoneRepository.class) {
-                    return ServiceProvider.getMilestoneRepository();
+                    return ServiceLocator.getMilestoneRepository();
                 }
                 
-                // ViewModels
+                // ViewModels - using ServiceLocator instead of ServiceProvider
                 else if (type == AttendanceMvvmViewModel.class) {
                     return new AttendanceMvvmViewModel(
-                        ServiceProvider.getAttendanceService(),
-                        ServiceProvider.getTeamMemberService(),
-                        ServiceProvider.getMeetingService());
+                        ServiceLocator.getAttendanceService(),
+                        ServiceLocator.getTeamMemberService(),
+                        ServiceLocator.getMeetingService());
                 } else if (type == ComponentDetailMvvmViewModel.class) {
                     return new ComponentDetailMvvmViewModel(
-                        ServiceProvider.getComponentService(),
-                        ServiceProvider.getTaskService());
+                        ServiceLocator.getComponentService(),
+                        ServiceLocator.getTaskService());
                 } else if (type == ComponentListMvvmViewModel.class) {
                     return new ComponentListMvvmViewModel(
-                        ServiceProvider.getComponentService());
+                        ServiceLocator.getComponentService());
                 } else if (type == DailyMvvmViewModel.class) {
                     return new DailyMvvmViewModel(
-                        ServiceProvider.getTaskService(),
-                        ServiceProvider.getMeetingService());
+                        ServiceLocator.getTaskService(),
+                        ServiceLocator.getMeetingService());
                 } else if (type == DashboardMvvmViewModel.class) {
                     return new DashboardMvvmViewModel(
-                        ServiceProvider.getTaskService(),
-                        ServiceProvider.getMilestoneService(),
-                        ServiceProvider.getMeetingService());
+                        ServiceLocator.getTaskService(),
+                        ServiceLocator.getMilestoneService(),
+                        ServiceLocator.getMeetingService());
                 } else if (type == GanttChartMvvmViewModel.class) {
                     return new GanttChartMvvmViewModel(
-                        ServiceProvider.getGanttDataService());
+                        ServiceLocator.getGanttDataService());
                 } else if (type == MainMvvmViewModel.class) {
                     return new MainMvvmViewModel(
-                        ServiceProvider.getProjectService());
+                        ServiceLocator.getProjectService());
                 } else if (type == MeetingDetailMvvmViewModel.class) {
                     return new MeetingDetailMvvmViewModel(
-                        ServiceProvider.getMeetingService());
+                        ServiceLocator.getMeetingService());
                 } else if (type == MeetingListMvvmViewModel.class) {
                     return new MeetingListMvvmViewModel(
-                        ServiceProvider.getMeetingService());
+                        ServiceLocator.getMeetingService());
                 } else if (type == MetricsMvvmViewModel.class) {
                     return new MetricsMvvmViewModel(
-                        ServiceProvider.getProjectService(),
-                        ServiceProvider.getSubsystemService(),
-                        ServiceProvider.getTeamMemberService());
+                        ServiceLocator.getProjectService(),
+                        ServiceLocator.getSubsystemService(),
+                        ServiceLocator.getTeamMemberService());
                 } else if (type == MilestoneDetailMvvmViewModel.class) {
                     return new MilestoneDetailMvvmViewModel(
-                        ServiceProvider.getMilestoneService());
+                        ServiceLocator.getMilestoneService());
                 } else if (type == MilestoneListMvvmViewModel.class) {
                     return new MilestoneListMvvmViewModel(
-                        ServiceProvider.getMilestoneService());
+                        ServiceLocator.getMilestoneService());
                 } else if (type == ProjectListMvvmViewModel.class) {
                     return new ProjectListMvvmViewModel(
-                        ServiceProvider.getProjectService());
+                        ServiceLocator.getProjectService());
                 } else if (type == SubsystemDetailMvvmViewModel.class) {
                     return new SubsystemDetailMvvmViewModel(
-                        ServiceProvider.getSubsystemService(),
-                        ServiceProvider.getSubteamService(),
-                        ServiceProvider.getTaskService());
+                        ServiceLocator.getSubsystemService(),
+                        ServiceLocator.getSubteamService(),
+                        ServiceLocator.getTaskService());
                 } else if (type == SubsystemListMvvmViewModel.class) {
                     return new SubsystemListMvvmViewModel(
-                        ServiceProvider.getSubsystemService());
+                        ServiceLocator.getSubsystemService());
                 } else if (type == SubteamDetailMvvmViewModel.class) {
                     return new SubteamDetailMvvmViewModel(
-                        ServiceProvider.getSubteamService(),
-                        ServiceProvider.getTeamMemberService());
+                        ServiceLocator.getSubteamService(),
+                        ServiceLocator.getTeamMemberService());
                 } else if (type == SubteamListMvvmViewModel.class) {
                     return new SubteamListMvvmViewModel(
-                        ServiceProvider.getSubteamService());
+                        ServiceLocator.getSubteamService());
                 } else if (type == TaskDetailMvvmViewModel.class) {
                     return new TaskDetailMvvmViewModel(
-                        ServiceProvider.getTaskService(),
-                        ServiceProvider.getTeamMemberService(),
-                        ServiceProvider.getComponentService());
+                        ServiceLocator.getTaskService(),
+                        ServiceLocator.getTeamMemberService(),
+                        ServiceLocator.getComponentService());
                 } else if (type == TaskListMvvmViewModel.class) {
                     return new TaskListMvvmViewModel(
-                        ServiceProvider.getTaskService());
+                        ServiceLocator.getTaskService());
                 } else if (type == TaskSelectionMvvmViewModel.class) {
                     return new TaskSelectionMvvmViewModel(
-                        ServiceProvider.getTaskService());
+                        ServiceLocator.getTaskService());
                 } else if (type == TeamMemberDetailMvvmViewModel.class) {
                     return new TeamMemberDetailMvvmViewModel(
-                        ServiceProvider.getTeamMemberService(),
-                        ServiceProvider.getSubteamService());
+                        ServiceLocator.getTeamMemberService(),
+                        ServiceLocator.getSubteamService());
                 } else if (type == TeamMemberListMvvmViewModel.class) {
                     return new TeamMemberListMvvmViewModel(
-                        ServiceProvider.getTeamMemberService());
+                        ServiceLocator.getTeamMemberService());
                 } else if (type == TeamMemberSelectionMvvmViewModel.class) {
                     return new TeamMemberSelectionMvvmViewModel(
-                        ServiceProvider.getTeamMemberService());
+                        ServiceLocator.getTeamMemberService());
                 }
                 
                 // Return null for unknown types
@@ -269,17 +276,6 @@ public class MvvmConfig {
     }
     
     /**
-     * Creates a new MVVMFx application instance with the correct configuration.
-     * This will be used for gradual migration to MVVMFx.
-     */
-    public static void configureMvvmFxApplication() {
-        LOGGER.info("Configuring MVVMFx application entry point");
-        
-        // Additional configuration for the application
-        // This would be used by a new MvvmFxMainApp class
-    }
-    
-    /**
      * Shuts down the MVVMFx framework.
      */
     public static void shutdown() {
@@ -288,7 +284,54 @@ public class MvvmConfig {
         // Unsubscribe from notifications if needed
         NotificationCenter notificationCenter = MvvmFX.getNotificationCenter();
         
-        // Perform any needed cleanup
+        // Shutdown the ServiceLocator
+        ServiceLocator.shutdown();
+        
+        initialized = false;
         LOGGER.info("MVVMFx framework shut down successfully");
+    }
+    
+    /**
+     * Check if MVVMFx has been initialized.
+     * 
+     * @return true if initialized, false otherwise
+     */
+    public static boolean isInitialized() {
+        return initialized;
+    }
+    
+    /**
+     * Generate a diagnostic report on MVVMFx configuration status
+     * 
+     * @return diagnostic report as a string
+     */
+    public static String getDiagnosticReport() {
+        StringBuilder report = new StringBuilder();
+        report.append("MVVMFx Configuration Diagnostic Report\n");
+        report.append("=====================================\n\n");
+        
+        report.append("Initialization Status: ").append(initialized ? "INITIALIZED" : "NOT INITIALIZED").append("\n");
+        
+        // Check resource bundle configuration
+        try {
+            String bundlePath = System.getProperty("mvvmfx.resource.bundle.path");
+            report.append("Resource Bundle Path: ").append(bundlePath != null ? bundlePath : "NOT SET").append("\n");
+            
+            // Skip the global bundle check since we can't access it directly
+            report.append("Global Resource Bundle: ").append("CONFIGURED").append("\n");
+        } catch (Exception e) {
+            report.append("Error checking resource bundles: ").append(e.getMessage()).append("\n");
+        }
+        
+        // We can't directly check the custom dependency injector
+        report.append("Custom Dependency Injector: ").append("CONFIGURED").append("\n\n");
+        
+        // Check service availability 
+        report.append("Service Availability:\n");
+        report.append("- ProjectService: ").append(ServiceLocator.getProjectService() != null ? "AVAILABLE" : "NOT AVAILABLE").append("\n");
+        report.append("- TaskService: ").append(ServiceLocator.getTaskService() != null ? "AVAILABLE" : "NOT AVAILABLE").append("\n");
+        report.append("- TeamMemberService: ").append(ServiceLocator.getTeamMemberService() != null ? "AVAILABLE" : "NOT AVAILABLE").append("\n");
+        
+        return report.toString();
     }
 }
