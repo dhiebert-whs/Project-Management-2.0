@@ -474,7 +474,7 @@ public class GanttChartFactory {
         } else {
             diamond.setFill(Color.PURPLE);
             //diamond.setStrokeColor(Color.DARKPURPLE);
-            diamond.setStrokeColor(Color.MEDIUMPURPLE);
+            diamond.setStroke(Color.MEDIUMPURPLE);
         }
 
         // Add style class based on status
