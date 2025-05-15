@@ -1,25 +1,16 @@
+// src/main/java/org/frcpm/services/ServiceFactory.java
+
 package org.frcpm.services;
 
+import org.frcpm.di.ServiceLocator;
 import org.frcpm.services.impl.*;
 
 /**
  * Factory class for creating service instances.
  * This follows the factory pattern to centralize service creation.
+ * Updated to use ServiceLocator for MVVMFx compatibility.
  */
 public class ServiceFactory {
-    
-    private static final ProjectService projectService = new ProjectServiceImpl();
-    private static final TaskService taskService = new TaskServiceImpl();
-    private static final TeamMemberService teamMemberService = new TeamMemberServiceImpl();
-    private static final SubteamService subteamService = new SubteamServiceImpl();
-    private static final SubsystemService subsystemService = new SubsystemServiceImpl();
-    private static final ComponentService componentService = new ComponentServiceImpl();
-    private static final MeetingService meetingService = new MeetingServiceImpl();
-    private static final AttendanceService attendanceService = new AttendanceServiceImpl();
-    private static final MilestoneService milestoneService = new MilestoneServiceImpl();
-    private static final GanttDataService ganttDataService = new GanttDataServiceImpl();
-
-
     
     /**
      * Gets the project service instance.
@@ -27,7 +18,7 @@ public class ServiceFactory {
      * @return the project service
      */
     public static ProjectService getProjectService() {
-        return projectService;
+        return ServiceLocator.getProjectService();
     }
     
     /**
@@ -36,7 +27,7 @@ public class ServiceFactory {
      * @return the task service
      */
     public static TaskService getTaskService() {
-        return taskService;
+        return ServiceLocator.getTaskService();
     }
     
     /**
@@ -45,7 +36,7 @@ public class ServiceFactory {
      * @return the team member service
      */
     public static TeamMemberService getTeamMemberService() {
-        return teamMemberService;
+        return ServiceLocator.getTeamMemberService();
     }
     
     /**
@@ -54,7 +45,7 @@ public class ServiceFactory {
      * @return the subteam service
      */
     public static SubteamService getSubteamService() {
-        return subteamService;
+        return ServiceLocator.getSubteamService();
     }
     
     /**
@@ -63,7 +54,7 @@ public class ServiceFactory {
      * @return the subsystem service
      */
     public static SubsystemService getSubsystemService() {
-        return subsystemService;
+        return ServiceLocator.getSubsystemService();
     }
     
     /**
@@ -72,7 +63,7 @@ public class ServiceFactory {
      * @return the component service
      */
     public static ComponentService getComponentService() {
-        return componentService;
+        return ServiceLocator.getComponentService();
     }
     
     /**
@@ -81,7 +72,7 @@ public class ServiceFactory {
      * @return the meeting service
      */
     public static MeetingService getMeetingService() {
-        return meetingService;
+        return ServiceLocator.getMeetingService();
     }
     
     /**
@@ -90,7 +81,7 @@ public class ServiceFactory {
      * @return the attendance service
      */
     public static AttendanceService getAttendanceService() {
-        return attendanceService;
+        return ServiceLocator.getAttendanceService();
     }
     
     /**
@@ -99,7 +90,7 @@ public class ServiceFactory {
      * @return the milestone service
      */
     public static MilestoneService getMilestoneService() {
-        return milestoneService;
+        return ServiceLocator.getMilestoneService();
     }
 
     /**
@@ -108,7 +99,7 @@ public class ServiceFactory {
      * @return the dialog service
      */
     public static DialogService getDialogService() {
-        return new JavaFXDialogService();
+        return ServiceLocator.getDialogService();
     }
 
     /**
@@ -117,8 +108,6 @@ public class ServiceFactory {
      * @return the Gantt data service
      */
     public static GanttDataService getGanttDataService() {
-        return ganttDataService;
+        return ServiceLocator.getGanttDataService();
     }
-
-
 }

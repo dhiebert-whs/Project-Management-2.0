@@ -10,6 +10,7 @@ import java.util.logging.Logger;
 /**
  * Factory class for creating and managing async service instances.
  * Provides singleton instances of async services.
+ * Updated for MVVMFx compatibility.
  */
 public class AsyncServiceFactory {
 
@@ -17,18 +18,60 @@ public class AsyncServiceFactory {
     private static final ConcurrentHashMap<Class<?>, Object> SERVICE_INSTANCES = new ConcurrentHashMap<>();
 
     // Singleton instances of async services
-    private static final ProjectServiceAsyncImpl projectService = new ProjectServiceAsyncImpl();
-    private static final TaskServiceAsyncImpl taskService = new TaskServiceAsyncImpl();
-    private static final MilestoneServiceAsyncImpl milestoneService = new MilestoneServiceAsyncImpl();
-    private static final TeamMemberServiceAsyncImpl teamMemberService = new TeamMemberServiceAsyncImpl();
-    private static final SubsystemServiceAsyncImpl subsystemService = new SubsystemServiceAsyncImpl();
-    private static final ComponentServiceAsyncImpl componentService = new ComponentServiceAsyncImpl();
-    private static final MeetingServiceAsyncImpl meetingService = new MeetingServiceAsyncImpl();
-    private static final AttendanceServiceAsyncImpl attendanceService = new AttendanceServiceAsyncImpl();
-    private static final SubteamServiceAsyncImpl subteamService = new SubteamServiceAsyncImpl();
+    private static ProjectServiceAsyncImpl projectService;
+    private static TaskServiceAsyncImpl taskService;
+    private static MilestoneServiceAsyncImpl milestoneService;
+    private static TeamMemberServiceAsyncImpl teamMemberService;
+    private static SubsystemServiceAsyncImpl subsystemService;
+    private static ComponentServiceAsyncImpl componentService;
+    private static MeetingServiceAsyncImpl meetingService;
+    private static AttendanceServiceAsyncImpl attendanceService;
+    private static SubteamServiceAsyncImpl subteamService;
 
     // Private constructor to prevent instantiation
     private AsyncServiceFactory() {
+    }
+
+    /**
+     * Initializes async service instances if needed.
+     */
+    private static void initializeIfNeeded() {
+        // Initialize services on first use
+        if (projectService == null) {
+            projectService = new ProjectServiceAsyncImpl();
+        }
+        
+        if (taskService == null) {
+            taskService = new TaskServiceAsyncImpl();
+        }
+        
+        if (milestoneService == null) {
+            milestoneService = new MilestoneServiceAsyncImpl();
+        }
+        
+        if (teamMemberService == null) {
+            teamMemberService = new TeamMemberServiceAsyncImpl();
+        }
+        
+        if (subsystemService == null) {
+            subsystemService = new SubsystemServiceAsyncImpl();
+        }
+        
+        if (componentService == null) {
+            componentService = new ComponentServiceAsyncImpl();
+        }
+        
+        if (meetingService == null) {
+            meetingService = new MeetingServiceAsyncImpl();
+        }
+        
+        if (attendanceService == null) {
+            attendanceService = new AttendanceServiceAsyncImpl();
+        }
+        
+        if (subteamService == null) {
+            subteamService = new SubteamServiceAsyncImpl();
+        }
     }
 
     /**
@@ -37,6 +80,7 @@ public class AsyncServiceFactory {
      * @return the project service with async methods
      */
     public static ProjectServiceAsyncImpl getProjectService() {
+        initializeIfNeeded();
         return projectService;
     }
 
@@ -46,6 +90,7 @@ public class AsyncServiceFactory {
      * @return the task service with async methods
      */
     public static TaskServiceAsyncImpl getTaskService() {
+        initializeIfNeeded();
         return taskService;
     }
 
@@ -55,6 +100,7 @@ public class AsyncServiceFactory {
      * @return the milestone service with async methods
      */
     public static MilestoneServiceAsyncImpl getMilestoneService() {
+        initializeIfNeeded();
         return milestoneService;
     }
 
@@ -64,6 +110,7 @@ public class AsyncServiceFactory {
      * @return the team member service with async methods
      */
     public static TeamMemberServiceAsyncImpl getTeamMemberService() {
+        initializeIfNeeded();
         return teamMemberService;
     }
 
@@ -73,6 +120,7 @@ public class AsyncServiceFactory {
      * @return the subsystem service with async methods
      */
     public static SubsystemServiceAsyncImpl getSubsystemService() {
+        initializeIfNeeded();
         return subsystemService;
     }
 
@@ -82,6 +130,7 @@ public class AsyncServiceFactory {
      * @return the component service with async methods
      */
     public static ComponentServiceAsyncImpl getComponentService() {
+        initializeIfNeeded();
         return componentService;
     }
 
@@ -91,6 +140,7 @@ public class AsyncServiceFactory {
      * @return the meeting service with async methods
      */
     public static MeetingServiceAsyncImpl getMeetingService() {
+        initializeIfNeeded();
         return meetingService;
     }
 
@@ -100,24 +150,19 @@ public class AsyncServiceFactory {
      * @return the attendance service with async methods
      */
     public static AttendanceServiceAsyncImpl getAttendanceService() {
+        initializeIfNeeded();
         return attendanceService;
-    }
-
-    public static SubteamServiceAsyncImpl getSubteamService() {
-        return subteamService;
     }
 
     /**
      * Gets the subteam service with async capabilities.
      * 
      * @return the subteam service with async methods
-     *
+     */
     public static SubteamServiceAsyncImpl getSubteamService() {
-        return (SubteamServiceAsyncImpl) SERVICE_INSTANCES.computeIfAbsent(
-            SubteamService.class,
-            k -> new SubteamServiceAsyncImpl()
-        );
-    }*/
+        initializeIfNeeded();
+        return subteamService;
+    }
 
     /**
      * Generic method to get async service by type.
@@ -147,7 +192,7 @@ public class AsyncServiceFactory {
                 return (T) getAttendanceService();
             } else if (serviceType == SubteamService.class) {
                 return (T) getSubteamService();
-            }else {
+            } else {
                 LOGGER.warning("Unknown service type: " + serviceType);
                 return null;
             }
@@ -162,7 +207,8 @@ public class AsyncServiceFactory {
      * This method should be called during application startup.
      */
     public static void initialize() {
-        // Initialization logic for async services can be added here if needed
+        // Ensure all services are initialized
+        initializeIfNeeded();
     }
 
     /**
@@ -172,6 +218,9 @@ public class AsyncServiceFactory {
     public static void shutdown() {
         // Ensure TaskExecutor is properly shut down to release thread resources
         org.frcpm.async.TaskExecutor.shutdown();
+        
+        // Clear service instances
+        clearAll();
     }
 
     /**
@@ -180,5 +229,16 @@ public class AsyncServiceFactory {
      */
     public static void clearAll() {
         SERVICE_INSTANCES.clear();
+        
+        // Reset service instances
+        projectService = null;
+        taskService = null;
+        milestoneService = null;
+        teamMemberService = null;
+        subsystemService = null;
+        componentService = null;
+        meetingService = null;
+        attendanceService = null;
+        subteamService = null;
     }
 }
