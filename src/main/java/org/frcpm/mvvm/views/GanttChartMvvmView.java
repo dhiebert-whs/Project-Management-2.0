@@ -7,9 +7,10 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
+import javafx.stage.Stage;
 
 import java.net.URL;
+import java.time.LocalDate;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -22,6 +23,7 @@ import org.frcpm.mvvm.viewmodels.GanttChartMvvmViewModel.FilterOption;
 
 /**
  * View for the Gantt chart visualization using MVVMFx.
+ * This view displays Gantt charts using the Chart-FX library.
  */
 public class GanttChartMvvmView implements FxmlView<GanttChartMvvmViewModel>, Initializable {
     
@@ -40,6 +42,8 @@ public class GanttChartMvvmView implements FxmlView<GanttChartMvvmViewModel>, In
     @FXML private Label statusLabel;
     @FXML private ProgressIndicator loadingIndicator;
     @FXML private Label errorLabel;
+    @FXML private DatePicker startDatePicker;
+    @FXML private DatePicker endDatePicker;
     
     @InjectViewModel
     private GanttChartMvvmViewModel viewModel;
@@ -54,8 +58,14 @@ public class GanttChartMvvmView implements FxmlView<GanttChartMvvmViewModel>, In
         // Set up combo boxes
         setupComboBoxes();
         
+        // Set up date pickers
+        setupDatePickers();
+        
         // Set up bindings
         setupBindings();
+        
+        // Set up event handlers
+        setupEventHandlers();
         
         // Set up error handling
         setupErrorHandling();
@@ -83,6 +93,31 @@ public class GanttChartMvvmView implements FxmlView<GanttChartMvvmViewModel>, In
             LOGGER.log(Level.SEVERE, "Error setting up combo boxes", e);
             showErrorAlert(resources.getString("error.title"), 
                           "Failed to set up filter options: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Sets up date pickers with appropriate values and bindings.
+     */
+    private void setupDatePickers() {
+        try {
+            // Check for null UI components for testability
+            if (startDatePicker == null || endDatePicker == null) {
+                LOGGER.warning("Date pickers not initialized - likely in test environment");
+                return;
+            }
+            
+            // Set initial values
+            startDatePicker.setValue(LocalDate.now().minusDays(30));
+            endDatePicker.setValue(LocalDate.now().plusDays(60));
+            
+            // Bind to view model
+            startDatePicker.valueProperty().bindBidirectional(viewModel.startDateProperty());
+            endDatePicker.valueProperty().bindBidirectional(viewModel.endDateProperty());
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up date pickers", e);
+            showErrorAlert(resources.getString("error.title"), 
+                          "Failed to set up date pickers: " + e.getMessage());
         }
     }
     
@@ -141,6 +176,40 @@ public class GanttChartMvvmView implements FxmlView<GanttChartMvvmViewModel>, In
     }
     
     /**
+     * Sets up event handlers for UI components.
+     */
+    private void setupEventHandlers() {
+        // Set up any additional event handlers not covered by bindings
+        try {
+            // Example: Handle date picker changes
+            if (startDatePicker != null) {
+                startDatePicker.setOnAction(e -> {
+                    // Ensure end date is after start date
+                    if (startDatePicker.getValue() != null &&
+                        endDatePicker.getValue() != null &&
+                        endDatePicker.getValue().isBefore(startDatePicker.getValue())) {
+                        endDatePicker.setValue(startDatePicker.getValue().plusMonths(2));
+                    }
+                });
+            }
+            
+            if (endDatePicker != null) {
+                endDatePicker.setOnAction(e -> {
+                    // Ensure start date is before end date
+                    if (startDatePicker.getValue() != null &&
+                        endDatePicker.getValue() != null &&
+                        startDatePicker.getValue().isAfter(endDatePicker.getValue())) {
+                        startDatePicker.setValue(endDatePicker.getValue().minusMonths(2));
+                    }
+                });
+            }
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error setting up event handlers", e);
+        }
+    }
+    
+    /**
      * Sets up error message handling.
      */
     private void setupErrorHandling() {
@@ -161,6 +230,17 @@ public class GanttChartMvvmView implements FxmlView<GanttChartMvvmViewModel>, In
      */
     public void setProject(Project project) {
         viewModel.setProject(project);
+        
+        // Update window title to include project name
+        if (project != null) {
+            var scene = chartContainer.getScene();
+            if (scene != null && scene.getWindow() != null) {
+                if (scene.getWindow() instanceof Stage) {
+                    Stage stage = (Stage) scene.getWindow();
+                    stage.setTitle("Gantt Chart - " + project.getName());
+                }
+            }
+        }
     }
     
     /**
@@ -184,5 +264,15 @@ public class GanttChartMvvmView implements FxmlView<GanttChartMvvmViewModel>, In
      */
     public GanttChartMvvmViewModel getViewModel() {
         return viewModel;
+    }
+    
+    /**
+     * Helper method to get a reference to the chart container.
+     * This is mainly for testing purposes.
+     * 
+     * @return the chart container
+     */
+    public BorderPane getChartContainer() {
+        return chartContainer;
     }
 }

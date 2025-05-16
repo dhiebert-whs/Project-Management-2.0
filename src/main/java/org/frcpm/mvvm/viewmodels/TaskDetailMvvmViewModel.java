@@ -8,7 +8,7 @@ import javafx.beans.property.*;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
-import javax.inject.Inject;
+
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.HashSet;
@@ -86,7 +86,7 @@ public class TaskDetailMvvmViewModel extends BaseMvvmViewModel {
      * @param teamMemberService the team member service
      * @param componentService the component service
      */
-    @Inject
+   
     public TaskDetailMvvmViewModel(TaskService taskService, TeamMemberService teamMemberService, 
                                  ComponentService componentService) {
         this.taskService = taskService;

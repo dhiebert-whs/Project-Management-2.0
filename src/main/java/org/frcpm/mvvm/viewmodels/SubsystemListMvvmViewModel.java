@@ -12,7 +12,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.scene.control.ProgressBar;
 
-import javax.inject.Inject;
+
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.logging.Level;
@@ -81,7 +81,7 @@ public class SubsystemListMvvmViewModel extends BaseMvvmViewModel {
      * 
      * @param subsystemService the subsystem service
      */
-    @Inject
+   
     public SubsystemListMvvmViewModel(SubsystemService subsystemService) {
         this.subsystemService = subsystemService;
         

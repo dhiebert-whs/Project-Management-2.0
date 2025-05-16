@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ProgressIndicator?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.TitledPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Rectangle?>
+    
+    <VBox spacing="10.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.frcpm.mvvm.views.SubteamDetailMvvmView">
+       <padding>
+          <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+       </padding>
+       <children>
+          <Label text="%subteam.details.title" style="-fx-font-size: 18; -fx-font-weight: bold;" />
+          
+          <GridPane hgap="10.0" vgap="10.0">
+            <columnConstraints>
+              <ColumnConstraints hgrow="SOMETIMES" maxWidth="150.0" minWidth="100.0" prefWidth="120.0" />
+              <ColumnConstraints hgrow="SOMETIMES" minWidth="200.0" prefWidth="350.0" />
+            </columnConstraints>
+            <rowConstraints>
+              <RowConstraints minHeight="30.0" prefHeight="30.0" vgrow="SOMETIMES" />
+              <RowConstraints minHeight="30.0" prefHeight="30.0" vgrow="SOMETIMES" />
+              <RowConstraints minHeight="80.0" prefHeight="80.0" vgrow="SOMETIMES" />
+            </rowConstraints>
+            <children>
+               <Label text="%subteam.name" GridPane.halignment="RIGHT" />
+               <Label text="%subteam.colorCode" GridPane.halignment="RIGHT" GridPane.rowIndex="1" />
+               <Label text="%subteam.specialties" GridPane.halignment="RIGHT" GridPane.rowIndex="2" />
+               
+               <TextField fx:id="nameTextField" promptText="%subteam.name.prompt" GridPane.columnIndex="1" />
+               
+               <HBox spacing="10" alignment="CENTER_LEFT" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                  <TextField fx:id="colorCodeTextField" promptText="%subteam.colorCode.prompt" />
+                  <Rectangle fx:id="colorPreview" width="30" height="20" stroke="BLACK" strokeWidth="1" />
+               </HBox>
+               
+               <TextArea fx:id="specialtiesTextArea" prefHeight="80.0" promptText="%subteam.specialties.prompt" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+            </children>
+          </GridPane>
+          
+          <TitledPane animated="false" collapsible="false" text="%subteam.teamMembers">
+             <content>
+                <VBox spacing="10">
+                   <children>
+                      <TableView fx:id="teamMembersTable" prefHeight="200.0">
+                         <columns>
+                            <TableColumn fx:id="memberNameColumn" prefWidth="200.0" text="%subteam.column.memberName" />
+                            <TableColumn fx:id="memberUsernameColumn" prefWidth="130.0" text="%subteam.column.memberUsername" />
+                            <TableColumn fx:id="memberEmailColumn" prefWidth="200.0" text="%subteam.column.memberEmail" />
+                         </columns>
+                         <placeholder>
+                            <Label text="%placeholder.noMembers" />
+                         </placeholder>
+                      </TableView>
+                      <HBox alignment="CENTER_LEFT" spacing="10.0">
+                         <children>
+                            <Button fx:id="addMemberButton" mnemonicParsing="false" text="%subteam.button.addMember" />
+                            <Button fx:id="removeMemberButton" mnemonicParsing="false" text="%subteam.button.removeMember" />
+                         </children>
+                      </HBox>
+                   </children>
+                </VBox>
+             </content>
+          </TitledPane>
+          
+          <HBox alignment="CENTER_RIGHT" spacing="10.0">
+             <children>
+                <Label fx:id="errorLabel" style="-fx-text-fill: red;" visible="false" HBox.hgrow="ALWAYS" />
+                <ProgressIndicator fx:id="loadingIndicator" prefHeight="20.0" prefWidth="20.0" visible="false" />
+                <Button fx:id="cancelButton" cancelButton="true" mnemonicParsing="false" text="%button.cancel" />
+                <Button fx:id="saveButton" defaultButton="true" mnemonicParsing="false" text="%button.save" />
+             </children>
+          </HBox>
+       </children>
+    </VBox>

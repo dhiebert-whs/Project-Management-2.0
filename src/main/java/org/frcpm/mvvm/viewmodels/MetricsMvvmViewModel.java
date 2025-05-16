@@ -9,8 +9,6 @@ import javafx.collections.ObservableList;
 import javafx.scene.chart.PieChart;
 import javafx.scene.chart.XYChart;
 
-import javax.inject.Inject;
-
 import java.lang.module.ModuleDescriptor.Exports;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -100,7 +98,7 @@ public class MetricsMvvmViewModel extends BaseMvvmViewModel {
      * @param subsystemService  the subsystem service
      * @param teamMemberService the team member service
      */
-    @Inject
+    
     public MetricsMvvmViewModel(ProjectService projectService, SubsystemService subsystemService, TeamMemberService teamMemberService) {
         this.projectService = projectService;
         this.projectServiceAsync = (ProjectServiceAsyncImpl) projectService;

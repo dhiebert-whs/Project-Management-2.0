@@ -9,7 +9,6 @@ import javafx.collections.ObservableList;
 import javafx.scene.chart.PieChart;
 import javafx.scene.chart.XYChart;
 
-import javax.inject.Inject;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
@@ -84,7 +83,7 @@ public class DashboardMvvmViewModel extends BaseMvvmViewModel {
      * @param milestoneService the milestone service
      * @param meetingService the meeting service
      */
-    @Inject
+   
     public DashboardMvvmViewModel(TaskService taskService, MilestoneService milestoneService, MeetingService meetingService) {
         this.taskService = taskService;
         this.taskServiceAsync = (TaskServiceAsyncImpl) taskService;

@@ -1,217 +1,280 @@
 // src/main/java/org/frcpm/charts/ChartStyler.java
 package org.frcpm.charts;
 
-import javafx.scene.paint.Color;
-import javafx.scene.chart.Chart;
-import javafx.scene.chart.XYChart;
-import javafx.scene.control.Tooltip;
 import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.control.Label;
+import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
-import javafx.util.Duration;
+import javafx.scene.shape.Shape;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
- * Utility class for styling Chart-FX charts.
- * This class provides methods for applying consistent styling to chart components.
+ * Utility class for styling Chart-FX chart components.
+ * This class provides methods to apply CSS styles and custom styling to charts.
  */
 public class ChartStyler {
     
-    // CSS class names
-    private static final String TASK_BAR_CLASS = "task-bar";
-    private static final String MILESTONE_MARKER_CLASS = "milestone-marker";
-    private static final String COMPLETED_CLASS = "completed";
-    private static final String IN_PROGRESS_CLASS = "in-progress";
-    private static final String DEPENDENCY_LINE_CLASS = "dependency-line";
+    // Define CSS class mappings for chart elements
+    private static final Map<String, String> TASK_STATUS_CLASSES = new HashMap<>();
+    private static final Map<String, String> PRIORITY_CLASSES = new HashMap<>();
     
-    /**
-     * Applies default styling to a chart.
-     * 
-     * @param chart the chart to style
-     */
-    public static void applyDefaultStyling(Chart chart) {
-        // Apply CSS class to chart
-        chart.getStyleClass().add("gantt-chart");
+    static {
+        // Initialize task status CSS classes
+        TASK_STATUS_CLASSES.put("not-started", "status-not-started");
+        TASK_STATUS_CLASSES.put("in-progress", "status-in-progress");
+        TASK_STATUS_CLASSES.put("completed", "status-completed");
         
-        // Set default chart properties
-        chart.setAnimated(false);
-        chart.setLegendVisible(false);
+        // Initialize priority CSS classes
+        PRIORITY_CLASSES.put("low", "priority-low");
+        PRIORITY_CLASSES.put("medium", "priority-medium");
+        PRIORITY_CLASSES.put("high", "priority-high");
+        PRIORITY_CLASSES.put("critical", "priority-critical");
     }
     
     /**
-     * Styles a task bar node based on the task properties.
-     * 
-     * @param node the node to style
-     * @param task the task data
+     * Applies CSS styles to a chart pane based on the loaded stylesheet.
+     *
+     * @param chartPane the chart pane to style
      */
-    public static void styleTaskBar(Node node, TaskChartItem task) {
-        if (node == null || task == null) {
+    public static void applyChartStyles(Pane chartPane) {
+        if (chartPane == null) {
             return;
         }
         
-        // Apply base CSS class
-        node.getStyleClass().add(TASK_BAR_CLASS);
-        
-        // Apply status-specific CSS class
-        if (task.isCompleted()) {
-            node.getStyleClass().add(COMPLETED_CLASS);
-        } else {
-            node.getStyleClass().add(IN_PROGRESS_CLASS);
+        // Add base style class to chart pane
+        if (!chartPane.getStyleClass().contains("gantt-chart-container")) {
+            chartPane.getStyleClass().add("gantt-chart-container");
         }
         
-        // Apply task-specific color if provided
-        if (task.getColor() != null && !task.getColor().isEmpty()) {
-            // If the node is a Rectangle, set its fill directly
-            if (node instanceof Rectangle) {
-                Rectangle rect = (Rectangle) node;
-                rect.setFill(Color.web(task.getColor()));
-                
-                // Set slightly darker stroke
-                Color baseColor = Color.web(task.getColor());
-                Color strokeColor = baseColor.darker();
-                rect.setStroke(strokeColor);
+        // Apply styles to chart components recursively
+        applyStylesToChildren(chartPane);
+    }
+    
+    /**
+     * Recursively applies styles to all children of a node.
+     *
+     * @param parent the parent node
+     */
+    private static void applyStylesToChildren(Parent parent) {
+        for (Node node : parent.getChildrenUnmodifiable()) {
+            // Apply specific styles based on node type
+            if (node instanceof Shape) {
+                applyShapeStyles((Shape) node);
+            } else if (node instanceof Label) {
+                applyLabelStyles((Label) node);
+            }
+            
+            // Recurse through children
+            if (node instanceof Parent) {
+                applyStylesToChildren((Parent) node);
             }
         }
-        
-        // Create and apply tooltip
-        createTooltip(node, task);
     }
     
     /**
-     * Styles a milestone marker based on the milestone properties.
-     * 
-     * @param node the node to style
-     * @param milestone the milestone data
+     * Applies styles to shape elements (task bars, milestone markers, etc.).
+     *
+     * @param shape the shape to style
      */
-    public static void styleMilestoneMarker(Node node, TaskChartItem milestone) {
-        if (node == null || milestone == null) {
-            return;
-        }
-        
-        // Apply base CSS class
-        node.getStyleClass().add(MILESTONE_MARKER_CLASS);
-        
-        // Apply status-specific CSS class
-        if (milestone.isCompleted()) {
-            node.getStyleClass().add(COMPLETED_CLASS);
-        } else {
-            node.getStyleClass().add(IN_PROGRESS_CLASS);
-        }
-        
-        // Apply milestone-specific color if provided
-        if (milestone.getColor() != null && !milestone.getColor().isEmpty()) {
-            // If the node is a shape, set its fill directly
-            if (node instanceof javafx.scene.shape.Shape) {
-                javafx.scene.shape.Shape shape = (javafx.scene.shape.Shape) node;
-                shape.setFill(Color.web(milestone.getColor()));
+    private static void applyShapeStyles(Shape shape) {
+        // Check user data for styling hints
+        if (shape.getUserData() instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> userData = (Map<String, Object>) shape.getUserData();
+            
+            // Apply task bar styles
+            if (userData.containsKey("type") && "task".equals(userData.get("type"))) {
+                shape.getStyleClass().add("task-bar");
                 
-                // Set slightly darker stroke
-                Color baseColor = Color.web(milestone.getColor());
-                Color strokeColor = baseColor.darker();
-                shape.setStroke(strokeColor);
+                // Apply status class
+                if (userData.containsKey("status")) {
+                    String status = (String) userData.get("status");
+                    String statusClass = TASK_STATUS_CLASSES.get(status);
+                    if (statusClass != null) {
+                        shape.getStyleClass().add(statusClass);
+                    }
+                }
+                
+                // Apply priority class
+                if (userData.containsKey("priority")) {
+                    String priority = (String) userData.get("priority");
+                    String priorityClass = PRIORITY_CLASSES.get(priority);
+                    if (priorityClass != null) {
+                        shape.getStyleClass().add(priorityClass);
+                    }
+                }
+            }
+            // Apply milestone styles
+            else if (userData.containsKey("type") && "milestone".equals(userData.get("type"))) {
+                shape.getStyleClass().add("milestone-marker");
+                
+                // Apply status class
+                if (userData.containsKey("status")) {
+                    String status = (String) userData.get("status");
+                    String statusClass = TASK_STATUS_CLASSES.get(status);
+                    if (statusClass != null) {
+                        shape.getStyleClass().add(statusClass);
+                    }
+                }
+            }
+            // Apply dependency line styles
+            else if (userData.containsKey("type") && "dependency".equals(userData.get("type"))) {
+                shape.getStyleClass().add("dependency-line");
+            }
+            // Apply today line styles
+            else if (userData.containsKey("type") && "today".equals(userData.get("type"))) {
+                shape.getStyleClass().add("today-line");
             }
         }
-        
-        // Create and apply tooltip
-        createTooltip(node, milestone);
     }
     
     /**
-     * Styles a dependency line between tasks.
-     * 
-     * @param node the node to style
+     * Applies styles to label elements.
+     *
+     * @param label the label to style
      */
-    public static void styleDependencyLine(Node node) {
-        if (node == null) {
+    private static void applyLabelStyles(Label label) {
+        // Check for label type in user data
+        if (label.getUserData() instanceof String) {
+            String type = (String) label.getUserData();
+            
+            if ("task-title".equals(type)) {
+                label.getStyleClass().add("task-title");
+            } else if ("milestone-title".equals(type)) {
+                label.getStyleClass().add("milestone-title");
+            } else if ("date-label".equals(type)) {
+                label.getStyleClass().add("date-label");
+            }
+        }
+    }
+    
+    /**
+     * Applies a color to a shape based on task priority.
+     *
+     * @param shape the shape to color
+     * @param priority the task priority
+     */
+    public static void applyPriorityColor(Shape shape, String priority) {
+        if (shape == null) {
             return;
         }
         
-        // Apply CSS class
-        node.getStyleClass().add(DEPENDENCY_LINE_CLASS);
+        Color fillColor;
         
-        // Additional styling if needed
-        if (node instanceof javafx.scene.shape.Line) {
-            javafx.scene.shape.Line line = (javafx.scene.shape.Line) node;
-            line.setStroke(Color.GRAY);
-            line.setStrokeWidth(1.5);
-            line.getStrokeDashArray().addAll(5.0, 5.0);
+        switch (priority.toLowerCase()) {
+            case "low":
+                fillColor = Color.web("#28a745"); // Green
+                break;
+            case "medium":
+                fillColor = Color.web("#ffc107"); // Yellow
+                break;
+            case "high":
+                fillColor = Color.web("#fd7e14"); // Orange
+                break;
+            case "critical":
+                fillColor = Color.web("#dc3545"); // Red
+                break;
+            default:
+                fillColor = Color.web("#6c757d"); // Gray for unknown priority
+                break;
+        }
+        
+        // Apply fill color
+        shape.setFill(fillColor);
+        
+        // Apply darker stroke color
+        Color strokeColor = fillColor.darker();
+        shape.setStroke(strokeColor);
+    }
+    
+    /**
+     * Applies a color to a shape based on task status.
+     *
+     * @param shape the shape to color
+     * @param status the task status
+     */
+    public static void applyStatusColor(Shape shape, String status) {
+        if (shape == null) {
+            return;
+        }
+        
+        Color fillColor;
+        
+        switch (status.toLowerCase()) {
+            case "not-started":
+                fillColor = Color.web("#ced4da"); // Gray
+                break;
+            case "in-progress":
+                fillColor = Color.web("#17a2b8"); // Cyan
+                break;
+            case "completed":
+                fillColor = Color.web("#28a745"); // Green
+                break;
+            default:
+                fillColor = Color.web("#6c757d"); // Dark gray for unknown status
+                break;
+        }
+        
+        // Apply fill color
+        shape.setFill(fillColor);
+        
+        // Apply darker stroke color
+        Color strokeColor = fillColor.darker();
+        shape.setStroke(strokeColor);
+    }
+    
+    /**
+     * Applies a progress indicator to a task bar.
+     *
+     * @param taskBar the task bar rectangle
+     * @param progress the progress percentage (0-100)
+     */
+    public static void applyProgressIndicator(Rectangle taskBar, int progress) {
+        if (taskBar == null || progress < 0 || progress > 100) {
+            return;
+        }
+        
+        // Create a new rectangle for the progress indicator
+        Rectangle progressIndicator = new Rectangle();
+        
+        // Set the same height and y position as the task bar
+        progressIndicator.setHeight(taskBar.getHeight());
+        progressIndicator.setY(taskBar.getY());
+        
+        // Calculate width based on progress
+        double progressWidth = taskBar.getWidth() * (progress / 100.0);
+        progressIndicator.setWidth(progressWidth);
+        progressIndicator.setX(taskBar.getX());
+        
+        // Set the style for the progress indicator
+        progressIndicator.getStyleClass().add("progress-indicator");
+        
+        // Get the parent pane and add the progress indicator
+        if (taskBar.getParent() instanceof Pane) {
+            Pane parent = (Pane) taskBar.getParent();
+            parent.getChildren().add(progressIndicator);
+            
+            // Ensure the progress indicator is behind the task bar
+            progressIndicator.toBack();
+            taskBar.toFront();
         }
     }
     
     /**
-     * Creates and applies a tooltip to a node with task/milestone information.
-     * 
-     * @param node the node to apply the tooltip to
-     * @param item the task/milestone data
+     * Creates a color based on hexadecimal string representation.
+     *
+     * @param hexColor the hexadecimal color string (e.g., "#ff0000")
+     * @return the Color object, or a default color if the input is invalid
      */
-    private static void createTooltip(Node node, TaskChartItem item) {
-        StringBuilder tooltipText = new StringBuilder();
-        
-        // Add title
-        tooltipText.append(item.getTitle()).append("\n");
-        
-        // Add dates
-        tooltipText.append("Start: ").append(item.getStartDate()).append("\n");
-        if (!item.isMilestone()) {
-            tooltipText.append("End: ").append(item.getEndDate()).append("\n");
-        }
-        
-        // Add progress for tasks
-        if (!item.isMilestone()) {
-            tooltipText.append("Progress: ").append(item.getProgress()).append("%\n");
-        }
-        
-        // Add assignee if available
-        if (item.getAssignee() != null && !item.getAssignee().isEmpty()) {
-            tooltipText.append("Assignee: ").append(item.getAssignee()).append("\n");
-        }
-        
-        // Add subsystem if available
-        if (item.getSubsystem() != null && !item.getSubsystem().isEmpty()) {
-            tooltipText.append("Subsystem: ").append(item.getSubsystem());
-        }
-        
-        // Create tooltip
-        Tooltip tooltip = new Tooltip(tooltipText.toString());
-        tooltip.setShowDelay(Duration.millis(200));
-        tooltip.setHideDelay(Duration.millis(200));
-        Tooltip.install(node, tooltip);
-    }
-    
-    /**
-     * Converts a hex color string to a Color object.
-     * 
-     * @param colorStr the hex color string (e.g., "#FF0000" for red)
-     * @return the Color object, or Color.GRAY if conversion fails
-     */
-    public static Color parseColor(String colorStr) {
-        if (colorStr == null || colorStr.isEmpty()) {
-            return Color.GRAY;
-        }
-        
+    public static Color createColor(String hexColor) {
         try {
-            return Color.web(colorStr);
-        } catch (IllegalArgumentException e) {
-            // Return a default color if parsing fails
-            return Color.GRAY;
+            return Color.web(hexColor);
+        } catch (Exception e) {
+            return Color.GRAY; // Default color on error
         }
-    }
-    
-    /**
-     * Gets a darker version of the specified color for use in borders or outlines.
-     * 
-     * @param baseColor the base color
-     * @return a darker version of the color
-     */
-    public static Color getDarkerColor(Color baseColor) {
-        return baseColor.darker();
-    }
-    
-    /**
-     * Gets a lighter version of the specified color for use in highlights.
-     * 
-     * @param baseColor the base color
-     * @return a lighter version of the color
-     */
-    public static Color getLighterColor(Color baseColor) {
-        return baseColor.brighter();
     }
 }

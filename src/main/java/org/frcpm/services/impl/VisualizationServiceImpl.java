@@ -1,7 +1,8 @@
-// src/main/java/org/frcpm/services/impl/VisualizationServiceImpl.java (updated)
+// src/main/java/org/frcpm/services/impl/VisualizationServiceImpl.java
 package org.frcpm.services.impl;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -11,6 +12,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import org.frcpm.charts.GanttChartFactory;
 import org.frcpm.charts.TaskChartItem;
+import org.frcpm.charts.ChartStyler;
 import org.frcpm.models.GanttChartData;
 import org.frcpm.models.Milestone;
 import org.frcpm.models.Project;
@@ -25,14 +27,19 @@ import org.frcpm.services.GanttChartTransformationService;
 import org.frcpm.services.GanttDataService;
 import org.frcpm.services.VisualizationService;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Implementation of the VisualizationService interface.
  * This service provides methods to generate visualization data for
- * various charts and dashboard components.
+ * various charts and dashboard components using Chart-FX.
  */
 public class VisualizationServiceImpl implements VisualizationService {
+    
+    private static final Logger LOGGER = Logger.getLogger(VisualizationServiceImpl.class.getName());
     
     private final ProjectRepository projectRepository;
     private final TaskRepository taskRepository;
@@ -80,79 +87,145 @@ public class VisualizationServiceImpl implements VisualizationService {
             boolean showMilestones,
             boolean showDependencies) {
         
-        // Get Gantt data from service
-        Map<String, Object> ganttData = ganttDataService.formatTasksForGantt(projectId, startDate, endDate);
+        LOGGER.info("Creating Gantt chart pane for project " + projectId);
         
-        if (ganttData == null || ganttData.isEmpty()) {
-            return new Pane(); // Return empty pane if no data
-        }
-        
-        // Extract tasks and milestones
-        @SuppressWarnings("unchecked")
-        List<GanttChartData> tasks = (List<GanttChartData>) ganttData.get("tasks");
-        
-        @SuppressWarnings("unchecked")
-        List<GanttChartData> milestones = (List<GanttChartData>) ganttData.get("milestones");
-        
-        // Convert to TaskChartItem lists
-        List<TaskChartItem> taskItems = new ArrayList<>();
-        if (tasks != null) {
-            for (GanttChartData data : tasks) {
-                taskItems.add(TaskChartItem.fromGanttChartData(data));
+        try {
+            // Get Gantt data from service
+            Map<String, Object> ganttData = ganttDataService.formatTasksForGantt(projectId, startDate, endDate);
+            
+            if (ganttData == null || ganttData.isEmpty()) {
+                LOGGER.warning("No Gantt data available for project " + projectId);
+                return new Pane(); // Return empty pane if no data
             }
-        }
-        
-        List<TaskChartItem> milestoneItems = new ArrayList<>();
-        if (milestones != null) {
-            for (GanttChartData data : milestones) {
-                milestoneItems.add(TaskChartItem.fromGanttChartData(data));
+            
+            // Extract tasks and milestones
+            @SuppressWarnings("unchecked")
+            List<GanttChartData> tasks = (List<GanttChartData>) ganttData.get("tasks");
+            
+            @SuppressWarnings("unchecked")
+            List<GanttChartData> milestones = (List<GanttChartData>) ganttData.get("milestones");
+            
+            // Convert to TaskChartItem lists
+            List<TaskChartItem> taskItems = convertGanttChartDataToTaskChartItems(tasks);
+            List<TaskChartItem> milestoneItems = convertGanttChartDataToTaskChartItems(milestones);
+            
+            // Ensure start and end dates are valid
+            if (startDate == null && tasks != null && !tasks.isEmpty()) {
+                // Use earliest task start date if available
+                startDate = tasks.stream()
+                        .map(GanttChartData::getStartDate)
+                        .filter(Objects::nonNull)
+                        .min(LocalDate::compareTo)
+                        .orElse(LocalDate.now().minusMonths(1));
+            } else if (startDate == null) {
+                // Default to one month ago
+                startDate = LocalDate.now().minusMonths(1);
             }
+            
+            if (endDate == null && tasks != null && !tasks.isEmpty()) {
+                // Use latest task end date if available
+                endDate = tasks.stream()
+                        .map(GanttChartData::getEndDate)
+                        .filter(Objects::nonNull)
+                        .max(LocalDate::compareTo)
+                        .orElse(LocalDate.now().plusMonths(2));
+            } else if (endDate == null) {
+                // Default to two months ahead
+                endDate = LocalDate.now().plusMonths(2);
+            }
+            
+            // Create chart with Chart-FX
+            Pane ganttChart = GanttChartFactory.createGanttChart(
+                taskItems,
+                showMilestones ? milestoneItems : new ArrayList<>(),
+                startDate,
+                endDate,
+                viewMode,
+                showDependencies
+            );
+            
+            // Apply styles
+            ChartStyler.applyChartStyles(ganttChart);
+            
+            LOGGER.info("Gantt chart pane created successfully");
+            return ganttChart;
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error creating Gantt chart pane", e);
+            return new Pane(); // Return empty pane on error
         }
-        
-        // Create chart with Chart-FX
-        return GanttChartFactory.createGanttChart(
-            taskItems,
-            showMilestones ? milestoneItems : new ArrayList<>(),
-            startDate,
-            endDate,
-            viewMode,
-            showDependencies
-        );
     }
     
     @Override
     public Pane createDailyChartPane(Long projectId, LocalDate date) {
-        // Get Gantt data for the specific date
-        Map<String, Object> ganttData = ganttDataService.getGanttDataForDate(projectId, date);
+        LOGGER.info("Creating daily chart pane for project " + projectId + " on date " + date);
         
-        if (ganttData == null || ganttData.isEmpty()) {
-            return new Pane(); // Return empty pane if no data
+        try {
+            // Use current date if not specified
+            LocalDate targetDate = (date != null) ? date : LocalDate.now();
+            
+            // Get Gantt data for the specific date
+            Map<String, Object> ganttData = ganttDataService.getGanttDataForDate(projectId, targetDate);
+            
+            if (ganttData == null || ganttData.isEmpty()) {
+                LOGGER.warning("No daily data available for project " + projectId + " on date " + targetDate);
+                return createEmptyDailyChart(targetDate);
+            }
+            
+            // Extract tasks and milestones
+            @SuppressWarnings("unchecked")
+            List<GanttChartData> tasks = (List<GanttChartData>) ganttData.get("tasks");
+            
+            @SuppressWarnings("unchecked")
+            List<GanttChartData> milestones = (List<GanttChartData>) ganttData.get("milestones");
+            
+            // Convert to TaskChartItem lists
+            List<TaskChartItem> taskItems = convertGanttChartDataToTaskChartItems(tasks);
+            List<TaskChartItem> milestoneItems = convertGanttChartDataToTaskChartItems(milestones);
+            
+            // Create daily chart using the GanttChartFactory
+            Pane dailyChart = GanttChartFactory.createDailyChart(taskItems, milestoneItems, targetDate);
+            
+            LOGGER.info("Daily chart pane created successfully");
+            return dailyChart;
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error creating daily chart pane", e);
+            return createEmptyDailyChart(date != null ? date : LocalDate.now());
+        }
+    }
+    
+    /**
+     * Creates an empty daily chart for the specified date.
+     *
+     * @param date the date
+     * @return a pane containing an empty daily chart
+     */
+    private Pane createEmptyDailyChart(LocalDate date) {
+        return GanttChartFactory.createDailyChart(new ArrayList<>(), new ArrayList<>(), date);
+    }
+    
+    /**
+     * Converts GanttChartData objects to TaskChartItem objects.
+     *
+     * @param chartDataList the list of GanttChartData objects
+     * @return a list of TaskChartItem objects
+     */
+    public List<TaskChartItem> convertGanttChartDataToTaskChartItems(List<GanttChartData> chartDataList) {
+        List<TaskChartItem> result = new ArrayList<>();
+        
+        if (chartDataList == null) {
+            return result;
         }
         
-        // Extract tasks and milestones
-        @SuppressWarnings("unchecked")
-        List<GanttChartData> tasks = (List<GanttChartData>) ganttData.get("tasks");
-        
-        @SuppressWarnings("unchecked")
-        List<GanttChartData> milestones = (List<GanttChartData>) ganttData.get("milestones");
-        
-        // Convert to TaskChartItem lists
-        List<TaskChartItem> taskItems = new ArrayList<>();
-        if (tasks != null) {
-            for (GanttChartData data : tasks) {
-                taskItems.add(TaskChartItem.fromGanttChartData(data));
+        for (GanttChartData data : chartDataList) {
+            TaskChartItem item = TaskChartItem.fromGanttChartData(data);
+            if (item != null) {
+                result.add(item);
             }
         }
         
-        List<TaskChartItem> milestoneItems = new ArrayList<>();
-        if (milestones != null) {
-            for (GanttChartData data : milestones) {
-                milestoneItems.add(TaskChartItem.fromGanttChartData(data));
-            }
-        }
-        
-        // Create daily chart
-        return GanttChartFactory.createDailyChart(taskItems, milestoneItems, date);
+        return result;
     }
     
     @Override
@@ -161,7 +234,7 @@ public class VisualizationServiceImpl implements VisualizationService {
         
         try {
             // Find project
-            var projectOpt = projectRepository.findById(projectId);
+            Optional<Project> projectOpt = projectRepository.findById(projectId);
             if (projectOpt.isEmpty()) {
                 return result;
             }
@@ -208,12 +281,16 @@ public class VisualizationServiceImpl implements VisualizationService {
             long totalDays = startDate.until(endDate).getDays();
             long daysPassed = startDate.until(today).getDays();
             
-            int timePercentage = totalDays > 0 ? (int) (daysPassed * 100 / totalDays) : 0;
+            // Calculate time elapsed percentage (capped at 100%)
+            int timePercentage = 0;
+            if (totalDays > 0) {
+                timePercentage = (int) Math.min(100, (daysPassed * 100 / totalDays));
+            }
             result.put("timeElapsed", timePercentage);
             
             return result;
         } catch (Exception e) {
-            // Log error and return empty result
+            LOGGER.log(Level.SEVERE, "Error getting project completion data", e);
             return result;
         }
     }
@@ -224,7 +301,7 @@ public class VisualizationServiceImpl implements VisualizationService {
         
         try {
             // Find project
-            var projectOpt = projectRepository.findById(projectId);
+            Optional<Project> projectOpt = projectRepository.findById(projectId);
             if (projectOpt.isEmpty()) {
                 return result;
             }
@@ -245,7 +322,7 @@ public class VisualizationServiceImpl implements VisualizationService {
             
             return result;
         } catch (Exception e) {
-            // Log error and return empty result
+            LOGGER.log(Level.SEVERE, "Error getting task status summary", e);
             return result;
         }
     }
@@ -256,7 +333,7 @@ public class VisualizationServiceImpl implements VisualizationService {
         
         try {
             // Find project
-            var projectOpt = projectRepository.findById(projectId);
+            Optional<Project> projectOpt = projectRepository.findById(projectId);
             if (projectOpt.isEmpty()) {
                 return result;
             }
@@ -316,7 +393,7 @@ public class VisualizationServiceImpl implements VisualizationService {
             
             return result;
         } catch (Exception e) {
-            // Log error and return empty result
+            LOGGER.log(Level.SEVERE, "Error getting upcoming deadlines", e);
             return result;
         }
     }
@@ -327,14 +404,14 @@ public class VisualizationServiceImpl implements VisualizationService {
         
         try {
             // Find project
-            var projectOpt = projectRepository.findById(projectId);
+            Optional<Project> projectOpt = projectRepository.findById(projectId);
             if (projectOpt.isEmpty()) {
                 return result;
             }
             
             Project project = projectOpt.get();
             
-            // Get tasks for project first
+            // Get tasks for project
             List<Task> allTasks = taskRepository.findByProject(project);
             
             // Extract all unique subsystems from the tasks
@@ -365,7 +442,7 @@ public class VisualizationServiceImpl implements VisualizationService {
             
             return result;
         } catch (Exception e) {
-            // Log error and return empty result
+            LOGGER.log(Level.SEVERE, "Error getting subsystem progress", e);
             return result;
         }
     }
@@ -376,7 +453,7 @@ public class VisualizationServiceImpl implements VisualizationService {
         
         try {
             // Find project
-            var projectOpt = projectRepository.findById(projectId);
+            Optional<Project> projectOpt = projectRepository.findById(projectId);
             if (projectOpt.isEmpty()) {
                 return result;
             }
@@ -401,8 +478,11 @@ public class VisualizationServiceImpl implements VisualizationService {
                         long totalDays = t.getStartDate().until(t.getEndDate()).getDays();
                         if (totalDays > 0) {
                             long daysPassed = t.getStartDate().until(today).getDays();
-                            int expectedProgress = (int) (daysPassed * 100 / totalDays);
-                            return t.getProgress() < expectedProgress - 10; // More than 10% behind
+                            // Only count if task has actually started
+                            if (daysPassed >= 0) {
+                                int expectedProgress = (int) (daysPassed * 100 / totalDays);
+                                return t.getProgress() < expectedProgress - 10; // More than 10% behind
+                            }
                         }
                     }
                     
@@ -420,7 +500,7 @@ public class VisualizationServiceImpl implements VisualizationService {
                 
                 if (task.getEndDate() != null && task.getEndDate().isBefore(today)) {
                     item.put("reason", "Past due date");
-                    item.put("daysOverdue", today.until(task.getEndDate()).getDays());
+                    item.put("daysOverdue", today.until(task.getEndDate()).getDays() * -1);
                 } else {
                     item.put("reason", "Behind schedule");
                     if (task.getStartDate() != null && task.getEndDate() != null) {
@@ -429,6 +509,7 @@ public class VisualizationServiceImpl implements VisualizationService {
                             long daysPassed = task.getStartDate().until(today).getDays();
                             int expectedProgress = (int) (daysPassed * 100 / totalDays);
                             item.put("expectedProgress", expectedProgress);
+                            item.put("progressGap", expectedProgress - task.getProgress());
                         }
                     }
                 }
@@ -442,22 +523,83 @@ public class VisualizationServiceImpl implements VisualizationService {
             
             return result;
         } catch (Exception e) {
-            // Log error and return empty result
+            LOGGER.log(Level.SEVERE, "Error getting at-risk tasks", e);
             return result;
         }
     }
     
     @Override
     public String generateSvgExport(Map<String, Object> chartData, String chartType) {
-        // SVG export functionality would be implemented here
-        // This is a placeholder implementation
+        // This method can be implemented using Chart-FX's SVG export capabilities
+        // For now, we'll just return a placeholder SVG
+        
         StringBuilder svg = new StringBuilder();
         svg.append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n");
         svg.append("<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" width=\"800\" height=\"600\">\n");
         
         // Add SVG content based on chartData and chartType
         svg.append("<rect width=\"800\" height=\"600\" fill=\"#f5f5f5\"/>\n");
-        svg.append("<text x=\"400\" y=\"300\" text-anchor=\"middle\" font-family=\"Arial\" font-size=\"20\">SVG Export Placeholder</text>\n");
+        svg.append("<text x=\"400\" y=\"300\" text-anchor=\"middle\" font-family=\"Arial\" font-size=\"20\">Chart Export - " + chartType + "</text>\n");
+        
+        // If it's a Gantt chart, try to draw some representation
+        if ("gantt".equalsIgnoreCase(chartType) && chartData != null) {
+            @SuppressWarnings("unchecked")
+            List<GanttChartData> tasks = (List<GanttChartData>) chartData.get("tasks");
+            
+            if (tasks != null && !tasks.isEmpty()) {
+                // Find date range
+                LocalDate minDate = tasks.stream()
+                        .map(GanttChartData::getStartDate)
+                        .filter(Objects::nonNull)
+                        .min(LocalDate::compareTo)
+                        .orElse(LocalDate.now().minusMonths(1));
+                
+                LocalDate maxDate = tasks.stream()
+                        .map(GanttChartData::getEndDate)
+                        .filter(Objects::nonNull)
+                        .max(LocalDate::compareTo)
+                        .orElse(LocalDate.now().plusMonths(1));
+                
+                long totalDays = minDate.until(maxDate).getDays() + 1;
+                double dayWidth = 700.0 / totalDays;
+                
+                // Add timeline
+                svg.append("<line x1=\"50\" y1=\"50\" x2=\"750\" y2=\"50\" stroke=\"#333333\" stroke-width=\"2\"/>\n");
+                
+                // Add a few date markers
+                for (int i = 0; i <= totalDays; i += totalDays / 5) {
+                    LocalDate date = minDate.plusDays(i);
+                    double x = 50 + (i * dayWidth);
+                    svg.append("<line x1=\"" + x + "\" y1=\"45\" x2=\"" + x + "\" y2=\"55\" stroke=\"#333333\" stroke-width=\"1\"/>\n");
+                    svg.append("<text x=\"" + x + "\" y=\"70\" text-anchor=\"middle\" font-family=\"Arial\" font-size=\"10\">" + 
+                              date.format(DateTimeFormatter.ISO_LOCAL_DATE) + "</text>\n");
+                }
+                
+                // Add some task bars (simplified)
+                int taskIndex = 0;
+                for (GanttChartData task : tasks) {
+                    if (task.getStartDate() != null && task.getEndDate() != null) {
+                        long startDays = minDate.until(task.getStartDate()).getDays();
+                        long endDays = minDate.until(task.getEndDate()).getDays();
+                        
+                        double x = 50 + (startDays * dayWidth);
+                        double width = (endDays - startDays + 1) * dayWidth;
+                        double y = 100 + (taskIndex * 30);
+                        
+                        // Add task bar
+                        svg.append("<rect x=\"" + x + "\" y=\"" + y + "\" width=\"" + width + "\" height=\"20\" " +
+                                  "fill=\"" + (task.getColor() != null ? task.getColor() : "#4285f4") + "\" " +
+                                  "stroke=\"#333333\" stroke-width=\"1\"/>\n");
+                        
+                        // Add task title
+                        svg.append("<text x=\"" + (x - 5) + "\" y=\"" + (y + 15) + "\" text-anchor=\"end\" " +
+                                  "font-family=\"Arial\" font-size=\"12\">" + task.getTitle() + "</text>\n");
+                        
+                        taskIndex++;
+                    }
+                }
+            }
+        }
         
         svg.append("</svg>");
         return svg.toString();
@@ -465,8 +607,25 @@ public class VisualizationServiceImpl implements VisualizationService {
     
     @Override
     public byte[] generatePdfReport(Long projectId, String reportType) {
-        // PDF report generation would be implemented here
-        // This is a placeholder implementation
-        return new byte[0];
+        // For now, we'll just return a stub implementation
+        LOGGER.info("PDF report generation requested for project " + projectId + " with type " + reportType);
+        
+        try {
+            // Find project
+            Optional<Project> projectOpt = projectRepository.findById(projectId);
+            if (projectOpt.isEmpty()) {
+                LOGGER.warning("Project not found for ID: " + projectId);
+                return new byte[0];
+            }
+            
+            // A complete implementation would generate a PDF here
+            // For now, return an empty byte array
+            LOGGER.info("PDF report generation not yet implemented");
+            return new byte[0];
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error generating PDF report", e);
+            return new byte[0];
+        }
     }
 }

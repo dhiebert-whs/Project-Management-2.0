@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+    
+    <VBox spacing="15" xmlns="http://javafx.com/javafx/11" xmlns:fx="http://javafx.com/fxml/1" 
+          fx:controller="org.frcpm.mvvm.views.MilestoneDetailMvvmView">
+        <padding>
+            <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+        </padding>
+        
+        <Label style="-fx-font-size: 18px; -fx-font-weight: bold;" text="%milestone.title" />
+        
+        <GridPane hgap="10" vgap="10">
+            <columnConstraints>
+                <ColumnConstraints minWidth="100" />
+                <ColumnConstraints hgrow="ALWAYS" />
+            </columnConstraints>
+            
+            <Label text="%milestone.project" GridPane.rowIndex="0" GridPane.columnIndex="0" />
+            <Label fx:id="projectLabel" style="-fx-font-weight: bold;" GridPane.rowIndex="0" GridPane.columnIndex="1" />
+            
+            <Label text="%milestone.name" GridPane.rowIndex="1" GridPane.columnIndex="0" />
+            <TextField fx:id="nameTextField" GridPane.rowIndex="1" GridPane.columnIndex="1" />
+            
+            <Label text="%milestone.date" GridPane.rowIndex="2" GridPane.columnIndex="0" />
+            <DatePicker fx:id="datePicker" GridPane.rowIndex="2" GridPane.columnIndex="1" prefWidth="300" />
+            
+            <Label text="%milestone.description" GridPane.rowIndex="3" GridPane.columnIndex="0" GridPane.valignment="TOP">
+                <GridPane.margin>
+                    <Insets top="5" />
+                </GridPane.margin>
+            </Label>
+            <TextArea fx:id="descriptionTextArea" GridPane.rowIndex="3" GridPane.columnIndex="1" 
+                     prefHeight="100" wrapText="true" />
+        </GridPane>
+        
+        <Label fx:id="errorLabel" textFill="RED" wrapText="true" />
+        
+        <HBox alignment="CENTER_RIGHT" spacing="10">
+            <ProgressIndicator fx:id="loadingIndicator" visible="false" />
+            <Button fx:id="saveButton" defaultButton="true" text="%button.save" />
+            <Button fx:id="cancelButton" cancelButton="true" text="%button.cancel" />
+        </HBox>
+    </VBox>

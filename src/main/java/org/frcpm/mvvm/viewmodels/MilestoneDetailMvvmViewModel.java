@@ -7,7 +7,7 @@ import javafx.application.Platform;
 import javafx.beans.property.*;
 import javafx.collections.FXCollections;
 
-import javax.inject.Inject;
+
 import java.time.LocalDate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -49,7 +49,7 @@ public class MilestoneDetailMvvmViewModel extends BaseMvvmViewModel {
      * 
      * @param milestoneService the milestone service
      */
-    @Inject
+
     public MilestoneDetailMvvmViewModel(MilestoneService milestoneService) {
         this.milestoneService = milestoneService;
         

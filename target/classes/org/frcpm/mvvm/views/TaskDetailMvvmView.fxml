@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+    
+    <BorderPane prefWidth="800" prefHeight="600" xmlns="http://javafx.com/javafx/17"
+                xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.frcpm.mvvm.views.TaskDetailMvvmView">
+        
+        <padding>
+            <Insets top="10" right="10" bottom="10" left="10"/>
+        </padding>
+        
+        <top>
+            <VBox spacing="10">
+                <Label fx:id="taskTitleLabel" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+                
+                <GridPane hgap="10" vgap="5">
+                    <columnConstraints>
+                        <ColumnConstraints minWidth="120" prefWidth="120"/>
+                        <ColumnConstraints minWidth="200" prefWidth="200"/>
+                        <ColumnConstraints minWidth="120" prefWidth="120"/>
+                        <ColumnConstraints minWidth="200" prefWidth="200"/>
+                    </columnConstraints>
+                    
+                    <Label text="%task.project" GridPane.rowIndex="0" GridPane.columnIndex="0" 
+                           style="-fx-font-weight: bold;"/>
+                    <Label fx:id="projectLabel" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                    
+                    <Label text="%task.subsystem" GridPane.rowIndex="0" GridPane.columnIndex="2" 
+                           style="-fx-font-weight: bold;"/>
+                    <Label fx:id="subsystemLabel" GridPane.rowIndex="0" GridPane.columnIndex="3"/>
+                    
+                    <Label text="%task.startDate" GridPane.rowIndex="1" GridPane.columnIndex="0" 
+                           style="-fx-font-weight: bold;"/>
+                    <DatePicker fx:id="startDatePicker" GridPane.rowIndex="1" GridPane.columnIndex="1" 
+                               prefWidth="Infinity"/>
+                    
+                    <Label text="%task.dueDate" GridPane.rowIndex="1" GridPane.columnIndex="2" 
+                           style="-fx-font-weight: bold;"/>
+                    <DatePicker fx:id="endDatePicker" GridPane.rowIndex="1" GridPane.columnIndex="3" 
+                               prefWidth="Infinity"/>
+                    
+                    <Label text="%task.priority" GridPane.rowIndex="2" GridPane.columnIndex="0" 
+                           style="-fx-font-weight: bold;"/>
+                    <ComboBox fx:id="priorityComboBox" GridPane.rowIndex="2" GridPane.columnIndex="1" 
+                             prefWidth="Infinity"/>
+                    
+                    <Label text="%task.progress" GridPane.rowIndex="3" GridPane.columnIndex="0" 
+                           style="-fx-font-weight: bold;"/>
+                    <HBox spacing="10" alignment="CENTER_LEFT" GridPane.rowIndex="3" 
+                          GridPane.columnIndex="1" GridPane.columnSpan="3">
+                        <Slider fx:id="progressSlider" min="0" max="100" value="0" showTickLabels="true" 
+                               showTickMarks="true" majorTickUnit="25" minorTickCount="5" 
+                               snapToTicks="true" prefWidth="400"/>
+                        <Label fx:id="progressLabel" text="0%" minWidth="40"/>
+                        <CheckBox fx:id="completedCheckBox" text="%task.completed"/>
+                    </HBox>
+                    
+                    <Label text="%task.estHours" GridPane.rowIndex="4" GridPane.columnIndex="0" 
+                           style="-fx-font-weight: bold;"/>
+                    <TextField fx:id="estimatedHoursField" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+                    
+                    <Label text="%task.actualHours" GridPane.rowIndex="4" GridPane.columnIndex="2" 
+                           style="-fx-font-weight: bold;"/>
+                    <TextField fx:id="actualHoursField" GridPane.rowIndex="4" GridPane.columnIndex="3"/>
+                    
+                    <Label text="%task.description" GridPane.rowIndex="5" GridPane.columnIndex="0" 
+                           style="-fx-font-weight: bold;" GridPane.valignment="TOP">
+                        <GridPane.margin>
+                            <Insets top="5"/>
+                        </GridPane.margin>
+                    </Label>
+                    <TextArea fx:id="descriptionArea" wrapText="true" prefHeight="80" 
+                             GridPane.rowIndex="5" GridPane.columnIndex="1" GridPane.columnSpan="3"/>
+                </GridPane>
+                
+                <Separator/>
+            </VBox>
+        </top>
+        
+        <center>
+            <TabPane>
+                <tabs>
+                    <Tab text="%task.tab.members" closable="false">
+                        <VBox spacing="10">
+                            <HBox alignment="CENTER_RIGHT" spacing="10">
+                                <Button fx:id="addMemberButton" text="%task.button.addMember" onAction="#handleAddTeamMember"/>
+                                <Button fx:id="removeMemberButton" text="%task.button.removeMember"/>
+                            </HBox>
+                            <TableView fx:id="assignedMembersTable" VBox.vgrow="ALWAYS">
+                                <columns>
+                                    <TableColumn fx:id="memberNameColumn" text="%task.column.memberName" prefWidth="250"/>
+                                    <TableColumn fx:id="memberSubteamColumn" text="%task.column.memberSubteam" prefWidth="150"/>
+                                </columns>
+                                <placeholder>
+                                    <Label text="%task.no.members"/>
+                                </placeholder>
+                            </TableView>
+                        </VBox>
+                    </Tab>
+                    
+                    <Tab text="%task.tab.components" closable="false">
+                        <VBox spacing="10">
+                            <HBox alignment="CENTER_RIGHT" spacing="10">
+                                <Button fx:id="addComponentButton" text="%task.button.addComponent" onAction="#handleAddComponent"/>
+                                <Button fx:id="removeComponentButton" text="%task.button.removeComponent"/>
+                            </HBox>
+                            <TableView fx:id="requiredComponentsTable" VBox.vgrow="ALWAYS">
+                                <columns>
+                                    <TableColumn fx:id="componentNameColumn" text="%task.column.componentName" prefWidth="250"/>
+                                    <TableColumn fx:id="componentPartNumberColumn" text="%task.column.componentPartNumber" prefWidth="150"/>
+                                    <TableColumn fx:id="componentDeliveredColumn" text="%task.column.componentDelivered" prefWidth="100"/>
+                                </columns>
+                                <placeholder>
+                                    <Label text="%task.no.components"/>
+                                </placeholder>
+                            </TableView>
+                        </VBox>
+                    </Tab>
+                    
+                    <Tab text="%task.tab.dependencies" closable="false">
+                        <VBox spacing="10">
+                            <HBox alignment="CENTER_RIGHT" spacing="10">
+                                <Button fx:id="addDependencyButton" text="%task.button.addDependency" onAction="#handleAddDependency"/>
+                                <Button fx:id="removeDependencyButton" text="%task.button.removeDependency"/>
+                            </HBox>
+                            <TableView fx:id="dependenciesTable" VBox.vgrow="ALWAYS">
+                                <columns>
+                                    <TableColumn fx:id="dependencyTitleColumn" text="%task.column.dependencyTitle" prefWidth="300"/>
+                                    <TableColumn fx:id="dependencyProgressColumn" text="%task.column.dependencyProgress" prefWidth="100"/>
+                                </columns>
+                                <placeholder>
+                                    <Label text="%task.no.dependencies"/>
+                                </placeholder>
+                            </TableView>
+                        </VBox>
+                    </Tab>
+                </tabs>
+            </TabPane>
+        </center>
+        
+        <bottom>
+            <VBox spacing="10">
+                <Label fx:id="errorLabel" textFill="RED" visible="false" managed="false"/>
+                <ProgressIndicator fx:id="loadingIndicator" visible="false" managed="true"/>
+                
+                <HBox alignment="CENTER_RIGHT" spacing="10">
+                    <Button fx:id="saveButton" text="%button.save" defaultButton="true"/>
+                    <Button fx:id="cancelButton" text="%button.cancel" cancelButton="true"/>
+                </HBox>
+            </VBox>
+        </bottom>
+        
+    </BorderPane>

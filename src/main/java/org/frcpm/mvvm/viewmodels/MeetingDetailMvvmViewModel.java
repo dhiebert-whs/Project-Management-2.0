@@ -10,7 +10,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 
-import javax.inject.Inject;
+
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -60,7 +60,7 @@ public class MeetingDetailMvvmViewModel extends BaseMvvmViewModel {
      * 
      * @param meetingService the meeting service
      */
-    @Inject
+    
     public MeetingDetailMvvmViewModel(MeetingService meetingService) {
         this.meetingService = meetingService;
         this.meetingServiceAsync = (MeetingServiceAsyncImpl) meetingService;

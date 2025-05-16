@@ -13,7 +13,6 @@ import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
-import javax.inject.Inject;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -69,7 +68,7 @@ public class DailyMvvmViewModel extends BaseMvvmViewModel {
      * @param taskService the task service
      * @param meetingService the meeting service
      */
-    @Inject
+    
     public DailyMvvmViewModel(TaskService taskService, MeetingService meetingService) {
         this.taskService = taskService;
         this.taskServiceAsync = (TaskServiceAsyncImpl) taskService;

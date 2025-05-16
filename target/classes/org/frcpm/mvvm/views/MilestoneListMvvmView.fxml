@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+    
+    <BorderPane fx:id="mainPane" prefHeight="600.0" prefWidth="800.0" 
+               xmlns="http://javafx.com/javafx/11" xmlns:fx="http://javafx.com/fxml/1" 
+               fx:controller="org.frcpm.mvvm.views.MilestoneListMvvmView">
+        <padding>
+            <Insets top="10" right="10" bottom="10" left="10"/>
+        </padding>
+        
+        <top>
+            <VBox spacing="10">
+                <HBox alignment="CENTER_LEFT" spacing="20">
+                    <Label text="%milestone.management.title" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+                    <Label text="%milestone.project" />
+                    <Label fx:id="projectNameLabel" style="-fx-font-weight: bold;" />
+                </HBox>
+                
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <Label text="%milestone.filter" />
+                    <ComboBox fx:id="filterComboBox" prefWidth="200" />
+                    <Region HBox.hgrow="ALWAYS" />
+                    <Button fx:id="refreshButton" text="%button.refresh" onAction="#onRefreshAction" />
+                </HBox>
+            </VBox>
+        </top>
+        
+        <center>
+            <VBox spacing="10">
+                <TableView fx:id="milestoneTableView" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="nameColumn" text="%milestone.column.name" prefWidth="300" />
+                        <TableColumn fx:id="dateColumn" text="%milestone.column.date" prefWidth="150" />
+                        <TableColumn fx:id="statusColumn" text="%milestone.column.status" prefWidth="100" />
+                        <TableColumn fx:id="descriptionColumn" text="%milestone.column.description" prefWidth="250" />
+                    </columns>
+                    <placeholder>
+                        <Label text="%milestone.no.milestones" />
+                    </placeholder>
+                </TableView>
+                
+                <Label text="%milestone.instruction.doubleClick" style="-fx-font-style: italic; -fx-text-fill: #666666;" />
+                
+                <Label fx:id="errorLabel" textFill="RED" wrapText="true" visible="false" />
+                
+                <HBox alignment="CENTER_RIGHT" spacing="10">
+                    <ProgressIndicator fx:id="loadingIndicator" visible="false" />
+                    <Button fx:id="newMilestoneButton" text="%button.newMilestone" onAction="#handleNewMilestone" />
+                    <Button fx:id="editMilestoneButton" text="%button.editMilestone" onAction="#handleEditMilestone" />
+                    <Button fx:id="deleteMilestoneButton" text="%button.deleteMilestone" onAction="#onDeleteMilestoneAction" />
+                </HBox>
+            </VBox>
+        </center>
+    </BorderPane>

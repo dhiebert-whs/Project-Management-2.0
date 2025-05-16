@@ -11,7 +11,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
-import javax.inject.Inject;
+
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -54,7 +54,7 @@ public class ProjectListMvvmViewModel extends BaseMvvmViewModel {
      * 
      * @param projectService the project service
      */
-    @Inject
+   
     public ProjectListMvvmViewModel(ProjectService projectService) {
         this.projectService = projectService;
         

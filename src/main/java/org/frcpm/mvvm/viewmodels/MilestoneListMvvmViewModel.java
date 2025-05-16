@@ -12,7 +12,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 
-import javax.inject.Inject;
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.function.Predicate;
@@ -77,7 +77,7 @@ public class MilestoneListMvvmViewModel extends BaseMvvmViewModel {
      * 
      * @param milestoneService the milestone service
      */
-    @Inject
+   
     public MilestoneListMvvmViewModel(MilestoneService milestoneService) {
         this.milestoneService = milestoneService;
         

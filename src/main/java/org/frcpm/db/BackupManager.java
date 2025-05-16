@@ -1,474 +1,125 @@
+// src/main/java/org/frcpm/db/BackupManager.java
 package org.frcpm.db;
 
+import org.frcpm.config.DatabaseConfig;
+import org.frcpm.utils.ErrorHandler;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
-import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 /**
- * Utility class for managing database backups.
+ * Manages database backups and restoration.
+ * Provides functionality for creating, restoring, and managing database backups.
  */
 public class BackupManager {
     
     private static final Logger LOGGER = Logger.getLogger(BackupManager.class.getName());
-    private static final Pattern BACKUP_PATTERN = Pattern.compile("(.+)_(\\d{8}_\\d{6})\\.zip");
-    private static final String BACKUP_DIR_PATH = System.getProperty("user.home") + "/.frcpm/backups";
-    private static final int BUFFER_SIZE = 4096;
+    
+    // Date format for backup file timestamps
+    private static final DateTimeFormatter TIMESTAMP_FORMATTER = 
+            DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+    
+    // Default backup directory
+    private static final String DEFAULT_BACKUP_DIR = "backups";
+    
+    // Backup file extension
+    private static final String BACKUP_EXTENSION = ".zip";
+    
+    // Database file extensions to backup
+    private static final List<String> DB_EXTENSIONS = Arrays.asList(".mv.db", ".trace.db", ".lock.db");
     
     /**
-     * Represents a database backup file.
+     * Backup object representing a database backup.
      */
-    public static class Backup implements Comparable<Backup> {
-        private final String fileName;
-        private final String databaseName;
-        private final Date timestamp;
-        private final File file;
+    public static class Backup {
+        private final String filePath;
+        private final LocalDateTime timestamp;
+        private final long fileSize;
         
         /**
-         * Creates a new backup.
+         * Creates a new Backup.
          * 
-         * @param fileName the name of the backup file
-         * @param databaseName the name of the database
-         * @param timestamp the timestamp of the backup
-         * @param file the backup file
+         * @param filePath the path to the backup file
+         * @param timestamp the timestamp when the backup was created
+         * @param fileSize the size of the backup file in bytes
          */
-        public Backup(String fileName, String databaseName, Date timestamp, File file) {
-            this.fileName = fileName;
-            this.databaseName = databaseName;
+        public Backup(String filePath, LocalDateTime timestamp, long fileSize) {
+            this.filePath = filePath;
             this.timestamp = timestamp;
-            this.file = file;
+            this.fileSize = fileSize;
         }
         
         /**
-         * Gets the file name.
+         * Gets the path to the backup file.
          * 
-         * @return the file name
+         * @return the file path
          */
-        public String getFileName() {
-            return fileName;
+        public String getFilePath() {
+            return filePath;
         }
         
         /**
-         * Gets the database name.
-         * 
-         * @return the database name
-         */
-        public String getDatabaseName() {
-            return databaseName;
-        }
-        
-        /**
-         * Gets the timestamp.
+         * Gets the timestamp when the backup was created.
          * 
          * @return the timestamp
          */
-        public Date getTimestamp() {
+        public LocalDateTime getTimestamp() {
             return timestamp;
         }
         
         /**
-         * Gets the file.
-         * 
-         * @return the file
-         */
-        public File getFile() {
-            return file;
-        }
-        
-        /**
-         * Gets a formatted string representation of the timestamp.
-         * 
-         * @return the formatted timestamp
-         */
-        public String getFormattedTimestamp() {
-            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            return dateFormat.format(timestamp);
-        }
-        
-        /**
-         * Gets the file size in bytes.
+         * Gets the size of the backup file in bytes.
          * 
          * @return the file size
          */
         public long getFileSize() {
-            return file.length();
+            return fileSize;
         }
         
         /**
-         * Gets a formatted representation of the file size.
+         * Gets a formatted string of the file size.
          * 
          * @return the formatted file size
          */
-        public String getFormattedFileSize() {
-            long size = getFileSize();
-            if (size < 1024) {
-                return size + " B";
-            } else if (size < 1024 * 1024) {
-                return String.format("%.2f KB", size / 1024.0);
+        public String getFormattedSize() {
+            if (fileSize < 1024) {
+                return fileSize + " B";
+            } else if (fileSize < 1024 * 1024) {
+                return String.format("%.2f KB", fileSize / 1024.0);
+            } else if (fileSize < 1024 * 1024 * 1024) {
+                return String.format("%.2f MB", fileSize / (1024.0 * 1024.0));
             } else {
-                return String.format("%.2f MB", size / (1024.0 * 1024.0));
+                return String.format("%.2f GB", fileSize / (1024.0 * 1024.0 * 1024.0));
             }
         }
-        
-        @Override
-        public String toString() {
-            return databaseName + " - " + getFormattedTimestamp() + " (" + getFormattedFileSize() + ")";
-        }
-        
-        @Override
-        public int compareTo(Backup other) {
-            // Sort from newest to oldest
-            return other.timestamp.compareTo(this.timestamp);
-        }
-    }
-    
-    /**
-     * Gets all available backups sorted by timestamp (newest first).
-     * 
-     * @return a list of backups
-     */
-    public static List<Backup> getBackups() {
-        List<Backup> backups = new ArrayList<>();
-        
-        // Get backup directory
-        File backupDir = new File(BACKUP_DIR_PATH);
-        
-        // Check if directory exists
-        if (!backupDir.exists() || !backupDir.isDirectory()) {
-            return backups;
-        }
-        
-        // Parse backup files
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
-        
-        File[] files = backupDir.listFiles();
-        if (files != null) {
-            for (File file : files) {
-                if (file.isFile() && file.getName().endsWith(".zip")) {
-                    Matcher matcher = BACKUP_PATTERN.matcher(file.getName());
-                    if (matcher.matches()) {
-                        String databaseName = matcher.group(1);
-                        String timestampStr = matcher.group(2);
-                        
-                        try {
-                            Date timestamp = dateFormat.parse(timestampStr);
-                            backups.add(new Backup(file.getName(), databaseName, timestamp, file));
-                        } catch (ParseException e) {
-                            LOGGER.log(Level.WARNING, "Error parsing backup timestamp: " + timestampStr, e);
-                        }
-                    }
-                }
-            }
-        }
-        
-        // Sort backups by timestamp (newest first)
-        backups.sort(Comparator.naturalOrder());
-        
-        return backups;
-    }
-    
-    /**
-     * Creates a backup of the current database.
-     * 
-     * @return the created backup, or null if the backup failed
-     */
-    public static Backup createBackup() {
-        String backupPath = DatabaseConfigurer.createBackup();
-        if (backupPath == null) {
-            LOGGER.warning("Failed to create backup");
-            return null;
-        }
-        
-        File backupFile = new File(backupPath);
-        if (!backupFile.exists()) {
-            LOGGER.warning("Backup file not created at expected path: " + backupPath);
-            return null;
-        }
-        
-        // Parse backup file name
-        Matcher matcher = BACKUP_PATTERN.matcher(backupFile.getName());
-        if (matcher.matches()) {
-            String databaseName = matcher.group(1);
-            String timestampStr = matcher.group(2);
-            
-            try {
-                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
-                Date timestamp = dateFormat.parse(timestampStr);
-                Backup backup = new Backup(backupFile.getName(), databaseName, timestamp, backupFile);
-                LOGGER.info("Created backup: " + backup);
-                return backup;
-            } catch (ParseException e) {
-                LOGGER.log(Level.WARNING, "Error parsing backup timestamp: " + timestampStr, e);
-                return null;
-            }
-        } else {
-            LOGGER.warning("Backup file name does not match expected pattern: " + backupFile.getName());
-            return null;
-        }
-    }
-    
-    /**
-     * Restores a backup.
-     * 
-     * @param backup the backup to restore
-     * @return true if the restore was successful, false otherwise
-     */
-    public static boolean restoreBackup(Backup backup) {
-        if (backup == null || !backup.getFile().exists()) {
-            LOGGER.warning("Cannot restore non-existent backup");
-            return false;
-        }
-        
-        LOGGER.info("Restoring backup: " + backup);
-        return DatabaseConfigurer.restoreFromBackup(backup.getFile().getAbsolutePath());
-    }
-    
-    /**
-     * Deletes a backup.
-     * 
-     * @param backup the backup to delete
-     * @return true if the delete was successful, false otherwise
-     */
-    public static boolean deleteBackup(Backup backup) {
-        if (backup == null || !backup.getFile().exists()) {
-            LOGGER.warning("Cannot delete non-existent backup");
-            return false;
-        }
-        
-        boolean success = backup.getFile().delete();
-        if (success) {
-            LOGGER.info("Deleted backup: " + backup);
-        } else {
-            LOGGER.warning("Failed to delete backup: " + backup);
-        }
-        
-        return success;
-    }
-    
-    /**
-     * Exports a backup to a specified location.
-     * 
-     * @param backup the backup to export
-     * @param destination the destination file
-     * @return true if the export was successful, false otherwise
-     */
-    public static boolean exportBackup(Backup backup, File destination) {
-        if (backup == null || !backup.getFile().exists()) {
-            LOGGER.warning("Cannot export non-existent backup");
-            return false;
-        }
-        
-        try {
-            Files.copy(backup.getFile().toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            LOGGER.info("Exported backup to: " + destination.getAbsolutePath());
-            return true;
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error exporting backup", e);
-            return false;
-        }
-    }
-    
-    /**
-     * Imports a backup from a specified location.
-     * 
-     * @param source the source file
-     * @return the imported backup, or null if the import failed
-     */
-    public static Backup importBackup(File source) {
-        if (source == null || !source.exists() || !source.isFile()) {
-            LOGGER.warning("Cannot import non-existent backup file");
-            return null;
-        }
-        
-        // Get backup directory
-        File backupDir = new File(BACKUP_DIR_PATH);
-        
-        // Create backup directory if it doesn't exist
-        if (!backupDir.exists()) {
-            backupDir.mkdirs();
-        }
-        
-        // Create destination file
-        File destination = new File(backupDir, source.getName());
-        
-        try {
-            // Copy backup file
-            Files.copy(source.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            
-            // Parse backup file name
-            Matcher matcher = BACKUP_PATTERN.matcher(destination.getName());
-            if (matcher.matches()) {
-                String databaseName = matcher.group(1);
-                String timestampStr = matcher.group(2);
-                
-                try {
-                    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
-                    Date timestamp = dateFormat.parse(timestampStr);
-                    Backup backup = new Backup(destination.getName(), databaseName, timestamp, destination);
-                    LOGGER.info("Imported backup: " + backup);
-                    return backup;
-                } catch (ParseException e) {
-                    LOGGER.log(Level.WARNING, "Error parsing backup timestamp: " + timestampStr, e);
-                    return null;
-                }
-            } else {
-                LOGGER.warning("Imported file name does not match backup pattern: " + source.getName());
-                return null;
-            }
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error importing backup", e);
-            return null;
-        }
-    }
-    
-    /**
-     * Cleans up old backups, keeping only the specified number of most recent backups.
-     * 
-     * @param maxBackups the maximum number of backups to keep
-     * @return the number of backups deleted
-     */
-    public static int cleanupOldBackups(int maxBackups) {
-        List<Backup> backups = getBackups();
-        
-        // If we have fewer backups than the maximum, no cleanup needed
-        if (backups.size() <= maxBackups) {
-            return 0;
-        }
-        
-        // Delete oldest backups
-        int deleted = 0;
-        for (int i = maxBackups; i < backups.size(); i++) {
-            if (deleteBackup(backups.get(i))) {
-                deleted++;
-            }
-        }
-        
-        LOGGER.info("Cleaned up " + deleted + " old backups, keeping " + maxBackups + " recent backups");
-        return deleted;
-    }
-    
-    /**
-     * Creates a compressed backup of the database.
-     * 
-     * @param databasePath the path to the database file
-     * @param backupPath the path to save the compressed backup
-     * @return true if the backup was successful, false otherwise
-     */
-    public static boolean createCompressedBackup(String databasePath, String backupPath) {
-        try {
-            // Create output ZIP file
-            try (ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(backupPath))) {
-                File databaseFile = new File(databasePath);
-                
-                // Only backup the file if it exists
-                if (databaseFile.exists()) {
-                    try (FileInputStream fis = new FileInputStream(databaseFile)) {
-                        ZipEntry zipEntry = new ZipEntry(databaseFile.getName());
-                        zipOut.putNextEntry(zipEntry);
-                        
-                        byte[] buffer = new byte[BUFFER_SIZE];
-                        int length;
-                        while ((length = fis.read(buffer)) > 0) {
-                            zipOut.write(buffer, 0, length);
-                        }
-                    }
-                } else {
-                    LOGGER.warning("Database file not found for backup: " + databasePath);
-                    return false;
-                }
-            }
-            
-            LOGGER.info("Compressed backup created at: " + backupPath);
-            return true;
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error creating compressed backup", e);
-            return false;
-        }
-    }
-    
-    /**
-     * Extracts a compressed backup.
-     * 
-     * @param backupPath the path to the compressed backup
-     * @param extractPath the path to extract the backup to
-     * @return true if the extraction was successful, false otherwise
-     */
-    public static boolean extractCompressedBackup(String backupPath, String extractPath) {
-        try {
-            File backupFile = new File(backupPath);
-            
-            // Verify backup file exists
-            if (!backupFile.exists()) {
-                LOGGER.warning("Backup file does not exist: " + backupPath);
-                return false;
-            }
-            
-            // Create extraction directory if it doesn't exist
-            File extractDir = new File(extractPath);
-            if (!extractDir.exists()) {
-                extractDir.mkdirs();
-            }
-            
-            // Extract files from ZIP
-            try (ZipInputStream zipIn = new ZipInputStream(new FileInputStream(backupFile))) {
-                ZipEntry entry = zipIn.getNextEntry();
-                
-                while (entry != null) {
-                    File outputFile = new File(extractPath, entry.getName());
-                    
-                    // Create output directory if it doesn't exist
-                    if (entry.isDirectory()) {
-                        outputFile.mkdirs();
-                    } else {
-                        // Create parent directories if they don't exist
-                        if (outputFile.getParentFile() != null) {
-                            outputFile.getParentFile().mkdirs();
-                        }
-                        
-                        // Extract file
-                        try (FileOutputStream fos = new FileOutputStream(outputFile)) {
-                            byte[] buffer = new byte[BUFFER_SIZE];
-                            int length;
-                            while ((length = zipIn.read(buffer)) > 0) {
-                                fos.write(buffer, 0, length);
-                            }
-                        }
-                    }
-                    
-                    zipIn.closeEntry();
-                    entry = zipIn.getNextEntry();
-                }
-            }
-            
-            LOGGER.info("Backup extracted to: " + extractPath);
-            return true;
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error extracting compressed backup", e);
-            return false;
-        }
-    }
-    
-    /**
-     * Gets the backup directory path.
-     * 
-     * @return the backup directory path
-     */
-    public static String getBackupDirPath() {
-        return BACKUP_DIR_PATH;
     }
     
     /**
@@ -477,16 +128,698 @@ public class BackupManager {
      * @return true if the directory exists or was created, false otherwise
      */
     public static boolean ensureBackupDirExists() {
-        File backupDir = new File(BACKUP_DIR_PATH);
-        if (!backupDir.exists()) {
-            boolean created = backupDir.mkdirs();
-            if (created) {
-                LOGGER.info("Created backup directory: " + BACKUP_DIR_PATH);
-            } else {
-                LOGGER.warning("Failed to create backup directory: " + BACKUP_DIR_PATH);
+        LOGGER.info("Ensuring backup directory exists");
+        
+        try {
+            // Get backup directory
+            File backupDir = getBackupDirectory();
+            if (!backupDir.exists()) {
+                LOGGER.info("Creating backup directory: " + backupDir.getAbsolutePath());
+                boolean created = backupDir.mkdirs();
+                if (!created) {
+                    LOGGER.severe("Failed to create backup directory: " + backupDir.getAbsolutePath());
+                    return false;
+                }
             }
-            return created;
+            return true;
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error ensuring backup directory exists", e);
+            return false;
         }
-        return true;
+    }
+    
+    /**
+     * Creates a backup of the database.
+     * 
+     * @return the backup, or null if the backup failed
+     */
+    public static Backup createBackup() {
+        LOGGER.info("Creating database backup");
+        
+        // Skip for in-memory databases
+        if (isInMemoryDatabase()) {
+            LOGGER.info("Skipping backup for in-memory database");
+            return null;
+        }
+        
+        // Get database file path
+        String dbFilePath = getDatabaseFilePath();
+        if (dbFilePath == null) {
+            LOGGER.warning("Cannot create backup: database file path is null");
+            return null;
+        }
+        
+        // Ensure backup directory exists
+        if (!ensureBackupDirExists()) {
+            LOGGER.warning("Cannot create backup: backup directory could not be created");
+            return null;
+        }
+        
+        // Generate timestamp for the backup file
+        String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMATTER);
+        
+        // Generate backup file name
+        File dbFile = new File(dbFilePath);
+        String dbName = dbFile.getName();
+        if (dbName.endsWith(".mv.db")) {
+            dbName = dbName.substring(0, dbName.length() - 6); // Remove .mv.db extension
+        }
+        
+        String backupFileName = dbName + "_" + timestamp + BACKUP_EXTENSION;
+        File backupDir = getBackupDirectory();
+        File backupFile = new File(backupDir, backupFileName);
+        
+        try {
+            // Create a backup using the SCRIPT command or file copy
+            boolean backupSuccess;
+            
+            // First try H2's BACKUP command (more reliable)
+            backupSuccess = createBackupUsingH2Backup(dbName, backupFile);
+            
+            // If that fails, try file copy
+            if (!backupSuccess) {
+                backupSuccess = createBackupUsingFileCopy(dbFilePath, backupFile);
+            }
+            
+            if (backupSuccess) {
+                LOGGER.info("Backup created successfully: " + backupFile.getAbsolutePath());
+                return new Backup(
+                    backupFile.getAbsolutePath(),
+                    LocalDateTime.parse(timestamp, TIMESTAMP_FORMATTER),
+                    backupFile.length()
+                );
+            } else {
+                LOGGER.warning("Failed to create backup");
+                return null;
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error creating backup", e);
+            // Delete incomplete backup file if it exists
+            if (backupFile.exists()) {
+                backupFile.delete();
+            }
+            return null;
+        }
+    }
+    
+    /**
+     * Creates a backup using H2's BACKUP command.
+     * 
+     * @param dbName the database name
+     * @param backupFile the backup file
+     * @return true if successful, false otherwise
+     */
+    private static boolean createBackupUsingH2Backup(String dbName, File backupFile) {
+        LOGGER.info("Attempting to create backup using H2 BACKUP command");
+        
+        EntityManager em = null;
+        
+        try {
+            em = DatabaseConfig.getEntityManager();
+            em.getTransaction().begin();
+            
+            // Generate the backup command
+            // Format: BACKUP TO 'path/to/backup.zip'
+            String backupCommand = "BACKUP TO '" + backupFile.getAbsolutePath().replace('\\', '/') + "'";
+            
+            // Execute the backup command
+            em.createNativeQuery(backupCommand).executeUpdate();
+            
+            em.getTransaction().commit();
+            
+            // Verify the backup file was created
+            if (backupFile.exists() && backupFile.length() > 0) {
+                LOGGER.info("H2 BACKUP command executed successfully");
+                return true;
+            } else {
+                LOGGER.warning("H2 BACKUP command executed, but backup file not found or empty");
+                return false;
+            }
+        } catch (Exception e) {
+            if (em != null && em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            LOGGER.log(Level.WARNING, "Error creating backup using H2 BACKUP command", e);
+            return false;
+        } finally {
+            if (em != null) {
+                em.close();
+            }
+        }
+    }
+    
+    /**
+     * Creates a backup by copying the database files.
+     * 
+     * @param dbFilePath the database file path
+     * @param backupFile the backup file
+     * @return true if successful, false otherwise
+     */
+    private static boolean createBackupUsingFileCopy(String dbFilePath, File backupFile) {
+        LOGGER.info("Creating backup using file copy");
+        
+        try {
+            // Get the database file
+            File dbFile = new File(dbFilePath);
+            String basePath = dbFile.getParent();
+            String dbName = dbFile.getName();
+            if (dbName.endsWith(".mv.db")) {
+                dbName = dbName.substring(0, dbName.length() - 6); // Remove .mv.db extension
+            }
+            
+            // Create a temporary zip file
+            File tempZipFile = File.createTempFile("backup_", BACKUP_EXTENSION);
+            
+            // Create a ZIP file with all database files
+            try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(tempZipFile))) {
+                // Add all database-related files
+                for (String ext : DB_EXTENSIONS) {
+                    File file = new File(basePath, dbName + ext);
+                    if (file.exists()) {
+                        LOGGER.fine("Adding to backup: " + file.getName());
+                        
+                        // Add file to ZIP
+                        ZipEntry entry = new ZipEntry(file.getName());
+                        zos.putNextEntry(entry);
+                        
+                        // Copy file data to ZIP
+                        try (FileInputStream fis = new FileInputStream(file)) {
+                            byte[] buffer = new byte[1024];
+                            int length;
+                            while ((length = fis.read(buffer)) > 0) {
+                                zos.write(buffer, 0, length);
+                            }
+                        }
+                        
+                        zos.closeEntry();
+                    }
+                }
+            }
+            
+            // Move the temporary zip file to the final location
+            Files.move(tempZipFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            
+            // Verify the backup file
+            if (backupFile.exists() && backupFile.length() > 0) {
+                LOGGER.info("Backup file created: " + backupFile.getAbsolutePath());
+                return true;
+            } else {
+                LOGGER.warning("Backup file not found or empty");
+                return false;
+            }
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Error creating backup using file copy", e);
+            return false;
+        }
+    }
+    
+    /**
+     * Restores the database from a backup.
+     * 
+     * @param backup the backup to restore
+     * @return true if the restore was successful, false otherwise
+     */
+    public static boolean restoreBackup(Backup backup) {
+        LOGGER.info("Restoring database from backup: " + backup.getFilePath());
+        
+        // Skip for in-memory databases
+        if (isInMemoryDatabase()) {
+            LOGGER.warning("Cannot restore in-memory database");
+            return false;
+        }
+        
+        // Get database file path
+        String dbFilePath = getDatabaseFilePath();
+        if (dbFilePath == null) {
+            LOGGER.warning("Cannot restore backup: database file path is null");
+            return false;
+        }
+        
+        // Check if the backup file exists
+        File backupFile = new File(backup.getFilePath());
+        if (!backupFile.exists()) {
+            LOGGER.warning("Backup file does not exist: " + backup.getFilePath());
+            return false;
+        }
+        
+        try {
+            // Shut down the database
+            shutdown();
+            
+            // Get the database file details
+            File dbFile = new File(dbFilePath);
+            String basePath = dbFile.getParent();
+            String dbName = dbFile.getName();
+            if (dbName.endsWith(".mv.db")) {
+                dbName = dbName.substring(0, dbName.length() - 6); // Remove .mv.db extension
+            }
+            
+            // Create backups of current database files
+            File tempBackupDir = createTempBackup(basePath, dbName);
+            
+            try {
+                // Delete current database files
+                deleteCurrentDatabaseFiles(basePath, dbName);
+                
+                // Extract the backup
+                extractBackup(backupFile, basePath);
+                
+                // Reinitialize the database
+                DatabaseConfig.initialize();
+                
+                // Verify the database is working
+                if (verifyDatabaseConnection()) {
+                    LOGGER.info("Database restored successfully from backup");
+                    return true;
+                } else {
+                    LOGGER.severe("Database verification failed after restore");
+                    // Attempt to restore from temporary backup
+                    restoreFromTempBackup(tempBackupDir, basePath);
+                    return false;
+                }
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error restoring database", e);
+                // Attempt to restore from temporary backup
+                restoreFromTempBackup(tempBackupDir, basePath);
+                return false;
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error during backup restoration", e);
+            return false;
+        }
+    }
+    
+    /**
+     * Creates a temporary backup of the current database files.
+     * 
+     * @param basePath the base path of the database files
+     * @param dbName the database name
+     * @return the temporary backup directory
+     * @throws IOException if an I/O error occurs
+     */
+    private static File createTempBackup(String basePath, String dbName) throws IOException {
+        LOGGER.info("Creating temporary backup of current database files");
+        
+        // Create a temporary directory
+        File tempBackupDir = Files.createTempDirectory("db_restore_backup_").toFile();
+        
+        // Copy all database files to the temporary directory
+        for (String ext : DB_EXTENSIONS) {
+            File srcFile = new File(basePath, dbName + ext);
+            if (srcFile.exists()) {
+                File destFile = new File(tempBackupDir, dbName + ext);
+                Files.copy(srcFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
+        }
+        
+        LOGGER.info("Temporary backup created: " + tempBackupDir.getAbsolutePath());
+        return tempBackupDir;
+    }
+    
+    /**
+     * Deletes the current database files.
+     * 
+     * @param basePath the base path of the database files
+     * @param dbName the database name
+     * @throws IOException if an I/O error occurs
+     */
+    private static void deleteCurrentDatabaseFiles(String basePath, String dbName) throws IOException {
+        LOGGER.info("Deleting current database files");
+        
+        for (String ext : DB_EXTENSIONS) {
+            File file = new File(basePath, dbName + ext);
+            if (file.exists()) {
+                if (!file.delete()) {
+                    LOGGER.warning("Could not delete file: " + file.getAbsolutePath());
+                }
+            }
+        }
+    }
+    
+    /**
+     * Extracts the backup file to the specified path.
+     * 
+     * @param backupFile the backup file
+     * @param destPath the destination path
+     * @throws IOException if an I/O error occurs
+     */
+    private static void extractBackup(File backupFile, String destPath) throws IOException {
+        LOGGER.info("Extracting backup to: " + destPath);
+        
+        try (ZipInputStream zis = new ZipInputStream(new FileInputStream(backupFile))) {
+            ZipEntry entry;
+            byte[] buffer = new byte[1024];
+            
+            while ((entry = zis.getNextEntry()) != null) {
+                String fileName = entry.getName();
+                File destFile = new File(destPath, fileName);
+                
+                // Create output directory if it doesn't exist
+                if (!destFile.getParentFile().exists()) {
+                    destFile.getParentFile().mkdirs();
+                }
+                
+                // Extract the file
+                try (FileOutputStream fos = new FileOutputStream(destFile)) {
+                    int length;
+                    while ((length = zis.read(buffer)) > 0) {
+                        fos.write(buffer, 0, length);
+                    }
+                }
+                
+                zis.closeEntry();
+            }
+        }
+        
+        LOGGER.info("Backup extracted successfully");
+    }
+    
+    /**
+     * Restores the database from a temporary backup.
+     * 
+     * @param tempBackupDir the temporary backup directory
+     * @param destPath the destination path
+     */
+    private static void restoreFromTempBackup(File tempBackupDir, String destPath) {
+        LOGGER.info("Restoring from temporary backup");
+        
+        try {
+            for (File file : tempBackupDir.listFiles()) {
+                File destFile = new File(destPath, file.getName());
+                Files.copy(file.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
+            
+            // Reinitialize the database
+            DatabaseConfig.initialize();
+            
+            LOGGER.info("Restored from temporary backup successfully");
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error restoring from temporary backup", e);
+        }
+    }
+    
+/**
+     * Verifies the database connection.
+     * 
+     * @return true if the connection is valid, false otherwise
+     */
+    private static boolean verifyDatabaseConnection() {
+        LOGGER.info("Verifying database connection");
+        
+        EntityManager em = null;
+        try {
+            em = DatabaseConfig.getEntityManager();
+            
+            // Try a simple query
+            Object result = em.createNativeQuery("SELECT 1").getSingleResult();
+            
+            return result != null;
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Database verification failed", e);
+            return false;
+        } finally {
+            if (em != null) {
+                em.close();
+            }
+        }
+    }
+    
+    /**
+     * Gets all available backups.
+     * 
+     * @return a list of backups, sorted by timestamp (newest first)
+     */
+    public static List<Backup> getBackups() {
+        LOGGER.info("Getting all available backups");
+        
+        List<Backup> backups = new ArrayList<>();
+        
+        try {
+            // Ensure backup directory exists
+            if (!ensureBackupDirExists()) {
+                LOGGER.warning("Backup directory does not exist");
+                return backups;
+            }
+            
+            // Get backup directory
+            File backupDir = getBackupDirectory();
+            
+            // List all backup files
+            File[] files = backupDir.listFiles((dir, name) -> name.endsWith(BACKUP_EXTENSION));
+            if (files == null || files.length == 0) {
+                LOGGER.info("No backups found");
+                return backups;
+            }
+            
+            // Parse backup files
+            for (File file : files) {
+                try {
+                    // Extract timestamp from filename
+                    String fileName = file.getName();
+                    
+                    // Format: dbname_yyyyMMdd_HHmmss.zip
+                    int timestampStartIndex = fileName.lastIndexOf('_') - 8; // 8 is the length of yyyyMMdd
+                    if (timestampStartIndex > 0) {
+                        String timestampStr = fileName.substring(
+                                timestampStartIndex, fileName.length() - BACKUP_EXTENSION.length());
+                        
+                        LocalDateTime timestamp = LocalDateTime.parse(timestampStr, TIMESTAMP_FORMATTER);
+                        
+                        backups.add(new Backup(file.getAbsolutePath(), timestamp, file.length()));
+                    }
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Error parsing backup file: " + file.getName(), e);
+                    // Skip invalid backup files
+                }
+            }
+            
+            // Sort backups by timestamp, newest first
+            backups.sort(Comparator.comparing(Backup::getTimestamp).reversed());
+            
+            LOGGER.info("Found " + backups.size() + " backups");
+            return backups;
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error getting backups", e);
+            return backups;
+        }
+    }
+    
+    /**
+     * Deletes a backup.
+     * 
+     * @param backup the backup to delete
+     * @return true if the backup was deleted, false otherwise
+     */
+    public static boolean deleteBackup(Backup backup) {
+        LOGGER.info("Deleting backup: " + backup.getFilePath());
+        
+        try {
+            File backupFile = new File(backup.getFilePath());
+            if (!backupFile.exists()) {
+                LOGGER.warning("Backup file does not exist: " + backup.getFilePath());
+                return false;
+            }
+            
+            boolean deleted = backupFile.delete();
+            if (deleted) {
+                LOGGER.info("Backup deleted successfully");
+            } else {
+                LOGGER.warning("Failed to delete backup");
+            }
+            
+            return deleted;
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error deleting backup", e);
+            return false;
+        }
+    }
+    
+    /**
+     * Cleans up old backups, keeping only the specified number of newest backups.
+     * 
+     * @param maxBackups the maximum number of backups to keep
+     * @return the number of backups deleted
+     */
+    public static int cleanupOldBackups(int maxBackups) {
+        LOGGER.info("Cleaning up old backups, keeping " + maxBackups + " newest backups");
+        
+        try {
+            // Get all backups
+            List<Backup> backups = getBackups();
+            
+            // If we have fewer backups than the maximum, no cleanup needed
+            if (backups.size() <= maxBackups) {
+                LOGGER.info("No cleanup needed, have " + backups.size() + 
+                          " backups, maximum is " + maxBackups);
+                return 0;
+            }
+            
+            // Delete oldest backups
+            int toDelete = backups.size() - maxBackups;
+            int deleted = 0;
+            
+            for (int i = maxBackups; i < backups.size(); i++) {
+                Backup backup = backups.get(i);
+                if (deleteBackup(backup)) {
+                    deleted++;
+                }
+            }
+            
+            LOGGER.info("Deleted " + deleted + " old backups");
+            return deleted;
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error cleaning up old backups", e);
+            return 0;
+        }
+    }
+    
+    /**
+     * Gets the backup directory.
+     * 
+     * @return the backup directory
+     */
+    private static File getBackupDirectory() {
+        // Get user home directory
+        String userHome = System.getProperty("user.home");
+        
+        // Get database directory (parent of database file)
+        String dbPath = getDatabaseFilePath();
+        String parentPath;
+        
+        if (dbPath != null) {
+            File dbFile = new File(dbPath);
+            parentPath = dbFile.getParent();
+        } else {
+            // Default to user home directory/.frcpm
+            parentPath = userHome + File.separator + ".frcpm";
+        }
+        
+        // Create backup directory path
+        return new File(parentPath, DEFAULT_BACKUP_DIR);
+    }
+    
+    /**
+     * Gets the database file path.
+     * 
+     * @return the database file path, or null if it cannot be determined
+     */
+    private static String getDatabaseFilePath() {
+        try {
+            // Try to get the database file path from DatabaseManager or directly construct it
+            if (!DatabaseConfig.isDevelopmentMode()) {
+                String dbName = DatabaseConfig.getDatabaseName();
+                String userHome = System.getProperty("user.home");
+                File dbDir = new File(userHome, ".frcpm");
+                File dbFile = new File(dbDir, dbName + ".mv.db");
+                
+                // Check if the file exists
+                if (dbFile.exists()) {
+                    return dbFile.getAbsolutePath();
+                }
+            }
+            
+            // If we can't determine the path directly, try to extract it from JDBC URL
+            Map<String, Object> props = getJdbcPropertiesFromConfig();
+            String url = (String) props.get("jakarta.persistence.jdbc.url");
+            
+            // Check if this is a file-based database
+            if (url != null && url.startsWith("jdbc:h2:file:")) {
+                // Extract the file path from the URL
+                String path = url.substring("jdbc:h2:file:".length());
+                
+                // Remove any parameters
+                if (path.contains(";")) {
+                    path = path.substring(0, path.indexOf(";"));
+                }
+                
+                // Resolve the path if it contains user.home
+                if (path.contains("${user.home}")) {
+                    String userHome = System.getProperty("user.home");
+                    path = path.replace("${user.home}", userHome);
+                }
+                
+                // Add .mv.db extension if not present
+                if (!path.endsWith(".mv.db")) {
+                    path += ".mv.db";
+                }
+                
+                return path;
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error getting database file path", e);
+        }
+        
+        // If we can't determine the path from the URL, try a default location
+        String userHome = System.getProperty("user.home");
+        String defaultPath = userHome + File.separator + ".frcpm" + File.separator + 
+                           "frcpm" + ".mv.db";
+        
+        File defaultFile = new File(defaultPath);
+        if (defaultFile.exists()) {
+            return defaultPath;
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Checks if the database is in-memory.
+     * 
+     * @return true if the database is in-memory, false otherwise
+     */
+    private static boolean isInMemoryDatabase() {
+        try {
+            return DatabaseConfig.isDevelopmentMode(); // Development mode uses in-memory database
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error checking if database is in-memory", e);
+            return false;
+        }
+    }
+    
+    /**
+     * Gets JDBC properties from the current configuration.
+     * 
+     * @return a map of JDBC properties
+     */
+    private static Map<String, Object> getJdbcPropertiesFromConfig() {
+        Map<String, Object> props = new HashMap<>();
+        
+        // Try to get a connection and extract properties
+        try {
+            // Try to get configuration from DatabaseConfig directly
+            if (DatabaseConfig.isDevelopmentMode()) {
+                // Development mode uses in-memory database
+                props.put("jakarta.persistence.jdbc.url", "jdbc:h2:mem:" + DatabaseConfig.getDatabaseName());
+            } else {
+                String userHome = System.getProperty("user.home");
+                File dbDir = new File(userHome, ".frcpm");
+                String dbPath = "file:" + new File(dbDir, DatabaseConfig.getDatabaseName()).getAbsolutePath();
+                props.put("jakarta.persistence.jdbc.url", "jdbc:h2:" + dbPath);
+            }
+            
+            // Add other standard properties
+            props.put("jakarta.persistence.jdbc.user", "sa");
+            props.put("jakarta.persistence.jdbc.password", "");
+            props.put("jakarta.persistence.jdbc.driver", "org.h2.Driver");
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error getting JDBC properties from config", e);
+        }
+        
+        return props;
+    }
+    
+    /**
+     * Shuts down the database connection.
+     */
+    private static void shutdown() {
+        LOGGER.info("Shutting down database");
+        
+        try {
+            // Shutdown EntityManagerFactory via DatabaseConfig
+            DatabaseConfig.shutdown();
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error shutting down database", e);
+        }
     }
 }

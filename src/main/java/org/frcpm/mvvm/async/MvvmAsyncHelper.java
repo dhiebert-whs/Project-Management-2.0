@@ -10,6 +10,8 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.SimpleDoubleProperty;
 import org.frcpm.async.TaskExecutor;
 
 import java.util.concurrent.CompletableFuture;
@@ -76,6 +78,9 @@ public class MvvmAsyncHelper {
         private final Consumer<Throwable> onFailure;
         private final BooleanProperty loadingProperty;
         private final BooleanProperty executableProperty = new SimpleBooleanProperty(true);
+        private final ReadOnlyBooleanWrapper notExecutableProperty = new ReadOnlyBooleanWrapper(false);
+        private final ReadOnlyBooleanWrapper notRunningProperty = new ReadOnlyBooleanWrapper(true);
+        private final SimpleDoubleProperty progressProperty = new SimpleDoubleProperty(0.0);
         
         public AsyncCommand(
                 Supplier<CompletableFuture<T>> asyncOperation,
@@ -92,8 +97,14 @@ public class MvvmAsyncHelper {
             if (loadingProperty != null) {
                 loadingProperty.addListener((obs, oldVal, newVal) -> {
                     updateExecutableState();
+                    notRunningProperty.set(!newVal);
                 });
             }
+            
+            // Set up binding for notExecutableProperty
+            executableProperty.addListener((obs, oldVal, newVal) -> {
+                notExecutableProperty.set(!newVal);
+            });
         }
         
         @Override
@@ -104,8 +115,10 @@ public class MvvmAsyncHelper {
             
             if (loadingProperty != null) {
                 loadingProperty.set(true);
+                notRunningProperty.set(false);
             }
             executableProperty.set(false);
+            notExecutableProperty.set(true);
             
             try {
                 CompletableFuture<T> future = asyncOperation.get();
@@ -118,6 +131,7 @@ public class MvvmAsyncHelper {
                         } finally {
                             if (loadingProperty != null) {
                                 loadingProperty.set(false);
+                                notRunningProperty.set(true);
                             }
                             updateExecutableState();
                         }
@@ -131,6 +145,7 @@ public class MvvmAsyncHelper {
                         } finally {
                             if (loadingProperty != null) {
                                 loadingProperty.set(false);
+                                notRunningProperty.set(true);
                             }
                             updateExecutableState();
                         }
@@ -147,6 +162,7 @@ public class MvvmAsyncHelper {
                     } finally {
                         if (loadingProperty != null) {
                             loadingProperty.set(false);
+                            notRunningProperty.set(true);
                         }
                         updateExecutableState();
                     }
@@ -157,6 +173,7 @@ public class MvvmAsyncHelper {
         private void updateExecutableState() {
             boolean loading = loadingProperty != null && loadingProperty.get();
             executableProperty.set(!loading);
+            notExecutableProperty.set(loading);
         }
         
         @Override
@@ -181,38 +198,32 @@ public class MvvmAsyncHelper {
 
         @Override
         public boolean isNotExecutable() {
-            // TODO Auto-generated method stub
-            throw new UnsupportedOperationException("Unimplemented method 'isNotExecutable'");
+            return !isExecutable();
         }
 
         @Override
         public ReadOnlyBooleanProperty notExecutableProperty() {
-            // TODO Auto-generated method stub
-            throw new UnsupportedOperationException("Unimplemented method 'notExecutableProperty'");
+            return notExecutableProperty.getReadOnlyProperty();
         }
 
         @Override
         public boolean isNotRunning() {
-            // TODO Auto-generated method stub
-            throw new UnsupportedOperationException("Unimplemented method 'isNotRunning'");
+            return !isRunning();
         }
 
         @Override
         public ReadOnlyBooleanProperty notRunningProperty() {
-            // TODO Auto-generated method stub
-            throw new UnsupportedOperationException("Unimplemented method 'notRunningProperty'");
+            return notRunningProperty.getReadOnlyProperty();
         }
 
         @Override
         public double getProgress() {
-            // TODO Auto-generated method stub
-            throw new UnsupportedOperationException("Unimplemented method 'getProgress'");
+            return progressProperty.get();
         }
 
         @Override
         public ReadOnlyDoubleProperty progressProperty() {
-            // TODO Auto-generated method stub
-            throw new UnsupportedOperationException("Unimplemented method 'progressProperty'");
+            return progressProperty;
         }
     }
     
@@ -224,13 +235,18 @@ public class MvvmAsyncHelper {
         private final Runnable asyncOperation;
         private final BooleanProperty runningProperty = new SimpleBooleanProperty(false);
         private final BooleanProperty executableProperty = new SimpleBooleanProperty(true);
+        private final ReadOnlyBooleanWrapper notRunningProperty = new ReadOnlyBooleanWrapper(true);
+        private final ReadOnlyBooleanWrapper notExecutableProperty = new ReadOnlyBooleanWrapper(false);
+        private final SimpleDoubleProperty progressProperty = new SimpleDoubleProperty(0.0);
         
         public SimpleAsyncCommand(Runnable asyncOperation) {
             this.asyncOperation = asyncOperation;
             
-            // When running changes, update executable property
+            // When running changes, update executable property and notRunningProperty
             runningProperty.addListener((obs, oldVal, newVal) -> {
                 executableProperty.set(!newVal);
+                notExecutableProperty.set(newVal);
+                notRunningProperty.set(!newVal);
             });
         }
         
@@ -241,6 +257,7 @@ public class MvvmAsyncHelper {
             }
             
             runningProperty.set(true);
+            notRunningProperty.set(false);
             
             TaskExecutor.executeAsync(
                 "SimpleAsyncCommand",
@@ -250,10 +267,12 @@ public class MvvmAsyncHelper {
                 },
                 result -> {
                     runningProperty.set(false);
+                    notRunningProperty.set(true);
                 },
                 error -> {
                     LOGGER.log(Level.SEVERE, "Error in async operation", error);
                     runningProperty.set(false);
+                    notRunningProperty.set(true);
                 }
             );
         }
@@ -280,38 +299,32 @@ public class MvvmAsyncHelper {
 
         @Override
         public boolean isNotExecutable() {
-            // TODO Auto-generated method stub
-            throw new UnsupportedOperationException("Unimplemented method 'isNotExecutable'");
+            return !isExecutable();
         }
 
         @Override
         public ReadOnlyBooleanProperty notExecutableProperty() {
-            // TODO Auto-generated method stub
-            throw new UnsupportedOperationException("Unimplemented method 'notExecutableProperty'");
+            return notExecutableProperty.getReadOnlyProperty();
         }
 
         @Override
         public boolean isNotRunning() {
-            // TODO Auto-generated method stub
-            throw new UnsupportedOperationException("Unimplemented method 'isNotRunning'");
+            return !isRunning();
         }
 
         @Override
         public ReadOnlyBooleanProperty notRunningProperty() {
-            // TODO Auto-generated method stub
-            throw new UnsupportedOperationException("Unimplemented method 'notRunningProperty'");
+            return notRunningProperty.getReadOnlyProperty();
         }
 
         @Override
         public double getProgress() {
-            // TODO Auto-generated method stub
-            throw new UnsupportedOperationException("Unimplemented method 'getProgress'");
+            return progressProperty.get();
         }
 
         @Override
         public ReadOnlyDoubleProperty progressProperty() {
-            // TODO Auto-generated method stub
-            throw new UnsupportedOperationException("Unimplemented method 'progressProperty'");
+            return progressProperty;
         }
     }
 }
