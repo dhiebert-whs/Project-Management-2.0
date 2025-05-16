@@ -1,171 +1,287 @@
+// src/main/java/org/frcpm/db/DatabaseConfigurer.java
 package org.frcpm.db;
 
+import org.frcpm.config.DatabaseConfig;
+import org.frcpm.async.TaskExecutor;
+import org.frcpm.utils.ErrorHandler;
+
+import impl.org.controlsfx.collections.MappingChange.Map;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
 import java.io.File;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.Properties;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.frcpm.config.DatabaseConfig;
-import org.frcpm.utils.UpdatedErrorHandler;
-
 /**
- * Utility class for database configuration and management.
- * Provides methods for configuring, backing up, and restoring the database.
+ * Configures the database with optimal settings for reliable operation.
+ * Handles database connection properties, backup scheduling, and diagnostics.
+ * Works with the H2 database to ensure proper persistence and performance.
  */
 public class DatabaseConfigurer {
     
     private static final Logger LOGGER = Logger.getLogger(DatabaseConfigurer.class.getName());
-    private static ScheduledExecutorService scheduledBackupService;
-    private static final Object backupLock = new Object();
+    
+    // Default H2 database connection parameters
+    private static final String DEFAULT_URL_PREFIX = "jdbc:h2:";
+    private static final String FILE_URL_PATTERN = "jdbc:h2:file:";
+    private static final String MEM_URL_PATTERN = "jdbc:h2:mem:";
+    
+    // H2 database specific settings
+    private static final String CLOSE_ON_EXIT_SETTING = "DB_CLOSE_ON_EXIT";
+    private static final String CLOSE_DELAY_SETTING = "DB_CLOSE_DELAY";
+    private static final String CACHE_SIZE_SETTING = "CACHE_SIZE";
+    private static final String LOCK_TIMEOUT_SETTING = "LOCK_TIMEOUT";
+    private static final String IGNORE_CASE_SETTING = "IGNORECASE";
+    private static final String AUTO_SERVER_SETTING = "AUTO_SERVER";
+    
+    // Default values
+    private static final int DEFAULT_CACHE_SIZE = 8192;  // KB
+    private static final int DEFAULT_LOCK_TIMEOUT = 10000;  // ms
+    
+    // Scheduled backup task
+    private static ScheduledFuture<?> backupSchedule;
     
     /**
-     * Configures the database with optimal settings for reliability.
+     * Initializes the database with optimal settings.
      * 
-     * @param developmentMode whether to use development mode
-     * @param databaseName the name of the database
-     * @return true if configuration was successful, false otherwise
+     * @return true if initialization was successful, false otherwise
      */
-    public static boolean configureDatabase(boolean developmentMode, String databaseName) {
+    public static boolean initializeWithOptimalSettings() {
+        LOGGER.info("Initializing database with optimal settings");
+        
         try {
-            LOGGER.info("Configuring database with name: " + databaseName + 
-                      ", developmentMode: " + developmentMode);
+            // Get database file path
+            String dbPath = getDatabaseFilePath();
+            LOGGER.info("Database path: " + dbPath);
             
-            // Set configuration options
-            DatabaseConfig.setDevelopmentMode(developmentMode);
-            DatabaseConfig.setDatabaseName(databaseName);
+            if (dbPath == null || dbPath.isEmpty()) {
+                // For in-memory databases, just return true
+                LOGGER.info("Using in-memory database, no file path configuration needed");
+                return true;
+            }
             
-            // Initialize the database with proper settings
-            DatabaseConfig.initialize();
+            // Ensure the database directory exists
+            File dbDir = new File(dbPath).getParentFile();
+            if (dbDir != null && !dbDir.exists()) {
+                boolean dirCreated = dbDir.mkdirs();
+                if (!dirCreated) {
+                    LOGGER.severe("Failed to create database directory: " + dbDir.getAbsolutePath());
+                    return false;
+                }
+            }
             
-            // Verify that the database is properly configured
-            return verifyDatabase();
+            // Apply optimal settings
+            applyOptimalSettings();
+            
+            return true;
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error configuring database", e);
-            UpdatedErrorHandler.showError("Database Configuration Error", 
-                    "Failed to configure the database: " + e.getMessage(), e);
+            LOGGER.log(Level.SEVERE, "Error initializing database with optimal settings", e);
             return false;
         }
     }
     
     /**
-     * Creates a backup of the database.
-     * The backup file will be saved in the backup directory with a timestamp.
-     * 
-     * @return the path to the backup file, or null if the backup failed
+     * Applies optimal settings to the H2 database.
+     * This includes:
+     * - Disabling automatic close on VM exit
+     * - Setting close delay to -1 (never close until shutdown)
+     * - Optimizing cache size
+     * - Setting lock timeout
+     * - Enabling auto server mode for multiple connections
      */
-    public static String createBackup() {
-        synchronized (backupLock) {
-            // Get user home directory
-            String userHome = System.getProperty("user.home");
-            File backupDir = new File(userHome, ".frcpm/backups");
+    private static void applyOptimalSettings() {
+        try {
+            // Get the JDBC URL from persistence properties (using current config as reference)
+            Map<String, Object> props = getJdbcPropertiesFromConfig();
+            String jdbcUrl = (String) ((Properties) props).get("jakarta.persistence.jdbc.url");
+            LOGGER.info("Current JDBC URL: " + jdbcUrl);
             
-            // Create backup directory if it doesn't exist
-            if (!backupDir.exists()) {
-                backupDir.mkdirs();
+            if (jdbcUrl == null) {
+                LOGGER.warning("Could not determine JDBC URL");
+                return;
             }
             
-            // Create backup file name with timestamp
-            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
-            String timestamp = dateFormat.format(new Date());
-            String dbName = DatabaseConfig.getDatabaseName();
-            String backupFileName = dbName + "_" + timestamp + ".zip";
+            // Parse and enhance URL with optimal settings
+            String enhancedUrl = enhanceJdbcUrl(jdbcUrl);
+            LOGGER.info("Enhanced JDBC URL: " + enhancedUrl);
             
-            String backupPath = new File(backupDir, backupFileName).getAbsolutePath();
+            // Update properties and reinitialize if needed
+            if (!jdbcUrl.equals(enhancedUrl)) {
+                // The URL needs to be updated, but we need to reinitialize the config
+                // to apply it properly. We'll store this for the next restart.
+                
+                // Store the enhanced URL in a system property for future initialization
+                System.setProperty("app.db.url", enhancedUrl);
+            }
             
+            // Apply settings to existing connections via SQL
+            EntityManager em = DatabaseConfig.getEntityManager();
             try {
-                LOGGER.info("Creating database backup at: " + backupPath);
+                // Set optimal settings via SQL statements
+                em.getTransaction().begin();
                 
-                // Create backup using DatabaseConfig
-                boolean success = DatabaseConfig.createBackup(backupPath);
+                em.createNativeQuery("SET " + CLOSE_ON_EXIT_SETTING + " FALSE").executeUpdate();
+                em.createNativeQuery("SET " + CLOSE_DELAY_SETTING + " -1").executeUpdate();
+                em.createNativeQuery("SET " + CACHE_SIZE_SETTING + " " + DEFAULT_CACHE_SIZE).executeUpdate();
+                em.createNativeQuery("SET " + LOCK_TIMEOUT_SETTING + " " + DEFAULT_LOCK_TIMEOUT).executeUpdate();
                 
-                if (success) {
-                    LOGGER.info("Database backup created successfully");
-                    // Clean up old backups - keep only the 10 most recent
-                    BackupManager.cleanupOldBackups(10);
-                    return backupPath;
-                } else {
-                    LOGGER.severe("Database backup failed");
-                    return null;
-                }
+                em.getTransaction().commit();
+                
+                LOGGER.info("Applied optimal settings to database");
             } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "Error creating database backup", e);
-                return null;
+                if (em.getTransaction().isActive()) {
+                    em.getTransaction().rollback();
+                }
+                LOGGER.log(Level.WARNING, "Error applying optimal settings via SQL", e);
+                // Continue execution - this is not a critical failure
+            } finally {
+                em.close();
             }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error applying optimal database settings", e);
+            // Continue execution - application can still function without optimal settings
         }
     }
     
     /**
-     * Restores the database from a backup file.
+     * Gets JDBC properties from the current configuration.
      * 
-     * @param backupPath the path to the backup file
-     * @return true if the restore was successful, false otherwise
+     * @return a map of JDBC properties
      */
-    public static boolean restoreFromBackup(String backupPath) {
-        synchronized (backupLock) {
-            // Verify that the backup file exists
-            File backupFile = new File(backupPath);
-            if (!backupFile.exists() || !backupFile.isFile()) {
-                LOGGER.severe("Backup file does not exist: " + backupPath);
-                return false;
+    private static Map<String, Object> getJdbcPropertiesFromConfig() {
+        Map<String, Object> props = new HashMap<>();
+        
+        // Try to get a connection and extract properties
+        try {
+            // Execute a custom query that returns JDBC URL
+            EntityManager em = DatabaseConfig.getEntityManager();
+            try {
+                Object url = em.createNativeQuery("CALL DATABASE_URL()").getSingleResult();
+                if (url != null) {
+                    props.put("jakarta.persistence.jdbc.url", url.toString());
+                }
+            } catch (Exception e) {
+                // H2 might not support this function, try a different approach
+                try {
+                    // Try to get path from system property or current configuration
+                    String dbName = DatabaseConfig.getDatabaseName();
+                    boolean devMode = DatabaseConfig.isDevelopmentMode();
+                    
+                    if (devMode) {
+                        props.put("jakarta.persistence.jdbc.url", "jdbc:h2:mem:" + dbName);
+                    } else {
+                        String userHome = System.getProperty("user.home");
+                        File dbDir = new File(userHome, ".frcpm");
+                        String dbPath = "file:" + new File(dbDir, dbName).getAbsolutePath();
+                        props.put("jakarta.persistence.jdbc.url", "jdbc:h2:" + dbPath);
+                    }
+                } catch (Exception ex) {
+                    LOGGER.log(Level.WARNING, "Error determining database URL from configuration", ex);
+                }
+            } finally {
+                em.close();
             }
             
-            try {
-                LOGGER.info("Restoring database from backup: " + backupPath);
-                
-                // Create a pre-restore backup just in case
-                String preRestoreBackup = createBackup();
-                LOGGER.info("Created pre-restore backup at: " + preRestoreBackup);
-                
-                // Restore from backup
-                boolean success = DatabaseConfig.restoreFromBackup(backupPath);
-                
-                if (success) {
-                    LOGGER.info("Database restored successfully from backup");
-                } else {
-                    LOGGER.severe("Database restore failed");
-                }
-                
-                return success;
-            } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "Error restoring database from backup", e);
-                return false;
-            }
+            // Add other standard properties
+            props.put("jakarta.persistence.jdbc.user", "sa");
+            props.put("jakarta.persistence.jdbc.password", "");
+            props.put("jakarta.persistence.jdbc.driver", "org.h2.Driver");
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error getting JDBC properties from config", e);
         }
+        
+        return props;
     }
     
     /**
-     * Schedules automatic backups at specified intervals.
+     * Enhances the JDBC URL with optimal settings.
      * 
-     * @param intervalHours the interval between backups in hours
-     * @return true if the schedule was set up, false otherwise
+     * @param jdbcUrl the original JDBC URL
+     * @return the enhanced JDBC URL
+     */
+    private static String enhanceJdbcUrl(String jdbcUrl) {
+        // Skip if null
+        if (jdbcUrl == null || jdbcUrl.trim().isEmpty()) {
+            return jdbcUrl;
+        }
+        
+        // Skip if not H2
+        if (!jdbcUrl.startsWith(DEFAULT_URL_PREFIX)) {
+            return jdbcUrl;
+        }
+        
+        // Parse URL and add parameters
+        StringBuilder enhancedUrl = new StringBuilder(jdbcUrl);
+        
+        // Check if URL already has parameters
+        if (jdbcUrl.contains(";")) {
+            // URL already has parameters, just add our parameters
+            enhancedUrl.append(";").append(CLOSE_ON_EXIT_SETTING).append("=FALSE");
+            enhancedUrl.append(";").append(CLOSE_DELAY_SETTING).append("=-1");
+            enhancedUrl.append(";").append(CACHE_SIZE_SETTING).append("=").append(DEFAULT_CACHE_SIZE);
+            enhancedUrl.append(";").append(LOCK_TIMEOUT_SETTING).append("=").append(DEFAULT_LOCK_TIMEOUT);
+            
+            // Add AUTO_SERVER=TRUE if file-based database
+            if (jdbcUrl.startsWith(FILE_URL_PATTERN)) {
+                enhancedUrl.append(";").append(AUTO_SERVER_SETTING).append("=TRUE");
+            }
+        } else {
+            // URL has no parameters yet, add parameters with initial semicolon
+            enhancedUrl.append(";").append(CLOSE_ON_EXIT_SETTING).append("=FALSE");
+            enhancedUrl.append(";").append(CLOSE_DELAY_SETTING).append("=-1");
+            enhancedUrl.append(";").append(CACHE_SIZE_SETTING).append("=").append(DEFAULT_CACHE_SIZE);
+            enhancedUrl.append(";").append(LOCK_TIMEOUT_SETTING).append("=").append(DEFAULT_LOCK_TIMEOUT);
+            
+            // Add AUTO_SERVER=TRUE if file-based database
+            if (jdbcUrl.startsWith(FILE_URL_PATTERN)) {
+                enhancedUrl.append(";").append(AUTO_SERVER_SETTING).append("=TRUE");
+            }
+        }
+        
+        return enhancedUrl.toString();
+    }
+    
+    /**
+     * Schedules automatic backups at regular intervals.
+     * 
+     * @param intervalHours the interval in hours between backups
+     * @return true if the schedule was set up successfully, false otherwise
      */
     public static boolean scheduleAutomaticBackups(int intervalHours) {
+        LOGGER.info("Scheduling automatic backups every " + intervalHours + " hours");
+        
         try {
-            // Stop any existing scheduled backups
+            // Cancel existing schedule if any
             stopScheduledBackups();
             
-            // Create a new scheduled executor service
-            scheduledBackupService = Executors.newSingleThreadScheduledExecutor(r -> {
-                Thread thread = new Thread(r, "Database-Backup-Thread");
-                thread.setDaemon(true);
-                return thread;
-            });
+            // Create a scheduled task executor if doesn't exist yet
+            if (!org.frcpm.async.TaskExecutor.isInitialized()) {
+                org.frcpm.async.TaskExecutor.initialize();
+            }
             
-            // Schedule backups at the specified interval
-            scheduledBackupService.scheduleAtFixedRate(() -> {
-                try {
-                    LOGGER.info("Performing scheduled database backup");
-                    createBackup();
-                } catch (Exception e) {
-                    LOGGER.log(Level.SEVERE, "Error in scheduled backup", e);
-                }
-            }, 1, intervalHours, TimeUnit.HOURS); // First backup after 1 hour
+            // Schedule new backup task using TaskExecutor
+            backupSchedule = org.frcpm.async.TaskExecutor.scheduleRepeatingTask(
+                () -> {
+                    LOGGER.info("Running scheduled backup");
+                    try {
+                        BackupManager.Backup backup = BackupManager.createBackup();
+                        LOGGER.info("Scheduled backup created: " + backup.getFilePath());
+                    } catch (Exception e) {
+                        LOGGER.log(Level.SEVERE, "Scheduled backup failed", e);
+                    }
+                },
+                intervalHours, intervalHours, TimeUnit.HOURS
+            );
             
-            LOGGER.info("Automatic backups scheduled every " + intervalHours + " hours");
+            LOGGER.info("Automatic backup schedule established");
             return true;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error scheduling automatic backups", e);
@@ -175,48 +291,80 @@ public class DatabaseConfigurer {
     
     /**
      * Stops scheduled automatic backups.
+     * 
+     * @return true if successful, false otherwise
      */
-    public static void stopScheduledBackups() {
-        if (scheduledBackupService != null && !scheduledBackupService.isShutdown()) {
-            scheduledBackupService.shutdown();
-            try {
-                scheduledBackupService.awaitTermination(30, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                LOGGER.log(Level.WARNING, "Interrupted while waiting for backup service shutdown", e);
+    public static boolean stopScheduledBackups() {
+        LOGGER.info("Stopping scheduled backups");
+        
+        try {
+            if (backupSchedule != null && !backupSchedule.isCancelled()) {
+                backupSchedule.cancel(false);
+                backupSchedule = null;
+                LOGGER.info("Backup schedule cancelled");
             }
-            LOGGER.info("Automatic backups stopped");
+            return true;
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error stopping backup schedule", e);
+            return false;
         }
     }
     
     /**
-     * Verifies database connectivity and schema.
+     * Verifies that the database is properly configured.
      * 
      * @return true if the database is properly configured, false otherwise
      */
     public static boolean verifyDatabase() {
+        LOGGER.info("Verifying database configuration");
+        
         try {
-            // Get entity manager and check if it can be created
-            jakarta.persistence.EntityManager em = DatabaseConfig.getEntityManager();
+            // Get the DB URL from current configuration
+            Map<String, Object> props = getJdbcPropertiesFromConfig();
+            String url = (String) props.get("jakarta.persistence.jdbc.url");
             
+            // Check if the database file exists if file-based
+            if (url != null && url.startsWith("jdbc:h2:file:")) {
+                String filePath = getDatabaseFilePath();
+                if (filePath != null) {
+                    File dbFile = new File(filePath);
+                    if (!dbFile.exists() || !dbFile.isFile()) {
+                        LOGGER.warning("Database file does not exist: " + filePath);
+                        return false;
+                    }
+                } else {
+                    LOGGER.warning("Could not determine database file path");
+                    return false;
+                }
+            }
+            
+            // Test a connection
+            EntityManager em = null;
             try {
-                // Try a simple query
-                em.createQuery("SELECT COUNT(p) FROM Project p").getSingleResult();
+                em = DatabaseConfig.getEntityManager();
                 
-                // Test transaction support
-                em.getTransaction().begin();
-                em.getTransaction().rollback();
+                // Try to execute a simple query
+                Boolean result = (Boolean) em.createNativeQuery("SELECT TRUE FROM DUAL")
+                                           .getSingleResult();
+                
+                // Check the database settings
+                Object closeOnExit = em.createNativeQuery("CALL SETTING_VALUE('" + CLOSE_ON_EXIT_SETTING + "')")
+                                     .getSingleResult();
+                Object closeDelay = em.createNativeQuery("CALL SETTING_VALUE('" + CLOSE_DELAY_SETTING + "')")
+                                    .getSingleResult();
                 
                 LOGGER.info("Database verification successful");
-                return true;
-            } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "Database verification failed: " + e.getMessage(), e);
-                return false;
+                LOGGER.info("Settings: " + CLOSE_ON_EXIT_SETTING + "=" + closeOnExit + 
+                          ", " + CLOSE_DELAY_SETTING + "=" + closeDelay);
+                
+                return result != null && result;
             } finally {
-                em.close();
+                if (em != null) {
+                    em.close();
+                }
             }
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error verifying database", e);
+            LOGGER.log(Level.SEVERE, "Database verification failed", e);
             return false;
         }
     }
@@ -228,49 +376,358 @@ public class DatabaseConfigurer {
      * @return true if the compact operation was successful, false otherwise
      */
     public static boolean compactDatabase() {
-        synchronized (backupLock) {
-            jakarta.persistence.EntityManager em = null;
-            try {
-                // Create a backup before compacting
-                String backupPath = createBackup();
-                LOGGER.info("Created pre-compact backup at: " + backupPath);
-                
-                em = DatabaseConfig.getEntityManager();
-                em.getTransaction().begin();
-                
-                // Execute SHUTDOWN COMPACT command
-                em.createNativeQuery("SHUTDOWN COMPACT").executeUpdate();
-                
-                em.getTransaction().commit();
-                
-                // Reinitialize the database
-                DatabaseConfig.reinitialize(DatabaseConfig.isDevelopmentMode());
-                
-                LOGGER.info("Database compacted successfully");
-                return true;
-            } catch (Exception e) {
-                if (em != null && em.getTransaction().isActive()) {
-                    em.getTransaction().rollback();
-                }
-                LOGGER.log(Level.SEVERE, "Error compacting database", e);
+        LOGGER.info("Compacting database");
+        
+        // Skip for in-memory databases
+        if (isInMemoryDatabase()) {
+            LOGGER.info("Skipping compact for in-memory database");
+            return true;
+        }
+        
+        Connection conn = null;
+        Statement stmt = null;
+        
+        try {
+            // Get connection details from properties
+            Map<String, Object> props = getJdbcPropertiesFromConfig();
+            String url = (String) props.get("jakarta.persistence.jdbc.url");
+            String username = (String) props.get("jakarta.persistence.jdbc.user");
+            String password = (String) props.get("jakarta.persistence.jdbc.password");
+            
+            if (url == null) {
+                LOGGER.warning("Could not determine JDBC URL for compaction");
                 return false;
-            } finally {
-                if (em != null) {
-                    em.close();
-                }
+            }
+            
+            // Default H2 credentials if not specified
+            if (username == null) username = "sa";
+            if (password == null) password = "";
+            
+            // Temporarily shut down the EntityManagerFactory to free connections
+            EntityManagerFactory emf = DatabaseConfig.getEntityManagerFactory();
+            if (emf != null && emf.isOpen()) {
+                emf.close();
+            }
+            
+            // Connect directly to run the SHUTDOWN COMPACT command
+            conn = DriverManager.getConnection(url, username, password);
+            stmt = conn.createStatement();
+            
+            // Execute the compact command
+            stmt.execute("SHUTDOWN COMPACT");
+            
+            LOGGER.info("Database compacted successfully");
+            
+            // Reinitialize the database configuration
+            DatabaseConfig.initialize();
+            
+            return true;
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error compacting database", e);
+            
+            // Try to reinitialize in case of failure
+            try {
+                DatabaseConfig.initialize();
+            } catch (Exception re) {
+                LOGGER.log(Level.SEVERE, "Failed to reinitialize database after compact error", re);
+            }
+            
+            return false;
+        } finally {
+            // Close resources
+            try {
+                if (stmt != null) stmt.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                LOGGER.log(Level.WARNING, "Error closing connection after compact", e);
             }
         }
     }
     
     /**
-     * Initializes the database with optimal settings for reliability.
+     * Gets the database file path for file-based databases.
      * 
-     * @return true if initialization was successful, false otherwise
+     * @return the database file path, or null if not a file-based database
      */
-    public static boolean initializeWithOptimalSettings() {
-        String dbName = System.getProperty("app.db.name", "frcpm");
-        boolean devMode = Boolean.getBoolean("app.db.dev");
+    private static String getDatabaseFilePath() {
+        try {
+            // Get the JDBC URL from properties
+            Map<String, Object> props = getJdbcPropertiesFromConfig();
+            String url = (String) props.get("jakarta.persistence.jdbc.url");
+            
+            // Check if this is a file-based database
+            if (url != null && url.startsWith("jdbc:h2:file:")) {
+                // Extract the file path from the URL
+                String path = url.substring("jdbc:h2:file:".length());
+                
+                // Remove any parameters
+                if (path.contains(";")) {
+                    path = path.substring(0, path.indexOf(";"));
+                }
+                
+                // Resolve the path if it contains user.home
+                if (path.contains("${user.home}")) {
+                    String userHome = System.getProperty("user.home");
+                    path = path.replace("${user.home}", userHome);
+                }
+                
+                // Add .mv.db extension if missing
+                if (!path.endsWith(".mv.db")) {
+                    path += ".mv.db";
+                }
+                
+                return path;
+            } else if (url == null) {
+                // Try to construct the database path from default location
+                String dbName = DatabaseConfig.getDatabaseName();
+                if (!DatabaseConfig.isDevelopmentMode()) {
+                    String userHome = System.getProperty("user.home");
+                    File dbDir = new File(userHome, ".frcpm");
+                    return new File(dbDir, dbName + ".mv.db").getAbsolutePath();
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error getting database file path", e);
+        }
         
-        return configureDatabase(devMode, dbName);
+        return null; // Not a file-based database or couldn't determine path
+    }
+    
+    /**
+     * Checks if the database is in-memory.
+     * 
+     * @return true if the database is in-memory, false otherwise
+     */
+    private static boolean isInMemoryDatabase() {
+        try {
+            // Try to get configuration from DatabaseConfig first
+            if (DatabaseConfig.isDevelopmentMode()) {
+                return true; // Development mode uses in-memory database
+            }
+            
+            // Check URL from properties
+            Map<String, Object> props = getJdbcPropertiesFromConfig();
+            String url = (String) props.get("jakarta.persistence.jdbc.url");
+            
+            return url != null && url.startsWith("jdbc:h2:mem:");
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error checking if database is in-memory", e);
+            return false;
+        }
+    }
+    
+    /**
+     * Gets diagnostic information about the database configuration.
+     * 
+     * @return a string containing diagnostic information
+     */
+    public static String getDiagnosticInfo() {
+        StringBuilder info = new StringBuilder();
+        info.append("Database Diagnostic Information\n");
+        info.append("==============================\n\n");
+        
+        try {
+            // Get JDBC URL from properties
+            Map<String, Object> props = getJdbcPropertiesFromConfig();
+            String url = (String) props.get("jakarta.persistence.jdbc.url");
+            info.append("JDBC URL: ").append(url).append("\n");
+            
+            // Database type
+            if (url != null) {
+                if (url.startsWith("jdbc:h2:file:")) {
+                    info.append("Database Type: File-based\n");
+                    info.append("Database Path: ").append(getDatabaseFilePath()).append("\n");
+                } else if (url.startsWith("jdbc:h2:mem:")) {
+                    info.append("Database Type: In-Memory\n");
+                } else {
+                    info.append("Database Type: Unknown\n");
+                }
+            } else {
+                // Get information from DatabaseConfig directly
+                info.append("Database Name: ").append(DatabaseConfig.getDatabaseName()).append("\n");
+                info.append("Development Mode: ").append(DatabaseConfig.isDevelopmentMode()).append("\n");
+                if (DatabaseConfig.isDevelopmentMode()) {
+                    info.append("Database Type: In-Memory\n");
+                } else {
+                    info.append("Database Type: File-based\n");
+                    
+                    // Try to construct the database path
+                    String userHome = System.getProperty("user.home");
+                    File dbDir = new File(userHome, ".frcpm");
+                    File dbFile = new File(dbDir, DatabaseConfig.getDatabaseName() + ".mv.db");
+                    info.append("Database Path: ").append(dbFile.getAbsolutePath()).append("\n");
+                    info.append("Database Exists: ").append(dbFile.exists()).append("\n");
+                }
+            }
+            
+            // Connection pool info
+            try {
+                EntityManagerFactory emf = DatabaseConfig.getEntityManagerFactory();
+                if (emf != null && emf.isOpen()) {
+                    info.append("EntityManagerFactory: Open\n");
+                } else {
+                    info.append("EntityManagerFactory: Closed\n");
+                }
+            } catch (Exception e) {
+                info.append("EntityManagerFactory: Error - ").append(e.getMessage()).append("\n");
+            }
+            
+            // Database settings
+            try {
+                EntityManager em = DatabaseConfig.getEntityManager();
+                try {
+                    Object closeOnExit = em.createNativeQuery("CALL SETTING_VALUE('" + CLOSE_ON_EXIT_SETTING + "')")
+                                         .getSingleResult();
+                    Object closeDelay = em.createNativeQuery("CALL SETTING_VALUE('" + CLOSE_DELAY_SETTING + "')")
+                                        .getSingleResult();
+                    Object cacheSize = em.createNativeQuery("CALL SETTING_VALUE('" + CACHE_SIZE_SETTING + "')")
+                                       .getSingleResult();
+                    Object lockTimeout = em.createNativeQuery("CALL SETTING_VALUE('" + LOCK_TIMEOUT_SETTING + "')")
+                                         .getSingleResult();
+                    
+                    info.append("\nDatabase Settings:\n");
+                    info.append("- ").append(CLOSE_ON_EXIT_SETTING).append(": ").append(closeOnExit).append("\n");
+                    info.append("- ").append(CLOSE_DELAY_SETTING).append(": ").append(closeDelay).append("\n");
+                    info.append("- ").append(CACHE_SIZE_SETTING).append(": ").append(cacheSize).append("\n");
+                    info.append("- ").append(LOCK_TIMEOUT_SETTING).append(": ").append(lockTimeout).append("\n");
+                } finally {
+                    em.close();
+                }
+            } catch (Exception e) {
+                info.append("\nCould not retrieve database settings: ").append(e.getMessage()).append("\n");
+            }
+            
+            // Backup info
+            try {
+                java.util.List<BackupManager.Backup> backups = BackupManager.getBackups();
+                info.append("\nBackups: ").append(backups.size()).append(" available\n");
+                if (!backups.isEmpty()) {
+                    BackupManager.Backup latestBackup = backups.get(0);
+                    info.append("Latest Backup: ").append(latestBackup.getTimestamp())
+                        .append(" (").append(latestBackup.getFilePath()).append(")\n");
+                }
+                
+                info.append("Backup Schedule: ");
+                if (backupSchedule != null && !backupSchedule.isCancelled()) {
+                    info.append("Active\n");
+                } else {
+                    info.append("Not active\n");
+                }
+            } catch (Exception e) {
+                info.append("\nCould not retrieve backup information: ").append(e.getMessage()).append("\n");
+            }
+            
+        } catch (Exception e) {
+            info.append("Error gathering diagnostic information: ").append(e.getMessage()).append("\n");
+        }
+        
+        return info.toString();
+    }
+}
+            
+            // Database settings
+            try {
+                EntityManager em = DatabaseConfig.getEntityManager();
+                try {
+                    Object closeOnExit = em.createNativeQuery("CALL SETTING_VALUE('" + CLOSE_ON_EXIT_SETTING + "')")
+                                         .getSingleResult();
+                    Object closeDelay = em.createNativeQuery("CALL SETTING_VALUE('" + CLOSE_DELAY_SETTING + "')")
+                                        .getSingleResult();
+                    Object cacheSize = em.createNativeQuery("CALL SETTING_VALUE('" + CACHE_SIZE_SETTING + "')")
+                                       .getSingleResult();
+                    Object lockTimeout = em.createNativeQuery("CALL SETTING_VALUE('" + LOCK_TIMEOUT_SETTING + "')")
+                                         .getSingleResult();
+                    
+                    info.append("\nDatabase Settings:\n");
+                    info.append("- ").append(CLOSE_ON_EXIT_SETTING).append(": ").append(closeOnExit).append("\n");
+                    info.append("- ").append(CLOSE_DELAY_SETTING).append(": ").append(closeDelay).append("\n");
+                    info.append("- ").append(CACHE_SIZE_SETTING).append(": ").append(cacheSize).append("\n");
+                    info.append("- ").append(LOCK_TIMEOUT_SETTING).append(": ").append(lockTimeout).append("\n");
+                } finally {
+                    em.close();
+                }
+            } catch (Exception e) {
+                info.append("\nCould not retrieve database settings: ").append(e.getMessage()).append("\n");
+            }
+            
+            // Backup info
+            try {
+                java.util.List<BackupManager.Backup> backups = BackupManager.getBackups();
+                info.append("\nBackups: ").append(backups.size()).append(" available\n");
+                if (!backups.isEmpty()) {
+                    BackupManager.Backup latestBackup = backups.get(0);
+                    info.append("Latest Backup: ").append(latestBackup.getTimestamp())
+                        .append(" (").append(latestBackup.getFilePath()).append(")\n");
+                }
+                
+                info.append("Backup Schedule: ");
+                if (backupSchedule != null && !backupSchedule.isCancelled()) {
+                    info.append("Active\n");
+                } else {
+                    info.append("Not active\n");
+                }
+            } catch (Exception e) {
+                info.append("\nCould not retrieve backup information: ").append(e.getMessage()).append("\n");
+            }
+            
+        } catch (Exception e) {
+            info.append("Error gathering diagnostic information: ").append(e.getMessage()).append("\n");
+        }
+        
+        return info.toString();
+    } e) {
+                info.append("EntityManagerFactory: Error - ").append(e.getMessage()).append("\n");
+            }
+            
+            // Database settings
+            try {
+                EntityManager em = DatabaseConfig.getEntityManager();
+                try {
+                    Object closeOnExit = em.createNativeQuery("CALL SETTING_VALUE('" + CLOSE_ON_EXIT_SETTING + "')")
+                                         .getSingleResult();
+                    Object closeDelay = em.createNativeQuery("CALL SETTING_VALUE('" + CLOSE_DELAY_SETTING + "')")
+                                        .getSingleResult();
+                    Object cacheSize = em.createNativeQuery("CALL SETTING_VALUE('" + CACHE_SIZE_SETTING + "')")
+                                       .getSingleResult();
+                    Object lockTimeout = em.createNativeQuery("CALL SETTING_VALUE('" + LOCK_TIMEOUT_SETTING + "')")
+                                         .getSingleResult();
+                    
+                    info.append("\nDatabase Settings:\n");
+                    info.append("- ").append(CLOSE_ON_EXIT_SETTING).append(": ").append(closeOnExit).append("\n");
+                    info.append("- ").append(CLOSE_DELAY_SETTING).append(": ").append(closeDelay).append("\n");
+                    info.append("- ").append(CACHE_SIZE_SETTING).append(": ").append(cacheSize).append("\n");
+                    info.append("- ").append(LOCK_TIMEOUT_SETTING).append(": ").append(lockTimeout).append("\n");
+                } finally {
+                    em.close();
+                }
+            } catch (Exception e) {
+                info.append("\nCould not retrieve database settings: ").append(e.getMessage()).append("\n");
+            }
+            
+            // Backup info
+            try {
+                java.util.List<BackupManager.Backup> backups = BackupManager.getBackups();
+                info.append("\nBackups: ").append(backups.size()).append(" available\n");
+                if (!backups.isEmpty()) {
+                    BackupManager.Backup latestBackup = backups.get(0);
+                    info.append("Latest Backup: ").append(latestBackup.getTimestamp())
+                        .append(" (").append(latestBackup.getFilePath()).append(")\n");
+                }
+                
+                info.append("Backup Schedule: ");
+                if (backupSchedule != null && !backupSchedule.isCancelled()) {
+                    info.append("Active\n");
+                } else {
+                    info.append("Not active\n");
+                }
+            } catch (Exception e) {
+                info.append("\nCould not retrieve backup information: ").append(e.getMessage()).append("\n");
+            }
+            
+        } catch (Exception e) {
+            info.append("Error gathering diagnostic information: ").append(e.getMessage()).append("\n");
+        }
+        
+        return info.toString();
     }
 }
