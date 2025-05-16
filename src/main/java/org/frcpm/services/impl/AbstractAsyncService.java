@@ -3,7 +3,7 @@
 package org.frcpm.services.impl;
 
 import org.frcpm.async.DatabaseTask;
-import org.frcpm.async.TaskExecutor;
+import org.frcpm.async.TaskFactory;
 import org.frcpm.config.DatabaseConfig;
 import org.frcpm.repositories.Repository;
 
@@ -12,6 +12,7 @@ import jakarta.persistence.EntityTransaction;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -137,6 +138,7 @@ public abstract class AbstractAsyncService<T, ID, R extends Repository<T, ID>> e
     
     /**
      * Executes a database operation asynchronously with error handling.
+     * This method allows providing a database operation that uses an EntityManager.
      * 
      * @param <R> the result type
      * @param taskName the name of the task
@@ -149,8 +151,53 @@ public abstract class AbstractAsyncService<T, ID, R extends Repository<T, ID>> e
                                                   Function<EntityManager, R> databaseOperation,
                                                   Consumer<R> onSuccess, 
                                                   Consumer<Throwable> onFailure) {
-        DatabaseTask<R> task = new DatabaseTask<>(taskName, databaseOperation);
-        return TaskExecutor.executeAsync(task, onSuccess, onFailure);
+        return executeAsync(taskName, () -> {
+            EntityManager em = DatabaseConfig.getEntityManager();
+            try {
+                return databaseOperation.apply(em);
+            } finally {
+                if (em != null && em.isOpen()) {
+                    em.close();
+                }
+            }
+        }, onSuccess, onFailure);
+    }
+    
+    /**
+     * Executes a callable task asynchronously with error handling.
+     * 
+     * @param <R> the result type
+     * @param taskName the name of the task
+     * @param callable the callable to execute
+     * @param onSuccess the callback to run on success
+     * @param onFailure the callback to run on failure
+     * @return a CompletableFuture that will be completed with the result
+     */
+    protected <R> CompletableFuture<R> executeAsync(String taskName, 
+                                                  Callable<R> callable,
+                                                  Consumer<R> onSuccess, 
+                                                  Consumer<Throwable> onFailure) {
+        // Create a CompletableFuture for the result
+        CompletableFuture<R> future = new CompletableFuture<>();
+        
+        // Use TaskFactory to create and execute the task
+        TaskFactory.createDataLoadTask(
+            callable,
+            result -> {
+                if (onSuccess != null) {
+                    onSuccess.accept(result);
+                }
+                future.complete(result);
+            },
+            error -> {
+                if (onFailure != null) {
+                    onFailure.accept(error);
+                }
+                future.completeExceptionally(error);
+            }
+        );
+        
+        return future;
     }
     
     /**

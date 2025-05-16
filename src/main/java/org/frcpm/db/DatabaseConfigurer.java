@@ -5,7 +5,6 @@ import org.frcpm.config.DatabaseConfig;
 import org.frcpm.async.TaskExecutor;
 import org.frcpm.utils.ErrorHandler;
 
-import impl.org.controlsfx.collections.MappingChange.Map;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import java.io.File;
@@ -13,6 +12,8 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -100,7 +101,7 @@ public class DatabaseConfigurer {
         try {
             // Get the JDBC URL from persistence properties (using current config as reference)
             Map<String, Object> props = getJdbcPropertiesFromConfig();
-            String jdbcUrl = (String) ((Properties) props).get("jakarta.persistence.jdbc.url");
+            String jdbcUrl = (String) props.get("jakarta.persistence.jdbc.url");
             LOGGER.info("Current JDBC URL: " + jdbcUrl);
             
             if (jdbcUrl == null) {
@@ -160,33 +161,15 @@ public class DatabaseConfigurer {
         
         // Try to get a connection and extract properties
         try {
-            // Execute a custom query that returns JDBC URL
-            EntityManager em = DatabaseConfig.getEntityManager();
-            try {
-                Object url = em.createNativeQuery("CALL DATABASE_URL()").getSingleResult();
-                if (url != null) {
-                    props.put("jakarta.persistence.jdbc.url", url.toString());
-                }
-            } catch (Exception e) {
-                // H2 might not support this function, try a different approach
-                try {
-                    // Try to get path from system property or current configuration
-                    String dbName = DatabaseConfig.getDatabaseName();
-                    boolean devMode = DatabaseConfig.isDevelopmentMode();
-                    
-                    if (devMode) {
-                        props.put("jakarta.persistence.jdbc.url", "jdbc:h2:mem:" + dbName);
-                    } else {
-                        String userHome = System.getProperty("user.home");
-                        File dbDir = new File(userHome, ".frcpm");
-                        String dbPath = "file:" + new File(dbDir, dbName).getAbsolutePath();
-                        props.put("jakarta.persistence.jdbc.url", "jdbc:h2:" + dbPath);
-                    }
-                } catch (Exception ex) {
-                    LOGGER.log(Level.WARNING, "Error determining database URL from configuration", ex);
-                }
-            } finally {
-                em.close();
+            // Try to get configuration from DatabaseConfig directly
+            if (DatabaseConfig.isDevelopmentMode()) {
+                // Development mode uses in-memory database
+                props.put("jakarta.persistence.jdbc.url", "jdbc:h2:mem:" + DatabaseConfig.getDatabaseName());
+            } else {
+                String userHome = System.getProperty("user.home");
+                File dbDir = new File(userHome, ".frcpm");
+                String dbPath = "file:" + new File(dbDir, DatabaseConfig.getDatabaseName()).getAbsolutePath();
+                props.put("jakarta.persistence.jdbc.url", "jdbc:h2:" + dbPath);
             }
             
             // Add other standard properties
@@ -262,18 +245,20 @@ public class DatabaseConfigurer {
             // Cancel existing schedule if any
             stopScheduledBackups();
             
-            // Create a scheduled task executor if doesn't exist yet
-            if (!org.frcpm.async.TaskExecutor.isInitialized()) {
-                org.frcpm.async.TaskExecutor.initialize();
-            }
+            // Schedule new backup task with a single-thread scheduler
+            java.util.concurrent.ScheduledExecutorService scheduler = 
+                java.util.concurrent.Executors.newSingleThreadScheduledExecutor();
             
-            // Schedule new backup task using TaskExecutor
-            backupSchedule = org.frcpm.async.TaskExecutor.scheduleRepeatingTask(
+            backupSchedule = scheduler.scheduleAtFixedRate(
                 () -> {
                     LOGGER.info("Running scheduled backup");
                     try {
                         BackupManager.Backup backup = BackupManager.createBackup();
-                        LOGGER.info("Scheduled backup created: " + backup.getFilePath());
+                        if (backup != null) {
+                            LOGGER.info("Scheduled backup created: " + backup.getFilePath());
+                        } else {
+                            LOGGER.warning("Scheduled backup failed");
+                        }
                     } catch (Exception e) {
                         LOGGER.log(Level.SEVERE, "Scheduled backup failed", e);
                     }
@@ -347,10 +332,10 @@ public class DatabaseConfigurer {
                 Boolean result = (Boolean) em.createNativeQuery("SELECT TRUE FROM DUAL")
                                            .getSingleResult();
                 
-                // Check the database settings
-                Object closeOnExit = em.createNativeQuery("CALL SETTING_VALUE('" + CLOSE_ON_EXIT_SETTING + "')")
+                // Check the database settings using more compatible approach
+                Object closeOnExit = em.createNativeQuery("SELECT SETTING_VALUE('" + CLOSE_ON_EXIT_SETTING + "')")
                                      .getSingleResult();
-                Object closeDelay = em.createNativeQuery("CALL SETTING_VALUE('" + CLOSE_DELAY_SETTING + "')")
+                Object closeDelay = em.createNativeQuery("SELECT SETTING_VALUE('" + CLOSE_DELAY_SETTING + "')")
                                     .getSingleResult();
                 
                 LOGGER.info("Database verification successful");
@@ -358,6 +343,18 @@ public class DatabaseConfigurer {
                           ", " + CLOSE_DELAY_SETTING + "=" + closeDelay);
                 
                 return result != null && result;
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, "Error during database settings check: " + e.getMessage());
+                
+                // Try a simpler query to verify basic connectivity
+                try {
+                    Object result = em.createNativeQuery("SELECT 1").getSingleResult();
+                    LOGGER.info("Database basic connectivity check successful");
+                    return result != null;
+                } catch (Exception e2) {
+                    LOGGER.log(Level.SEVERE, "Database verification failed", e2);
+                    return false;
+                }
             } finally {
                 if (em != null) {
                     em.close();
@@ -451,7 +448,20 @@ public class DatabaseConfigurer {
      */
     private static String getDatabaseFilePath() {
         try {
-            // Get the JDBC URL from properties
+            // Try to get configuration from DatabaseConfig directly
+            if (!DatabaseConfig.isDevelopmentMode()) {
+                String dbName = DatabaseConfig.getDatabaseName();
+                String userHome = System.getProperty("user.home");
+                File dbDir = new File(userHome, ".frcpm");
+                File dbFile = new File(dbDir, dbName + ".mv.db");
+                
+                // Check if the file exists
+                if (dbFile.exists()) {
+                    return dbFile.getAbsolutePath();
+                }
+            }
+            
+            // If direct method doesn't work, try to extract from JDBC URL
             Map<String, Object> props = getJdbcPropertiesFromConfig();
             String url = (String) props.get("jakarta.persistence.jdbc.url");
             
@@ -501,22 +511,14 @@ public class DatabaseConfigurer {
     private static boolean isInMemoryDatabase() {
         try {
             // Try to get configuration from DatabaseConfig first
-            if (DatabaseConfig.isDevelopmentMode()) {
-                return true; // Development mode uses in-memory database
-            }
-            
-            // Check URL from properties
-            Map<String, Object> props = getJdbcPropertiesFromConfig();
-            String url = (String) props.get("jakarta.persistence.jdbc.url");
-            
-            return url != null && url.startsWith("jdbc:h2:mem:");
+            return DatabaseConfig.isDevelopmentMode(); // Development mode uses in-memory database
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "Error checking if database is in-memory", e);
             return false;
         }
     }
     
-    /**
+/**
      * Gets diagnostic information about the database configuration.
      * 
      * @return a string containing diagnostic information
@@ -576,13 +578,13 @@ public class DatabaseConfigurer {
             try {
                 EntityManager em = DatabaseConfig.getEntityManager();
                 try {
-                    Object closeOnExit = em.createNativeQuery("CALL SETTING_VALUE('" + CLOSE_ON_EXIT_SETTING + "')")
+                    Object closeOnExit = em.createNativeQuery("SELECT SETTING_VALUE('" + CLOSE_ON_EXIT_SETTING + "')")
                                          .getSingleResult();
-                    Object closeDelay = em.createNativeQuery("CALL SETTING_VALUE('" + CLOSE_DELAY_SETTING + "')")
+                    Object closeDelay = em.createNativeQuery("SELECT SETTING_VALUE('" + CLOSE_DELAY_SETTING + "')")
                                         .getSingleResult();
-                    Object cacheSize = em.createNativeQuery("CALL SETTING_VALUE('" + CACHE_SIZE_SETTING + "')")
+                    Object cacheSize = em.createNativeQuery("SELECT SETTING_VALUE('" + CACHE_SIZE_SETTING + "')")
                                        .getSingleResult();
-                    Object lockTimeout = em.createNativeQuery("CALL SETTING_VALUE('" + LOCK_TIMEOUT_SETTING + "')")
+                    Object lockTimeout = em.createNativeQuery("SELECT SETTING_VALUE('" + LOCK_TIMEOUT_SETTING + "')")
                                          .getSingleResult();
                     
                     info.append("\nDatabase Settings:\n");
@@ -590,113 +592,16 @@ public class DatabaseConfigurer {
                     info.append("- ").append(CLOSE_DELAY_SETTING).append(": ").append(closeDelay).append("\n");
                     info.append("- ").append(CACHE_SIZE_SETTING).append(": ").append(cacheSize).append("\n");
                     info.append("- ").append(LOCK_TIMEOUT_SETTING).append(": ").append(lockTimeout).append("\n");
-                } finally {
-                    em.close();
-                }
-            } catch (Exception e) {
-                info.append("\nCould not retrieve database settings: ").append(e.getMessage()).append("\n");
-            }
-            
-            // Backup info
-            try {
-                java.util.List<BackupManager.Backup> backups = BackupManager.getBackups();
-                info.append("\nBackups: ").append(backups.size()).append(" available\n");
-                if (!backups.isEmpty()) {
-                    BackupManager.Backup latestBackup = backups.get(0);
-                    info.append("Latest Backup: ").append(latestBackup.getTimestamp())
-                        .append(" (").append(latestBackup.getFilePath()).append(")\n");
-                }
-                
-                info.append("Backup Schedule: ");
-                if (backupSchedule != null && !backupSchedule.isCancelled()) {
-                    info.append("Active\n");
-                } else {
-                    info.append("Not active\n");
-                }
-            } catch (Exception e) {
-                info.append("\nCould not retrieve backup information: ").append(e.getMessage()).append("\n");
-            }
-            
-        } catch (Exception e) {
-            info.append("Error gathering diagnostic information: ").append(e.getMessage()).append("\n");
-        }
-        
-        return info.toString();
-    }
-}
-            
-            // Database settings
-            try {
-                EntityManager em = DatabaseConfig.getEntityManager();
-                try {
-                    Object closeOnExit = em.createNativeQuery("CALL SETTING_VALUE('" + CLOSE_ON_EXIT_SETTING + "')")
-                                         .getSingleResult();
-                    Object closeDelay = em.createNativeQuery("CALL SETTING_VALUE('" + CLOSE_DELAY_SETTING + "')")
-                                        .getSingleResult();
-                    Object cacheSize = em.createNativeQuery("CALL SETTING_VALUE('" + CACHE_SIZE_SETTING + "')")
-                                       .getSingleResult();
-                    Object lockTimeout = em.createNativeQuery("CALL SETTING_VALUE('" + LOCK_TIMEOUT_SETTING + "')")
-                                         .getSingleResult();
-                    
-                    info.append("\nDatabase Settings:\n");
-                    info.append("- ").append(CLOSE_ON_EXIT_SETTING).append(": ").append(closeOnExit).append("\n");
-                    info.append("- ").append(CLOSE_DELAY_SETTING).append(": ").append(closeDelay).append("\n");
-                    info.append("- ").append(CACHE_SIZE_SETTING).append(": ").append(cacheSize).append("\n");
-                    info.append("- ").append(LOCK_TIMEOUT_SETTING).append(": ").append(lockTimeout).append("\n");
-                } finally {
-                    em.close();
-                }
-            } catch (Exception e) {
-                info.append("\nCould not retrieve database settings: ").append(e.getMessage()).append("\n");
-            }
-            
-            // Backup info
-            try {
-                java.util.List<BackupManager.Backup> backups = BackupManager.getBackups();
-                info.append("\nBackups: ").append(backups.size()).append(" available\n");
-                if (!backups.isEmpty()) {
-                    BackupManager.Backup latestBackup = backups.get(0);
-                    info.append("Latest Backup: ").append(latestBackup.getTimestamp())
-                        .append(" (").append(latestBackup.getFilePath()).append(")\n");
-                }
-                
-                info.append("Backup Schedule: ");
-                if (backupSchedule != null && !backupSchedule.isCancelled()) {
-                    info.append("Active\n");
-                } else {
-                    info.append("Not active\n");
-                }
-            } catch (Exception e) {
-                info.append("\nCould not retrieve backup information: ").append(e.getMessage()).append("\n");
-            }
-            
-        } catch (Exception e) {
-            info.append("Error gathering diagnostic information: ").append(e.getMessage()).append("\n");
-        }
-        
-        return info.toString();
-    } e) {
-                info.append("EntityManagerFactory: Error - ").append(e.getMessage()).append("\n");
-            }
-            
-            // Database settings
-            try {
-                EntityManager em = DatabaseConfig.getEntityManager();
-                try {
-                    Object closeOnExit = em.createNativeQuery("CALL SETTING_VALUE('" + CLOSE_ON_EXIT_SETTING + "')")
-                                         .getSingleResult();
-                    Object closeDelay = em.createNativeQuery("CALL SETTING_VALUE('" + CLOSE_DELAY_SETTING + "')")
-                                        .getSingleResult();
-                    Object cacheSize = em.createNativeQuery("CALL SETTING_VALUE('" + CACHE_SIZE_SETTING + "')")
-                                       .getSingleResult();
-                    Object lockTimeout = em.createNativeQuery("CALL SETTING_VALUE('" + LOCK_TIMEOUT_SETTING + "')")
-                                         .getSingleResult();
-                    
-                    info.append("\nDatabase Settings:\n");
-                    info.append("- ").append(CLOSE_ON_EXIT_SETTING).append(": ").append(closeOnExit).append("\n");
-                    info.append("- ").append(CLOSE_DELAY_SETTING).append(": ").append(closeDelay).append("\n");
-                    info.append("- ").append(CACHE_SIZE_SETTING).append(": ").append(cacheSize).append("\n");
-                    info.append("- ").append(LOCK_TIMEOUT_SETTING).append(": ").append(lockTimeout).append("\n");
+                } catch (Exception e) {
+                    // Try a simpler approach
+                    info.append("\nCould not retrieve detailed settings: ").append(e.getMessage()).append("\n");
+                    info.append("Checking basic connectivity instead...\n");
+                    try {
+                        Object result = em.createNativeQuery("SELECT 1").getSingleResult();
+                        info.append("Basic database connectivity: OK\n");
+                    } catch (Exception e2) {
+                        info.append("Basic database connectivity: FAILED - ").append(e2.getMessage()).append("\n");
+                    }
                 } finally {
                     em.close();
                 }

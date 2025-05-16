@@ -6,6 +6,10 @@ import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.logging.Level;
@@ -18,6 +22,7 @@ import java.util.logging.Logger;
 public class TaskFactory {
     
     private static final Logger LOGGER = Logger.getLogger(TaskFactory.class.getName());
+    private static final ExecutorService DATABASE_EXECUTOR = Executors.newFixedThreadPool(2);
     
     /**
      * Creates a database task for executing a database operation.
@@ -27,7 +32,7 @@ public class TaskFactory {
      * @return the database task
      */
     public static <T> DatabaseTask<T> createDatabaseTask(Callable<T> task) {
-        return TaskExecutor.createDatabaseTask(task);
+        return new DatabaseTask<>(task, DATABASE_EXECUTOR);
     }
     
     /**
@@ -334,14 +339,18 @@ public class TaskFactory {
      * @param onError the error callback
      * @return the scheduled future for the task
      */
-    public static <T> java.util.concurrent.ScheduledFuture<?> createPeriodicTask(
+    public static <T> ScheduledFuture<?> createPeriodicTask(
             Callable<T> task,
             long initialDelay,
             long period,
             Consumer<T> onResult,
             Consumer<Throwable> onError) {
         
-        return TaskExecutor.scheduleRepeatingTask(() -> {
+        // Use the TaskExecutor's async facilities for executing scheduled tasks
+        java.util.concurrent.ScheduledExecutorService scheduler = 
+            java.util.concurrent.Executors.newSingleThreadScheduledExecutor();
+        
+        return scheduler.scheduleAtFixedRate(() -> {
             try {
                 T result = task.call();
                 if (onResult != null) {
@@ -353,6 +362,15 @@ public class TaskFactory {
                     Platform.runLater(() -> onError.accept(e));
                 }
             }
-        }, initialDelay, period, java.util.concurrent.TimeUnit.MILLISECONDS);
+        }, initialDelay, period, TimeUnit.MILLISECONDS);
+    }
+    
+    /**
+     * Shuts down the task factory's executor services.
+     * Should be called when the application is shutting down.
+     */
+    public static void shutdown() {
+        LOGGER.info("Shutting down TaskFactory executor services");
+        DATABASE_EXECUTOR.shutdown();
     }
 }

@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDateTime;
@@ -23,7 +24,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -515,7 +518,7 @@ public class BackupManager {
         }
     }
     
-    /**
+/**
      * Verifies the database connection.
      * 
      * @return true if the connection is valid, false otherwise
@@ -702,8 +705,22 @@ public class BackupManager {
      */
     private static String getDatabaseFilePath() {
         try {
-            // Try to get the database file path from the database configuration
-            String url = DatabaseConfig.getConnectionUrl();
+            // Try to get the database file path from DatabaseManager or directly construct it
+            if (!DatabaseConfig.isDevelopmentMode()) {
+                String dbName = DatabaseConfig.getDatabaseName();
+                String userHome = System.getProperty("user.home");
+                File dbDir = new File(userHome, ".frcpm");
+                File dbFile = new File(dbDir, dbName + ".mv.db");
+                
+                // Check if the file exists
+                if (dbFile.exists()) {
+                    return dbFile.getAbsolutePath();
+                }
+            }
+            
+            // If we can't determine the path directly, try to extract it from JDBC URL
+            Map<String, Object> props = getJdbcPropertiesFromConfig();
+            String url = (String) props.get("jakarta.persistence.jdbc.url");
             
             // Check if this is a file-based database
             if (url != null && url.startsWith("jdbc:h2:file:")) {
@@ -752,12 +769,44 @@ public class BackupManager {
      */
     private static boolean isInMemoryDatabase() {
         try {
-            String url = DatabaseConfig.getConnectionUrl();
-            return url != null && url.startsWith("jdbc:h2:mem:");
+            return DatabaseConfig.isDevelopmentMode(); // Development mode uses in-memory database
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "Error checking if database is in-memory", e);
             return false;
         }
+    }
+    
+    /**
+     * Gets JDBC properties from the current configuration.
+     * 
+     * @return a map of JDBC properties
+     */
+    private static Map<String, Object> getJdbcPropertiesFromConfig() {
+        Map<String, Object> props = new HashMap<>();
+        
+        // Try to get a connection and extract properties
+        try {
+            // Try to get configuration from DatabaseConfig directly
+            if (DatabaseConfig.isDevelopmentMode()) {
+                // Development mode uses in-memory database
+                props.put("jakarta.persistence.jdbc.url", "jdbc:h2:mem:" + DatabaseConfig.getDatabaseName());
+            } else {
+                String userHome = System.getProperty("user.home");
+                File dbDir = new File(userHome, ".frcpm");
+                String dbPath = "file:" + new File(dbDir, DatabaseConfig.getDatabaseName()).getAbsolutePath();
+                props.put("jakarta.persistence.jdbc.url", "jdbc:h2:" + dbPath);
+            }
+            
+            // Add other standard properties
+            props.put("jakarta.persistence.jdbc.user", "sa");
+            props.put("jakarta.persistence.jdbc.password", "");
+            props.put("jakarta.persistence.jdbc.driver", "org.h2.Driver");
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error getting JDBC properties from config", e);
+        }
+        
+        return props;
     }
     
     /**
@@ -767,34 +816,8 @@ public class BackupManager {
         LOGGER.info("Shutting down database");
         
         try {
-            // Shutdown EntityManagerFactory
-            EntityManagerFactory emf = DatabaseConfig.getEntityManagerFactory();
-            if (emf != null && emf.isOpen()) {
-                emf.close();
-            }
-            
-            // Execute SHUTDOWN command
-            Connection conn = null;
-            Statement stmt = null;
-            
-            try {
-                String url = DatabaseConfig.getConnectionUrl();
-                String username = DatabaseConfig.getUsername();
-                String password = DatabaseConfig.getPassword();
-                
-                conn = DriverManager.getConnection(url, username, password);
-                stmt = conn.createStatement();
-                stmt.execute("SHUTDOWN");
-            } catch (SQLException e) {
-                LOGGER.log(Level.WARNING, "Error executing SHUTDOWN command", e);
-            } finally {
-                if (stmt != null) {
-                    try { stmt.close(); } catch (SQLException e) { /* Ignore */ }
-                }
-                if (conn != null) {
-                    try { conn.close(); } catch (SQLException e) { /* Ignore */ }
-                }
-            }
+            // Shutdown EntityManagerFactory via DatabaseConfig
+            DatabaseConfig.shutdown();
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "Error shutting down database", e);
         }
