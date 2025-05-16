@@ -1,5 +1,4 @@
 // src/main/java/org/frcpm/services/ServiceFactory.java
-
 package org.frcpm.services;
 
 import org.frcpm.di.ServiceLocator;
@@ -11,6 +10,15 @@ import org.frcpm.services.impl.*;
  * Updated to use ServiceLocator for MVVMFx compatibility.
  */
 public class ServiceFactory {
+
+    /**
+     * Initializes all services.
+     * This method should be called during application startup.
+     */
+    public static void initialize() {
+        // Initialize ServiceLocator
+        ServiceLocator.initialize();
+    }
     
     /**
      * Gets the project service instance.
@@ -109,5 +117,33 @@ public class ServiceFactory {
      */
     public static GanttDataService getGanttDataService() {
         return ServiceLocator.getGanttDataService();
+    }
+    
+    /**
+     * Gets the transformation service instance.
+     * 
+     * @return the transformation service
+     */
+    public static GanttChartTransformationService getTransformationService() {
+        return ServiceLocator.getTransformationService();
+    }
+    
+    /**
+     * Gets a service by its interface type.
+     * 
+     * @param <T> the service type
+     * @param serviceType the service interface class
+     * @return the service instance
+     */
+    public static <T> T getService(Class<T> serviceType) {
+        return ServiceLocator.getService(serviceType);
+    }
+    
+    /**
+     * Shuts down all services.
+     * This method should be called during application shutdown.
+     */
+    public static void shutdown() {
+        ServiceLocator.shutdown();
     }
 }

@@ -1,7 +1,7 @@
 // src/main/java/org/frcpm/services/AsyncServiceFactory.java
-
 package org.frcpm.services;
 
+import org.frcpm.async.TaskExecutor;
 import org.frcpm.services.impl.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
@@ -10,7 +10,7 @@ import java.util.logging.Logger;
 /**
  * Factory class for creating and managing async service instances.
  * Provides singleton instances of async services.
- * Updated for MVVMFx compatibility.
+ * Updated to integrate with the task-based threading model and MVVMFx compatibility.
  */
 public class AsyncServiceFactory {
 
@@ -34,43 +34,76 @@ public class AsyncServiceFactory {
 
     /**
      * Initializes async service instances if needed.
+     * Ensures each service is properly set up with the task-based threading model.
      */
     private static void initializeIfNeeded() {
+        LOGGER.info("Initializing async services");
+        
         // Initialize services on first use
         if (projectService == null) {
             projectService = new ProjectServiceAsyncImpl();
+            configureAsyncService(projectService);
         }
         
         if (taskService == null) {
             taskService = new TaskServiceAsyncImpl();
+            configureAsyncService(taskService);
         }
         
         if (milestoneService == null) {
             milestoneService = new MilestoneServiceAsyncImpl();
+            configureAsyncService(milestoneService);
         }
         
         if (teamMemberService == null) {
             teamMemberService = new TeamMemberServiceAsyncImpl();
+            configureAsyncService(teamMemberService);
         }
         
         if (subsystemService == null) {
             subsystemService = new SubsystemServiceAsyncImpl();
+            configureAsyncService(subsystemService);
         }
         
         if (componentService == null) {
             componentService = new ComponentServiceAsyncImpl();
+            configureAsyncService(componentService);
         }
         
         if (meetingService == null) {
             meetingService = new MeetingServiceAsyncImpl();
+            configureAsyncService(meetingService);
         }
         
         if (attendanceService == null) {
             attendanceService = new AttendanceServiceAsyncImpl();
+            configureAsyncService(attendanceService);
         }
         
         if (subteamService == null) {
             subteamService = new SubteamServiceAsyncImpl();
+            configureAsyncService(subteamService);
+        }
+
+        LOGGER.info("Async services initialization complete");
+    }
+    
+    /**
+     * Configures an async service with task executor and any other settings.
+     * 
+     * @param service the service to configure
+     */
+    private static void configureAsyncService(AbstractAsyncService<?, ?, ?> service) {
+        try {
+            // Use reflection to set task executor or any configuration needed
+            java.lang.reflect.Method configureMethod = AbstractAsyncService.class.getDeclaredMethod("configureExecutor");
+            if (configureMethod != null) {
+                configureMethod.setAccessible(true);
+                configureMethod.invoke(service);
+            }
+        } catch (Exception e) {
+            // If method doesn't exist or other error, just log it - old services may not have this method
+            LOGGER.log(Level.WARNING, "Could not configure service with TaskExecutor: " + e.getMessage(), e);
         }
     }
 
@@ -174,28 +207,44 @@ public class AsyncServiceFactory {
     @SuppressWarnings("unchecked")
     public static <T> T getServiceAsync(Class<T> serviceType) {
         try {
+            // First, check if we have the service in our cache
+            T cachedService = (T) SERVICE_INSTANCES.get(serviceType);
+            if (cachedService != null) {
+                return cachedService;
+            }
+            
+            // Otherwise, get the appropriate service
+            T service = null;
+            
             if (serviceType == ProjectService.class) {
-                return (T) getProjectService();
+                service = (T) getProjectService();
             } else if (serviceType == TaskService.class) {
-                return (T) getTaskService();
+                service = (T) getTaskService();
             } else if (serviceType == MilestoneService.class) {
-                return (T) getMilestoneService();
+                service = (T) getMilestoneService();
             } else if (serviceType == SubsystemService.class) {
-                return (T) getSubsystemService();
+                service = (T) getSubsystemService();
             } else if (serviceType == TeamMemberService.class) {
-                return (T) getTeamMemberService();
+                service = (T) getTeamMemberService();
             } else if (serviceType == ComponentService.class) {
-                return (T) getComponentService();
+                service = (T) getComponentService();
             } else if (serviceType == MeetingService.class) {
-                return (T) getMeetingService();
+                service = (T) getMeetingService();
             } else if (serviceType == AttendanceService.class) {
-                return (T) getAttendanceService();
+                service = (T) getAttendanceService();
             } else if (serviceType == SubteamService.class) {
-                return (T) getSubteamService();
+                service = (T) getSubteamService();
             } else {
                 LOGGER.warning("Unknown service type: " + serviceType);
                 return null;
             }
+            
+            // Store in cache for future use
+            if (service != null) {
+                SERVICE_INSTANCES.put(serviceType, service);
+            }
+            
+            return service;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error creating async service for type: " + serviceType, e);
             return null;
@@ -207,8 +256,17 @@ public class AsyncServiceFactory {
      * This method should be called during application startup.
      */
     public static void initialize() {
+        LOGGER.info("Initializing all async services");
+        
         // Ensure all services are initialized
         initializeIfNeeded();
+        
+        // Initialize TaskExecutor if needed
+        TaskExecutor.executeAsync("AsyncServiceFactory-Init", 
+            () -> "Initialization completed", 
+            result -> LOGGER.info("TaskExecutor successfully used: " + result),
+            error -> LOGGER.log(Level.SEVERE, "Error initializing TaskExecutor", error)
+        );
     }
 
     /**
@@ -216,11 +274,15 @@ public class AsyncServiceFactory {
      * This method should be called during application shutdown.
      */
     public static void shutdown() {
+        LOGGER.info("Shutting down async services");
+        
         // Ensure TaskExecutor is properly shut down to release thread resources
-        org.frcpm.async.TaskExecutor.shutdown();
+        TaskExecutor.shutdown();
         
         // Clear service instances
         clearAll();
+        
+        LOGGER.info("Async services shutdown complete");
     }
 
     /**
@@ -240,5 +302,7 @@ public class AsyncServiceFactory {
         meetingService = null;
         attendanceService = null;
         subteamService = null;
+        
+        LOGGER.info("Async service instances cleared");
     }
 }

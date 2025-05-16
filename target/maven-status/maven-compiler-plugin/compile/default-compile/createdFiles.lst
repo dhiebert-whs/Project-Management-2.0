@@ -36,6 +36,7 @@ org\frcpm\mvvm\views\SubsystemDetailMvvmView.class
 org\frcpm\models\GanttChartData.class
 org\frcpm\mvvm\views\DashboardMvvmView$4.class
 org\frcpm\mvvm\viewmodels\ProjectListMvvmViewModel.class
+org\frcpm\async\TaskFactory$1.class
 org\frcpm\async\TaskFactory.class
 org\frcpm\charts\GanttChartFactory.class
 org\frcpm\mvvm\viewmodels\MilestoneListMvvmViewModel$MilestoneFilter.class
@@ -49,6 +50,7 @@ org\frcpm\charts\ChartStyler.class
 org\frcpm\mvvm\viewmodels\SubsystemListMvvmViewModel$SubsystemFilter.class
 org\frcpm\mvvm\views\DashboardMvvmView$3.class
 org\frcpm\mvvm\viewmodels\SubteamListMvvmViewModel.class
+org\frcpm\async\TaskFactory$2.class
 org\frcpm\mvvm\views\TaskSelectionMvvmView$3.class
 org\frcpm\repositories\impl\SubsystemRepositoryImpl.class
 org\frcpm\mvvm\views\SubsystemListMvvmView$1.class
@@ -116,6 +118,7 @@ org\frcpm\models\Project.class
 org\frcpm\mvvm\views\TaskListMvvmView.class
 org\frcpm\mvvm\views\ProjectListMvvmView.class
 org\frcpm\mvvm\viewmodels\TaskDetailMvvmViewModel.class
+org\frcpm\repositories\impl\JpaRepositoryImpl$DatabaseOperation.class
 org\frcpm\services\impl\ComponentServiceAsyncImpl.class
 org\frcpm\mvvm\viewmodels\ComponentListMvvmViewModel.class
 org\frcpm\repositories\impl\SubteamRepositoryImpl.class
@@ -151,6 +154,7 @@ org\frcpm\utils\DatabaseTestUtil.class
 org\frcpm\services\VisualizationService.class
 org\frcpm\repositories\impl\MilestoneRepositoryImpl.class
 org\frcpm\mvvm\MvvmDialogHelper.class
+org\frcpm\repositories\impl\JpaRepositoryImpl$BatchOperation.class
 org\frcpm\mvvm\viewmodels\ComponentListMvvmViewModel$ComponentFilter.class
 org\frcpm\mvvm\views\SubteamDetailMvvmView.class
 org\frcpm\mvvm\views\SubsystemDetailMvvmView$3.class

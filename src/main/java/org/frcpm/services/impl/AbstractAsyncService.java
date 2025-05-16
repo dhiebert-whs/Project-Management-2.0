@@ -246,4 +246,14 @@ public abstract class AbstractAsyncService<T, ID, R extends Repository<T, ID>> e
             }
         }
     }
+
+    /**
+     * Configures the executor service for this async service.
+     * Called by AsyncServiceFactory during initialization.
+     */
+    protected void configureExecutor() {
+        LOGGER.info("Configuring executor for " + this.getClass().getSimpleName());
+        // No additional configuration needed here since we're using TaskExecutor
+        // in the executeAsync methods which handles thread management
+    }
 }

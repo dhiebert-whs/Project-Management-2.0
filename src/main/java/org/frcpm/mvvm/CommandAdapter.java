@@ -7,6 +7,8 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.control.Button;
 
 import java.util.function.Supplier;
@@ -57,10 +59,26 @@ public class CommandAdapter {
         private final org.frcpm.binding.Command command;
         private final BooleanProperty runningProperty = new SimpleBooleanProperty(false);
         private final BooleanProperty executableProperty = new SimpleBooleanProperty();
+        private final ReadOnlyBooleanWrapper notRunningProperty = new ReadOnlyBooleanWrapper();
+        private final ReadOnlyBooleanWrapper notExecutableProperty = new ReadOnlyBooleanWrapper();
+        private final SimpleDoubleProperty progressProperty = new SimpleDoubleProperty(0.0);
         
         public ExistingCommandAdapter(org.frcpm.binding.Command command) {
             this.command = command;
             this.executableProperty.set(command.canExecute());
+            
+            // Set up bindings for not-properties
+            this.runningProperty.addListener((obs, oldVal, newVal) -> {
+                notRunningProperty.set(!newVal);
+            });
+            
+            this.executableProperty.addListener((obs, oldVal, newVal) -> {
+                notExecutableProperty.set(!newVal);
+            });
+            
+            // Initialize not-properties
+            this.notRunningProperty.set(!this.runningProperty.get());
+            this.notExecutableProperty.set(!this.executableProperty.get());
         }
         
         @Override
@@ -101,38 +119,32 @@ public class CommandAdapter {
 
         @Override
         public boolean isNotExecutable() {
-            // TODO Auto-generated method stub
-            throw new UnsupportedOperationException("Unimplemented method 'isNotExecutable'");
+            return !isExecutable();
         }
 
         @Override
         public ReadOnlyBooleanProperty notExecutableProperty() {
-            // TODO Auto-generated method stub
-            throw new UnsupportedOperationException("Unimplemented method 'notExecutableProperty'");
+            return notExecutableProperty.getReadOnlyProperty();
         }
 
         @Override
         public boolean isNotRunning() {
-            // TODO Auto-generated method stub
-            throw new UnsupportedOperationException("Unimplemented method 'isNotRunning'");
+            return !isRunning();
         }
 
         @Override
         public ReadOnlyBooleanProperty notRunningProperty() {
-            // TODO Auto-generated method stub
-            throw new UnsupportedOperationException("Unimplemented method 'notRunningProperty'");
+            return notRunningProperty.getReadOnlyProperty();
         }
 
         @Override
         public double getProgress() {
-            // TODO Auto-generated method stub
-            throw new UnsupportedOperationException("Unimplemented method 'getProgress'");
+            return progressProperty.get();
         }
 
         @Override
         public ReadOnlyDoubleProperty progressProperty() {
-            // TODO Auto-generated method stub
-            throw new UnsupportedOperationException("Unimplemented method 'progressProperty'");
+            return progressProperty;
         }
     }
 }
