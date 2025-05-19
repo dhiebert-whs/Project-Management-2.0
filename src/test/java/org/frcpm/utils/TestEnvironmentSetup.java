@@ -15,6 +15,7 @@ import org.frcpm.mvvm.MvvmConfig;
 import org.frcpm.testfx.TestFXHeadlessConfig;
 import org.testfx.util.WaitForAsyncUtils;
 
+
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
