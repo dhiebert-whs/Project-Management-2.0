@@ -44,6 +44,7 @@ public class TeamMemberRepositoryTest extends BaseRepositoryTest {
         // Create and save a test subteam
         testSubteam = new Subteam();
         testSubteam.setName("Test Subteam");
+        testSubteam.setColorCode("#FF5733"); 
         beginTransaction();
         em.persist(testSubteam);
         commitTransaction();
@@ -219,6 +220,7 @@ public class TeamMemberRepositoryTest extends BaseRepositoryTest {
         // Create a second subteam
         Subteam anotherSubteam = new Subteam();
         anotherSubteam.setName("Another Subteam");
+        anotherSubteam.setColorCode("#33FF57");
         beginTransaction();
         em.persist(anotherSubteam);
         commitTransaction();
