@@ -15,7 +15,6 @@ import org.frcpm.mvvm.MvvmConfig;
 import org.frcpm.testfx.TestFXHeadlessConfig;
 import org.testfx.util.WaitForAsyncUtils;
 
-
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -23,54 +22,56 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Utility class providing setup and teardown functionality for testing environments.
+ * Utility class providing setup and teardown functionality for testing
+ * environments.
  * Handles initialization of the database, services, and JavaFX components.
  */
 public class TestEnvironmentSetup {
-    
+
     private static final Logger LOGGER = Logger.getLogger(TestEnvironmentSetup.class.getName());
-    
+
     /** Default timeout for operations in milliseconds */
     private static final int DEFAULT_TIMEOUT = 10000;
-    
+
     /** Flag to track if the test database has been initialized */
     private static boolean databaseInitialized = false;
-    
+
     /** Flag to track if the JavaFX toolkit has been initialized */
     private static boolean javaFxInitialized = false;
-    
+
     /**
      * Private constructor to prevent instantiation.
      */
     private TestEnvironmentSetup() {
         // Utility class, do not instantiate
     }
-    
+
     /**
-     * Initializes the test environment including database, services, and JavaFX toolkit.
+     * Initializes the test environment including database, services, and JavaFX
+     * toolkit.
      * 
      * @param initializeJavaFx whether to initialize the JavaFX toolkit
      * @param inMemoryDatabase whether to use an in-memory database
-     * @param useMockServices whether to use mock services via TestModule
+     * @param useMockServices  whether to use mock services via TestModule
      * @return true if initialization was successful, false otherwise
      */
     public static boolean initialize(boolean initializeJavaFx, boolean inMemoryDatabase, boolean useMockServices) {
-        LOGGER.info("Initializing test environment: JavaFX=" + initializeJavaFx + 
-                   ", InMemoryDB=" + inMemoryDatabase + ", MockServices=" + useMockServices);
-        
+        LOGGER.info("Initializing test environment: JavaFX=" + initializeJavaFx +
+                ", InMemoryDB=" + inMemoryDatabase + ", MockServices=" + useMockServices);
+
         try {
             // Configure headless mode if needed
             if (initializeJavaFx) {
                 TestFXHeadlessConfig.configureHeadlessMode();
             }
-            
+
             // Initialize database
             if (inMemoryDatabase) {
                 initializeInMemoryDatabase();
             } else {
                 initializeTestDatabase();
             }
-            
+
             // Initialize services
             if (useMockServices) {
                 TestModule.initialize();
@@ -78,12 +79,12 @@ public class TestEnvironmentSetup {
                 ServiceLocator.initialize();
                 MvvmConfig.initialize();
             }
-            
+
             // Initialize JavaFX toolkit if needed
             if (initializeJavaFx && !javaFxInitialized) {
                 initializeJavaFxToolkit();
             }
-            
+
             LOGGER.info("Test environment initialization complete");
             return true;
         } catch (Exception e) {
@@ -91,7 +92,7 @@ public class TestEnvironmentSetup {
             return false;
         }
     }
-    
+
     /**
      * Initializes an in-memory H2 database for tests.
      */
@@ -100,19 +101,19 @@ public class TestEnvironmentSetup {
             LOGGER.info("In-memory database already initialized");
             return;
         }
-        
+
         LOGGER.info("Initializing in-memory database for tests");
-        
+
         // Set system property to use in-memory database
         System.setProperty("db.url", "jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1");
         System.setProperty("db.username", "sa");
         System.setProperty("db.password", "");
         System.setProperty("db.dialect", "org.hibernate.dialect.H2Dialect");
         System.setProperty("hibernate.hbm2ddl.auto", "create-drop");
-        
+
         // Initialize database
         DatabaseConfig.initialize();
-        
+
         // Verify database connection
         EntityManagerFactory emf = DatabaseConfig.getEntityManagerFactory();
         EntityManager em = emf.createEntityManager();
@@ -126,7 +127,7 @@ public class TestEnvironmentSetup {
             em.close();
         }
     }
-    
+
     /**
      * Initializes a test database with a test configuration.
      */
@@ -135,26 +136,26 @@ public class TestEnvironmentSetup {
             LOGGER.info("Test database already initialized");
             return;
         }
-        
+
         LOGGER.info("Initializing test database");
-        
+
         // Set system property to use test database
         System.setProperty("db.url", "jdbc:h2:./data/testdb;DB_CLOSE_DELAY=-1");
         System.setProperty("db.username", "sa");
         System.setProperty("db.password", "");
         System.setProperty("db.dialect", "org.hibernate.dialect.H2Dialect");
         System.setProperty("hibernate.hbm2ddl.auto", "create-drop");
-        
+
         // Initialize database
         DatabaseConfig.initialize();
-        
+
         // Clear test database
         TestDatabaseCleaner.clearTestDatabase();
-        
+
         databaseInitialized = true;
         LOGGER.info("Test database initialized successfully");
     }
-    
+
     /**
      * Initializes the JavaFX toolkit.
      */
@@ -163,19 +164,19 @@ public class TestEnvironmentSetup {
             LOGGER.info("JavaFX toolkit already initialized");
             return;
         }
-        
+
         LOGGER.info("Initializing JavaFX toolkit");
-        
+
         // Check if we're running in headless mode
         boolean headless = TestFXHeadlessConfig.isHeadlessMode();
         if (headless) {
             LOGGER.info("Running in headless mode, configuring JavaFX accordingly");
             TestFXHeadlessConfig.configureHeadlessMode();
         }
-        
+
         // Initialize JavaFX toolkit
         final CountDownLatch latch = new CountDownLatch(1);
-        
+
         // Launch JavaFX toolkit in a separate thread
         Thread javafxThread = new Thread(() -> {
             try {
@@ -188,19 +189,19 @@ public class TestEnvironmentSetup {
                 LOGGER.log(Level.SEVERE, "Error initializing JavaFX toolkit", e);
             }
         });
-        
+
         javafxThread.setDaemon(true);
         javafxThread.start();
-        
+
         // Wait for initialization to complete
         if (!latch.await(DEFAULT_TIMEOUT, TimeUnit.MILLISECONDS)) {
             throw new RuntimeException("Timeout waiting for JavaFX toolkit initialization");
         }
-        
+
         javaFxInitialized = true;
         LOGGER.info("JavaFX toolkit initialized successfully");
     }
-    
+
     /**
      * Creates a test Stage with a simple Pane as the root.
      * 
@@ -210,12 +211,12 @@ public class TestEnvironmentSetup {
         if (!javaFxInitialized) {
             initializeJavaFxToolkit();
         }
-        
+
         LOGGER.info("Creating test Stage");
-        
+
         AtomicReference<Stage> stageRef = new AtomicReference<>();
         CountDownLatch latch = new CountDownLatch(1);
-        
+
         Platform.runLater(() -> {
             try {
                 Stage stage = new Stage();
@@ -229,37 +230,38 @@ public class TestEnvironmentSetup {
                 latch.countDown();
             }
         });
-        
+
         // Wait for stage creation to complete
         if (!latch.await(DEFAULT_TIMEOUT, TimeUnit.MILLISECONDS)) {
             throw new RuntimeException("Timeout waiting for test Stage creation");
         }
-        
+
         // Wait for JavaFX events to process
         WaitForAsyncUtils.waitForFxEvents();
-        
+
         return stageRef.get();
     }
-    
+
     /**
-     * Shuts down the test environment including database, services, and JavaFX toolkit.
+     * Shuts down the test environment including database, services, and JavaFX
+     * toolkit.
      */
     public static void shutdown() {
         LOGGER.info("Shutting down test environment");
-        
+
         // Shutdown services
         if (TestModule.isInitialized()) {
             TestModule.shutdown();
         }
-        
+
         if (MvvmConfig.isInitialized()) {
             MvvmConfig.shutdown();
         }
-        
+
         if (ServiceLocator.isInitialized()) {
             ServiceLocator.shutdown();
         }
-        
+
         // Shutdown database
         if (databaseInitialized) {
             try {
@@ -269,7 +271,7 @@ public class TestEnvironmentSetup {
                 LOGGER.log(Level.WARNING, "Error shutting down database", e);
             }
         }
-        
+
         // Cleanup JavaFX
         if (javaFxInitialized) {
             try {
@@ -279,10 +281,10 @@ public class TestEnvironmentSetup {
                 LOGGER.log(Level.WARNING, "Error exiting JavaFX platform", e);
             }
         }
-        
+
         LOGGER.info("Test environment shutdown complete");
     }
-    
+
     /**
      * Clears the test database by truncating all tables.
      */
@@ -291,11 +293,11 @@ public class TestEnvironmentSetup {
             LOGGER.warning("Cannot clear database - not initialized");
             return;
         }
-        
+
         LOGGER.info("Clearing test database");
         TestDatabaseCleaner.clearTestDatabase();
     }
-    
+
     /**
      * Checks if the database is initialized.
      * 
@@ -304,7 +306,7 @@ public class TestEnvironmentSetup {
     public static boolean isDatabaseInitialized() {
         return databaseInitialized;
     }
-    
+
     /**
      * Checks if JavaFX is initialized.
      * 
@@ -313,7 +315,7 @@ public class TestEnvironmentSetup {
     public static boolean isJavaFxInitialized() {
         return javaFxInitialized;
     }
-    
+
     /**
      * Runs a database test with proper error handling.
      * 
@@ -322,7 +324,7 @@ public class TestEnvironmentSetup {
      */
     public static boolean runDatabaseTest(Runnable test) {
         LOGGER.info("Running database test");
-        
+
         if (!databaseInitialized) {
             try {
                 initializeTestDatabase();
@@ -331,7 +333,7 @@ public class TestEnvironmentSetup {
                 return false;
             }
         }
-        
+
         try {
             test.run();
             return true;
@@ -340,7 +342,7 @@ public class TestEnvironmentSetup {
             return false;
         }
     }
-    
+
     /**
      * Runs a JavaFX test with proper error handling.
      * 
@@ -349,7 +351,7 @@ public class TestEnvironmentSetup {
      */
     public static boolean runJavaFxTest(Runnable test) {
         LOGGER.info("Running JavaFX test");
-        
+
         if (!javaFxInitialized) {
             try {
                 initializeJavaFxToolkit();
@@ -358,7 +360,7 @@ public class TestEnvironmentSetup {
                 return false;
             }
         }
-        
+
         try {
             test.run();
             return true;
