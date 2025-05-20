@@ -99,12 +99,24 @@ public class TestModule {
             (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class),
             (ComponentRepository) MOCK_REPOSITORIES.get(ComponentRepository.class)
         );
+
+        // Create team member service with injected mocks
+        TeamMemberService teamMemberService = new TestableTeamMemberServiceImpl(
+            (TeamMemberRepository) MOCK_REPOSITORIES.get(TeamMemberRepository.class),
+            (SubteamRepository) MOCK_REPOSITORIES.get(SubteamRepository.class)
+        );
+
+        // Create subsystem service with injected mocks
+        SubsystemService subsystemService = new TestableSubsystemServiceImpl(
+            (SubsystemRepository) MOCK_REPOSITORIES.get(SubsystemRepository.class),
+            (SubteamRepository) MOCK_REPOSITORIES.get(SubteamRepository.class)
+        );
         
         // Create other mock services
         ProjectService projectService = Mockito.mock(ProjectService.class);
-        TeamMemberService teamMemberService = Mockito.mock(TeamMemberService.class);
+        //TeamMemberService teamMemberService = Mockito.mock(TeamMemberService.class);
         SubteamService subteamService = Mockito.mock(SubteamService.class);
-        SubsystemService subsystemService = Mockito.mock(SubsystemService.class);
+        //SubsystemService subsystemService = Mockito.mock(SubsystemService.class);
         ComponentService componentService = Mockito.mock(ComponentService.class);
         MeetingService meetingService = Mockito.mock(MeetingService.class);
         AttendanceService attendanceService = Mockito.mock(AttendanceService.class);
@@ -236,7 +248,9 @@ public class TestModule {
         
         // Reset all mocks
         for (Object mock : MOCK_SERVICES.values()) {
-            if (mock instanceof TestableTaskServiceImpl) {
+            if (mock instanceof TestableTaskServiceImpl || 
+                mock instanceof TestableTeamMemberServiceImpl || 
+                mock instanceof TestableSubsystemServiceImpl) {
                 // Skip resetting the TestableTaskServiceImpl because it's not a mock
                 continue;
             }
