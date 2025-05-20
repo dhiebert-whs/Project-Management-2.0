@@ -1,10 +1,11 @@
 // src/test/java/org/frcpm/di/TestModule.java
+
 package org.frcpm.di;
 
 import de.saxsys.mvvmfx.MvvmFX;
-import org.frcpm.mvvm.MvvmConfig;
 import org.frcpm.repositories.specific.*;
 import org.frcpm.services.*;
+import org.frcpm.services.impl.*;
 import org.mockito.Mockito;
 
 import java.util.HashMap;
@@ -14,6 +15,7 @@ import java.util.logging.Logger;
 /**
  * Test module for dependency injection in tests.
  * Provides mock implementations of services and repositories for testing.
+ * Enhanced to work with MVVMFx dependency injection.
  */
 public class TestModule {
     
@@ -91,9 +93,15 @@ public class TestModule {
     private static void createMockServices() {
         LOGGER.info("Creating mock services");
         
-        // Create mock services
+        // Create task service with injected mocks
+        TaskService taskService = new TestableTaskServiceImpl(
+            (TaskRepository) MOCK_REPOSITORIES.get(TaskRepository.class),
+            (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class),
+            (ComponentRepository) MOCK_REPOSITORIES.get(ComponentRepository.class)
+        );
+        
+        // Create other mock services
         ProjectService projectService = Mockito.mock(ProjectService.class);
-        TaskService taskService = Mockito.mock(TaskService.class);
         TeamMemberService teamMemberService = Mockito.mock(TeamMemberService.class);
         SubteamService subteamService = Mockito.mock(SubteamService.class);
         SubsystemService subsystemService = Mockito.mock(SubsystemService.class);
@@ -105,9 +113,9 @@ public class TestModule {
         GanttDataService ganttDataService = Mockito.mock(GanttDataService.class);
         GanttChartTransformationService transformationService = Mockito.mock(GanttChartTransformationService.class);
         
-        // Store mocks in service map
-        MOCK_SERVICES.put(ProjectService.class, projectService);
+        // Store in service map
         MOCK_SERVICES.put(TaskService.class, taskService);
+        MOCK_SERVICES.put(ProjectService.class, projectService);
         MOCK_SERVICES.put(TeamMemberService.class, teamMemberService);
         MOCK_SERVICES.put(SubteamService.class, subteamService);
         MOCK_SERVICES.put(SubsystemService.class, subsystemService);
@@ -197,19 +205,25 @@ public class TestModule {
         if (!initialized) initialize();
         MOCK_SERVICES.put(serviceClass, service);
         ServiceLocator.register(serviceClass, service);
+        
+        // Update MVVMFx dependency injector
+        configureMvvmFxDependencyInjection();
     }
     
-    /**
-     * Replaces a mock repository with a custom implementation.
-     * 
-     * @param <T> the repository type
-     * @param repositoryClass the repository interface class
-     * @param repository the repository implementation
-     */
+/**
+    * Replaces a mock repository with a custom implementation.
+    * 
+    * @param <T> the repository type
+    * @param repositoryClass the repository interface class
+    * @param repository the repository implementation
+    */
     public static <T> void setRepository(Class<T> repositoryClass, T repository) {
         if (!initialized) initialize();
         MOCK_REPOSITORIES.put(repositoryClass, repository);
         ServiceLocator.register(repositoryClass, repository);
+        
+        // Update MVVMFx dependency injector to pick up the change
+        configureMvvmFxDependencyInjection();
     }
     
     /**
@@ -222,6 +236,10 @@ public class TestModule {
         
         // Reset all mocks
         for (Object mock : MOCK_SERVICES.values()) {
+            if (mock instanceof TestableTaskServiceImpl) {
+                // Skip resetting the TestableTaskServiceImpl because it's not a mock
+                continue;
+            }
             Mockito.reset(mock);
         }
         
@@ -235,6 +253,9 @@ public class TestModule {
      */
     public static void shutdown() {
         LOGGER.info("Shutting down TestModule");
+        
+        // Clean up MVVMFx
+        MvvmFX.setCustomDependencyInjector(null);
         
         // Clear all mocks
         MOCK_SERVICES.clear();
@@ -254,4 +275,4 @@ public class TestModule {
     public static boolean isInitialized() {
         return initialized;
     }
-}
+ }

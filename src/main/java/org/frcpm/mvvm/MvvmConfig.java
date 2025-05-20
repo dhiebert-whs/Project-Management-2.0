@@ -104,8 +104,8 @@ public class MvvmConfig {
                 // Services - using ServiceLocator instead of ServiceProvider
                 if (type == ProjectService.class) {
                     return ServiceLocator.getProjectService();
-                } else if (type == TaskService.class) {
-                    return ServiceLocator.getTaskService();
+                }  else if (type == TaskService.class) {
+                    return new TestableTaskServiceImpl(); // No-arg constructor will use ServiceLocator
                 } else if (type == TeamMemberService.class) {
                     return ServiceLocator.getTeamMemberService();
                 } else if (type == SubteamService.class) {
@@ -127,7 +127,6 @@ public class MvvmConfig {
                 } else if (type == GanttChartTransformationService.class) {
                     return ServiceLocator.getTransformationService();
                 }
-                
                 // Repositories - using ServiceLocator instead of ServiceProvider
                 else if (type == ProjectRepository.class) {
                     return ServiceLocator.getProjectRepository();
