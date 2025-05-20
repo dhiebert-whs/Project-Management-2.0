@@ -76,16 +76,15 @@ public class TestModule {
         MilestoneRepository milestoneRepo = Mockito.mock(MilestoneRepository.class);
         
         // Store mocks in repository map
-        MOCK_REPOSITORIES.put(AttendanceRepository.class, attendanceRepo);
-        MOCK_REPOSITORIES.put(ComponentRepository.class, componentRepo);
-        MOCK_REPOSITORIES.put(MeetingRepository.class, meetingRepo);
-        MOCK_REPOSITORIES.put(MilestoneRepository.class, milestoneRepo);
         MOCK_REPOSITORIES.put(ProjectRepository.class, projectRepo);
-        MOCK_REPOSITORIES.put(SubsystemRepository.class, subsystemRepo);
-        MOCK_REPOSITORIES.put(SubteamRepository.class, subteamRepo);
         MOCK_REPOSITORIES.put(TaskRepository.class, taskRepo);
         MOCK_REPOSITORIES.put(TeamMemberRepository.class, teamMemberRepo);
-
+        MOCK_REPOSITORIES.put(SubteamRepository.class, subteamRepo);
+        MOCK_REPOSITORIES.put(SubsystemRepository.class, subsystemRepo);
+        MOCK_REPOSITORIES.put(ComponentRepository.class, componentRepo);
+        MOCK_REPOSITORIES.put(MeetingRepository.class, meetingRepo);
+        MOCK_REPOSITORIES.put(AttendanceRepository.class, attendanceRepo);
+        MOCK_REPOSITORIES.put(MilestoneRepository.class, milestoneRepo);
     }
     
     /**
@@ -94,52 +93,77 @@ public class TestModule {
     private static void createMockServices() {
         LOGGER.info("Creating mock services");
         
-        // Create task service with injected mocks
+        // Create services with injected repository mocks
+        
+        // Task service with injected mocks
         TaskService taskService = new TestableTaskServiceImpl(
             (TaskRepository) MOCK_REPOSITORIES.get(TaskRepository.class),
             (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class),
             (ComponentRepository) MOCK_REPOSITORIES.get(ComponentRepository.class)
         );
-
-        // Create team member service with injected mocks
+        
+        // Team member service with injected mocks
         TeamMemberService teamMemberService = new TestableTeamMemberServiceImpl(
             (TeamMemberRepository) MOCK_REPOSITORIES.get(TeamMemberRepository.class),
             (SubteamRepository) MOCK_REPOSITORIES.get(SubteamRepository.class)
         );
-
-        // Create subsystem service with injected mocks
+        
+        // Subsystem service with injected mocks
         SubsystemService subsystemService = new TestableSubsystemServiceImpl(
             (SubsystemRepository) MOCK_REPOSITORIES.get(SubsystemRepository.class),
             (SubteamRepository) MOCK_REPOSITORIES.get(SubteamRepository.class)
         );
-
-        // Create attendance service with injected mocks
+        
+        // Subteam service with injected mocks
+        SubteamService subteamService = new TestableSubteamServiceImpl(
+            (SubteamRepository) MOCK_REPOSITORIES.get(SubteamRepository.class)
+        );
+        
+        // Milestone service with injected mocks
+        MilestoneService milestoneService = new TestableMilestoneServiceImpl(
+            (MilestoneRepository) MOCK_REPOSITORIES.get(MilestoneRepository.class),
+            (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class)
+        );
+        
+        // Attendance service with injected mocks
         AttendanceService attendanceService = new TestableAttendanceServiceImpl(
             (AttendanceRepository) MOCK_REPOSITORIES.get(AttendanceRepository.class),
             (MeetingRepository) MOCK_REPOSITORIES.get(MeetingRepository.class),
             (TeamMemberRepository) MOCK_REPOSITORIES.get(TeamMemberRepository.class)
         );
         
-        // Create other mock services
+        // Component service with injected mocks
+        ComponentService componentService = new TestableComponentServiceImpl(
+            (ComponentRepository) MOCK_REPOSITORIES.get(ComponentRepository.class),
+            (TaskRepository) MOCK_REPOSITORIES.get(TaskRepository.class)
+        );
+        
+        // Meeting service with injected mocks
+        MeetingService meetingService = new TestableMeetingServiceImpl(
+            (MeetingRepository) MOCK_REPOSITORIES.get(MeetingRepository.class),
+            (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class)
+        );
+        
+        // Project service (using mock)
         ProjectService projectService = Mockito.mock(ProjectService.class);
-        SubteamService subteamService = Mockito.mock(SubteamService.class);
-        ComponentService componentService = Mockito.mock(ComponentService.class);
-        MeetingService meetingService = Mockito.mock(MeetingService.class);
-        MilestoneService milestoneService = Mockito.mock(MilestoneService.class);
+        
+        // Dialog service (using mock)
         DialogService dialogService = Mockito.mock(DialogService.class);
+        
+        // Gantt services (using mocks)
         GanttDataService ganttDataService = Mockito.mock(GanttDataService.class);
         GanttChartTransformationService transformationService = Mockito.mock(GanttChartTransformationService.class);
         
-        // Store in service map
+        // Store services in service map
+        MOCK_SERVICES.put(TaskService.class, taskService);
+        MOCK_SERVICES.put(TeamMemberService.class, teamMemberService);
+        MOCK_SERVICES.put(SubsystemService.class, subsystemService);
+        MOCK_SERVICES.put(SubteamService.class, subteamService);
+        MOCK_SERVICES.put(MilestoneService.class, milestoneService);
         MOCK_SERVICES.put(AttendanceService.class, attendanceService);
         MOCK_SERVICES.put(ComponentService.class, componentService);
         MOCK_SERVICES.put(MeetingService.class, meetingService);
-        MOCK_SERVICES.put(MilestoneService.class, milestoneService);
         MOCK_SERVICES.put(ProjectService.class, projectService);
-        MOCK_SERVICES.put(SubsystemService.class, subsystemService);
-        MOCK_SERVICES.put(SubteamService.class, subteamService);
-        MOCK_SERVICES.put(TaskService.class, taskService);
-        MOCK_SERVICES.put(TeamMemberService.class, teamMemberService);
         MOCK_SERVICES.put(DialogService.class, dialogService);
         MOCK_SERVICES.put(GanttDataService.class, ganttDataService);
         MOCK_SERVICES.put(GanttChartTransformationService.class, transformationService);
@@ -227,13 +251,13 @@ public class TestModule {
         configureMvvmFxDependencyInjection();
     }
     
-/**
-    * Replaces a mock repository with a custom implementation.
-    * 
-    * @param <T> the repository type
-    * @param repositoryClass the repository interface class
-    * @param repository the repository implementation
-    */
+    /**
+     * Replaces a mock repository with a custom implementation.
+     * 
+     * @param <T> the repository type
+     * @param repositoryClass the repository interface class
+     * @param repository the repository implementation
+     */
     public static <T> void setRepository(Class<T> repositoryClass, T repository) {
         if (!initialized) initialize();
         MOCK_REPOSITORIES.put(repositoryClass, repository);
@@ -258,15 +282,26 @@ public class TestModule {
                 mock instanceof TestableSubsystemServiceImpl ||
                 mock instanceof TestableSubteamServiceImpl ||
                 mock instanceof TestableMilestoneServiceImpl ||
-                mock instanceof TestableAttendanceServiceImpl) {
-                // Skip resetting the TestableTaskServiceImpl because it's not a mock
+                mock instanceof TestableAttendanceServiceImpl ||
+                mock instanceof TestableComponentServiceImpl ||
+                mock instanceof TestableMeetingServiceImpl) {
+                // Skip resetting the testable service implementations because they're not mocks
                 continue;
             }
-            Mockito.reset(mock);
+            
+            try {
+                Mockito.reset(mock);
+            } catch (Exception e) {
+                LOGGER.warning("Failed to reset mock: " + mock.getClass().getName() + " - " + e.getMessage());
+            }
         }
         
         for (Object mock : MOCK_REPOSITORIES.values()) {
-            Mockito.reset(mock);
+            try {
+                Mockito.reset(mock);
+            } catch (Exception e) {
+                LOGGER.warning("Failed to reset mock: " + mock.getClass().getName() + " - " + e.getMessage());
+            }
         }
     }
     
@@ -297,4 +332,4 @@ public class TestModule {
     public static boolean isInitialized() {
         return initialized;
     }
- }
+}
