@@ -250,7 +250,9 @@ public class TestModule {
         for (Object mock : MOCK_SERVICES.values()) {
             if (mock instanceof TestableTaskServiceImpl || 
                 mock instanceof TestableTeamMemberServiceImpl || 
-                mock instanceof TestableSubsystemServiceImpl) {
+                mock instanceof TestableSubsystemServiceImpl ||
+                mock instanceof TestableSubteamServiceImpl ||
+                mock instanceof TestableMilestoneServiceImpl) {
                 // Skip resetting the TestableTaskServiceImpl because it's not a mock
                 continue;
             }
