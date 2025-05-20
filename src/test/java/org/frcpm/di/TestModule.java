@@ -76,15 +76,16 @@ public class TestModule {
         MilestoneRepository milestoneRepo = Mockito.mock(MilestoneRepository.class);
         
         // Store mocks in repository map
-        MOCK_REPOSITORIES.put(ProjectRepository.class, projectRepo);
-        MOCK_REPOSITORIES.put(TaskRepository.class, taskRepo);
-        MOCK_REPOSITORIES.put(TeamMemberRepository.class, teamMemberRepo);
-        MOCK_REPOSITORIES.put(SubteamRepository.class, subteamRepo);
-        MOCK_REPOSITORIES.put(SubsystemRepository.class, subsystemRepo);
+        MOCK_REPOSITORIES.put(AttendanceRepository.class, attendanceRepo);
         MOCK_REPOSITORIES.put(ComponentRepository.class, componentRepo);
         MOCK_REPOSITORIES.put(MeetingRepository.class, meetingRepo);
-        MOCK_REPOSITORIES.put(AttendanceRepository.class, attendanceRepo);
         MOCK_REPOSITORIES.put(MilestoneRepository.class, milestoneRepo);
+        MOCK_REPOSITORIES.put(ProjectRepository.class, projectRepo);
+        MOCK_REPOSITORIES.put(SubsystemRepository.class, subsystemRepo);
+        MOCK_REPOSITORIES.put(SubteamRepository.class, subteamRepo);
+        MOCK_REPOSITORIES.put(TaskRepository.class, taskRepo);
+        MOCK_REPOSITORIES.put(TeamMemberRepository.class, teamMemberRepo);
+
     }
     
     /**
@@ -111,30 +112,34 @@ public class TestModule {
             (SubsystemRepository) MOCK_REPOSITORIES.get(SubsystemRepository.class),
             (SubteamRepository) MOCK_REPOSITORIES.get(SubteamRepository.class)
         );
+
+        // Create attendance service with injected mocks
+        AttendanceService attendanceService = new TestableAttendanceServiceImpl(
+            (AttendanceRepository) MOCK_REPOSITORIES.get(AttendanceRepository.class),
+            (MeetingRepository) MOCK_REPOSITORIES.get(MeetingRepository.class),
+            (TeamMemberRepository) MOCK_REPOSITORIES.get(TeamMemberRepository.class)
+        );
         
         // Create other mock services
         ProjectService projectService = Mockito.mock(ProjectService.class);
-        //TeamMemberService teamMemberService = Mockito.mock(TeamMemberService.class);
         SubteamService subteamService = Mockito.mock(SubteamService.class);
-        //SubsystemService subsystemService = Mockito.mock(SubsystemService.class);
         ComponentService componentService = Mockito.mock(ComponentService.class);
         MeetingService meetingService = Mockito.mock(MeetingService.class);
-        AttendanceService attendanceService = Mockito.mock(AttendanceService.class);
         MilestoneService milestoneService = Mockito.mock(MilestoneService.class);
         DialogService dialogService = Mockito.mock(DialogService.class);
         GanttDataService ganttDataService = Mockito.mock(GanttDataService.class);
         GanttChartTransformationService transformationService = Mockito.mock(GanttChartTransformationService.class);
         
         // Store in service map
-        MOCK_SERVICES.put(TaskService.class, taskService);
-        MOCK_SERVICES.put(ProjectService.class, projectService);
-        MOCK_SERVICES.put(TeamMemberService.class, teamMemberService);
-        MOCK_SERVICES.put(SubteamService.class, subteamService);
-        MOCK_SERVICES.put(SubsystemService.class, subsystemService);
+        MOCK_SERVICES.put(AttendanceService.class, attendanceService);
         MOCK_SERVICES.put(ComponentService.class, componentService);
         MOCK_SERVICES.put(MeetingService.class, meetingService);
-        MOCK_SERVICES.put(AttendanceService.class, attendanceService);
         MOCK_SERVICES.put(MilestoneService.class, milestoneService);
+        MOCK_SERVICES.put(ProjectService.class, projectService);
+        MOCK_SERVICES.put(SubsystemService.class, subsystemService);
+        MOCK_SERVICES.put(SubteamService.class, subteamService);
+        MOCK_SERVICES.put(TaskService.class, taskService);
+        MOCK_SERVICES.put(TeamMemberService.class, teamMemberService);
         MOCK_SERVICES.put(DialogService.class, dialogService);
         MOCK_SERVICES.put(GanttDataService.class, ganttDataService);
         MOCK_SERVICES.put(GanttChartTransformationService.class, transformationService);
@@ -252,7 +257,8 @@ public class TestModule {
                 mock instanceof TestableTeamMemberServiceImpl || 
                 mock instanceof TestableSubsystemServiceImpl ||
                 mock instanceof TestableSubteamServiceImpl ||
-                mock instanceof TestableMilestoneServiceImpl) {
+                mock instanceof TestableMilestoneServiceImpl ||
+                mock instanceof TestableAttendanceServiceImpl) {
                 // Skip resetting the TestableTaskServiceImpl because it's not a mock
                 continue;
             }
