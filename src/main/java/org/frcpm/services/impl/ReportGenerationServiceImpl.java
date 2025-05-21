@@ -72,6 +72,10 @@ public class ReportGenerationServiceImpl implements ReportGenerationService {
         LOGGER.info("Generating project summary report for project ID: " + projectId);
         
         Map<String, Object> report = new HashMap<>();
+
+        // Add report metadata
+        report.put("reportType", "Project Summary");
+        report.put("generatedDate", LocalDate.now());
         
         try {
             // Get project
@@ -82,11 +86,7 @@ public class ReportGenerationServiceImpl implements ReportGenerationService {
             }
             
             Project project = projectOpt.get();
-            
-            // Add report metadata
-            report.put("reportType", "Project Summary");
-            report.put("generatedDate", LocalDate.now());
-            
+                        
             // Add project details
             Map<String, Object> projectDetails = new HashMap<>();
             projectDetails.put("name", project.getName());
