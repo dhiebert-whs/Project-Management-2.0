@@ -143,6 +143,25 @@ public class TestModule {
             (MeetingRepository) MOCK_REPOSITORIES.get(MeetingRepository.class),
             (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class)
         );
+
+        // Gantt chart service with injected mocks
+        // Note: GanttDataService is not a mock, but a testable implementation
+        GanttDataService ganttDataService = new TestableGanttDataServiceImpl(
+            (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class),
+            (TaskRepository) MOCK_REPOSITORIES.get(TaskRepository.class),
+            (MilestoneRepository) MOCK_REPOSITORIES.get(MilestoneRepository.class),
+            Mockito.mock(GanttChartTransformationService.class)
+        );
+
+        // Visualization service with injected mocks
+        // Note: VisualizationService is not a mock, but a testable implementation
+        VisualizationService visualizationService = new TestableVisualizationServiceImpl(
+            (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class),
+            (TaskRepository) MOCK_REPOSITORIES.get(TaskRepository.class),
+            (MilestoneRepository) MOCK_REPOSITORIES.get(MilestoneRepository.class),
+            (SubsystemRepository) MOCK_REPOSITORIES.get(SubsystemRepository.class),
+            ganttDataService
+        );
         
         // Project service (using mock)
         ProjectService projectService = Mockito.mock(ProjectService.class);
@@ -151,7 +170,6 @@ public class TestModule {
         DialogService dialogService = Mockito.mock(DialogService.class);
         
         // Gantt services (using mocks)
-        GanttDataService ganttDataService = Mockito.mock(GanttDataService.class);
         GanttChartTransformationService transformationService = Mockito.mock(GanttChartTransformationService.class);
         
         // Store services in service map
@@ -167,6 +185,7 @@ public class TestModule {
         MOCK_SERVICES.put(DialogService.class, dialogService);
         MOCK_SERVICES.put(GanttDataService.class, ganttDataService);
         MOCK_SERVICES.put(GanttChartTransformationService.class, transformationService);
+        MOCK_SERVICES.put(VisualizationService.class, visualizationService);
     }
     
     /**
@@ -284,7 +303,9 @@ public class TestModule {
                 mock instanceof TestableMilestoneServiceImpl ||
                 mock instanceof TestableAttendanceServiceImpl ||
                 mock instanceof TestableComponentServiceImpl ||
-                mock instanceof TestableMeetingServiceImpl) {
+                mock instanceof TestableMeetingServiceImpl ||
+                mock instanceof TestableGanttDataServiceImpl ||     // Add this line
+                mock instanceof TestableVisualizationServiceImpl)  {
                 // Skip resetting the testable service implementations because they're not mocks
                 continue;
             }
