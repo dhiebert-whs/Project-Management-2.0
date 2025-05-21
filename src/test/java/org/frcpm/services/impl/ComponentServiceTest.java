@@ -23,6 +23,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
@@ -61,7 +62,8 @@ public class ComponentServiceTest extends BaseServiceTest {
         
         // Configure task repository
         when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
-        
+        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    
         // Create service with injected mocks
         componentService = new TestableComponentServiceImpl(
             componentRepository,
