@@ -1,21 +1,26 @@
+// src/main/java/org/frcpm/models/TaskStatus.java
 package org.frcpm.models;
 
 /**
  * Enum representing the status of a task.
  */
 public enum TaskStatus {
-    /**
-     * Task has not been started yet (0% progress)
-     */
-    NOT_STARTED,
+    NOT_STARTED("Not Started"),
+    IN_PROGRESS("In Progress"),
+    COMPLETED("Completed");
     
-    /**
-     * Task is in progress (1-99% progress)
-     */
-    IN_PROGRESS,
+    private final String displayName;
     
-    /**
-     * Task is completed (100% progress)
-     */
-    COMPLETED
+    TaskStatus(String displayName) {
+        this.displayName = displayName;
+    }
+    
+    public String getDisplayName() {
+        return displayName;
+    }
+    
+    @Override
+    public String toString() {
+        return displayName;
+    }
 }
