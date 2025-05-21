@@ -36,6 +36,9 @@ public class ServiceLocator {
     private static DialogService dialogService;
     private static GanttDataService ganttDataService;
     private static GanttChartTransformationService transformationService;
+    private static VisualizationService visualizationService;
+    private static MetricsCalculationService metricsCalculationService;
+    private static ReportGenerationService reportGenerationService;
     
     /**
      * Initializes the service locator by registering all services.
@@ -119,11 +122,16 @@ public class ServiceLocator {
         milestoneService = new MilestoneServiceImpl();
         dialogService = new JavaFXDialogService();
         ganttDataService = new GanttDataServiceImpl();
+        metricsCalculationService = new MetricsCalculationServiceImpl();
+        reportGenerationService = new ReportGenerationServiceImpl();
     
         // Get transformation service from Gantt data service
         if (ganttDataService != null && ganttDataService instanceof GanttDataServiceImpl) {
             transformationService = ((GanttDataServiceImpl) ganttDataService).getTransformationService();
         }
+        
+        // Get visualization service
+        visualizationService = new VisualizationServiceImpl();
         
         // Register services
         register(ProjectService.class, projectService);
@@ -138,6 +146,9 @@ public class ServiceLocator {
         register(DialogService.class, dialogService);
         register(GanttDataService.class, ganttDataService);
         register(GanttChartTransformationService.class, transformationService);
+        register(VisualizationService.class, visualizationService);
+        register(MetricsCalculationService.class, metricsCalculationService);
+        register(ReportGenerationService.class, reportGenerationService);
     }
     
     /**
@@ -183,6 +194,51 @@ public class ServiceLocator {
             injectRepository(milestoneService, "milestoneRepository", MilestoneRepository.class);
             injectRepository(milestoneService, "projectRepository", ProjectRepository.class);
             
+            // GanttDataService
+            injectRepository(ganttDataService, "projectRepository", ProjectRepository.class);
+            injectRepository(ganttDataService, "taskRepository", TaskRepository.class);
+            injectRepository(ganttDataService, "milestoneRepository", MilestoneRepository.class);
+            
+            // VisualizationService
+            injectRepository(visualizationService, "projectRepository", ProjectRepository.class);
+            injectRepository(visualizationService, "taskRepository", TaskRepository.class);
+            injectRepository(visualizationService, "milestoneRepository", MilestoneRepository.class);
+            injectRepository(visualizationService, "subsystemRepository", SubsystemRepository.class);
+            
+            // Inject GanttDataService into VisualizationService
+            try {
+                java.lang.reflect.Field field = findField(visualizationService.getClass(), "ganttDataService");
+                if (field != null) {
+                    field.setAccessible(true);
+                    field.set(visualizationService, ganttDataService);
+                }
+            } catch (Exception e) {
+                LOGGER.warning("Failed to inject GanttDataService into VisualizationService: " + e.getMessage());
+            }
+            
+            // MetricsCalculationService
+            injectRepository(metricsCalculationService, "projectRepository", ProjectRepository.class);
+            injectRepository(metricsCalculationService, "taskRepository", TaskRepository.class);
+            injectRepository(metricsCalculationService, "teamMemberRepository", TeamMemberRepository.class);
+            injectRepository(metricsCalculationService, "milestoneRepository", MilestoneRepository.class);
+            injectRepository(metricsCalculationService, "attendanceRepository", AttendanceRepository.class);
+            injectRepository(metricsCalculationService, "meetingRepository", MeetingRepository.class);
+            injectRepository(metricsCalculationService, "subsystemRepository", SubsystemRepository.class);
+            
+            // ReportGenerationService
+            injectRepository(reportGenerationService, "projectRepository", ProjectRepository.class);
+            injectRepository(reportGenerationService, "taskRepository", TaskRepository.class);
+            injectRepository(reportGenerationService, "teamMemberRepository", TeamMemberRepository.class);
+            injectRepository(reportGenerationService, "milestoneRepository", MilestoneRepository.class);
+            injectRepository(reportGenerationService, "attendanceRepository", AttendanceRepository.class);
+            injectRepository(reportGenerationService, "meetingRepository", MeetingRepository.class);
+            injectRepository(reportGenerationService, "subsystemRepository", SubsystemRepository.class);
+            
+            // Inject services into ReportGenerationService
+            injectService(reportGenerationService, "metricsService", metricsCalculationService);
+            injectService(reportGenerationService, "ganttDataService", ganttDataService);
+            injectService(reportGenerationService, "visualizationService", visualizationService);
+            
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error injecting repositories into services", e);
             throw new RuntimeException("Failed to inject repositories into services", e);
@@ -222,6 +278,41 @@ public class ServiceLocator {
             }
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "Error injecting repository " + repositoryClass.getSimpleName() + 
+                     " into " + service.getClass().getSimpleName(), e);
+        }
+    }
+    
+    /**
+     * Helper method to inject a service into another service using reflection.
+     * 
+     * @param service the service to inject into
+     * @param fieldName the name of the field to inject
+     * @param serviceToInject the service to inject
+     */
+    private static void injectService(Object service, String fieldName, Object serviceToInject) {
+        try {
+            if (service == null) {
+                LOGGER.warning("Service is null, cannot inject dependency");
+                return;
+            }
+            
+            if (serviceToInject == null) {
+                LOGGER.warning("Service to inject is null for field: " + fieldName);
+                return;
+            }
+            
+            // Use reflection to inject the service
+            java.lang.reflect.Field field = findField(service.getClass(), fieldName);
+            if (field != null) {
+                field.setAccessible(true);
+                field.set(service, serviceToInject);
+                LOGGER.fine("Injected " + serviceToInject.getClass().getSimpleName() + " into " + 
+                          service.getClass().getSimpleName() + "." + fieldName);
+            } else {
+                LOGGER.warning("Field not found: " + fieldName + " in " + service.getClass().getSimpleName());
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error injecting service " + serviceToInject.getClass().getSimpleName() + 
                      " into " + service.getClass().getSimpleName(), e);
         }
     }
@@ -346,6 +437,21 @@ public class ServiceLocator {
         return transformationService;
     }
     
+    public static VisualizationService getVisualizationService() {
+        if (!initialized) initialize();
+        return visualizationService;
+    }
+    
+    public static MetricsCalculationService getMetricsCalculationService() {
+        if (!initialized) initialize();
+        return metricsCalculationService;
+    }
+    
+    public static ReportGenerationService getReportGenerationService() {
+        if (!initialized) initialize();
+        return reportGenerationService;
+    }
+    
     // Repository getters
     
     public static ProjectRepository getProjectRepository() {
@@ -414,6 +520,9 @@ public class ServiceLocator {
         dialogService = null;
         ganttDataService = null;
         transformationService = null;
+        visualizationService = null;
+        metricsCalculationService = null;
+        reportGenerationService = null;
         
         initialized = false;
         LOGGER.info("ServiceLocator cleared");

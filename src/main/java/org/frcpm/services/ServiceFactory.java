@@ -129,6 +129,33 @@ public class ServiceFactory {
     }
     
     /**
+     * Gets the visualization service instance.
+     * 
+     * @return the visualization service
+     */
+    public static VisualizationService getVisualizationService() {
+        return ServiceLocator.getVisualizationService();
+    }
+    
+    /**
+     * Gets the metrics calculation service instance.
+     * 
+     * @return the metrics calculation service
+     */
+    public static MetricsCalculationService getMetricsCalculationService() {
+        return ServiceLocator.getMetricsCalculationService();
+    }
+    
+    /**
+     * Gets the report generation service instance.
+     * 
+     * @return the report generation service
+     */
+    public static ReportGenerationService getReportGenerationService() {
+        return ServiceLocator.getReportGenerationService();
+    }
+    
+    /**
      * Gets a service by its interface type.
      * 
      * @param <T> the service type
