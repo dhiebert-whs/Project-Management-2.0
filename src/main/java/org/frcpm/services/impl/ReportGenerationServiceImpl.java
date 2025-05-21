@@ -531,7 +531,7 @@ public Map<String, Object> generateAttendanceReport(Long projectId, LocalDate st
         }
         
         // Sort by attendance rate (descending)
-        memberAttendance.sort(Comparator.comparing(m -> ((Double) m.get("attendanceRate"))).reversed());
+        memberAttendance.sort(Comparator.comparing(m -> ((Double) ((Map<String, Object>) m).get("attendanceRate"))).reversed());
         
         report.put("memberAttendance", memberAttendance);
         
@@ -657,7 +657,7 @@ public Map<String, Object> generateSubsystemProgressReport(Long projectId) {
         
         // Sort by completion percentage (descending)
         subsystemDetails.sort(Comparator.comparing(s -> 
-            ((Double) ((Map<String, Object>) s.get("taskStatistics")).get("completionPercentage"))).reversed());
+            ((Double) ((Map<String, Object>) ((Map<String, Object>) s).get("taskStatistics")).get("completionPercentage"))).reversed());
         
         report.put("subsystems", subsystemDetails);
         
@@ -819,7 +819,7 @@ public Map<String, Object> generateTeamMemberReport(Long teamMemberId, LocalDate
         }
         
         // Sort by date (descending)
-        attendanceDetails.sort(Comparator.comparing(a -> ((LocalDate) a.get("date"))).reversed());
+        attendanceDetails.sort(Comparator.comparing(a -> ((LocalDate) ((Map<String, Object>) a).get("date"))).reversed());
         
         report.put("attendanceDetails", attendanceDetails);
         
