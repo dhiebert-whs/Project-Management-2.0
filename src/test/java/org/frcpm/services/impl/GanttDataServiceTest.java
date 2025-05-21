@@ -289,6 +289,29 @@ public class GanttDataServiceTest extends BaseServiceTest {
         filterCriteria.put("startDate", now.toString());
         filterCriteria.put("endDate", now.plusDays(20).toString());
         
+        // Create filtered tasks and milestones
+        List<GanttChartData> filteredTasks = new ArrayList<>(testTasksGanttData);
+        List<GanttChartData> filteredMilestones = new ArrayList<>(testMilestonesGanttData);
+        
+        // Configure the mock to return our filtered lists
+        when(transformationService.filterChartData(
+            eq(testTasksGanttData), 
+            eq("CRITICAL_PATH"), 
+            isNull(), 
+            eq("Drivetrain"), 
+            eq(now), 
+            eq(now.plusDays(20))
+        )).thenReturn(filteredTasks);
+        
+        when(transformationService.filterChartData(
+            eq(testMilestonesGanttData), 
+            isNull(), 
+            isNull(), 
+            isNull(), 
+            eq(now), 
+            eq(now.plusDays(20))
+        )).thenReturn(filteredMilestones);
+        
         // Execute
         Map<String, Object> result = ganttDataService.applyFiltersToGanttData(ganttData, filterCriteria);
         
@@ -296,14 +319,14 @@ public class GanttDataServiceTest extends BaseServiceTest {
         assertNotNull(result);
         
         @SuppressWarnings("unchecked")
-        List<GanttChartData> filteredTasks = (List<GanttChartData>) result.get("tasks");
-        assertNotNull(filteredTasks);
-        assertEquals(1, filteredTasks.size());
+        List<GanttChartData> resultTasks = (List<GanttChartData>) result.get("tasks");
+        assertNotNull(resultTasks);
+        assertEquals(1, resultTasks.size());
         
         @SuppressWarnings("unchecked")
-        List<GanttChartData> filteredMilestones = (List<GanttChartData>) result.get("milestones");
-        assertNotNull(filteredMilestones);
-        assertEquals(1, filteredMilestones.size());
+        List<GanttChartData> resultMilestones = (List<GanttChartData>) result.get("milestones");
+        assertNotNull(resultMilestones);
+        assertEquals(1, resultMilestones.size());
         
         // Verify transformation service calls
         verify(transformationService).filterChartData(
