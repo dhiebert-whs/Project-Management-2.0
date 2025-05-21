@@ -1,4 +1,4 @@
-// src/test/java/org/frcpm/di/TestModule.java
+// src/test/java/org/frcpm/di/TestModule.java (update)
 
 package org.frcpm.di;
 
@@ -172,6 +172,31 @@ public class TestModule {
         // Gantt services (using mocks)
         GanttChartTransformationService transformationService = Mockito.mock(GanttChartTransformationService.class);
         
+        // Add MetricsCalculationService (using testable implementation)
+        MetricsCalculationService metricsService = new TestableMetricsCalculationServiceImpl(
+            (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class),
+            (TaskRepository) MOCK_REPOSITORIES.get(TaskRepository.class),
+            (TeamMemberRepository) MOCK_REPOSITORIES.get(TeamMemberRepository.class),
+            (MilestoneRepository) MOCK_REPOSITORIES.get(MilestoneRepository.class),
+            (AttendanceRepository) MOCK_REPOSITORIES.get(AttendanceRepository.class),
+            (MeetingRepository) MOCK_REPOSITORIES.get(MeetingRepository.class),
+            (SubsystemRepository) MOCK_REPOSITORIES.get(SubsystemRepository.class)
+        );
+        
+        // Add ReportGenerationService (using testable implementation)
+        ReportGenerationService reportService = new TestableReportGenerationServiceImpl(
+            (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class),
+            (TaskRepository) MOCK_REPOSITORIES.get(TaskRepository.class),
+            (TeamMemberRepository) MOCK_REPOSITORIES.get(TeamMemberRepository.class),
+            (MilestoneRepository) MOCK_REPOSITORIES.get(MilestoneRepository.class),
+            (AttendanceRepository) MOCK_REPOSITORIES.get(AttendanceRepository.class),
+            (MeetingRepository) MOCK_REPOSITORIES.get(MeetingRepository.class),
+            (SubsystemRepository) MOCK_REPOSITORIES.get(SubsystemRepository.class),
+            metricsService,
+            ganttDataService,
+            visualizationService
+        );
+        
         // Store services in service map
         MOCK_SERVICES.put(TaskService.class, taskService);
         MOCK_SERVICES.put(TeamMemberService.class, teamMemberService);
@@ -186,6 +211,8 @@ public class TestModule {
         MOCK_SERVICES.put(GanttDataService.class, ganttDataService);
         MOCK_SERVICES.put(GanttChartTransformationService.class, transformationService);
         MOCK_SERVICES.put(VisualizationService.class, visualizationService);
+        MOCK_SERVICES.put(MetricsCalculationService.class, metricsService);
+        MOCK_SERVICES.put(ReportGenerationService.class, reportService);
     }
     
     /**
@@ -304,8 +331,10 @@ public class TestModule {
                 mock instanceof TestableAttendanceServiceImpl ||
                 mock instanceof TestableComponentServiceImpl ||
                 mock instanceof TestableMeetingServiceImpl ||
-                mock instanceof TestableGanttDataServiceImpl ||     // Add this line
-                mock instanceof TestableVisualizationServiceImpl)  {
+                mock instanceof TestableGanttDataServiceImpl ||
+                mock instanceof TestableVisualizationServiceImpl ||
+                mock instanceof TestableMetricsCalculationServiceImpl ||
+                mock instanceof TestableReportGenerationServiceImpl) {
                 // Skip resetting the testable service implementations because they're not mocks
                 continue;
             }
