@@ -110,16 +110,9 @@ public class TestModule {
         // Create a spy so we can stub async methods
         TeamMemberService teamMemberService = Mockito.spy(teamMemberServiceImpl);
         
-    // Task service with async support - use the testable async implementation
-    TestableTaskServiceAsyncImpl taskServiceImpl = new TestableTaskServiceAsyncImpl(
-        (TaskRepository) MOCK_REPOSITORIES.get(TaskRepository.class),
-        (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class),
-        (ComponentRepository) MOCK_REPOSITORIES.get(ComponentRepository.class)
-    );
-    // Create a spy so we can stub async methods
-    TaskService taskService = Mockito.spy(taskServiceImpl);
 
 
+        
         // Subsystem service with injected mocks
         SubsystemService subsystemService = new TestableSubsystemServiceImpl(
             (SubsystemRepository) MOCK_REPOSITORIES.get(SubsystemRepository.class),
