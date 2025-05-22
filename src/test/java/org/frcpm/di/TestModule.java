@@ -1,4 +1,4 @@
-// src/test/java/org/frcpm/di/TestModule.java (update)
+// src/test/java/org/frcpm/di/TestModule.java (FIXED)
 
 package org.frcpm.di;
 
@@ -102,11 +102,13 @@ public class TestModule {
             (ComponentRepository) MOCK_REPOSITORIES.get(ComponentRepository.class)
         );
         
-        // Team member service with async support - use the new testable async implementation
-        TeamMemberService teamMemberService = new TestableTeamMemberServiceAsyncImpl(
+        // Team member service with async support - CREATE A SPY INSTEAD OF REAL IMPLEMENTATION
+        TestableTeamMemberServiceAsyncImpl teamMemberServiceImpl = new TestableTeamMemberServiceAsyncImpl(
             (TeamMemberRepository) MOCK_REPOSITORIES.get(TeamMemberRepository.class),
             (SubteamRepository) MOCK_REPOSITORIES.get(SubteamRepository.class)
         );
+        // Create a spy so we can stub async methods
+        TeamMemberService teamMemberService = Mockito.spy(teamMemberServiceImpl);
         
         // Subsystem service with injected mocks
         SubsystemService subsystemService = new TestableSubsystemServiceImpl(
@@ -322,7 +324,6 @@ public class TestModule {
         // Reset all mocks
         for (Object mock : MOCK_SERVICES.values()) {
             if (mock instanceof TestableTaskServiceImpl || 
-                mock instanceof TestableTeamMemberServiceImpl || 
                 mock instanceof TestableSubsystemServiceImpl ||
                 mock instanceof TestableSubteamServiceImpl ||
                 mock instanceof TestableMilestoneServiceImpl ||
@@ -333,7 +334,7 @@ public class TestModule {
                 mock instanceof TestableVisualizationServiceImpl ||
                 mock instanceof TestableMetricsCalculationServiceImpl ||
                 mock instanceof TestableReportGenerationServiceImpl) {
-                // Skip resetting the testable service implementations because they're not mocks
+                // Skip resetting the testable service implementations because they're not pure mocks
                 continue;
             }
             
