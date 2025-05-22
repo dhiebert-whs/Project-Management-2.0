@@ -102,8 +102,8 @@ public class TestModule {
             (ComponentRepository) MOCK_REPOSITORIES.get(ComponentRepository.class)
         );
         
-        // Team member service with injected mocks
-        TeamMemberService teamMemberService = new TestableTeamMemberServiceImpl(
+        // Team member service with async support - use the new testable async implementation
+        TeamMemberService teamMemberService = new TestableTeamMemberServiceAsyncImpl(
             (TeamMemberRepository) MOCK_REPOSITORIES.get(TeamMemberRepository.class),
             (SubteamRepository) MOCK_REPOSITORIES.get(SubteamRepository.class)
         );
@@ -144,8 +144,7 @@ public class TestModule {
             (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class)
         );
 
-        // Gantt chart service with injected mocks
-        // Note: GanttDataService is not a mock, but a testable implementation
+        // Gantt chart service with injected mocks - use the existing testable implementation
         GanttDataService ganttDataService = new TestableGanttDataServiceImpl(
             (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class),
             (TaskRepository) MOCK_REPOSITORIES.get(TaskRepository.class),
@@ -154,7 +153,6 @@ public class TestModule {
         );
 
         // Visualization service with injected mocks
-        // Note: VisualizationService is not a mock, but a testable implementation
         VisualizationService visualizationService = new TestableVisualizationServiceImpl(
             (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class),
             (TaskRepository) MOCK_REPOSITORIES.get(TaskRepository.class),

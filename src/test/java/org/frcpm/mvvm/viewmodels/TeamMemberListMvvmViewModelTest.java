@@ -11,7 +11,7 @@ import org.frcpm.di.TestModule;
 import org.frcpm.models.Project;
 import org.frcpm.models.TeamMember;
 import org.frcpm.services.TeamMemberService;
-import org.frcpm.services.impl.TeamMemberServiceAsyncImpl;
+import org.frcpm.services.impl.TestableTeamMemberServiceAsyncImpl;
 import org.frcpm.utils.TestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 public class TeamMemberListMvvmViewModelTest {
     
     private TeamMemberService teamMemberService;
-    private TeamMemberServiceAsyncImpl teamMemberServiceAsync;
+    private TestableTeamMemberServiceAsyncImpl teamMemberServiceAsync;
     
     private Project testProject;
     private List<TeamMember> testTeamMembers;
@@ -36,9 +36,9 @@ public class TeamMemberListMvvmViewModelTest {
         // Create test data
         setupTestData();
         
-        // Get service references from TestModule (they're already testable implementations)
+        // Get service references from TestModule
         teamMemberService = TestModule.getService(TeamMemberService.class);
-        teamMemberServiceAsync = (TeamMemberServiceAsyncImpl) teamMemberService;
+        teamMemberServiceAsync = (TestableTeamMemberServiceAsyncImpl) teamMemberService;
         
         // Initialize JavaFX toolkit if needed
         try {
@@ -439,6 +439,7 @@ public class TeamMemberListMvvmViewModelTest {
         });
     }
     
+    
     @Test
     public void testErrorHandlingDuringDelete() {
         // Configure the mock service to return an error
@@ -650,9 +651,9 @@ public class TeamMemberListMvvmViewModelTest {
     
     @Test
     public void testAsyncServiceCasting() {
-        // Verify that the service can be cast to async implementation
+        // Verify that the service can be cast to our testable async implementation
         assertNotNull(teamMemberServiceAsync);
-        assertTrue(teamMemberServiceAsync instanceof TeamMemberServiceAsyncImpl);
+        assertTrue(teamMemberServiceAsync instanceof TestableTeamMemberServiceAsyncImpl);
         assertSame(teamMemberService, teamMemberServiceAsync);
     }
 }

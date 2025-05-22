@@ -13,7 +13,7 @@ import org.frcpm.models.Subteam;
 import org.frcpm.models.TeamMember;
 import org.frcpm.services.SubteamService;
 import org.frcpm.services.TeamMemberService;
-import org.frcpm.services.impl.TeamMemberServiceAsyncImpl;
+import org.frcpm.services.impl.TestableTeamMemberServiceAsyncImpl;
 import org.frcpm.utils.TestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +25,7 @@ public class TeamMemberDetailMvvmViewModelTest {
     
     private TeamMemberService teamMemberService;
     private SubteamService subteamService;
+    private TestableTeamMemberServiceAsyncImpl teamMemberServiceAsync;
     
     private Project testProject;
     private Subteam testSubteam;
@@ -43,6 +44,7 @@ public class TeamMemberDetailMvvmViewModelTest {
         // Get service references from TestModule (they're already testable implementations)
         teamMemberService = TestModule.getService(TeamMemberService.class);
         subteamService = TestModule.getService(SubteamService.class);
+        teamMemberServiceAsync = (TestableTeamMemberServiceAsyncImpl) teamMemberService;
         
         // Configure service mocks
         when(subteamService.findAll()).thenReturn(testSubteams);

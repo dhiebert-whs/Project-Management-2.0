@@ -11,7 +11,7 @@ import org.frcpm.di.TestModule;
 import org.frcpm.models.Project;
 import org.frcpm.models.TeamMember;
 import org.frcpm.services.TeamMemberService;
-import org.frcpm.services.impl.TeamMemberServiceAsyncImpl;
+import org.frcpm.services.impl.TestableTeamMemberServiceAsyncImpl;
 import org.frcpm.utils.TestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 public class TeamMemberSelectionMvvmViewModelTest {
     
     private TeamMemberService teamMemberService;
-    private TeamMemberServiceAsyncImpl teamMemberServiceAsync;
+    private TestableTeamMemberServiceAsyncImpl teamMemberServiceAsync;
     
     private Project testProject;
     private List<TeamMember> testTeamMembers;
@@ -38,7 +38,7 @@ public class TeamMemberSelectionMvvmViewModelTest {
         
         // Get service references from TestModule (they're already testable implementations)
         teamMemberService = TestModule.getService(TeamMemberService.class);
-        teamMemberServiceAsync = (TeamMemberServiceAsyncImpl) teamMemberService;
+        teamMemberServiceAsync = (TestableTeamMemberServiceAsyncImpl) teamMemberService;
         
         // Initialize JavaFX toolkit if needed
         try {
@@ -644,9 +644,9 @@ public class TeamMemberSelectionMvvmViewModelTest {
     
     @Test
     public void testAsyncServiceCasting() {
-        // Verify that the service can be cast to async implementation
+        // Verify that the service can be cast to our testable async implementation
         assertNotNull(teamMemberServiceAsync);
-        assertTrue(teamMemberServiceAsync instanceof TeamMemberServiceAsyncImpl);
+        assertTrue(teamMemberServiceAsync instanceof TestableTeamMemberServiceAsyncImpl);
         assertSame(teamMemberService, teamMemberServiceAsync);
     }
 }
