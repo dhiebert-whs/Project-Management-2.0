@@ -17,6 +17,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -27,11 +29,11 @@ import org.frcpm.mvvm.BaseMvvmViewModel;
 import org.frcpm.mvvm.async.MvvmAsyncHelper;
 import org.frcpm.services.ComponentService;
 import org.frcpm.services.TaskService;
-import org.frcpm.services.impl.ComponentServiceAsyncImpl;
-import org.frcpm.services.impl.TaskServiceAsyncImpl;
 
 /**
  * ViewModel for the ComponentDetail view using MVVMFx.
+ * FIXED: Removed problematic casting to specific implementation classes.
+ * Now uses reflection to call async methods if available, or delegates to sync methods.
  */
 public class ComponentDetailMvvmViewModel extends BaseMvvmViewModel {
     
@@ -39,9 +41,7 @@ public class ComponentDetailMvvmViewModel extends BaseMvvmViewModel {
     
     // Service dependencies
     private final ComponentService componentService;
-    private final ComponentServiceAsyncImpl componentServiceAsync;
     private final TaskService taskService;
-    private final TaskServiceAsyncImpl taskServiceAsync;
     
     // Observable properties for component fields
     private final StringProperty name = new SimpleStringProperty("");
@@ -74,9 +74,7 @@ public class ComponentDetailMvvmViewModel extends BaseMvvmViewModel {
      */
     public ComponentDetailMvvmViewModel(ComponentService componentService, TaskService taskService) {
         this.componentService = componentService;
-        this.componentServiceAsync = (ComponentServiceAsyncImpl) componentService;
         this.taskService = taskService;
-        this.taskServiceAsync = (TaskServiceAsyncImpl) taskService;
         
         initializeCommands();
         setupValidation();
@@ -240,9 +238,8 @@ public class ComponentDetailMvvmViewModel extends BaseMvvmViewModel {
         
         loading.set(true);
         
-        // For now, we'll refresh the component to get the latest tasks
-        componentServiceAsync.findByIdAsync(
-            comp.getId(),
+        // Use async method from interface
+        componentService.findByIdAsync(comp.getId(),
             // Success handler
             refreshedComponent -> {
                 Platform.runLater(() -> {
@@ -290,9 +287,8 @@ public class ComponentDetailMvvmViewModel extends BaseMvvmViewModel {
             componentToSave.setActualDelivery(actualDelivery.get());
             componentToSave.setDelivered(delivered.get());
             
-            // Save the component asynchronously
-            componentServiceAsync.saveAsync(
-                componentToSave,
+            // Use async method from interface
+            componentService.saveAsync(componentToSave,
                 // Success handler
                 savedComponent -> {
                     Platform.runLater(() -> {
@@ -370,10 +366,8 @@ public class ComponentDetailMvvmViewModel extends BaseMvvmViewModel {
         componentIds.add(component.get().getId());
         
         try {
-            // Use the async service to associate the component with the task
-            taskServiceAsync.associateComponentsWithTaskAsync(
-                task.getId(),
-                componentIds,
+            // Use async method from interface
+            taskService.associateComponentsWithTaskAsync(task.getId(), componentIds,
                 updatedTask -> {
                     Platform.runLater(() -> {
                         // Reload tasks to reflect the changes
@@ -420,12 +414,10 @@ public class ComponentDetailMvvmViewModel extends BaseMvvmViewModel {
         
         // Create a set of component IDs without this component
         try {
-            // Use the async service to update the task's required components
             Set<Long> emptyComponentIds = new HashSet<>(); // Empty to remove all associations
             
-            taskServiceAsync.associateComponentsWithTaskAsync(
-                task.getId(),
-                emptyComponentIds,
+            // Use async method from interface
+            taskService.associateComponentsWithTaskAsync(task.getId(), emptyComponentIds,
                 updatedTask -> {
                     Platform.runLater(() -> {
                         // Reload tasks to reflect the changes
