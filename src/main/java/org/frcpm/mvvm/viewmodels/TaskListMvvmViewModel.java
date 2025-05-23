@@ -11,7 +11,6 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
-
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -21,10 +20,11 @@ import org.frcpm.models.Task;
 import org.frcpm.mvvm.BaseMvvmViewModel;
 import org.frcpm.mvvm.async.MvvmAsyncHelper;
 import org.frcpm.services.TaskService;
-import org.frcpm.services.impl.TaskServiceAsyncImpl;
 
 /**
  * ViewModel for the TaskList view using MVVMFx.
+ * FIXED: Removed problematic casting to specific implementation classes.
+ * Now uses interface methods with async support via default implementations.
  */
 public class TaskListMvvmViewModel extends BaseMvvmViewModel {
     
@@ -32,7 +32,6 @@ public class TaskListMvvmViewModel extends BaseMvvmViewModel {
     
     // Service dependencies
     private final TaskService taskService;
-    private final TaskServiceAsyncImpl taskServiceAsync;
     
     // Observable collections and properties
     private final ObservableList<Task> tasks = FXCollections.observableArrayList();
@@ -52,12 +51,8 @@ public class TaskListMvvmViewModel extends BaseMvvmViewModel {
      * 
      * @param taskService the task service
      */
-   
     public TaskListMvvmViewModel(TaskService taskService) {
         this.taskService = taskService;
-        
-        // Get the async service implementation - we need to cast since we're using the specific implementation
-        this.taskServiceAsync = (TaskServiceAsyncImpl) taskService;
         
         initializeCommands();
     }
@@ -235,7 +230,7 @@ public class TaskListMvvmViewModel extends BaseMvvmViewModel {
     }
     
     /**
-     * Loads tasks asynchronously.
+     * Loads tasks asynchronously using the interface method.
      */
     private void loadTasksAsync() {
         if (currentProject.get() == null) {
@@ -244,8 +239,8 @@ public class TaskListMvvmViewModel extends BaseMvvmViewModel {
         
         loading.set(true);
         
-        // Use the specific async method from TaskServiceAsyncImpl
-        taskServiceAsync.findByProjectAsync(
+        // FIXED: Use interface method instead of casting to implementation
+        taskService.findByProjectAsync(
             currentProject.get(),
             // Success callback
             result -> {
@@ -269,7 +264,7 @@ public class TaskListMvvmViewModel extends BaseMvvmViewModel {
     }
     
     /**
-     * Deletes a task asynchronously.
+     * Deletes a task asynchronously using the interface method.
      */
     private void deleteTaskAsync() {
         Task task = selectedTask.get();
@@ -279,8 +274,8 @@ public class TaskListMvvmViewModel extends BaseMvvmViewModel {
         
         loading.set(true);
         
-        // Using the generic deleteByIdAsync from AbstractAsyncService
-        taskServiceAsync.deleteByIdAsync(
+        // FIXED: Use interface method instead of casting to implementation
+        taskService.deleteByIdAsync(
             task.getId(),
             // Success callback
             result -> {

@@ -215,6 +215,32 @@ public interface TaskService extends Service<Task, Long> {
     }
     
     /**
+     * Deletes a task by ID asynchronously.
+     * 
+     * @param id the ID of the task to delete
+     * @param onSuccess the callback to run on success
+     * @param onFailure the callback to run on failure
+     * @return a CompletableFuture that will be completed with a boolean indicating success
+     */
+    default CompletableFuture<Boolean> deleteByIdAsync(Long id, Consumer<Boolean> onSuccess, Consumer<Throwable> onFailure) {
+        // Default implementation for services that don't support async operations
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        try {
+            boolean result = deleteById(id);
+            if (onSuccess != null) {
+                onSuccess.accept(result);
+            }
+            future.complete(result);
+        } catch (Exception e) {
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            future.completeExceptionally(e);
+        }
+        return future;
+    }
+
+    /**
      * Updates a task's progress asynchronously.
      * 
      * @param taskId the task ID
