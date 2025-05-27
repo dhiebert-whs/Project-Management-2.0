@@ -11,18 +11,17 @@ import org.frcpm.di.TestModule;
 import org.frcpm.models.Project;
 import org.frcpm.models.TeamMember;
 import org.frcpm.services.TeamMemberService;
-import org.frcpm.services.impl.TestableTeamMemberServiceAsyncImpl;
 import org.frcpm.utils.TestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
  * Tests for the TeamMemberSelectionMvvmViewModel class.
+ * FIXED: Uses proper mock pattern instead of casting to concrete implementations.
  */
 public class TeamMemberSelectionMvvmViewModelTest {
     
     private TeamMemberService teamMemberService;
-    private TestableTeamMemberServiceAsyncImpl teamMemberServiceAsync;
     
     private Project testProject;
     private List<TeamMember> testTeamMembers;
@@ -36,9 +35,14 @@ public class TeamMemberSelectionMvvmViewModelTest {
         // Create test data
         setupTestData();
         
-        // Get service references from TestModule (they're already testable implementations)
+        // Create mock service
+        TeamMemberService mockService = mock(TeamMemberService.class);
+        
+        // Register mock with TestModule
+        TestModule.setService(TeamMemberService.class, mockService);
+        
+        // Get service from TestModule (now returns mock)
         teamMemberService = TestModule.getService(TeamMemberService.class);
-        teamMemberServiceAsync = (TestableTeamMemberServiceAsyncImpl) teamMemberService;
         
         // Initialize JavaFX toolkit if needed
         try {
@@ -135,7 +139,7 @@ public class TeamMemberSelectionMvvmViewModelTest {
                 invocation.getArgument(0);
             successCallback.accept(testTeamMembers);
             return null;
-        }).when(teamMemberServiceAsync).findAllAsync(any(), any());
+        }).when(teamMemberService).findAllAsync(any(), any());
         
         // Run on JavaFX thread to avoid threading issues
         TestUtils.runOnFxThreadAndWait(() -> {
@@ -167,7 +171,7 @@ public class TeamMemberSelectionMvvmViewModelTest {
                 invocation.getArgument(0);
             successCallback.accept(testTeamMembers);
             return null;
-        }).when(teamMemberServiceAsync).findAllAsync(any(), any());
+        }).when(teamMemberService).findAllAsync(any(), any());
         
         // Run on JavaFX thread to avoid threading issues
         TestUtils.runOnFxThreadAndWait(() -> {
@@ -205,7 +209,7 @@ public class TeamMemberSelectionMvvmViewModelTest {
                 invocation.getArgument(0);
             successCallback.accept(testTeamMembers);
             return null;
-        }).when(teamMemberServiceAsync).findAllAsync(any(), any());
+        }).when(teamMemberService).findAllAsync(any(), any());
         
         // Run on JavaFX thread to avoid threading issues
         TestUtils.runOnFxThreadAndWait(() -> {
@@ -282,7 +286,7 @@ public class TeamMemberSelectionMvvmViewModelTest {
                 invocation.getArgument(0);
             successCallback.accept(testTeamMembers);
             return null;
-        }).when(teamMemberServiceAsync).findAllAsync(any(), any());
+        }).when(teamMemberService).findAllAsync(any(), any());
         
         // Run on JavaFX thread to avoid threading issues
         TestUtils.runOnFxThreadAndWait(() -> {
@@ -378,7 +382,7 @@ public class TeamMemberSelectionMvvmViewModelTest {
                 invocation.getArgument(0);
             successCallback.accept(testTeamMembers);
             return null;
-        }).when(teamMemberServiceAsync).findAllAsync(any(), any());
+        }).when(teamMemberService).findAllAsync(any(), any());
         
         // Run on JavaFX thread to avoid threading issues
         TestUtils.runOnFxThreadAndWait(() -> {
@@ -422,7 +426,7 @@ public class TeamMemberSelectionMvvmViewModelTest {
                 invocation.getArgument(0);
             successCallback.accept(testTeamMembers);
             return null;
-        }).when(teamMemberServiceAsync).findAllAsync(any(), any());
+        }).when(teamMemberService).findAllAsync(any(), any());
         
         // Run on JavaFX thread to avoid threading issues
         TestUtils.runOnFxThreadAndWait(() -> {
@@ -460,7 +464,7 @@ public class TeamMemberSelectionMvvmViewModelTest {
                 invocation.getArgument(0);
             successCallback.accept(testTeamMembers);
             return null;
-        }).when(teamMemberServiceAsync).findAllAsync(any(), any());
+        }).when(teamMemberService).findAllAsync(any(), any());
         
         // Run on JavaFX thread to avoid threading issues
         TestUtils.runOnFxThreadAndWait(() -> {
@@ -524,7 +528,7 @@ public class TeamMemberSelectionMvvmViewModelTest {
                 invocation.getArgument(1);
             errorCallback.accept(new RuntimeException("Service error"));
             return null;
-        }).when(teamMemberServiceAsync).findAllAsync(any(), any());
+        }).when(teamMemberService).findAllAsync(any(), any());
         
         // Run on JavaFX thread to avoid threading issues
         TestUtils.runOnFxThreadAndWait(() -> {
@@ -582,7 +586,7 @@ public class TeamMemberSelectionMvvmViewModelTest {
                 }
             }).start();
             return null;
-        }).when(teamMemberServiceAsync).findAllAsync(any(), any());
+        }).when(teamMemberService).findAllAsync(any(), any());
         
         // Run on JavaFX thread to avoid threading issues
         TestUtils.runOnFxThreadAndWait(() -> {
@@ -616,7 +620,7 @@ public class TeamMemberSelectionMvvmViewModelTest {
                 invocation.getArgument(0);
             successCallback.accept(testTeamMembers);
             return null;
-        }).when(teamMemberServiceAsync).findAllAsync(any(), any());
+        }).when(teamMemberService).findAllAsync(any(), any());
         
         // Run on JavaFX thread to avoid threading issues
         TestUtils.runOnFxThreadAndWait(() -> {
@@ -644,9 +648,8 @@ public class TeamMemberSelectionMvvmViewModelTest {
     
     @Test
     public void testAsyncServiceCasting() {
-        // Verify that the service can be cast to our testable async implementation
-        assertNotNull(teamMemberServiceAsync);
-        assertTrue(teamMemberServiceAsync instanceof TestableTeamMemberServiceAsyncImpl);
-        assertSame(teamMemberService, teamMemberServiceAsync);
+        // Verify that the service is now a proper mock
+        assertNotNull(teamMemberService);
+        // The service is now a proper mock, no casting needed
     }
 }
