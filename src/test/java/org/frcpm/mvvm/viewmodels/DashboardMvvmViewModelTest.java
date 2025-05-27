@@ -16,24 +16,19 @@ import org.frcpm.models.Task;
 import org.frcpm.services.MeetingService;
 import org.frcpm.services.MilestoneService;
 import org.frcpm.services.TaskService;
-import org.frcpm.services.impl.MeetingServiceAsyncImpl;
-import org.frcpm.services.impl.MilestoneServiceAsyncImpl;
-import org.frcpm.services.impl.TaskServiceAsyncImpl;
 import org.frcpm.utils.TestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
  * Tests for the DashboardMvvmViewModel class.
+ * FIXED: Uses proper mock pattern instead of casting to concrete implementations.
  */
 public class DashboardMvvmViewModelTest {
     
     private TaskService taskService;
     private MilestoneService milestoneService;
     private MeetingService meetingService;
-    private TaskServiceAsyncImpl taskServiceAsync;
-    private MilestoneServiceAsyncImpl milestoneServiceAsync;
-    private MeetingServiceAsyncImpl meetingServiceAsync;
     
     private Project testProject;
     private List<Task> testTasks;
@@ -49,13 +44,20 @@ public class DashboardMvvmViewModelTest {
         // Create test data
         setupTestData();
         
-        // Get service references from TestModule
+        // Create mock services
+        TaskService mockTaskService = mock(TaskService.class);
+        MilestoneService mockMilestoneService = mock(MilestoneService.class);
+        MeetingService mockMeetingService = mock(MeetingService.class);
+        
+        // Register mocks with TestModule
+        TestModule.setService(TaskService.class, mockTaskService);
+        TestModule.setService(MilestoneService.class, mockMilestoneService);
+        TestModule.setService(MeetingService.class, mockMeetingService);
+        
+        // Get services from TestModule (now returns mocks)
         taskService = TestModule.getService(TaskService.class);
         milestoneService = TestModule.getService(MilestoneService.class);
         meetingService = TestModule.getService(MeetingService.class);
-        taskServiceAsync = (TaskServiceAsyncImpl) taskService;
-        milestoneServiceAsync = (MilestoneServiceAsyncImpl) milestoneService;
-        meetingServiceAsync = (MeetingServiceAsyncImpl) meetingService;
         
         // Initialize JavaFX toolkit if needed
         try {
@@ -114,14 +116,12 @@ public class DashboardMvvmViewModelTest {
         
         Milestone milestone1 = new Milestone();
         milestone1.setId(1L);
-        //milestone1.setTitle("Milestone 1");
         milestone1.setProject(testProject);
         milestone1.setDate(LocalDate.now().plusDays(7));
         testMilestones.add(milestone1);
         
         Milestone milestone2 = new Milestone();
         milestone2.setId(2L);
-        //milestone2.setTitle("Milestone 2");
         milestone2.setProject(testProject);
         milestone2.setDate(LocalDate.now().plusDays(20));
         testMilestones.add(milestone2);
@@ -131,13 +131,11 @@ public class DashboardMvvmViewModelTest {
         
         Meeting meeting1 = new Meeting();
         meeting1.setId(1L);
-        //meeting1.setTitle("Meeting 1");
         meeting1.setDate(LocalDate.now().plusDays(3));
         testMeetings.add(meeting1);
         
         Meeting meeting2 = new Meeting();
         meeting2.setId(2L);
-        //meeting2.setTitle("Meeting 2");
         meeting2.setDate(LocalDate.now().plusDays(8));
         testMeetings.add(meeting2);
     }
@@ -188,21 +186,21 @@ public class DashboardMvvmViewModelTest {
             java.util.function.Consumer<List<Task>> successCallback = invocation.getArgument(1);
             successCallback.accept(testTasks);
             return null;
-        }).when(taskServiceAsync).findByProjectAsync(any(), any(), any());
+        }).when(taskService).findByProjectAsync(any(), any(), any());
         
         doAnswer(invocation -> {
             @SuppressWarnings("unchecked")
             java.util.function.Consumer<List<Milestone>> successCallback = invocation.getArgument(1);
             successCallback.accept(testMilestones);
             return null;
-        }).when(milestoneServiceAsync).findByProjectAsync(any(), any(), any());
+        }).when(milestoneService).findByProjectAsync(any(), any(), any());
         
         doAnswer(invocation -> {
             @SuppressWarnings("unchecked")
             java.util.function.Consumer<List<Meeting>> successCallback = invocation.getArgument(2);
             successCallback.accept(testMeetings);
             return null;
-        }).when(meetingServiceAsync).getUpcomingMeetingsAsync(anyLong(), anyInt(), any(), any());
+        }).when(meetingService).getUpcomingMeetingsAsync(anyLong(), anyInt(), any(), any());
         
         // Run on JavaFX thread to avoid threading issues
         TestUtils.runOnFxThreadAndWait(() -> {
@@ -244,21 +242,21 @@ public class DashboardMvvmViewModelTest {
             java.util.function.Consumer<List<Task>> successCallback = invocation.getArgument(1);
             successCallback.accept(testTasks);
             return null;
-        }).when(taskServiceAsync).findByProjectAsync(any(), any(), any());
+        }).when(taskService).findByProjectAsync(any(), any(), any());
         
         doAnswer(invocation -> {
             @SuppressWarnings("unchecked")
             java.util.function.Consumer<List<Milestone>> successCallback = invocation.getArgument(1);
             successCallback.accept(testMilestones);
             return null;
-        }).when(milestoneServiceAsync).findByProjectAsync(any(), any(), any());
+        }).when(milestoneService).findByProjectAsync(any(), any(), any());
         
         doAnswer(invocation -> {
             @SuppressWarnings("unchecked")
             java.util.function.Consumer<List<Meeting>> successCallback = invocation.getArgument(2);
             successCallback.accept(testMeetings);
             return null;
-        }).when(meetingServiceAsync).getUpcomingMeetingsAsync(anyLong(), anyInt(), any(), any());
+        }).when(meetingService).getUpcomingMeetingsAsync(anyLong(), anyInt(), any(), any());
         
         // Run on JavaFX thread to avoid threading issues
         TestUtils.runOnFxThreadAndWait(() -> {
@@ -277,9 +275,9 @@ public class DashboardMvvmViewModelTest {
             }
             
             // Verify services were called
-            verify(taskServiceAsync, atLeastOnce()).findByProjectAsync(any(), any(), any());
-            verify(milestoneServiceAsync, atLeastOnce()).findByProjectAsync(any(), any(), any());
-            verify(meetingServiceAsync, atLeastOnce()).getUpcomingMeetingsAsync(anyLong(), anyInt(), any(), any());
+            verify(taskService, atLeastOnce()).findByProjectAsync(any(), any(), any());
+            verify(milestoneService, atLeastOnce()).findByProjectAsync(any(), any(), any());
+            verify(meetingService, atLeastOnce()).getUpcomingMeetingsAsync(anyLong(), anyInt(), any(), any());
         });
     }
     
@@ -291,7 +289,7 @@ public class DashboardMvvmViewModelTest {
             java.util.function.Consumer<List<Task>> successCallback = invocation.getArgument(1);
             successCallback.accept(testTasks);
             return null;
-        }).when(taskServiceAsync).findByProjectAsync(any(), any(), any());
+        }).when(taskService).findByProjectAsync(any(), any(), any());
         
         // Run on JavaFX thread to avoid threading issues
         TestUtils.runOnFxThreadAndWait(() -> {
@@ -380,7 +378,7 @@ public class DashboardMvvmViewModelTest {
             java.util.function.Consumer<List<Task>> successCallback = invocation.getArgument(1);
             successCallback.accept(testTasks);
             return null;
-        }).when(taskServiceAsync).findByProjectAsync(any(), any(), any());
+        }).when(taskService).findByProjectAsync(any(), any(), any());
         
         // Run on JavaFX thread to avoid threading issues
         TestUtils.runOnFxThreadAndWait(() -> {
@@ -446,7 +444,7 @@ public class DashboardMvvmViewModelTest {
             java.util.function.Consumer<Throwable> errorCallback = invocation.getArgument(2);
             errorCallback.accept(new RuntimeException("Service error"));
             return null;
-        }).when(taskServiceAsync).findByProjectAsync(any(), any(), any());
+        }).when(taskService).findByProjectAsync(any(), any(), any());
         
         // Configure other services to succeed
         doAnswer(invocation -> {
@@ -454,14 +452,14 @@ public class DashboardMvvmViewModelTest {
             java.util.function.Consumer<List<Milestone>> successCallback = invocation.getArgument(1);
             successCallback.accept(testMilestones);
             return null;
-        }).when(milestoneServiceAsync).findByProjectAsync(any(), any(), any());
+        }).when(milestoneService).findByProjectAsync(any(), any(), any());
         
         doAnswer(invocation -> {
             @SuppressWarnings("unchecked")
             java.util.function.Consumer<List<Meeting>> successCallback = invocation.getArgument(2);
             successCallback.accept(testMeetings);
             return null;
-        }).when(meetingServiceAsync).getUpcomingMeetingsAsync(anyLong(), anyInt(), any(), any());
+        }).when(meetingService).getUpcomingMeetingsAsync(anyLong(), anyInt(), any(), any());
         
         // Run on JavaFX thread to avoid threading issues
         TestUtils.runOnFxThreadAndWait(() -> {
@@ -559,7 +557,7 @@ public class DashboardMvvmViewModelTest {
                 }
             }).start();
             return null;
-        }).when(taskServiceAsync).findByProjectAsync(any(), any(), any());
+        }).when(taskService).findByProjectAsync(any(), any(), any());
         
         // Run on JavaFX thread to avoid threading issues
         TestUtils.runOnFxThreadAndWait(() -> {
