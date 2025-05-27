@@ -16,24 +16,22 @@ import org.frcpm.models.Task;
 import org.frcpm.services.MeetingService;
 import org.frcpm.services.MilestoneService;
 import org.frcpm.services.TaskService;
-import org.frcpm.services.impl.MeetingServiceAsyncImpl;
-import org.frcpm.services.impl.MilestoneServiceAsyncImpl;
-import org.frcpm.services.impl.TaskServiceAsyncImpl;
+import org.frcpm.services.impl.TestableMeetingServiceAsyncImpl;
+import org.frcpm.services.impl.TestableMilestoneServiceAsyncImpl;
+import org.frcpm.services.impl.TestableTaskServiceAsyncImpl;
 import org.frcpm.utils.TestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
  * Tests for the DashboardMvvmViewModel class.
+ * FIXED: Uses proper mock pattern instead of invalid casting.
  */
 public class DashboardMvvmViewModelTest {
     
     private TaskService taskService;
     private MilestoneService milestoneService;
     private MeetingService meetingService;
-    private TaskServiceAsyncImpl taskServiceAsync;
-    private MilestoneServiceAsyncImpl milestoneServiceAsync;
-    private MeetingServiceAsyncImpl meetingServiceAsync;
     
     private Project testProject;
     private List<Task> testTasks;
@@ -43,19 +41,52 @@ public class DashboardMvvmViewModelTest {
     
     @BeforeEach
     public void setUp() throws Exception {
-        // Initialize TestModule
+        // Initialize TestModule first
         TestModule.initialize();
         
         // Create test data
         setupTestData();
         
-        // Get service references from TestModule
+        // Create testable async implementations (NOT pure mocks)
+        // These have the async methods that DashboardMvvmViewModel needs
+        TestableTaskServiceAsyncImpl mockTaskService = mock(TestableTaskServiceAsyncImpl.class);
+        TestableMilestoneServiceAsyncImpl mockMilestoneService = mock(TestableMilestoneServiceAsyncImpl.class);
+        TestableMeetingServiceAsyncImpl mockMeetingService = mock(TestableMeetingServiceAsyncImpl.class);
+        
+        // Configure mock behavior for async methods
+        // Task service async methods
+        doAnswer(invocation -> {
+            @SuppressWarnings("unchecked")
+            java.util.function.Consumer<List<Task>> callback = invocation.getArgument(1);
+            callback.accept(testTasks);
+            return null;
+        }).when(mockTaskService).findByProjectAsync(any(), any(), any());
+        
+        // Milestone service async methods
+        doAnswer(invocation -> {
+            @SuppressWarnings("unchecked")
+            java.util.function.Consumer<List<Milestone>> callback = invocation.getArgument(1);
+            callback.accept(testMilestones);
+            return null;
+        }).when(mockMilestoneService).findByProjectAsync(any(), any(), any());
+        
+        // Meeting service async methods
+        doAnswer(invocation -> {
+            @SuppressWarnings("unchecked")
+            java.util.function.Consumer<List<Meeting>> callback = invocation.getArgument(2);
+            callback.accept(testMeetings);
+            return null;
+        }).when(mockMeetingService).getUpcomingMeetingsAsync(anyLong(), anyInt(), any(), any());
+        
+        // Register mocks with TestModule
+        TestModule.setService(TaskService.class, mockTaskService);
+        TestModule.setService(MilestoneService.class, mockMilestoneService);
+        TestModule.setService(MeetingService.class, mockMeetingService);
+        
+        // Get service references from TestModule (now returns mocks)
         taskService = TestModule.getService(TaskService.class);
         milestoneService = TestModule.getService(MilestoneService.class);
         meetingService = TestModule.getService(MeetingService.class);
-        taskServiceAsync = (TaskServiceAsyncImpl) taskService;
-        milestoneServiceAsync = (MilestoneServiceAsyncImpl) milestoneService;
-        meetingServiceAsync = (MeetingServiceAsyncImpl) meetingService;
         
         // Initialize JavaFX toolkit if needed
         try {
@@ -114,14 +145,12 @@ public class DashboardMvvmViewModelTest {
         
         Milestone milestone1 = new Milestone();
         milestone1.setId(1L);
-        //milestone1.setTitle("Milestone 1");
         milestone1.setProject(testProject);
         milestone1.setDate(LocalDate.now().plusDays(7));
         testMilestones.add(milestone1);
         
         Milestone milestone2 = new Milestone();
         milestone2.setId(2L);
-        //milestone2.setTitle("Milestone 2");
         milestone2.setProject(testProject);
         milestone2.setDate(LocalDate.now().plusDays(20));
         testMilestones.add(milestone2);
@@ -131,13 +160,11 @@ public class DashboardMvvmViewModelTest {
         
         Meeting meeting1 = new Meeting();
         meeting1.setId(1L);
-        //meeting1.setTitle("Meeting 1");
         meeting1.setDate(LocalDate.now().plusDays(3));
         testMeetings.add(meeting1);
         
         Meeting meeting2 = new Meeting();
         meeting2.setId(2L);
-        //meeting2.setTitle("Meeting 2");
         meeting2.setDate(LocalDate.now().plusDays(8));
         testMeetings.add(meeting2);
     }
@@ -182,28 +209,6 @@ public class DashboardMvvmViewModelTest {
     
     @Test
     public void testSetProject() {
-        // Configure mock services
-        doAnswer(invocation -> {
-            @SuppressWarnings("unchecked")
-            java.util.function.Consumer<List<Task>> successCallback = invocation.getArgument(1);
-            successCallback.accept(testTasks);
-            return null;
-        }).when(taskServiceAsync).findByProjectAsync(any(), any(), any());
-        
-        doAnswer(invocation -> {
-            @SuppressWarnings("unchecked")
-            java.util.function.Consumer<List<Milestone>> successCallback = invocation.getArgument(1);
-            successCallback.accept(testMilestones);
-            return null;
-        }).when(milestoneServiceAsync).findByProjectAsync(any(), any(), any());
-        
-        doAnswer(invocation -> {
-            @SuppressWarnings("unchecked")
-            java.util.function.Consumer<List<Meeting>> successCallback = invocation.getArgument(2);
-            successCallback.accept(testMeetings);
-            return null;
-        }).when(meetingServiceAsync).getUpcomingMeetingsAsync(anyLong(), anyInt(), any(), any());
-        
         // Run on JavaFX thread to avoid threading issues
         TestUtils.runOnFxThreadAndWait(() -> {
             // Set project
@@ -238,28 +243,6 @@ public class DashboardMvvmViewModelTest {
     
     @Test
     public void testRefreshCommand() {
-        // Configure mock services
-        doAnswer(invocation -> {
-            @SuppressWarnings("unchecked")
-            java.util.function.Consumer<List<Task>> successCallback = invocation.getArgument(1);
-            successCallback.accept(testTasks);
-            return null;
-        }).when(taskServiceAsync).findByProjectAsync(any(), any(), any());
-        
-        doAnswer(invocation -> {
-            @SuppressWarnings("unchecked")
-            java.util.function.Consumer<List<Milestone>> successCallback = invocation.getArgument(1);
-            successCallback.accept(testMilestones);
-            return null;
-        }).when(milestoneServiceAsync).findByProjectAsync(any(), any(), any());
-        
-        doAnswer(invocation -> {
-            @SuppressWarnings("unchecked")
-            java.util.function.Consumer<List<Meeting>> successCallback = invocation.getArgument(2);
-            successCallback.accept(testMeetings);
-            return null;
-        }).when(meetingServiceAsync).getUpcomingMeetingsAsync(anyLong(), anyInt(), any(), any());
-        
         // Run on JavaFX thread to avoid threading issues
         TestUtils.runOnFxThreadAndWait(() -> {
             // Set project first
@@ -277,22 +260,14 @@ public class DashboardMvvmViewModelTest {
             }
             
             // Verify services were called
-            verify(taskServiceAsync, atLeastOnce()).findByProjectAsync(any(), any(), any());
-            verify(milestoneServiceAsync, atLeastOnce()).findByProjectAsync(any(), any(), any());
-            verify(meetingServiceAsync, atLeastOnce()).getUpcomingMeetingsAsync(anyLong(), anyInt(), any(), any());
+            verify((TestableTaskServiceAsyncImpl)taskService, atLeastOnce()).findByProjectAsync(any(), any(), any());
+            verify((TestableMilestoneServiceAsyncImpl)milestoneService, atLeastOnce()).findByProjectAsync(any(), any(), any());
+            verify((TestableMeetingServiceAsyncImpl)meetingService, atLeastOnce()).getUpcomingMeetingsAsync(anyLong(), anyInt(), any(), any());
         });
     }
     
     @Test
     public void testUpcomingTasksFiltering() {
-        // Configure task service to return all test tasks
-        doAnswer(invocation -> {
-            @SuppressWarnings("unchecked")
-            java.util.function.Consumer<List<Task>> successCallback = invocation.getArgument(1);
-            successCallback.accept(testTasks);
-            return null;
-        }).when(taskServiceAsync).findByProjectAsync(any(), any(), any());
-        
         // Run on JavaFX thread to avoid threading issues
         TestUtils.runOnFxThreadAndWait(() -> {
             // Set project to trigger loading
@@ -374,14 +349,6 @@ public class DashboardMvvmViewModelTest {
     
     @Test
     public void testProgressCalculation() {
-        // Configure task service to return test tasks
-        doAnswer(invocation -> {
-            @SuppressWarnings("unchecked")
-            java.util.function.Consumer<List<Task>> successCallback = invocation.getArgument(1);
-            successCallback.accept(testTasks);
-            return null;
-        }).when(taskServiceAsync).findByProjectAsync(any(), any(), any());
-        
         // Run on JavaFX thread to avoid threading issues
         TestUtils.runOnFxThreadAndWait(() -> {
             // Set project to trigger progress calculation
@@ -440,33 +407,31 @@ public class DashboardMvvmViewModelTest {
     
     @Test
     public void testErrorHandlingDuringLoad() {
+        // Create fresh mock with error behavior
+        TestableTaskServiceAsyncImpl errorTaskService = mock(TestableTaskServiceAsyncImpl.class);
+        
         // Configure task service to return an error
         doAnswer(invocation -> {
             @SuppressWarnings("unchecked")
             java.util.function.Consumer<Throwable> errorCallback = invocation.getArgument(2);
             errorCallback.accept(new RuntimeException("Service error"));
             return null;
-        }).when(taskServiceAsync).findByProjectAsync(any(), any(), any());
+        }).when(errorTaskService).findByProjectAsync(any(), any(), any());
         
-        // Configure other services to succeed
-        doAnswer(invocation -> {
-            @SuppressWarnings("unchecked")
-            java.util.function.Consumer<List<Milestone>> successCallback = invocation.getArgument(1);
-            successCallback.accept(testMilestones);
-            return null;
-        }).when(milestoneServiceAsync).findByProjectAsync(any(), any(), any());
-        
-        doAnswer(invocation -> {
-            @SuppressWarnings("unchecked")
-            java.util.function.Consumer<List<Meeting>> successCallback = invocation.getArgument(2);
-            successCallback.accept(testMeetings);
-            return null;
-        }).when(meetingServiceAsync).getUpcomingMeetingsAsync(anyLong(), anyInt(), any(), any());
+        // Register error service
+        TestModule.setService(TaskService.class, errorTaskService);
         
         // Run on JavaFX thread to avoid threading issues
         TestUtils.runOnFxThreadAndWait(() -> {
+            // Create new viewModel with error service
+            DashboardMvvmViewModel errorViewModel = new DashboardMvvmViewModel(
+                TestModule.getService(TaskService.class), 
+                milestoneService, 
+                meetingService
+            );
+            
             // Set project to trigger loading
-            viewModel.setProject(testProject);
+            errorViewModel.setProject(testProject);
             
             // Let async operations complete
             try {
@@ -476,14 +441,14 @@ public class DashboardMvvmViewModelTest {
             }
             
             // Should have error message
-            assertNotNull(viewModel.getErrorMessage());
-            assertTrue(viewModel.getErrorMessage().contains("tasks"));
+            assertNotNull(errorViewModel.getErrorMessage());
+            assertTrue(errorViewModel.getErrorMessage().contains("tasks"));
             
             // Should no longer be loading
-            assertFalse(viewModel.isLoading());
+            assertFalse(errorViewModel.isLoading());
             
             // Upcoming tasks should be empty due to error
-            assertTrue(viewModel.getUpcomingTasks().isEmpty());
+            assertTrue(errorViewModel.getUpcomingTasks().isEmpty());
         });
     }
     
@@ -547,6 +512,8 @@ public class DashboardMvvmViewModelTest {
     @Test
     public void testLoadingProperty() {
         // Configure services with delayed responses
+        TestableTaskServiceAsyncImpl delayedTaskService = mock(TestableTaskServiceAsyncImpl.class);
+        
         doAnswer(invocation -> {
             new Thread(() -> {
                 try {
@@ -559,16 +526,26 @@ public class DashboardMvvmViewModelTest {
                 }
             }).start();
             return null;
-        }).when(taskServiceAsync).findByProjectAsync(any(), any(), any());
+        }).when(delayedTaskService).findByProjectAsync(any(), any(), any());
+        
+        // Register delayed service
+        TestModule.setService(TaskService.class, delayedTaskService);
         
         // Run on JavaFX thread to avoid threading issues
         TestUtils.runOnFxThreadAndWait(() -> {
+            // Create new viewModel with delayed service
+            DashboardMvvmViewModel delayedViewModel = new DashboardMvvmViewModel(
+                TestModule.getService(TaskService.class), 
+                milestoneService, 
+                meetingService
+            );
+            
             // Initially not loading
-            assertFalse(viewModel.isLoading());
+            assertFalse(delayedViewModel.isLoading());
             
             // Execute refresh command
-            viewModel.setProject(testProject);
-            viewModel.getRefreshCommand().execute();
+            delayedViewModel.setProject(testProject);
+            delayedViewModel.getRefreshCommand().execute();
             
             // Let operations complete
             try {
@@ -578,7 +555,7 @@ public class DashboardMvvmViewModelTest {
             }
             
             // Should no longer be loading
-            assertFalse(viewModel.isLoading());
+            assertFalse(delayedViewModel.isLoading());
         });
     }
     
