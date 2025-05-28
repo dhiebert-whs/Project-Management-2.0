@@ -22,7 +22,7 @@ public abstract class BaseViewModelTest<T extends BaseMvvmViewModel> {
     
     protected static final Logger LOGGER = Logger.getLogger(BaseViewModelTest.class.getName());
     
-    private AutoCloseable mockitoCloseable;
+    protected AutoCloseable mockitoCloseable;
     protected T viewModel;
     
     /**
@@ -92,7 +92,7 @@ public abstract class BaseViewModelTest<T extends BaseMvvmViewModel> {
     /**
      * Initializes the JavaFX toolkit if needed.
      */
-    private void initializeJavaFxToolkit() throws Exception {
+    protected void initializeJavaFxToolkit() throws Exception {
         // Check if JavaFX toolkit is already initialized
         try {
             Platform.runLater(() -> {});
