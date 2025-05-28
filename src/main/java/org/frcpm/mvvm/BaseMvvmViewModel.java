@@ -7,8 +7,10 @@ import de.saxsys.mvvmfx.utils.commands.Command;
 import de.saxsys.mvvmfx.utils.commands.DelegateCommand;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
@@ -143,16 +145,35 @@ public abstract class BaseMvvmViewModel implements ViewModel {
     
     /**
      * Simple wrapper for MVVMFx Command that integrates with our existing command pattern.
+     * FIXED: Properly implements all Command interface methods.
      */
     private static class CommandWrapper implements Command {
         private final Runnable action;
         private final Supplier<Boolean> executable;
         private final BooleanProperty executableProperty = new SimpleBooleanProperty(true);
         private final BooleanProperty runningProperty = new SimpleBooleanProperty(false);
+        private final ReadOnlyBooleanWrapper notExecutableProperty = new ReadOnlyBooleanWrapper(false);
+        private final ReadOnlyBooleanWrapper notRunningProperty = new ReadOnlyBooleanWrapper(true);
+        private final SimpleDoubleProperty progressProperty = new SimpleDoubleProperty(0.0);
         
         public CommandWrapper(Runnable action, Supplier<Boolean> executable) {
             this.action = action;
             this.executable = executable;
+            
+            // Set up bindings for derived properties
+            this.runningProperty.addListener((obs, oldVal, newVal) -> {
+                notRunningProperty.set(!newVal);
+                updateExecutableState();
+            });
+            
+            // Initialize not-properties
+            updateExecutableState();
+        }
+        
+        private void updateExecutableState() {
+            boolean isExecutable = !runningProperty.get() && executable.get();
+            executableProperty.set(isExecutable);
+            notExecutableProperty.set(!isExecutable);
         }
         
         @Override
@@ -163,6 +184,7 @@ public abstract class BaseMvvmViewModel implements ViewModel {
                     action.run();
                 } finally {
                     runningProperty.set(false);
+                    updateExecutableState();
                 }
             }
         }
@@ -170,7 +192,7 @@ public abstract class BaseMvvmViewModel implements ViewModel {
         @Override
         public BooleanProperty executableProperty() {
             // Update the property value before returning
-            executableProperty.set(isExecutable());
+            updateExecutableState();
             return executableProperty;
         }
         
@@ -191,38 +213,33 @@ public abstract class BaseMvvmViewModel implements ViewModel {
 
         @Override
         public boolean isNotExecutable() {
-            // TODO Auto-generated method stub
-            throw new UnsupportedOperationException("Unimplemented method 'isNotExecutable'");
+            return !isExecutable();
         }
 
         @Override
         public ReadOnlyBooleanProperty notExecutableProperty() {
-            // TODO Auto-generated method stub
-            throw new UnsupportedOperationException("Unimplemented method 'notExecutableProperty'");
+            updateExecutableState();
+            return notExecutableProperty.getReadOnlyProperty();
         }
 
         @Override
         public boolean isNotRunning() {
-            // TODO Auto-generated method stub
-            throw new UnsupportedOperationException("Unimplemented method 'isNotRunning'");
+            return !isRunning();
         }
 
         @Override
         public ReadOnlyBooleanProperty notRunningProperty() {
-            // TODO Auto-generated method stub
-            throw new UnsupportedOperationException("Unimplemented method 'notRunningProperty'");
+            return notRunningProperty.getReadOnlyProperty();
         }
 
         @Override
         public double getProgress() {
-            // TODO Auto-generated method stub
-            throw new UnsupportedOperationException("Unimplemented method 'getProgress'");
+            return progressProperty.get();
         }
 
         @Override
         public ReadOnlyDoubleProperty progressProperty() {
-            // TODO Auto-generated method stub
-            throw new UnsupportedOperationException("Unimplemented method 'progressProperty'");
+            return progressProperty;
         }
     }
     
