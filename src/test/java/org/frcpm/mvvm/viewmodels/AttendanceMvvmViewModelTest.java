@@ -1,13 +1,20 @@
-// src/test/java/org/frcpm/mvvm/viewmodels/AttendanceMvvmViewModelTest.java
+// src/test/java/org/frcpm/mvvm/viewmodels/AttendanceMvvmViewModelTest.java - FIXED
+
 package org.frcpm.mvvm.viewmodels;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 import org.frcpm.di.TestModule;
 import org.frcpm.models.Attendance;
@@ -17,22 +24,22 @@ import org.frcpm.models.TeamMember;
 import org.frcpm.services.AttendanceService;
 import org.frcpm.services.MeetingService;
 import org.frcpm.services.TeamMemberService;
-import org.frcpm.services.impl.TestableAttendanceServiceImpl;
-import org.frcpm.services.impl.TestableMeetingServiceAsyncImpl;
-import org.frcpm.services.impl.TestableTeamMemberServiceAsyncImpl;
+import org.frcpm.services.impl.AttendanceServiceAsyncImpl;
+import org.frcpm.services.impl.MeetingServiceAsyncImpl;
+import org.frcpm.services.impl.TeamMemberServiceAsyncImpl;
 import org.frcpm.utils.TestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
  * Tests for the AttendanceMvvmViewModel class.
- * FIXED: Uses proven methodology - mocks testable service implementations directly.
+ * FIXED: Uses proven methodology - mocks async implementation classes directly.
  */
 public class AttendanceMvvmViewModelTest {
     
-    private AttendanceService attendanceService;
-    private MeetingService meetingService;
-    private TeamMemberService teamMemberService;
+    private AttendanceServiceAsyncImpl attendanceServiceAsync;
+    private MeetingServiceAsyncImpl meetingServiceAsync;
+    private TeamMemberServiceAsyncImpl teamMemberServiceAsync;
     
     private Project testProject;
     private Meeting testMeeting;
@@ -48,47 +55,66 @@ public class AttendanceMvvmViewModelTest {
         // Create test data
         setupTestData();
         
-        // Create mock services - CRITICAL: Mock the actual testable implementations
-        TestableAttendanceServiceImpl mockAttendanceService = mock(TestableAttendanceServiceImpl.class);
-        TestableMeetingServiceAsyncImpl mockMeetingService = mock(TestableMeetingServiceAsyncImpl.class);
-        TestableTeamMemberServiceAsyncImpl mockTeamMemberService = mock(TestableTeamMemberServiceAsyncImpl.class);
+        // Create mock services - CRITICAL: Mock the actual async implementations
+        attendanceServiceAsync = mock(AttendanceServiceAsyncImpl.class);
+        meetingServiceAsync = mock(MeetingServiceAsyncImpl.class);
+        teamMemberServiceAsync = mock(TeamMemberServiceAsyncImpl.class);
         
-        // Configure attendance service mocks
-        when(mockAttendanceService.findByMeeting(any(Meeting.class))).thenReturn(testAttendances);
-        when(mockAttendanceService.save(any(Attendance.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(mockAttendanceService.findAll()).thenReturn(testAttendances);
-        
-        // Configure meeting service mocks
+        // Configure attendanceServiceAsync
         doAnswer(invocation -> {
-            @SuppressWarnings("unchecked")
-            java.util.function.Consumer<List<Meeting>> successCallback = 
-                invocation.getArgument(1);
-            List<Meeting> meetings = List.of(testMeeting);
-            successCallback.accept(meetings);
+            Meeting meeting = invocation.getArgument(0);
+            Consumer<List<Attendance>> successCallback = invocation.getArgument(1);
+            successCallback.accept(testAttendances);
             return null;
-        }).when(mockMeetingService).findByProjectAsync(any(), any(), any());
+        }).when(attendanceServiceAsync).findByMeetingAsync(any(Meeting.class), any(), any());
         
-        // Configure team member service mocks
         doAnswer(invocation -> {
-            @SuppressWarnings("unchecked")
-            java.util.function.Consumer<List<TeamMember>> successCallback = 
-                invocation.getArgument(0);
+            Long meetingId = invocation.getArgument(0);
+            List<Long> presentMemberIds = invocation.getArgument(1);
+            Consumer<Integer> successCallback = invocation.getArgument(2);
+            successCallback.accept(presentMemberIds.size());
+            return null;
+        }).when(attendanceServiceAsync).recordAttendanceForMeetingAsync(anyLong(), anyList(), any(), any());
+        
+        doAnswer(invocation -> {
+            Long attendanceId = invocation.getArgument(0);
+            boolean present = invocation.getArgument(1);
+            LocalTime arrivalTime = invocation.getArgument(2);
+            LocalTime departureTime = invocation.getArgument(3);
+            Consumer<Attendance> successCallback = invocation.getArgument(4);
+            
+            Attendance attendance = testAttendances.stream()
+                .filter(a -> a.getId().equals(attendanceId))
+                .findFirst()
+                .orElse(null);
+                
+            if (attendance != null) {
+                attendance.setPresent(present);
+                attendance.setArrivalTime(arrivalTime);
+                attendance.setDepartureTime(departureTime);
+                successCallback.accept(attendance);
+            }
+            
+            return null;
+        }).when(attendanceServiceAsync).updateAttendanceAsync(anyLong(), anyBoolean(), any(), any(), any(), any());
+        
+        // Configure teamMemberServiceAsync
+        doAnswer(invocation -> {
+            Consumer<List<TeamMember>> successCallback = invocation.getArgument(0);
             successCallback.accept(testTeamMembers);
             return null;
-        }).when(mockTeamMemberService).findAllAsync(any(), any());
+        }).when(teamMemberServiceAsync).findAllAsync(any(), any());
+        
+        // Configure meetingServiceAsync
+        // No specific configuration needed for this test
         
         // Register mocks with TestModule - BOTH interface and implementation
-        TestModule.setService(AttendanceService.class, mockAttendanceService);
-        TestModule.setService(TestableAttendanceServiceImpl.class, mockAttendanceService);
-        TestModule.setService(MeetingService.class, mockMeetingService);
-        TestModule.setService(TestableMeetingServiceAsyncImpl.class, mockMeetingService);
-        TestModule.setService(TeamMemberService.class, mockTeamMemberService);
-        TestModule.setService(TestableTeamMemberServiceAsyncImpl.class, mockTeamMemberService);
-        
-        // Get services from TestModule
-        attendanceService = TestModule.getService(AttendanceService.class);
-        meetingService = TestModule.getService(MeetingService.class);
-        teamMemberService = TestModule.getService(TeamMemberService.class);
+        TestModule.setService(AttendanceService.class, attendanceServiceAsync);
+        TestModule.setService(AttendanceServiceAsyncImpl.class, attendanceServiceAsync);
+        TestModule.setService(MeetingService.class, meetingServiceAsync);
+        TestModule.setService(MeetingServiceAsyncImpl.class, meetingServiceAsync);
+        TestModule.setService(TeamMemberService.class, teamMemberServiceAsync);
+        TestModule.setService(TeamMemberServiceAsyncImpl.class, teamMemberServiceAsync);
         
         // Initialize JavaFX toolkit if needed
         try {
@@ -99,7 +125,11 @@ public class AttendanceMvvmViewModelTest {
         
         // Create the view model on the JavaFX thread
         TestUtils.runOnFxThreadAndWait(() -> {
-            viewModel = new AttendanceMvvmViewModel(attendanceService, teamMemberService, meetingService);
+            viewModel = new AttendanceMvvmViewModel(
+                TestModule.getService(AttendanceService.class),
+                TestModule.getService(TeamMemberService.class),
+                TestModule.getService(MeetingService.class)
+            );
         });
     }
     
@@ -148,29 +178,29 @@ public class AttendanceMvvmViewModelTest {
         Attendance attendance1 = new Attendance();
         attendance1.setId(1L);
         attendance1.setMeeting(testMeeting);
-        attendance1.setTeamMember(member1);
+        attendance1.setMember(member1);
         attendance1.setPresent(true);
-        attendance1.setNotes("On time");
+        attendance1.setArrivalTime(testMeeting.getStartTime());
+        attendance1.setDepartureTime(testMeeting.getEndTime());
         testAttendances.add(attendance1);
         
         Attendance attendance2 = new Attendance();
         attendance2.setId(2L);
         attendance2.setMeeting(testMeeting);
-        attendance2.setTeamMember(member2);
+        attendance2.setMember(member2);
         attendance2.setPresent(true);
-        attendance2.setNotes("Arrived late");
+        attendance2.setArrivalTime(testMeeting.getStartTime().plusMinutes(15));
+        attendance2.setDepartureTime(testMeeting.getEndTime());
         testAttendances.add(attendance2);
         
         Attendance attendance3 = new Attendance();
         attendance3.setId(3L);
         attendance3.setMeeting(testMeeting);
-        attendance3.setTeamMember(member3);
+        attendance3.setMember(member3);
         attendance3.setPresent(false);
-        attendance3.setNotes("Absent - sick");
+        attendance3.setArrivalTime(null);
+        attendance3.setDepartureTime(null);
         testAttendances.add(attendance3);
-        
-        // Link attendances to meeting
-        testMeeting.setAttendances(testAttendances);
     }
     
     @Test
@@ -178,59 +208,38 @@ public class AttendanceMvvmViewModelTest {
         TestUtils.runOnFxThreadAndWait(() -> {
             // Verify initial state
             assertTrue(viewModel.getAttendanceRecords().isEmpty());
-            assertNull(viewModel.getCurrentMeeting());
-            assertNull(viewModel.getCurrentProject());
+            assertNull(viewModel.getMeeting());
             assertFalse(viewModel.isLoading());
             
             // Verify commands exist
-            assertNotNull(viewModel.getLoadMeetingsCommand());
             assertNotNull(viewModel.getLoadAttendanceCommand());
             assertNotNull(viewModel.getSaveAttendanceCommand());
-            assertNotNull(viewModel.getRefreshCommand());
+            assertNotNull(viewModel.getCancelCommand());
+            assertNotNull(viewModel.getSetTimeCommand());
             
-            // Check command executability - use !isExecutable instead of isNotExecutable
-            assertTrue(viewModel.getLoadMeetingsCommand().isExecutable());
-            assertTrue(viewModel.getRefreshCommand().isExecutable());
-            assertFalse(viewModel.getLoadAttendanceCommand().isExecutable()); // No meeting selected
-            assertFalse(viewModel.getSaveAttendanceCommand().isExecutable()); // No changes
+            // Check command executability
+            assertTrue(!viewModel.getLoadAttendanceCommand().isExecutable()); // No meeting selected
+            assertTrue(!viewModel.getSaveAttendanceCommand().isExecutable()); // No records loaded
+            assertTrue(viewModel.getCancelCommand().isExecutable()); // Always executable
+            assertTrue(!viewModel.getSetTimeCommand().isExecutable()); // No record selected
         });
     }
     
     @Test
-    public void testInitWithProject() {
+    public void testInitWithMeeting() {
         TestUtils.runOnFxThreadAndWait(() -> {
-            // Initialize with project
-            viewModel.initWithProject(testProject);
+            // Initialize with meeting
+            viewModel.initWithMeeting(testMeeting);
             
-            // Verify project was set
-            assertEquals(testProject, viewModel.getCurrentProject());
-        });
-        
-        // Let async operations complete
-        try {
-            Thread.sleep(200);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Verify meetings were loaded
-            assertFalse(viewModel.getMeetings().isEmpty());
-            assertEquals(1, viewModel.getMeetings().size());
-            assertEquals(testMeeting, viewModel.getMeetings().get(0));
-        });
-    }
-    
-    @Test
-    public void testLoadAttendanceForMeeting() {
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Set current meeting
-            viewModel.setCurrentMeeting(testMeeting);
+            // Verify meeting was set
+            assertEquals(testMeeting, viewModel.getMeeting());
             
-            // Load attendance command should now be executable
+            // LoadAttendance command should be executable now
             assertTrue(viewModel.getLoadAttendanceCommand().isExecutable());
-            
-            // Execute load attendance command
+        });
+        
+        // Execute load attendance command
+        TestUtils.runOnFxThreadAndWait(() -> {
             viewModel.getLoadAttendanceCommand().execute();
         });
         
@@ -245,29 +254,24 @@ public class AttendanceMvvmViewModelTest {
             // Verify attendance records were loaded
             assertEquals(3, viewModel.getAttendanceRecords().size());
             
-            // Verify attendance data
+            // Verify specific record details
             AttendanceMvvmViewModel.AttendanceRecord record1 = viewModel.getAttendanceRecords().get(0);
-            assertEquals("John Doe", record1.getTeamMemberName());
+            assertEquals("John", record1.getTeamMember().getFirstName());
             assertTrue(record1.isPresent());
-            assertEquals("On time", record1.getNotes());
-            
-            AttendanceMvvmViewModel.AttendanceRecord record2 = viewModel.getAttendanceRecords().get(1);
-            assertEquals("Jane Smith", record2.getTeamMemberName());
-            assertTrue(record2.isPresent());
-            assertEquals("Arrived late", record2.getNotes());
             
             AttendanceMvvmViewModel.AttendanceRecord record3 = viewModel.getAttendanceRecords().get(2);
-            assertEquals("Bob Johnson", record3.getTeamMemberName());
+            assertEquals("Bob", record3.getTeamMember().getFirstName());
             assertFalse(record3.isPresent());
-            assertEquals("Absent - sick", record3.getNotes());
         });
     }
     
     @Test
-    public void testMarkAttendance() {
+    public void testLoadAttendanceCommand() {
         TestUtils.runOnFxThreadAndWait(() -> {
-            // Set current meeting and load attendance
-            viewModel.setCurrentMeeting(testMeeting);
+            // Set meeting first
+            viewModel.initWithMeeting(testMeeting);
+            
+            // Execute load command
             viewModel.getLoadAttendanceCommand().execute();
         });
         
@@ -279,14 +283,44 @@ public class AttendanceMvvmViewModelTest {
         }
         
         TestUtils.runOnFxThreadAndWait(() -> {
-            // Get the first attendance record (John Doe - currently present)
-            AttendanceMvvmViewModel.AttendanceRecord record = viewModel.getAttendanceRecords().get(0);
+            // Verify attendance records were loaded
+            assertEquals(3, viewModel.getAttendanceRecords().size());
             
-            // Mark as absent
-            record.setPresent(false);
-            record.setNotes("Left early");
+            // SaveAttendance command should not be executable (not dirty)
+            assertTrue(!viewModel.getSaveAttendanceCommand().isExecutable());
+        });
+    }
+    
+    @Test
+    public void testSaveAttendanceCommand() {
+        TestUtils.runOnFxThreadAndWait(() -> {
+            // Set meeting and load attendance
+            viewModel.initWithMeeting(testMeeting);
+            viewModel.getLoadAttendanceCommand().execute();
+        });
+        
+        // Let async operations complete
+        try {
+            Thread.sleep(200);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        
+        // Store the initial state for comparison
+        final boolean[] initialDirtyState = new boolean[1];
+        
+        TestUtils.runOnFxThreadAndWait(() -> {
+            // Get initial dirty state
+            initialDirtyState[0] = viewModel.isDirty();
             
-            // Save attendance command should be executable after changes
+            // Modify a record to make the view model dirty
+            AttendanceMvvmViewModel.AttendanceRecord record = viewModel.getAttendanceRecords().get(2); // Bob (absent)
+            record.setPresent(true); // Change to present
+            
+            // ViewModel should be dirty now
+            assertTrue(viewModel.isDirty());
+            
+            // Save command should be executable
             assertTrue(viewModel.getSaveAttendanceCommand().isExecutable());
             
             // Execute save command
@@ -295,24 +329,30 @@ public class AttendanceMvvmViewModelTest {
         
         // Let async operations complete
         try {
-            Thread.sleep(200);
+            Thread.sleep(500); // Use a longer delay
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
         
         TestUtils.runOnFxThreadAndWait(() -> {
-            // Verify changes were applied
-            AttendanceMvvmViewModel.AttendanceRecord updatedRecord = viewModel.getAttendanceRecords().get(0);
-            assertFalse(updatedRecord.isPresent());
-            assertEquals("Left early", updatedRecord.getNotes());
+            // After saving, the ViewModel should no longer be dirty
+            assertFalse(viewModel.isDirty(), "ViewModel should not be dirty after saving");
+            
+            // Verify the change persisted - Bob should still be present
+            AttendanceMvvmViewModel.AttendanceRecord record = viewModel.getAttendanceRecords().get(2);
+            assertTrue(record.isPresent(), "Record should still be present after save");
+            
+            // Save command should no longer be executable (since we're not dirty)
+            assertFalse(viewModel.getSaveAttendanceCommand().isExecutable(), 
+                    "Save command should not be executable after saving");
         });
     }
     
     @Test
-    public void testAttendanceStatistics() {
+    public void testUpdateRecordTimes() {
         TestUtils.runOnFxThreadAndWait(() -> {
-            // Set current meeting and load attendance
-            viewModel.setCurrentMeeting(testMeeting);
+            // Set meeting and load attendance
+            viewModel.initWithMeeting(testMeeting);
             viewModel.getLoadAttendanceCommand().execute();
         });
         
@@ -324,22 +364,15 @@ public class AttendanceMvvmViewModelTest {
         }
         
         TestUtils.runOnFxThreadAndWait(() -> {
-            // Verify attendance statistics
-            assertEquals(3, viewModel.getTotalMembers());
-            assertEquals(2, viewModel.getPresentCount());
-            assertEquals(1, viewModel.getAbsentCount());
+            // Get a record to update
+            AttendanceMvvmViewModel.AttendanceRecord record = viewModel.getAttendanceRecords().get(0); // John (present)
             
-            // Verify percentage calculation (2 out of 3 = 66.67%)
-            double expectedPercentage = (2.0 / 3.0) * 100;
-            assertEquals(expectedPercentage, viewModel.getAttendancePercentage(), 0.01);
-        });
-    }
-    
-    @Test
-    public void testCreateAttendanceForAllMembers() {
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Initialize with project to load team members
-            viewModel.initWithProject(testProject);
+            // Update times
+            LocalTime newArrivalTime = LocalTime.of(16, 15);
+            LocalTime newDepartureTime = LocalTime.of(18, 30);
+            
+            // Call the method directly
+            viewModel.updateRecordTimes(record, newArrivalTime, newDepartureTime);
         });
         
         // Let async operations complete
@@ -350,44 +383,34 @@ public class AttendanceMvvmViewModelTest {
         }
         
         TestUtils.runOnFxThreadAndWait(() -> {
-            // Set current meeting (empty attendance)
-            Meeting emptyMeeting = new Meeting();
-            emptyMeeting.setId(2L);
-            emptyMeeting.setDate(LocalDate.now().plusDays(1));
-            emptyMeeting.setStartTime(LocalTime.of(16, 0));
-            emptyMeeting.setEndTime(LocalTime.of(18, 0));
-            emptyMeeting.setProject(testProject);
-            
-            viewModel.setCurrentMeeting(emptyMeeting);
-            
-            // Execute command to create attendance for all members
-            viewModel.getCreateAttendanceForAllMembersCommand().execute();
-        });
-        
-        // Let async operations complete
-        try {
-            Thread.sleep(200);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Verify attendance records were created for all team members
-            assertEquals(3, viewModel.getAttendanceRecords().size());
-            
-            // All should be marked as present by default
-            for (AttendanceMvvmViewModel.AttendanceRecord record : viewModel.getAttendanceRecords()) {
-                assertTrue(record.isPresent());
-                assertEquals("", record.getNotes());
-            }
+            // Verify record was updated
+            AttendanceMvvmViewModel.AttendanceRecord record = viewModel.getAttendanceRecords().get(0);
+            assertEquals(LocalTime.of(16, 15), record.getArrivalTime());
+            assertEquals(LocalTime.of(18, 30), record.getDepartureTime());
         });
     }
     
     @Test
-    public void testFilterByAttendanceStatus() {
+    public void testTimeFormatting() {
         TestUtils.runOnFxThreadAndWait(() -> {
-            // Set current meeting and load attendance
-            viewModel.setCurrentMeeting(testMeeting);
+            // Test parsing time strings
+            LocalTime time1 = viewModel.parseTime("16:30");
+            assertEquals(LocalTime.of(16, 30), time1);
+            
+            LocalTime time2 = viewModel.parseTime("invalid");
+            assertNull(time2);
+            
+            // Test formatting times
+            String formatted = viewModel.formatTime(LocalTime.of(9, 15));
+            assertEquals("09:15", formatted);
+        });
+    }
+    
+    @Test
+    public void testGetPresentMemberIds() {
+        TestUtils.runOnFxThreadAndWait(() -> {
+            // Set meeting and load attendance
+            viewModel.initWithMeeting(testMeeting);
             viewModel.getLoadAttendanceCommand().execute();
         });
         
@@ -399,176 +422,46 @@ public class AttendanceMvvmViewModelTest {
         }
         
         TestUtils.runOnFxThreadAndWait(() -> {
-            // Initially showing all records
-            assertEquals(3, viewModel.getFilteredAttendanceRecords().size());
+            // Get present member IDs
+            List<Long> presentMemberIds = viewModel.getPresentMemberIds();
             
-            // Filter to show only present members
-            viewModel.setShowPresentOnly(true);
-            assertEquals(2, viewModel.getFilteredAttendanceRecords().size());
-            
-            // Verify all filtered records are present
-            for (AttendanceMvvmViewModel.AttendanceRecord record : viewModel.getFilteredAttendanceRecords()) {
-                assertTrue(record.isPresent());
-            }
-            
-            // Filter to show only absent members
-            viewModel.setShowPresentOnly(false);
-            viewModel.setShowAbsentOnly(true);
-            assertEquals(1, viewModel.getFilteredAttendanceRecords().size());
-            
-            // Verify filtered record is absent
-            AttendanceMvvmViewModel.AttendanceRecord absentRecord = viewModel.getFilteredAttendanceRecords().get(0);
-            assertFalse(absentRecord.isPresent());
-            assertEquals("Bob Johnson", absentRecord.getTeamMemberName());
-            
-            // Reset filters
-            viewModel.setShowAbsentOnly(false);
-            assertEquals(3, viewModel.getFilteredAttendanceRecords().size());
+            // Should have 2 present members (John and Jane)
+            assertEquals(2, presentMemberIds.size());
+            assertTrue(presentMemberIds.contains(1L)); // John
+            assertTrue(presentMemberIds.contains(2L)); // Jane
+            assertFalse(presentMemberIds.contains(3L)); // Bob (absent)
         });
     }
     
     @Test
-    public void testBulkAttendanceOperations() {
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Set current meeting and load attendance
-            viewModel.setCurrentMeeting(testMeeting);
-            viewModel.getLoadAttendanceCommand().execute();
-        });
-        
-        // Let async operations complete
-        try {
-            Thread.sleep(200);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Mark all as present
-            viewModel.getMarkAllPresentCommand().execute();
-            
-            // Verify all are marked as present
-            for (AttendanceMvvmViewModel.AttendanceRecord record : viewModel.getAttendanceRecords()) {
-                assertTrue(record.isPresent());
-            }
-            
-            // Mark all as absent
-            viewModel.getMarkAllAbsentCommand().execute();
-            
-            // Verify all are marked as absent
-            for (AttendanceMvvmViewModel.AttendanceRecord record : viewModel.getAttendanceRecords()) {
-                assertFalse(record.isPresent());
-            }
-        });
-    }
-    
-    @Test
-    public void testMeetingSelection() {
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Initialize with project to load meetings
-            viewModel.initWithProject(testProject);
-        });
-        
-        // Let async operations complete
-        try {
-            Thread.sleep(200);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Initially no meeting selected
-            assertNull(viewModel.getCurrentMeeting());
-            assertFalse(viewModel.getLoadAttendanceCommand().isExecutable());
-            
-            // Select a meeting
-            viewModel.setCurrentMeeting(testMeeting);
-            
-            // Verify meeting was selected
-            assertEquals(testMeeting, viewModel.getCurrentMeeting());
-            
-            // Load attendance command should now be executable
-            assertTrue(viewModel.getLoadAttendanceCommand().isExecutable());
-        });
-    }
-    
-    @Test
-    public void testLoadMeetingsCommand() {
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Set project and execute load meetings command
-            viewModel.setCurrentProject(testProject);
-            viewModel.getLoadMeetingsCommand().execute();
-        });
-        
-        // Let async operations complete
-        try {
-            Thread.sleep(200);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Verify meetings were loaded
-            assertEquals(1, viewModel.getMeetings().size());
-            assertEquals(testMeeting, viewModel.getMeetings().get(0));
-            
-            // Error message should be cleared
-            assertNull(viewModel.getErrorMessage());
-        });
-    }
-    
-    @Test
-    public void testRefreshCommand() {
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Set project and meeting
-            viewModel.setCurrentProject(testProject);
-            viewModel.setCurrentMeeting(testMeeting);
-            
-            // Execute refresh command
-            viewModel.getRefreshCommand().execute();
-        });
-        
-        // Let async operations complete
-        try {
-            Thread.sleep(200);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Verify both meetings and attendance were refreshed
-            assertEquals(1, viewModel.getMeetings().size());
-            assertEquals(3, viewModel.getAttendanceRecords().size());
-        });
-    }
-    
-    @Test
-    public void testErrorHandlingDuringLoad() {
+    public void testLoadAttendanceErrorHandling() {
         // Create error mock
-        TestableMeetingServiceAsyncImpl errorMockService = mock(TestableMeetingServiceAsyncImpl.class);
+        AttendanceServiceAsyncImpl errorMockService = mock(AttendanceServiceAsyncImpl.class);
         
         // Configure mock to throw error
         doAnswer(invocation -> {
-            @SuppressWarnings("unchecked")
-            java.util.function.Consumer<Throwable> errorCallback = 
-                invocation.getArgument(2);
+            Consumer<Throwable> errorCallback = invocation.getArgument(2);
             errorCallback.accept(new RuntimeException("Test error"));
             return null;
-        }).when(errorMockService).findByProjectAsync(any(), any(), any());
+        }).when(errorMockService).findByMeetingAsync(any(), any(), any());
         
-        // Register error mock with TestModule
-        TestModule.setService(MeetingService.class, errorMockService);
+        // Register error mock
+        TestModule.setService(AttendanceService.class, errorMockService);
+        TestModule.setService(AttendanceServiceAsyncImpl.class, errorMockService);
         
         TestUtils.runOnFxThreadAndWait(() -> {
-            // Create new view model with error mock
+            // Create a new view model with the error mock
             AttendanceMvvmViewModel errorViewModel = new AttendanceMvvmViewModel(
                 TestModule.getService(AttendanceService.class),
                 TestModule.getService(TeamMemberService.class),
                 TestModule.getService(MeetingService.class)
             );
             
-            // Set project and execute load command
-            errorViewModel.setCurrentProject(testProject);
-            errorViewModel.getLoadMeetingsCommand().execute();
+            // Set meeting
+            errorViewModel.initWithMeeting(testMeeting);
+            
+            // Execute load command
+            errorViewModel.getLoadAttendanceCommand().execute();
             
             // Let async operations complete
             try {
@@ -577,39 +470,19 @@ public class AttendanceMvvmViewModelTest {
                 e.printStackTrace();
             }
             
-            // Verify error message
+            // Verify error handling
             assertNotNull(errorViewModel.getErrorMessage());
             assertTrue(errorViewModel.getErrorMessage().contains("Failed to load"));
-            
-            // Verify meetings are empty
-            assertTrue(errorViewModel.getMeetings().isEmpty());
-        });
-    }
-    
-    @Test
-    public void testPropertyBindings() {
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Test project property
-            viewModel.setCurrentProject(testProject);
-            assertEquals(testProject, viewModel.getCurrentProject());
-            assertEquals(testProject, viewModel.currentProjectProperty().get());
-            
-            // Test meeting property
-            viewModel.setCurrentMeeting(testMeeting);
-            assertEquals(testMeeting, viewModel.getCurrentMeeting());
-            assertEquals(testMeeting, viewModel.currentMeetingProperty().get());
-            
-            // Test loading property
-            assertFalse(viewModel.isLoading());
-            assertEquals(Boolean.FALSE, viewModel.loadingProperty().get());
+            assertFalse(errorViewModel.isLoading());
         });
     }
     
     @Test
     public void testDispose() {
         TestUtils.runOnFxThreadAndWait(() -> {
-            // Load some data first
-            viewModel.initWithProject(testProject);
+            // Set meeting and load attendance
+            viewModel.initWithMeeting(testMeeting);
+            viewModel.getLoadAttendanceCommand().execute();
         });
         
         // Let async operations complete
@@ -620,14 +493,13 @@ public class AttendanceMvvmViewModelTest {
         }
         
         TestUtils.runOnFxThreadAndWait(() -> {
-            // Verify data was loaded
-            assertFalse(viewModel.getMeetings().isEmpty());
+            // Verify records are loaded
+            assertFalse(viewModel.getAttendanceRecords().isEmpty());
             
             // Call dispose
             viewModel.dispose();
             
-            // Verify collections were cleared
-            assertTrue(viewModel.getMeetings().isEmpty());
+            // Records should be cleared
             assertTrue(viewModel.getAttendanceRecords().isEmpty());
         });
     }

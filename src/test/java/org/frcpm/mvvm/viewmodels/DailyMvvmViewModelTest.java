@@ -1,4 +1,5 @@
-// src/test/java/org/frcpm/mvvm/viewmodels/DailyMvvmViewModelTest.java
+// src/test/java/org/frcpm/mvvm/viewmodels/DailyMvvmViewModelTest.java - FIXED
+
 package org.frcpm.mvvm.viewmodels;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -8,34 +9,33 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 import org.frcpm.di.TestModule;
 import org.frcpm.models.Meeting;
 import org.frcpm.models.Project;
 import org.frcpm.models.Task;
-import org.frcpm.models.TaskStatus;
 import org.frcpm.models.TeamMember;
 import org.frcpm.services.MeetingService;
 import org.frcpm.services.TaskService;
-import org.frcpm.services.impl.TestableMeetingServiceAsyncImpl;
-import org.frcpm.services.impl.TestableTaskServiceAsyncImpl;
+import org.frcpm.services.impl.MeetingServiceAsyncImpl;
+import org.frcpm.services.impl.TaskServiceAsyncImpl;
 import org.frcpm.utils.TestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
  * Tests for the DailyMvvmViewModel class.
- * FIXED: Uses proven methodology - mocks testable service implementations directly.
+ * FIXED: Uses proven methodology - mocks async implementation classes directly.
  */
 public class DailyMvvmViewModelTest {
     
-    private TaskService taskService;
-    private MeetingService meetingService;
+    private TaskServiceAsyncImpl taskServiceAsync;
+    private MeetingServiceAsyncImpl meetingServiceAsync;
     
     private Project testProject;
     private List<Task> testTasks;
     private List<Meeting> testMeetings;
-    private TeamMember testMember;
     private DailyMvvmViewModel viewModel;
     
     @BeforeEach
@@ -46,91 +46,43 @@ public class DailyMvvmViewModelTest {
         // Create test data
         setupTestData();
         
-        // Create mock services - CRITICAL: Mock the actual testable implementations
-        TestableTaskServiceAsyncImpl mockTaskService = mock(TestableTaskServiceAsyncImpl.class);
-        TestableMeetingServiceAsyncImpl mockMeetingService = mock(TestableMeetingServiceAsyncImpl.class);
+        // Create mock services - CRITICAL: Mock the actual async implementations
+        taskServiceAsync = mock(TaskServiceAsyncImpl.class);
+        meetingServiceAsync = mock(MeetingServiceAsyncImpl.class);
         
-        // Configure task service mocks
+        // Configure taskServiceAsync
         doAnswer(invocation -> {
-            LocalDate date = invocation.getArgument(0);
-            @SuppressWarnings("unchecked")
-            java.util.function.Consumer<List<Task>> successCallback = 
-                invocation.getArgument(1);
+            Project project = invocation.getArgument(0);
+            Consumer<List<Task>> successCallback = invocation.getArgument(1);
             
-            // Filter tasks by due date
-            List<Task> tasksForDate = testTasks.stream()
-                .filter(task -> task.getDueDate() != null && task.getDueDate().equals(date))
+            // Filter tasks by project
+            List<Task> projectTasks = testTasks.stream()
+                .filter(t -> t.getProject() != null && t.getProject().getId().equals(project.getId()))
                 .toList();
             
-            successCallback.accept(tasksForDate);
+            successCallback.accept(projectTasks);
             return null;
-        }).when(mockTaskService).findTasksDueTodayAsync(any(), any(), any());
+        }).when(taskServiceAsync).findByProjectAsync(any(Project.class), any(), any());
         
-        doAnswer(invocation -> {
-            TeamMember member = invocation.getArgument(0);
-            @SuppressWarnings("unchecked")
-            java.util.function.Consumer<List<Task>> successCallback = 
-                invocation.getArgument(1);
-            
-            // Filter tasks by assigned member
-            List<Task> memberTasks = testTasks.stream()
-                .filter(task -> task.getAssignedMembers() != null && 
-                               task.getAssignedMembers().contains(member))
-                .toList();
-            
-            successCallback.accept(memberTasks);
-            return null;
-        }).when(mockTaskService).findByAssignedMemberAsync(any(), any(), any());
-        
-        doAnswer(invocation -> {
-            @SuppressWarnings("unchecked")
-            java.util.function.Consumer<List<Task>> successCallback = 
-                invocation.getArgument(0);
-            successCallback.accept(testTasks);
-            return null;
-        }).when(mockTaskService).findAllAsync(any(), any());
-        
-        // Configure meeting service mocks
+        // Configure meetingServiceAsync
         doAnswer(invocation -> {
             LocalDate date = invocation.getArgument(0);
-            @SuppressWarnings("unchecked")
-            java.util.function.Consumer<List<Meeting>> successCallback = 
-                invocation.getArgument(1);
+            Consumer<List<Meeting>> successCallback = invocation.getArgument(1);
             
             // Filter meetings by date
             List<Meeting> meetingsForDate = testMeetings.stream()
-                .filter(meeting -> meeting.getDate() != null && meeting.getDate().equals(date))
+                .filter(m -> m.getDate() != null && m.getDate().equals(date))
                 .toList();
             
             successCallback.accept(meetingsForDate);
             return null;
-        }).when(mockMeetingService).findByDateAsync(any(), any(), any());
-        
-        doAnswer(invocation -> {
-            Project project = invocation.getArgument(0);
-            @SuppressWarnings("unchecked")
-            java.util.function.Consumer<List<Meeting>> successCallback = 
-                invocation.getArgument(1);
-            
-            // Filter meetings by project
-            List<Meeting> projectMeetings = testMeetings.stream()
-                .filter(meeting -> meeting.getProject() != null && 
-                                 meeting.getProject().getId().equals(project.getId()))
-                .toList();
-            
-            successCallback.accept(projectMeetings);
-            return null;
-        }).when(mockMeetingService).findByProjectAsync(any(), any(), any());
+        }).when(meetingServiceAsync).findByDateAsync(any(LocalDate.class), any(), any());
         
         // Register mocks with TestModule - BOTH interface and implementation
-        TestModule.setService(TaskService.class, mockTaskService);
-        TestModule.setService(TestableTaskServiceAsyncImpl.class, mockTaskService);
-        TestModule.setService(MeetingService.class, mockMeetingService);
-        TestModule.setService(TestableMeetingServiceAsyncImpl.class, mockMeetingService);
-        
-        // Get services from TestModule
-        taskService = TestModule.getService(TaskService.class);
-        meetingService = TestModule.getService(MeetingService.class);
+        TestModule.setService(TaskService.class, taskServiceAsync);
+        TestModule.setService(TaskServiceAsyncImpl.class, taskServiceAsync);
+        TestModule.setService(MeetingService.class, meetingServiceAsync);
+        TestModule.setService(MeetingServiceAsyncImpl.class, meetingServiceAsync);
         
         // Initialize JavaFX toolkit if needed
         try {
@@ -141,7 +93,10 @@ public class DailyMvvmViewModelTest {
         
         // Create the view model on the JavaFX thread
         TestUtils.runOnFxThreadAndWait(() -> {
-            viewModel = new DailyMvvmViewModel(taskService, meetingService);
+            viewModel = new DailyMvvmViewModel(
+                TestModule.getService(TaskService.class),
+                TestModule.getService(MeetingService.class)
+            );
         });
     }
     
@@ -151,98 +106,86 @@ public class DailyMvvmViewModelTest {
         testProject.setId(1L);
         testProject.setName("Test Project");
         
-        // Create test team member
-        testMember = new TeamMember();
-        testMember.setId(1L);
-        testMember.setFirstName("John");
-        testMember.setLastName("Doe");
-        testMember.setEmail("john.doe@example.com");
-        
         // Create test tasks
         testTasks = new ArrayList<>();
         
-        Task todayTask1 = new Task();
-        todayTask1.setId(1L);
-        todayTask1.setTitle("Complete robot assembly");
-        todayTask1.setDescription("Finish assembling the robot chassis");
-        todayTask1.setDueDate(LocalDate.now());
-        todayTask1.setStatus(TaskStatus.IN_PROGRESS);
-        todayTask1.setAssignedMembers(List.of(testMember));
-        todayTask1.setProject(testProject);
-        testTasks.add(todayTask1);
+        Task task1 = new Task();
+        task1.setId(1L);
+        task1.setTitle("Complete robot arm");
+        task1.setStartDate(LocalDate.now().minusDays(2));
+        task1.setEndDate(LocalDate.now().plusDays(1));
+        //task1.setDueDate(LocalDate.now());
+        task1.setProgress(50);
+        task1.setProject(testProject);
+        testTasks.add(task1);
         
-        Task todayTask2 = new Task();
-        todayTask2.setId(2L);
-        todayTask2.setTitle("Test drivetrain");
-        todayTask2.setDescription("Run tests on the drivetrain system");
-        todayTask2.setDueDate(LocalDate.now());
-        todayTask2.setStatus(TaskStatus.TODO);
-        todayTask2.setProject(testProject);
-        testTasks.add(todayTask2);
+        Task task2 = new Task();
+        task2.setId(2L);
+        task2.setTitle("Test drivetrain");
+        task2.setStartDate(LocalDate.now());
+        task2.setEndDate(LocalDate.now());
+        //task2.setDueDate(LocalDate.now());
+        task2.setProgress(25);
+        task2.setProject(testProject);
+        testTasks.add(task2);
         
-        Task tomorrowTask = new Task();
-        tomorrowTask.setId(3L);
-        tomorrowTask.setTitle("Program autonomous");
-        tomorrowTask.setDescription("Write autonomous code");
-        tomorrowTask.setDueDate(LocalDate.now().plusDays(1));
-        tomorrowTask.setStatus(TaskStatus.TODO);
-        tomorrowTask.setAssignedMembers(List.of(testMember));
-        tomorrowTask.setProject(testProject);
-        testTasks.add(tomorrowTask);
-        
-        Task overdueTask = new Task();
-        overdueTask.setId(4L);
-        overdueTask.setTitle("Order parts");
-        overdueTask.setDescription("Order missing parts for robot");
-        overdueTask.setDueDate(LocalDate.now().minusDays(2));
-        overdueTask.setStatus(TaskStatus.TODO);
-        overdueTask.setProject(testProject);
-        testTasks.add(overdueTask);
+        Task task3 = new Task();
+        task3.setId(3L);
+        task3.setTitle("Future task");
+        task3.setStartDate(LocalDate.now().plusDays(1));
+        task3.setEndDate(LocalDate.now().plusDays(3));
+        //task3.setDueDate(LocalDate.now().plusDays(3));
+        task3.setProgress(0);
+        task3.setProject(testProject);
+        testTasks.add(task3);
         
         // Create test meetings
         testMeetings = new ArrayList<>();
         
-        Meeting todayMeeting = new Meeting();
-        todayMeeting.setId(1L);
-        todayMeeting.setDate(LocalDate.now());
-        todayMeeting.setStartTime(LocalTime.of(16, 0));
-        todayMeeting.setEndTime(LocalTime.of(18, 0));
-        todayMeeting.setNotes("Daily standup meeting");
-        todayMeeting.setProject(testProject);
-        testMeetings.add(todayMeeting);
+        Meeting meeting1 = new Meeting();
+        meeting1.setId(1L);
+        meeting1.setDate(LocalDate.now());
+        meeting1.setStartTime(LocalTime.of(16, 0));
+        meeting1.setEndTime(LocalTime.of(18, 0));
+        meeting1.setNotes("Daily standup");
+        meeting1.setProject(testProject);
+        testMeetings.add(meeting1);
         
-        Meeting tomorrowMeeting = new Meeting();
-        tomorrowMeeting.setId(2L);
-        tomorrowMeeting.setDate(LocalDate.now().plusDays(1));
-        tomorrowMeeting.setStartTime(LocalTime.of(17, 0));
-        tomorrowMeeting.setEndTime(LocalTime.of(19, 0));
-        tomorrowMeeting.setNotes("Design review meeting");
-        tomorrowMeeting.setProject(testProject);
-        testMeetings.add(tomorrowMeeting);
+        Meeting meeting2 = new Meeting();
+        meeting2.setId(2L);
+        meeting2.setDate(LocalDate.now().plusDays(1));
+        meeting2.setStartTime(LocalTime.of(15, 0));
+        meeting2.setEndTime(LocalTime.of(17, 0));
+        meeting2.setNotes("Design review");
+        meeting2.setProject(testProject);
+        testMeetings.add(meeting2);
     }
     
     @Test
     public void testInitialState() {
         TestUtils.runOnFxThreadAndWait(() -> {
             // Verify initial state
-            assertTrue(viewModel.getTodaysTasks().isEmpty());
-            assertTrue(viewModel.getTodaysMeetings().isEmpty());
-            assertTrue(viewModel.getMyTasks().isEmpty());
-            assertNull(viewModel.getCurrentProject());
-            assertNull(viewModel.getCurrentMember());
+            assertNotNull(viewModel.getSelectedDate());
+            assertEquals(LocalDate.now(), viewModel.getSelectedDate());
             assertFalse(viewModel.isLoading());
             
-            // Verify commands exist
-            assertNotNull(viewModel.getLoadTodaysDataCommand());
-            assertNotNull(viewModel.getLoadMyTasksCommand());
-            assertNotNull(viewModel.getRefreshCommand());
-            assertNotNull(viewModel.getMarkTaskCompleteCommand());
+            // Verify collections are empty
+            assertTrue(viewModel.getTasks().isEmpty());
+            assertTrue(viewModel.getMeetings().isEmpty());
             
-            // Check command executability - use !isExecutable instead of isNotExecutable
-            assertTrue(viewModel.getLoadTodaysDataCommand().isExecutable());
-            assertTrue(viewModel.getRefreshCommand().isExecutable());
-            assertFalse(viewModel.getLoadMyTasksCommand().isExecutable()); // No member set
-            assertFalse(viewModel.getMarkTaskCompleteCommand().isExecutable()); // No task selected
+            // Verify commands exist
+            assertNotNull(viewModel.getAddTaskCommand());
+            assertNotNull(viewModel.getEditTaskCommand());
+            assertNotNull(viewModel.getAddMeetingCommand());
+            assertNotNull(viewModel.getEditMeetingCommand());
+            assertNotNull(viewModel.getTakeAttendanceCommand());
+            assertNotNull(viewModel.getRefreshCommand());
+            
+            // Check command executability
+            assertTrue(!viewModel.getEditTaskCommand().isExecutable()); // No task selected
+            assertTrue(!viewModel.getEditMeetingCommand().isExecutable()); // No meeting selected
+            assertTrue(!viewModel.getTakeAttendanceCommand().isExecutable()); // No meeting selected
+            assertTrue(viewModel.getRefreshCommand().isExecutable()); // Always executable
         });
     }
     
@@ -264,25 +207,25 @@ public class DailyMvvmViewModelTest {
         }
         
         TestUtils.runOnFxThreadAndWait(() -> {
-            // Verify today's data was loaded
-            assertEquals(2, viewModel.getTodaysTasks().size()); // 2 tasks due today
-            assertEquals(1, viewModel.getTodaysMeetings().size()); // 1 meeting today
+            // Verify data was loaded for today's date
+            assertFalse(viewModel.getTasks().isEmpty());
+            assertFalse(viewModel.getMeetings().isEmpty());
             
-            // Verify task details
-            assertTrue(viewModel.getTodaysTasks().stream().anyMatch(t -> t.getTitle().equals("Complete robot assembly")));
-            assertTrue(viewModel.getTodaysTasks().stream().anyMatch(t -> t.getTitle().equals("Test drivetrain")));
+            // Verify specific data
+            assertEquals(2, viewModel.getTasks().size()); // Tasks active today
+            assertEquals(1, viewModel.getMeetings().size()); // Meetings today
             
-            // Verify meeting details
-            assertEquals("Daily standup meeting", viewModel.getTodaysMeetings().get(0).getNotes());
+            // Verify commands that require project are executable
+            assertTrue(viewModel.getAddTaskCommand().isExecutable());
+            assertTrue(viewModel.getAddMeetingCommand().isExecutable());
         });
     }
     
     @Test
-    public void testLoadTodaysDataCommand() {
+    public void testLoadDataForDate() {
         TestUtils.runOnFxThreadAndWait(() -> {
-            // Set project and execute load today's data command
+            // Set project
             viewModel.setCurrentProject(testProject);
-            viewModel.getLoadTodaysDataCommand().execute();
         });
         
         // Let async operations complete
@@ -293,28 +236,9 @@ public class DailyMvvmViewModelTest {
         }
         
         TestUtils.runOnFxThreadAndWait(() -> {
-            // Verify today's tasks were loaded
-            assertEquals(2, viewModel.getTodaysTasks().size());
-            
-            // Verify today's meetings were loaded
-            assertEquals(1, viewModel.getTodaysMeetings().size());
-            
-            // Error message should be cleared
-            assertNull(viewModel.getErrorMessage());
-        });
-    }
-    
-    @Test
-    public void testLoadMyTasksCommand() {
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Set current member
-            viewModel.setCurrentMember(testMember);
-            
-            // Load my tasks command should now be executable
-            assertTrue(viewModel.getLoadMyTasksCommand().isExecutable());
-            
-            // Execute load my tasks command
-            viewModel.getLoadMyTasksCommand().execute();
+            // Change date to tomorrow
+            LocalDate tomorrow = LocalDate.now().plusDays(1);
+            viewModel.setSelectedDate(tomorrow);
         });
         
         // Let async operations complete
@@ -325,204 +249,21 @@ public class DailyMvvmViewModelTest {
         }
         
         TestUtils.runOnFxThreadAndWait(() -> {
-            // Verify my tasks were loaded (2 tasks assigned to testMember)
-            assertEquals(2, viewModel.getMyTasks().size());
+            // Verify tomorrow's data was loaded
+            assertEquals(2, viewModel.getTasks().size()); // Task 1 and task 3 span tomorrow
+            assertEquals(1, viewModel.getMeetings().size()); // Meeting 2 is tomorrow
             
-            // Verify task details
-            assertTrue(viewModel.getMyTasks().stream().anyMatch(t -> t.getTitle().equals("Complete robot assembly")));
-            assertTrue(viewModel.getMyTasks().stream().anyMatch(t -> t.getTitle().equals("Program autonomous")));
-        });
-    }
-    
-    @Test
-    public void testTaskPriorityFiltering() {
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Load today's data
-            viewModel.initWithProject(testProject);
-        });
-        
-        // Let async operations complete
-        try {
-            Thread.sleep(200);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Initially showing all tasks
-            assertEquals(2, viewModel.getTodaysTasks().size());
-            
-            // Get high priority tasks (should be empty with current test data)
-            List<Task> highPriorityTasks = viewModel.getHighPriorityTasks();
-            assertTrue(highPriorityTasks.isEmpty()); // No high priority tasks in test data
-            
-            // Get overdue tasks
-            List<Task> overdueTasks = viewModel.getOverdueTasks();
-            assertEquals(1, overdueTasks.size()); // 1 overdue task
-            assertEquals("Order parts", overdueTasks.get(0).getTitle());
-        });
-    }
-    
-    @Test
-    public void testTaskStatusCounting() {
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Load today's data
-            viewModel.initWithProject(testProject);
-        });
-        
-        // Let async operations complete
-        try {
-            Thread.sleep(200);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Verify task counts by status
-            assertEquals(1, viewModel.getInProgressTasksCount()); // 1 in progress
-            assertEquals(1, viewModel.getTodoTasksCount()); // 1 todo (for today)
-            assertEquals(0, viewModel.getCompletedTasksCount()); // 0 completed
-            
-            // Verify total tasks count
-            assertEquals(2, viewModel.getTotalTasksCount());
-        });
-    }
-    
-    @Test
-    public void testMarkTaskComplete() {
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Load today's data
-            viewModel.initWithProject(testProject);
-        });
-        
-        // Let async operations complete
-        try {
-            Thread.sleep(200);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Select a task
-            Task taskToComplete = viewModel.getTodaysTasks().get(0);
-            viewModel.setSelectedTask(taskToComplete);
-            
-            // Mark task complete command should be executable
-            assertTrue(viewModel.getMarkTaskCompleteCommand().isExecutable());
-            
-            // Execute mark complete command
-            viewModel.getMarkTaskCompleteCommand().execute();
-            
-            // Verify task status was updated
-            assertEquals(TaskStatus.DONE, taskToComplete.getStatus());
-        });
-    }
-    
-    @Test
-    public void testDailyProgressCalculation() {
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Load today's data
-            viewModel.initWithProject(testProject);
-        });
-        
-        // Let async operations complete
-        try {
-            Thread.sleep(200);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Initial progress (0 completed out of 2 = 0%)
-            assertEquals(0.0, viewModel.getDailyProgress(), 0.01);
-            
-            // Mark one task as complete
-            Task task = viewModel.getTodaysTasks().get(0);
-            task.setStatus(TaskStatus.DONE);
-            viewModel.refreshProgress();
-            
-            // Progress should be 50% (1 out of 2)
-            assertEquals(50.0, viewModel.getDailyProgress(), 0.01);
-        });
-    }
-    
-    @Test
-    public void testUpcomingMeetingsAlert() {
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Create a meeting that starts soon (within 30 minutes)
-            Meeting urgentMeeting = new Meeting();
-            urgentMeeting.setId(3L);
-            urgentMeeting.setDate(LocalDate.now());
-            urgentMeeting.setStartTime(LocalTime.now().plusMinutes(15));
-            urgentMeeting.setEndTime(LocalTime.now().plusMinutes(75));
-            urgentMeeting.setNotes("Urgent design review");
-            urgentMeeting.setProject(testProject);
-            
-            // Add to today's meetings
-            viewModel.getTodaysMeetings().add(urgentMeeting);
-            
-            // Check for upcoming meetings
-            List<Meeting> upcomingMeetings = viewModel.getUpcomingMeetings();
-            assertEquals(1, upcomingMeetings.size());
-            assertEquals("Urgent design review", upcomingMeetings.get(0).getNotes());
-        });
-    }
-    
-    @Test
-    public void testMemberTaskFiltering() {
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Set current member and load tasks
-            viewModel.setCurrentMember(testMember);
-            viewModel.getLoadMyTasksCommand().execute();
-        });
-        
-        // Let async operations complete
-        try {
-            Thread.sleep(200);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Verify only tasks assigned to the member are loaded
-            assertEquals(2, viewModel.getMyTasks().size());
-            
-            for (Task task : viewModel.getMyTasks()) {
-                assertTrue(task.getAssignedMembers().contains(testMember));
-            }
-        });
-    }
-    
-    @Test
-    public void testRefreshCommand() {
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Set project and member
-            viewModel.setCurrentProject(testProject);
-            viewModel.setCurrentMember(testMember);
-            
-            // Execute refresh command
-            viewModel.getRefreshCommand().execute();
-        });
-        
-        // Let async operations complete
-        try {
-            Thread.sleep(200);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        
-        TestUtils.runOnFxThreadAndWait(() -> {
-            // Verify all data was refreshed
-            assertEquals(2, viewModel.getTodaysTasks().size());
-            assertEquals(1, viewModel.getTodaysMeetings().size());
-            assertEquals(2, viewModel.getMyTasks().size());
+            // Verify specific content
+            assertTrue(viewModel.getTasks().stream().anyMatch(t -> t.getTitle().equals("Complete robot arm")));
+            assertTrue(viewModel.getTasks().stream().anyMatch(t -> t.getTitle().equals("Future task")));
+            assertTrue(viewModel.getMeetings().stream().anyMatch(m -> m.getNotes().equals("Design review")));
         });
     }
     
     @Test
     public void testTaskSelection() {
         TestUtils.runOnFxThreadAndWait(() -> {
-            // Load today's data
+            // Set project and load data
             viewModel.initWithProject(testProject);
         });
         
@@ -536,26 +277,22 @@ public class DailyMvvmViewModelTest {
         TestUtils.runOnFxThreadAndWait(() -> {
             // Initially no task selected
             assertNull(viewModel.getSelectedTask());
-            assertFalse(viewModel.getMarkTaskCompleteCommand().isExecutable());
+            assertFalse(viewModel.getEditTaskCommand().isExecutable());
             
             // Select a task
-            Task selectedTask = viewModel.getTodaysTasks().get(0);
-            viewModel.setSelectedTask(selectedTask);
+            Task task = viewModel.getTasks().get(0);
+            viewModel.setSelectedTask(task);
             
             // Verify selection
-            assertEquals(selectedTask, viewModel.getSelectedTask());
-            
-            // Mark complete command should now be executable (if task is not already complete)
-            if (!selectedTask.getStatus().equals(TaskStatus.DONE)) {
-                assertTrue(viewModel.getMarkTaskCompleteCommand().isExecutable());
-            }
+            assertEquals(task, viewModel.getSelectedTask());
+            assertTrue(viewModel.getEditTaskCommand().isExecutable());
         });
     }
     
     @Test
-    public void testDailyStatusSummary() {
+    public void testMeetingSelection() {
         TestUtils.runOnFxThreadAndWait(() -> {
-            // Load today's data
+            // Set project and load data
             viewModel.initWithProject(testProject);
         });
         
@@ -567,45 +304,105 @@ public class DailyMvvmViewModelTest {
         }
         
         TestUtils.runOnFxThreadAndWait(() -> {
-            // Get daily status summary
-            String summary = viewModel.getDailyStatusSummary();
-            assertNotNull(summary);
+            // Initially no meeting selected
+            assertNull(viewModel.getSelectedMeeting());
+            assertFalse(viewModel.getEditMeetingCommand().isExecutable());
+            assertFalse(viewModel.getTakeAttendanceCommand().isExecutable());
             
-            // Summary should contain task counts and meeting info
-            assertTrue(summary.contains("2")); // Total tasks
-            assertTrue(summary.contains("1")); // Meetings
-            assertTrue(summary.toLowerCase().contains("task"));
-            assertTrue(summary.toLowerCase().contains("meeting"));
+            // Select a meeting
+            Meeting meeting = viewModel.getMeetings().get(0);
+            viewModel.setSelectedMeeting(meeting);
+            
+            // Verify selection
+            assertEquals(meeting, viewModel.getSelectedMeeting());
+            assertTrue(viewModel.getEditMeetingCommand().isExecutable());
+            assertTrue(viewModel.getTakeAttendanceCommand().isExecutable());
         });
     }
     
     @Test
-    public void testErrorHandlingDuringLoad() {
+    public void testRefreshCommand() {
+        TestUtils.runOnFxThreadAndWait(() -> {
+            // Set project and load initial data
+            viewModel.initWithProject(testProject);
+        });
+        
+        // Let async operations complete
+        try {
+            Thread.sleep(200);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        
+        // Add a new task to test data
+        Task newTask = new Task();
+        newTask.setId(4L);
+        newTask.setTitle("New urgent task");
+        newTask.setStartDate(LocalDate.now());
+        newTask.setEndDate(LocalDate.now());
+        //newTask.setDueDate(LocalDate.now());
+        newTask.setProject(testProject);
+        testTasks.add(newTask);
+        
+        TestUtils.runOnFxThreadAndWait(() -> {
+            // Execute refresh command
+            viewModel.getRefreshCommand().execute();
+        });
+        
+        // Let async operations complete
+        try {
+            Thread.sleep(200);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        
+        TestUtils.runOnFxThreadAndWait(() -> {
+            // Verify data was refreshed and includes new task
+            assertEquals(3, viewModel.getTasks().size()); // Now includes the new task
+            assertTrue(viewModel.getTasks().stream().anyMatch(t -> t.getTitle().equals("New urgent task")));
+        });
+    }
+    
+    @Test
+    public void testFormattedDate() {
+        TestUtils.runOnFxThreadAndWait(() -> {
+            // Set a specific date
+            LocalDate testDate = LocalDate.of(2024, 3, 15);
+            viewModel.setSelectedDate(testDate);
+            
+            // Verify formatted date
+            String formattedDate = viewModel.getFormattedDate();
+            assertTrue(formattedDate.contains("March"));
+            assertTrue(formattedDate.contains("15"));
+            assertTrue(formattedDate.contains("2024"));
+        });
+    }
+    
+    @Test
+    public void testLoadDataErrorHandling() {
         // Create error mock
-        TestableTaskServiceAsyncImpl errorMockService = mock(TestableTaskServiceAsyncImpl.class);
+        TaskServiceAsyncImpl errorMockService = mock(TaskServiceAsyncImpl.class);
         
         // Configure mock to throw error
         doAnswer(invocation -> {
-            @SuppressWarnings("unchecked")
-            java.util.function.Consumer<Throwable> errorCallback = 
-                invocation.getArgument(2);
+            Consumer<Throwable> errorCallback = invocation.getArgument(2);
             errorCallback.accept(new RuntimeException("Test error"));
             return null;
-        }).when(errorMockService).findTasksDueTodayAsync(any(), any(), any());
+        }).when(errorMockService).findByProjectAsync(any(Project.class), any(), any());
         
-        // Register error mock with TestModule
+        // Register error mock
         TestModule.setService(TaskService.class, errorMockService);
+        TestModule.setService(TaskServiceAsyncImpl.class, errorMockService);
         
         TestUtils.runOnFxThreadAndWait(() -> {
-            // Create new view model with error mock
+            // Create a new view model with the error mock
             DailyMvvmViewModel errorViewModel = new DailyMvvmViewModel(
                 TestModule.getService(TaskService.class),
                 TestModule.getService(MeetingService.class)
             );
             
-            // Set project and execute load command
+            // Set project
             errorViewModel.setCurrentProject(testProject);
-            errorViewModel.getLoadTodaysDataCommand().execute();
             
             // Let async operations complete
             try {
@@ -614,12 +411,10 @@ public class DailyMvvmViewModelTest {
                 e.printStackTrace();
             }
             
-            // Verify error message
+            // Verify error handling
             assertNotNull(errorViewModel.getErrorMessage());
             assertTrue(errorViewModel.getErrorMessage().contains("Failed to load"));
-            
-            // Verify tasks are empty
-            assertTrue(errorViewModel.getTodaysTasks().isEmpty());
+            assertFalse(errorViewModel.isLoading());
         });
     }
     
@@ -631,10 +426,11 @@ public class DailyMvvmViewModelTest {
             assertEquals(testProject, viewModel.getCurrentProject());
             assertEquals(testProject, viewModel.currentProjectProperty().get());
             
-            // Test member property
-            viewModel.setCurrentMember(testMember);
-            assertEquals(testMember, viewModel.getCurrentMember());
-            assertEquals(testMember, viewModel.currentMemberProperty().get());
+            // Test date property
+            LocalDate tomorrow = LocalDate.now().plusDays(1);
+            viewModel.setSelectedDate(tomorrow);
+            assertEquals(tomorrow, viewModel.getSelectedDate());
+            assertEquals(tomorrow, viewModel.selectedDateProperty().get());
             
             // Test loading property
             assertFalse(viewModel.isLoading());
@@ -643,9 +439,9 @@ public class DailyMvvmViewModelTest {
     }
     
     @Test
-    public void testTimeBasedFiltering() {
+    public void testIsTaskOnDate() {
         TestUtils.runOnFxThreadAndWait(() -> {
-            // Load data
+            // Set project and load data
             viewModel.initWithProject(testProject);
         });
         
@@ -656,28 +452,51 @@ public class DailyMvvmViewModelTest {
             e.printStackTrace();
         }
         
+        // Change date to tomorrow
         TestUtils.runOnFxThreadAndWait(() -> {
-            // Test morning tasks (tasks due in AM)
-            List<Task> morningTasks = viewModel.getMorningTasks();
-            // All tasks are due today but don't have specific times, so this will be empty
-            assertTrue(morningTasks.isEmpty());
+            LocalDate tomorrow = LocalDate.now().plusDays(1);
+            viewModel.setSelectedDate(tomorrow);
+        });
+        
+        // Let async operations complete
+        try {
+            Thread.sleep(200);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        
+        TestUtils.runOnFxThreadAndWait(() -> {
+            // Verify task filtering by date works correctly
+            assertEquals(2, viewModel.getTasks().size());
             
-            // Test afternoon tasks (tasks due in PM)
-            List<Task> afternoonTasks = viewModel.getAfternoonTasks();
-            // All tasks are due today but don't have specific times, so this will be empty
-            assertTrue(afternoonTasks.isEmpty());
+            // Task 1 spans today and tomorrow
+            assertTrue(viewModel.getTasks().stream().anyMatch(t -> t.getTitle().equals("Complete robot arm")));
             
-            // Test current hour meetings
-            List<Meeting> currentHourMeetings = viewModel.getCurrentHourMeetings();
-            // Meeting is at 16:00, will be empty unless current time matches
-            assertTrue(currentHourMeetings.size() <= 1);
+            // Task 2 is only for today, should not be in tomorrow's list
+            assertFalse(viewModel.getTasks().stream().anyMatch(t -> t.getTitle().equals("Test drivetrain")));
+            
+            // Task 3 starts tomorrow, should be in tomorrow's list
+            assertTrue(viewModel.getTasks().stream().anyMatch(t -> t.getTitle().equals("Future task")));
+        });
+    }
+    
+    @Test
+    public void testLoadWithNullProject() {
+        TestUtils.runOnFxThreadAndWait(() -> {
+            // Try to load data with null project
+            viewModel.setCurrentProject(null);
+            
+            // Should not cause errors
+            assertNull(viewModel.getCurrentProject());
+            assertTrue(viewModel.getTasks().isEmpty());
+            assertTrue(viewModel.getMeetings().isEmpty());
         });
     }
     
     @Test
     public void testDispose() {
         TestUtils.runOnFxThreadAndWait(() -> {
-            // Load some data first
+            // Initialize with data
             viewModel.initWithProject(testProject);
         });
         
@@ -689,17 +508,16 @@ public class DailyMvvmViewModelTest {
         }
         
         TestUtils.runOnFxThreadAndWait(() -> {
-            // Verify data was loaded
-            assertFalse(viewModel.getTodaysTasks().isEmpty());
-            assertFalse(viewModel.getTodaysMeetings().isEmpty());
+            // Verify data is loaded
+            assertFalse(viewModel.getTasks().isEmpty());
+            assertFalse(viewModel.getMeetings().isEmpty());
             
             // Call dispose
             viewModel.dispose();
             
-            // Verify collections were cleared
-            assertTrue(viewModel.getTodaysTasks().isEmpty());
-            assertTrue(viewModel.getTodaysMeetings().isEmpty());
-            assertTrue(viewModel.getMyTasks().isEmpty());
+            // Collections should be cleared
+            assertTrue(viewModel.getTasks().isEmpty());
+            assertTrue(viewModel.getMeetings().isEmpty());
         });
     }
 }
