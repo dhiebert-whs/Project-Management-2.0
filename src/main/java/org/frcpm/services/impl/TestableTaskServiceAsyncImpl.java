@@ -12,10 +12,7 @@ import org.frcpm.repositories.specific.TaskRepository;
 import org.frcpm.services.TaskService;
 import org.frcpm.di.ServiceLocator;
 
-import java.time.Duration;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -25,31 +22,19 @@ import java.util.logging.Logger;
 
 /**
  * A testable async implementation of TaskService that accepts injected repositories
- * for better unit testing. This implementation eliminates static references to
- * RepositoryFactory and uses proper constructor injection for all dependencies.
- * 
- * This class extends TaskServiceAsyncImpl to provide async capabilities while
- * allowing for proper dependency injection in tests.
+ * for better unit testing. This implementation provides async methods that can be stubbed
+ * in tests without requiring spy patterns.
  */
-public class TestableTaskServiceAsyncImpl extends TaskServiceAsyncImpl implements TaskService {
+public class TestableTaskServiceAsyncImpl extends TestableTaskServiceImpl {
     
     private static final Logger LOGGER = Logger.getLogger(TestableTaskServiceAsyncImpl.class.getName());
-    
-    // Dependencies injected via constructor
-    private final TaskRepository taskRepository;
-    private final ProjectRepository projectRepository;
-    private final ComponentRepository componentRepository;
     
     /**
      * Constructor for MVVMFx injection.
      * Uses ServiceLocator for default initialization.
      */
     public TestableTaskServiceAsyncImpl() {
-        this(
-            ServiceLocator.getTaskRepository(),
-            ServiceLocator.getProjectRepository(),
-            ServiceLocator.getComponentRepository()
-        );
+        super();
     }
     
     /**
@@ -63,340 +48,170 @@ public class TestableTaskServiceAsyncImpl extends TaskServiceAsyncImpl implement
             TaskRepository taskRepository,
             ProjectRepository projectRepository,
             ComponentRepository componentRepository) {
-        super(); // Call parent constructor
-        this.taskRepository = taskRepository;
-        this.projectRepository = projectRepository;
-        this.componentRepository = componentRepository;
+        super(taskRepository, projectRepository, componentRepository);
+    }
+    
+    // ASYNC METHODS - These can be stubbed directly in tests without spies
+    
+    /**
+     * Finds all tasks asynchronously.
+     * 
+     * @param onSuccess the callback to run on success
+     * @param onFailure the callback to run on failure
+     * @return a CompletableFuture that will be completed with the list of tasks
+     */
+    public CompletableFuture<List<Task>> findAllAsync(Consumer<List<Task>> onSuccess, Consumer<Throwable> onFailure) {
+        CompletableFuture<List<Task>> future = new CompletableFuture<>();
         
-        // Inject repositories into the parent class using reflection
         try {
-            injectRepositoryIntoParent("repository", taskRepository);
+            List<Task> result = findAll();
+            if (onSuccess != null) {
+                onSuccess.accept(result);
+            }
+            future.complete(result);
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to inject task repository into parent", e);
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            future.completeExceptionally(e);
         }
+        
+        return future;
     }
     
     /**
-     * Helper method to inject repository into parent class using reflection.
+     * Finds a task by ID asynchronously.
+     * 
+     * @param id the task ID
+     * @param onSuccess the callback to run on success
+     * @param onFailure the callback to run on failure
+     * @return a CompletableFuture that will be completed with the task
      */
-    private void injectRepositoryIntoParent(String fieldName, Object repository) throws Exception {
-        java.lang.reflect.Field field = findFieldInHierarchy(this.getClass(), fieldName);
-        if (field != null) {
-            field.setAccessible(true);
-            field.set(this, repository);
+    public CompletableFuture<Task> findByIdAsync(Long id, Consumer<Task> onSuccess, Consumer<Throwable> onFailure) {
+        CompletableFuture<Task> future = new CompletableFuture<>();
+        
+        try {
+            Task result = findById(id);
+            if (onSuccess != null) {
+                onSuccess.accept(result);
+            }
+            future.complete(result);
+        } catch (Exception e) {
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            future.completeExceptionally(e);
         }
+        
+        return future;
     }
     
     /**
-     * Find field in class hierarchy.
+     * Saves a task asynchronously.
+     * 
+     * @param entity the task to save
+     * @param onSuccess the callback to run on success
+     * @param onFailure the callback to run on failure
+     * @return a CompletableFuture that will be completed with the saved task
      */
-    private java.lang.reflect.Field findFieldInHierarchy(Class<?> clazz, String fieldName) {
+    public CompletableFuture<Task> saveAsync(Task entity, Consumer<Task> onSuccess, Consumer<Throwable> onFailure) {
+        CompletableFuture<Task> future = new CompletableFuture<>();
+        
         try {
-            return clazz.getDeclaredField(fieldName);
-        } catch (NoSuchFieldException e) {
-            Class<?> superClass = clazz.getSuperclass();
-            if (superClass != null && superClass != Object.class) {
-                return findFieldInHierarchy(superClass, fieldName);
+            Task result = save(entity);
+            if (onSuccess != null) {
+                onSuccess.accept(result);
             }
-            return null;
-        }
-    }
-
-    // Override synchronous interface methods to use injected repositories
-    
-    @Override
-    public Task findById(Long id) {
-        if (id == null) {
-            return null;
-        }
-        return taskRepository.findById(id).orElse(null);
-    }
-    
-    @Override
-    public List<Task> findAll() {
-        return taskRepository.findAll();
-    }
-    
-    @Override
-    public Task save(Task entity) {
-        try {
-            return taskRepository.save(entity);
+            future.complete(result);
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error saving task", e);
-            throw new RuntimeException("Failed to save task", e);
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            future.completeExceptionally(e);
         }
+        
+        return future;
     }
     
-    @Override
-    public void delete(Task entity) {
+    /**
+     * Deletes a task asynchronously.
+     * 
+     * @param entity the task to delete
+     * @param onSuccess the callback to run on success
+     * @param onFailure the callback to run on failure
+     * @return a CompletableFuture that will be completed when the task is deleted
+     */
+    public CompletableFuture<Void> deleteAsync(Task entity, Consumer<Void> onSuccess, Consumer<Throwable> onFailure) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        
         try {
-            taskRepository.delete(entity);
+            delete(entity);
+            if (onSuccess != null) {
+                onSuccess.accept(null);
+            }
+            future.complete(null);
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error deleting task", e);
-            throw new RuntimeException("Failed to delete task", e);
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            future.completeExceptionally(e);
         }
+        
+        return future;
     }
     
-    @Override
-    public boolean deleteById(Long id) {
+    /**
+     * Deletes a task by ID asynchronously.
+     * 
+     * @param id the ID of the task to delete
+     * @param onSuccess the callback to run on success
+     * @param onFailure the callback to run on failure
+     * @return a CompletableFuture that will be completed with a boolean indicating success
+     */
+    public CompletableFuture<Boolean> deleteByIdAsync(Long id, Consumer<Boolean> onSuccess, Consumer<Throwable> onFailure) {
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        
         try {
-            return taskRepository.deleteById(id);
+            boolean result = deleteById(id);
+            if (onSuccess != null) {
+                onSuccess.accept(result);
+            }
+            future.complete(result);
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error deleting task by ID", e);
-            throw new RuntimeException("Failed to delete task by ID", e);
-        }
-    }
-    
-    @Override
-    public long count() {
-        return taskRepository.count();
-    }
-    
-    @Override
-    public List<Task> findByProject(Project project) {
-        return taskRepository.findByProject(project);
-    }
-    
-    @Override
-    public List<Task> findBySubsystem(Subsystem subsystem) {
-        return taskRepository.findBySubsystem(subsystem);
-    }
-    
-    @Override
-    public List<Task> findByAssignedMember(TeamMember member) {
-        if (member == null) {
-            throw new IllegalArgumentException("Member cannot be null");
-        }
-        return taskRepository.findByAssignedMember(member);
-    }
-    
-    @Override
-    public List<Task> findByCompleted(boolean completed) {
-        return taskRepository.findByCompleted(completed);
-    }
-    
-    @Override
-    public Task createTask(String title, Project project, Subsystem subsystem,
-            double estimatedHours, Task.Priority priority, 
-            LocalDate startDate, LocalDate endDate) {
-        if (title == null || title.trim().isEmpty()) {
-            throw new IllegalArgumentException("Task title cannot be empty");
-        }
-
-        if (project == null) {
-            throw new IllegalArgumentException("Project cannot be null");
-        }
-
-        if (subsystem == null) {
-            throw new IllegalArgumentException("Subsystem cannot be null");
-        }
-
-        if (estimatedHours <= 0) {
-            throw new IllegalArgumentException("Estimated hours must be positive");
-        }
-
-        Task task = new Task(title, project, subsystem);
-        task.setEstimatedDuration(Duration.ofMinutes((long) (estimatedHours * 60)));
-
-        if (priority != null) {
-            task.setPriority(priority);
-        }
-
-        if (startDate != null) {
-            task.setStartDate(startDate);
-        }
-
-        if (endDate != null) {
-            if (startDate != null && endDate.isBefore(startDate)) {
-                throw new IllegalArgumentException("End date cannot be before start date");
+            if (onFailure != null) {
+                onFailure.accept(e);
             }
-            task.setEndDate(endDate);
+            future.completeExceptionally(e);
         }
-
-        return save(task);
+        
+        return future;
     }
     
-    @Override
-    public Task updateTaskProgress(Long taskId, int progress, boolean completed) {
-        if (taskId == null) {
-            throw new IllegalArgumentException("Task ID cannot be null");
-        }
-
-        Task task = findById(taskId);
-        if (task == null) {
-            LOGGER.log(Level.WARNING, "Task not found with ID: {0}", taskId);
-            return null;
-        }
-
-        // Progress must be between 0 and 100
-        progress = Math.max(0, Math.min(100, progress));
-        task.setProgress(progress);
-
-        // If completed is true, set progress to 100%
-        if (completed && progress < 100) {
-            task.setProgress(100);
-        }
-
-        task.setCompleted(completed || progress == 100);
-
-        return save(task);
-    }
-    
-    @Override
-    public Task assignMembers(Long taskId, Set<TeamMember> members) {
-        if (taskId == null) {
-            throw new IllegalArgumentException("Task ID cannot be null");
-        }
-
-        Task task = findById(taskId);
-        if (task == null) {
-            LOGGER.log(Level.WARNING, "Task not found with ID: {0}", taskId);
-            return null;
-        }
-
-        // Clear existing assignments
-        task.getAssignedTo().clear();
-
-        // Add new assignments
-        if (members != null) {
-            for (TeamMember member : members) {
-                if (member != null && member.getId() != null) {
-                    task.assignMember(member);
-                }
-            }
-        }
-
-        return save(task);
-    }
-    
-    @Override
-    public boolean addDependency(Long taskId, Long dependencyId) {
-        if (taskId == null || dependencyId == null) {
-            throw new IllegalArgumentException("Task IDs cannot be null");
-        }
-
-        if (taskId.equals(dependencyId)) {
-            throw new IllegalArgumentException("A task cannot depend on itself");
-        }
-
+    /**
+     * Counts all tasks asynchronously.
+     * 
+     * @param onSuccess the callback to run on success
+     * @param onFailure the callback to run on failure
+     * @return a CompletableFuture that will be completed with the count of tasks
+     */
+    public CompletableFuture<Long> countAsync(Consumer<Long> onSuccess, Consumer<Throwable> onFailure) {
+        CompletableFuture<Long> future = new CompletableFuture<>();
+        
         try {
-            // Get task and dependency objects
-            Task task = findById(taskId);
-            Task dependency = findById(dependencyId);
-
-            if (task == null || dependency == null) {
-                return false;
+            long result = count();
+            if (onSuccess != null) {
+                onSuccess.accept(result);
             }
-
-            // Add the dependency relationship
-            task.addPreDependency(dependency);
-
-            // Save the changes
-            save(task);
-            save(dependency);
-
-            return true;
+            future.complete(result);
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error adding dependency", e);
-            return false;
-        }
-    }
-    
-    @Override
-    public boolean removeDependency(Long taskId, Long dependencyId) {
-        if (taskId == null || dependencyId == null) {
-            throw new IllegalArgumentException("Task IDs cannot be null");
-        }
-
-        try {
-            // Get task and dependency objects
-            Task task = findById(taskId);
-            Task dependency = findById(dependencyId);
-
-            if (task == null || dependency == null) {
-                return false;
+            if (onFailure != null) {
+                onFailure.accept(e);
             }
-
-            // Remove the dependency relationship
-            task.removePreDependency(dependency);
-
-            // Save the changes
-            save(task);
-            save(dependency);
-
-            return true;
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error removing dependency", e);
-            return false;
+            future.completeExceptionally(e);
         }
+        
+        return future;
     }
-    
-    @Override
-    public List<Task> getTasksDueSoon(Long projectId, int days) {
-        if (projectId == null) {
-            throw new IllegalArgumentException("Project ID cannot be null");
-        }
-
-        if (days <= 0) {
-            throw new IllegalArgumentException("Days must be positive");
-        }
-
-        // Use project repository instead of static RepositoryFactory access
-        Project project = projectRepository.findById(projectId).orElse(null);
-        if (project == null) {
-            LOGGER.log(Level.WARNING, "Project not found with ID: {0}", projectId);
-            return new ArrayList<>();
-        }
-
-        LocalDate today = LocalDate.now();
-        LocalDate dueBefore = today.plusDays(days);
-
-        List<Task> allTasks = taskRepository.findByProject(project);
-        List<Task> dueSoonTasks = new ArrayList<>();
-
-        for (Task task : allTasks) {
-            if (!task.isCompleted() && task.getEndDate() != null &&
-                    !task.getEndDate().isBefore(today) && !task.getEndDate().isAfter(dueBefore)) {
-                dueSoonTasks.add(task);
-            }
-        }
-
-        return dueSoonTasks;
-    }
-    
-    @Override
-    public Task updateRequiredComponents(Long taskId, Set<Long> componentIds) {
-        if (taskId == null) {
-            throw new IllegalArgumentException("Task ID cannot be null");
-        }
-
-        Task task = findById(taskId);
-        if (task == null) {
-            LOGGER.log(Level.WARNING, "Task not found with ID: {0}", taskId);
-            return null;
-        }
-
-        // Clear existing component relationships
-        task.getRequiredComponents().clear();
-
-        // Add new component relationships if componentIds is not null or empty
-        if (componentIds != null && !componentIds.isEmpty()) {
-            for (Long componentId : componentIds) {
-                var componentOpt = componentRepository.findById(componentId);
-                if (componentOpt.isPresent()) {
-                    task.addRequiredComponent(componentOpt.get());
-                } else {
-                    LOGGER.log(Level.WARNING, "Component not found with ID: {0}", componentId);
-                }
-            }
-        }
-
-        // Save the updated task
-        return save(task);
-    }
-    
-    // Async methods - these will delegate to the parent class implementation
-    // but the parent class will use our injected repositories
     
     /**
      * Finds tasks by project asynchronously.
@@ -406,17 +221,315 @@ public class TestableTaskServiceAsyncImpl extends TaskServiceAsyncImpl implement
      * @param onFailure the callback to run on failure
      * @return a CompletableFuture that will be completed with the list of tasks
      */
-    public CompletableFuture<List<Task>> findByProjectAsync(Project project,
-                                                       Consumer<List<Task>> onSuccess,
-                                                       Consumer<Throwable> onFailure) {
-        if (project == null) {
-            CompletableFuture<List<Task>> future = new CompletableFuture<>();
-            future.completeExceptionally(new IllegalArgumentException("Project cannot be null"));
-            return future;
+    public CompletableFuture<List<Task>> findByProjectAsync(Project project, Consumer<List<Task>> onSuccess, Consumer<Throwable> onFailure) {
+        CompletableFuture<List<Task>> future = new CompletableFuture<>();
+        
+        try {
+            List<Task> result = findByProject(project);
+            if (onSuccess != null) {
+                onSuccess.accept(result);
+            }
+            future.complete(result);
+        } catch (Exception e) {
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            future.completeExceptionally(e);
         }
-
-        return executeAsync("Find Tasks By Project: " + project.getId(), () -> {
-            return findByProject(project);
-        }, onSuccess, onFailure);
+        
+        return future;
+    }
+    
+    /**
+     * Finds tasks by subsystem asynchronously.
+     * 
+     * @param subsystem the subsystem to find tasks for
+     * @param onSuccess the callback to run on success
+     * @param onFailure the callback to run on failure
+     * @return a CompletableFuture that will be completed with the list of tasks
+     */
+    public CompletableFuture<List<Task>> findBySubsystemAsync(Subsystem subsystem, Consumer<List<Task>> onSuccess, Consumer<Throwable> onFailure) {
+        CompletableFuture<List<Task>> future = new CompletableFuture<>();
+        
+        try {
+            List<Task> result = findBySubsystem(subsystem);
+            if (onSuccess != null) {
+                onSuccess.accept(result);
+            }
+            future.complete(result);
+        } catch (Exception e) {
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            future.completeExceptionally(e);
+        }
+        
+        return future;
+    }
+    
+    /**
+     * Finds tasks by assigned member asynchronously.
+     * 
+     * @param member the team member
+     * @param onSuccess the callback to run on success
+     * @param onFailure the callback to run on failure
+     * @return a CompletableFuture that will be completed with the list of tasks
+     */
+    public CompletableFuture<List<Task>> findByAssignedMemberAsync(TeamMember member, Consumer<List<Task>> onSuccess, Consumer<Throwable> onFailure) {
+        CompletableFuture<List<Task>> future = new CompletableFuture<>();
+        
+        try {
+            List<Task> result = findByAssignedMember(member);
+            if (onSuccess != null) {
+                onSuccess.accept(result);
+            }
+            future.complete(result);
+        } catch (Exception e) {
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            future.completeExceptionally(e);
+        }
+        
+        return future;
+    }
+    
+    /**
+     * Finds tasks by completed status asynchronously.
+     * 
+     * @param completed whether to find completed or incomplete tasks
+     * @param onSuccess the callback to run on success
+     * @param onFailure the callback to run on failure
+     * @return a CompletableFuture that will be completed with the list of tasks
+     */
+    public CompletableFuture<List<Task>> findByCompletedAsync(boolean completed, Consumer<List<Task>> onSuccess, Consumer<Throwable> onFailure) {
+        CompletableFuture<List<Task>> future = new CompletableFuture<>();
+        
+        try {
+            List<Task> result = findByCompleted(completed);
+            if (onSuccess != null) {
+                onSuccess.accept(result);
+            }
+            future.complete(result);
+        } catch (Exception e) {
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            future.completeExceptionally(e);
+        }
+        
+        return future;
+    }
+    
+    /**
+     * Creates a new task asynchronously.
+     * 
+     * @param title the task title
+     * @param project the project the task belongs to
+     * @param subsystem the subsystem the task is for
+     * @param estimatedHours the estimated hours to complete the task
+     * @param priority the task priority
+     * @param startDate the planned start date (optional)
+     * @param endDate the planned end date (optional)
+     * @param onSuccess the callback to run on success
+     * @param onFailure the callback to run on failure
+     * @return a CompletableFuture that will be completed with the created task
+     */
+    public CompletableFuture<Task> createTaskAsync(String title, Project project, Subsystem subsystem,
+                                              double estimatedHours, Task.Priority priority,
+                                              LocalDate startDate, LocalDate endDate,
+                                              Consumer<Task> onSuccess, Consumer<Throwable> onFailure) {
+        CompletableFuture<Task> future = new CompletableFuture<>();
+        
+        try {
+            Task result = createTask(title, project, subsystem, estimatedHours, priority, startDate, endDate);
+            if (onSuccess != null) {
+                onSuccess.accept(result);
+            }
+            future.complete(result);
+        } catch (Exception e) {
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            future.completeExceptionally(e);
+        }
+        
+        return future;
+    }
+    
+    /**
+     * Updates a task's progress asynchronously.
+     * 
+     * @param taskId the task ID
+     * @param progress the new progress percentage (0-100)
+     * @param completed whether the task is completed
+     * @param onSuccess the callback to run on success
+     * @param onFailure the callback to run on failure
+     * @return a CompletableFuture that will be completed with the updated task
+     */
+    public CompletableFuture<Task> updateTaskProgressAsync(Long taskId, int progress, boolean completed,
+                                                         Consumer<Task> onSuccess, Consumer<Throwable> onFailure) {
+        CompletableFuture<Task> future = new CompletableFuture<>();
+        
+        try {
+            Task result = updateTaskProgress(taskId, progress, completed);
+            if (onSuccess != null) {
+                onSuccess.accept(result);
+            }
+            future.complete(result);
+        } catch (Exception e) {
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            future.completeExceptionally(e);
+        }
+        
+        return future;
+    }
+    
+    /**
+     * Assigns members to a task asynchronously.
+     * 
+     * @param taskId the task ID
+     * @param members the members to assign
+     * @param onSuccess the callback to run on success
+     * @param onFailure the callback to run on failure
+     * @return a CompletableFuture that will be completed with the updated task
+     */
+    public CompletableFuture<Task> assignMembersAsync(Long taskId, Set<TeamMember> members,
+                                                    Consumer<Task> onSuccess, Consumer<Throwable> onFailure) {
+        CompletableFuture<Task> future = new CompletableFuture<>();
+        
+        try {
+            Task result = assignMembers(taskId, members);
+            if (onSuccess != null) {
+                onSuccess.accept(result);
+            }
+            future.complete(result);
+        } catch (Exception e) {
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            future.completeExceptionally(e);
+        }
+        
+        return future;
+    }
+    
+    /**
+     * Adds a dependency between tasks asynchronously.
+     * 
+     * @param taskId the task ID
+     * @param dependencyId the dependency task ID
+     * @param onSuccess the callback to run on success
+     * @param onFailure the callback to run on failure
+     * @return a CompletableFuture that will be completed with a boolean indicating success
+     */
+    public CompletableFuture<Boolean> addDependencyAsync(Long taskId, Long dependencyId,
+                                                       Consumer<Boolean> onSuccess, Consumer<Throwable> onFailure) {
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        
+        try {
+            boolean result = addDependency(taskId, dependencyId);
+            if (onSuccess != null) {
+                onSuccess.accept(result);
+            }
+            future.complete(result);
+        } catch (Exception e) {
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            future.completeExceptionally(e);
+        }
+        
+        return future;
+    }
+    
+    /**
+     * Removes a dependency between tasks asynchronously.
+     * 
+     * @param taskId the task ID
+     * @param dependencyId the dependency task ID
+     * @param onSuccess the callback to run on success
+     * @param onFailure the callback to run on failure
+     * @return a CompletableFuture that will be completed with a boolean indicating success
+     */
+    public CompletableFuture<Boolean> removeDependencyAsync(Long taskId, Long dependencyId,
+                                                          Consumer<Boolean> onSuccess, Consumer<Throwable> onFailure) {
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        
+        try {
+            boolean result = removeDependency(taskId, dependencyId);
+            if (onSuccess != null) {
+                onSuccess.accept(result);
+            }
+            future.complete(result);
+        } catch (Exception e) {
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            future.completeExceptionally(e);
+        }
+        
+        return future;
+    }
+    
+    /**
+     * Gets tasks due soon for a project asynchronously.
+     * 
+     * @param projectId the project ID
+     * @param days the number of days to look ahead
+     * @param onSuccess the callback to run on success
+     * @param onFailure the callback to run on failure
+     * @return a CompletableFuture that will be completed with the list of tasks
+     */
+    public CompletableFuture<List<Task>> getTasksDueSoonAsync(Long projectId, int days,
+                                                            Consumer<List<Task>> onSuccess, Consumer<Throwable> onFailure) {
+        CompletableFuture<List<Task>> future = new CompletableFuture<>();
+        
+        try {
+            List<Task> result = getTasksDueSoon(projectId, days);
+            if (onSuccess != null) {
+                onSuccess.accept(result);
+            }
+            future.complete(result);
+        } catch (Exception e) {
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            future.completeExceptionally(e);
+        }
+        
+        return future;
+    }
+    
+    /**
+     * Associates components with a task asynchronously.
+     * This method is used by ComponentDetailMvvmViewModel.
+     * 
+     * @param taskId the task ID
+     * @param componentIds the component IDs to associate
+     * @param onSuccess the callback to run on success
+     * @param onFailure the callback to run on failure
+     * @return a CompletableFuture that will be completed with the updated task
+     */
+    public CompletableFuture<Task> associateComponentsWithTaskAsync(Long taskId, Set<Long> componentIds,
+                                                        Consumer<Task> onSuccess, Consumer<Throwable> onFailure) {
+        CompletableFuture<Task> future = new CompletableFuture<>();
+        
+        try {
+            Task result = updateRequiredComponents(taskId, componentIds);
+            if (onSuccess != null) {
+                onSuccess.accept(result);
+            }
+            future.complete(result);
+        } catch (Exception e) {
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            future.completeExceptionally(e);
+        }
+        
+        return future;
     }
 }

@@ -101,31 +101,49 @@ public class MvvmConfig {
         // Register service implementations with MVVMFx's dependency injector
         MvvmFX.setCustomDependencyInjector(type -> {
             try {
-                // Services - using ServiceLocator instead of ServiceProvider
+                // Services - using ServiceLocator for most, but testable async implementations for key services
                 if (type == ProjectService.class) {
                     return ServiceLocator.getProjectService();
-                }  else if (type == TaskService.class) {
-                    return new TestableTaskServiceImpl(); // No-arg constructor will use ServiceLocator
+                } else if (type == TaskService.class) {
+                    // Use testable async implementation for ViewModels that need async methods
+                    return new TestableTaskServiceAsyncImpl(); // ✅ FIXED - Using async implementation
                 } else if (type == TeamMemberService.class) {
-                    return ServiceLocator.getTeamMemberService();
-                } else if (type == SubteamService.class) {
-                    return ServiceLocator.getSubteamService();
-                } else if (type == SubsystemService.class) {
-                    return ServiceLocator.getSubsystemService();
+                    // Use testable async implementation for ViewModels that need async methods
+                    return new TestableTeamMemberServiceAsyncImpl(); // ✅ FIXED - Using async implementation
                 } else if (type == ComponentService.class) {
-                    return ServiceLocator.getComponentService();
+                    // Use testable async implementation for ViewModels that need async methods
+                    return new TestableComponentServiceAsyncImpl(); // ✅ FIXED - Using async implementation
                 } else if (type == MeetingService.class) {
-                    return ServiceLocator.getMeetingService();
+                    // Use testable async implementation for ViewModels that need async methods
+                    return new TestableMeetingServiceAsyncImpl(); // ✅ FIXED - Using async implementation
                 } else if (type == AttendanceService.class) {
-                    return ServiceLocator.getAttendanceService();
+                    // Use testable async implementation for ViewModels that need async methods
+                    return new TestableAttendanceServiceAsyncImpl(); // ✅ FIXED - Using async implementation
                 } else if (type == MilestoneService.class) {
-                    return ServiceLocator.getMilestoneService();
+                    // Use testable async implementation for ViewModels that need async methods
+                    return new TestableMilestoneServiceAsyncImpl(); // ✅ FIXED - Using async implementation
+                } else if (type == SubteamService.class) {
+                    // Use testable implementation (sync is fine for this service)
+                    return new TestableSubteamServiceAsyncImpl(); // ✅ ADDED - Using async implementation
+                } else if (type == SubsystemService.class) {
+                    // Use testable implementation (sync is fine for this service)
+                    return new TestableSubsystemServiceAsyncImpl(); // ✅ ADDED - Using async implementation
                 } else if (type == DialogService.class) {
                     return ServiceLocator.getDialogService();
                 } else if (type == GanttDataService.class) {
-                    return ServiceLocator.getGanttDataService();
+                    // Use testable async implementation for ViewModels that need async methods
+                    return new TestableGanttDataServiceAsyncImpl(); // ✅ FIXED - Using async implementation
                 } else if (type == GanttChartTransformationService.class) {
                     return ServiceLocator.getTransformationService();
+                } else if (type == VisualizationService.class) {
+                    // Use testable async implementation for ViewModels that need async methods
+                    return new TestableVisualizationServiceAsyncImpl(); // ✅ FIXED - Using async implementation
+                } else if (type == MetricsCalculationService.class) {
+                    // Use testable async implementation for ViewModels that need async methods
+                    return new TestableMetricsCalculationServiceAsyncImpl(); // ✅ FIXED - Using async implementation
+                } else if (type == ReportGenerationService.class) {
+                    // Use testable async implementation for ViewModels that need async methods
+                    return new TestableReportGenerationServiceAsyncImpl(); // ✅ FIXED - Using async implementation
                 }
                 // Repositories - using ServiceLocator instead of ServiceProvider
                 else if (type == ProjectRepository.class) {
@@ -148,90 +166,91 @@ public class MvvmConfig {
                     return ServiceLocator.getMilestoneRepository();
                 }
                 
-                // ViewModels - using ServiceLocator instead of ServiceProvider
+                // ViewModels - using ServiceLocator for service injection
                 else if (type == AttendanceMvvmViewModel.class) {
+                    // Use the testable async service implementations
                     return new AttendanceMvvmViewModel(
-                        ServiceLocator.getAttendanceService(),
-                        ServiceLocator.getTeamMemberService(),
-                        ServiceLocator.getMeetingService());
+                        new TestableAttendanceServiceAsyncImpl(),
+                        new TestableTeamMemberServiceAsyncImpl(),
+                        new TestableMeetingServiceAsyncImpl());
                 } else if (type == ComponentDetailMvvmViewModel.class) {
                     return new ComponentDetailMvvmViewModel(
-                        ServiceLocator.getComponentService(),
-                        ServiceLocator.getTaskService());
+                        new TestableComponentServiceAsyncImpl(),
+                        new TestableTaskServiceAsyncImpl());
                 } else if (type == ComponentListMvvmViewModel.class) {
                     return new ComponentListMvvmViewModel(
-                        ServiceLocator.getComponentService());
+                        new TestableComponentServiceAsyncImpl());
                 } else if (type == DailyMvvmViewModel.class) {
                     return new DailyMvvmViewModel(
-                        ServiceLocator.getTaskService(),
-                        ServiceLocator.getMeetingService());
+                        new TestableTaskServiceAsyncImpl(),
+                        new TestableMeetingServiceAsyncImpl());
                 } else if (type == DashboardMvvmViewModel.class) {
                     return new DashboardMvvmViewModel(
-                        ServiceLocator.getTaskService(),
-                        ServiceLocator.getMilestoneService(),
-                        ServiceLocator.getMeetingService());
+                        new TestableTaskServiceAsyncImpl(),
+                        new TestableMilestoneServiceAsyncImpl(),
+                        new TestableMeetingServiceAsyncImpl());
                 } else if (type == GanttChartMvvmViewModel.class) {
                     return new GanttChartMvvmViewModel(
-                        ServiceLocator.getGanttDataService());
+                        new TestableGanttDataServiceAsyncImpl());
                 } else if (type == MainMvvmViewModel.class) {
                     return new MainMvvmViewModel(
                         ServiceLocator.getProjectService());
                 } else if (type == MeetingDetailMvvmViewModel.class) {
                     return new MeetingDetailMvvmViewModel(
-                        ServiceLocator.getMeetingService());
+                        new TestableMeetingServiceAsyncImpl());
                 } else if (type == MeetingListMvvmViewModel.class) {
                     return new MeetingListMvvmViewModel(
-                        ServiceLocator.getMeetingService());
+                        new TestableMeetingServiceAsyncImpl());
                 } else if (type == MetricsMvvmViewModel.class) {
                     return new MetricsMvvmViewModel(
                         ServiceLocator.getProjectService(),
-                        ServiceLocator.getSubsystemService(),
-                        ServiceLocator.getTeamMemberService());
+                        new TestableSubsystemServiceAsyncImpl(),
+                        new TestableTeamMemberServiceAsyncImpl());
                 } else if (type == MilestoneDetailMvvmViewModel.class) {
                     return new MilestoneDetailMvvmViewModel(
-                        ServiceLocator.getMilestoneService());
+                        new TestableMilestoneServiceAsyncImpl());
                 } else if (type == MilestoneListMvvmViewModel.class) {
                     return new MilestoneListMvvmViewModel(
-                        ServiceLocator.getMilestoneService());
+                        new TestableMilestoneServiceAsyncImpl());
                 } else if (type == ProjectListMvvmViewModel.class) {
                     return new ProjectListMvvmViewModel(
                         ServiceLocator.getProjectService());
                 } else if (type == SubsystemDetailMvvmViewModel.class) {
                     return new SubsystemDetailMvvmViewModel(
-                        ServiceLocator.getSubsystemService(),
-                        ServiceLocator.getSubteamService(),
-                        ServiceLocator.getTaskService());
+                        new TestableSubsystemServiceAsyncImpl(),
+                        new TestableSubteamServiceAsyncImpl(),
+                        new TestableTaskServiceAsyncImpl());
                 } else if (type == SubsystemListMvvmViewModel.class) {
                     return new SubsystemListMvvmViewModel(
-                        ServiceLocator.getSubsystemService());
+                        new TestableSubsystemServiceAsyncImpl());
                 } else if (type == SubteamDetailMvvmViewModel.class) {
                     return new SubteamDetailMvvmViewModel(
-                        ServiceLocator.getSubteamService(),
-                        ServiceLocator.getTeamMemberService());
+                        new TestableSubteamServiceAsyncImpl(),
+                        new TestableTeamMemberServiceAsyncImpl());
                 } else if (type == SubteamListMvvmViewModel.class) {
                     return new SubteamListMvvmViewModel(
-                        ServiceLocator.getSubteamService());
+                        new TestableSubteamServiceAsyncImpl());
                 } else if (type == TaskDetailMvvmViewModel.class) {
                     return new TaskDetailMvvmViewModel(
-                        ServiceLocator.getTaskService(),
-                        ServiceLocator.getTeamMemberService(),
-                        ServiceLocator.getComponentService());
+                        new TestableTaskServiceAsyncImpl(),
+                        new TestableTeamMemberServiceAsyncImpl(),
+                        new TestableComponentServiceAsyncImpl());
                 } else if (type == TaskListMvvmViewModel.class) {
                     return new TaskListMvvmViewModel(
-                        ServiceLocator.getTaskService());
+                        new TestableTaskServiceAsyncImpl());
                 } else if (type == TaskSelectionMvvmViewModel.class) {
                     return new TaskSelectionMvvmViewModel(
-                        ServiceLocator.getTaskService());
+                        new TestableTaskServiceAsyncImpl());
                 } else if (type == TeamMemberDetailMvvmViewModel.class) {
                     return new TeamMemberDetailMvvmViewModel(
-                        ServiceLocator.getTeamMemberService(),
-                        ServiceLocator.getSubteamService());
+                        new TestableTeamMemberServiceAsyncImpl(),
+                        new TestableSubteamServiceAsyncImpl());
                 } else if (type == TeamMemberListMvvmViewModel.class) {
                     return new TeamMemberListMvvmViewModel(
-                        ServiceLocator.getTeamMemberService());
+                        new TestableTeamMemberServiceAsyncImpl());
                 } else if (type == TeamMemberSelectionMvvmViewModel.class) {
                     return new TeamMemberSelectionMvvmViewModel(
-                        ServiceLocator.getTeamMemberService());
+                        new TestableTeamMemberServiceAsyncImpl());
                 }
                 
                 // Return null for unknown types
