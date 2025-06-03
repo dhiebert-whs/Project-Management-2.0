@@ -12,6 +12,7 @@ org\frcpm\repositories\test\InMemoryTaskRepository.class
 org\frcpm\mvvm\views\SimpleDiagnosticTest.class
 org\frcpm\services\impl\ReportGenerationServiceTest.class
 org\frcpm\mvvm\viewmodels\TeamMemberSelectionMvvmViewModelTest.class
+org\frcpm\mvvm\views\FXMLDiagnosticTest.class
 org\frcpm\services\impl\MetricsCalculationServiceTest.class
 org\frcpm\testfx\TestFXHeadlessConfig$StandardScreenCaptureUtility.class
 org\frcpm\repositories\specific\AttendanceRepositoryTest.class

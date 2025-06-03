@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="org.frcpm.mvvm.views.MvvmfxViewLoadingTest" time="2.776" tests="1" errors="0" skipped="0" failures="1">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="org.frcpm.mvvm.views.MvvmfxViewLoadingTest" time="3.016" tests="1" errors="0" skipped="0" failures="1">
   <properties>
     <property name="java.specification.version" value="21"/>
     <property name="javafx.runtime.version" value="21.0.2+5"/>
@@ -19,7 +19,7 @@
     <property name="sun.java.launcher" value="SUN_STANDARD"/>
     <property name="user.country" value="US"/>
     <property name="sun.boot.library.path" value="C:\Program Files\Eclipse Adoptium\jdk-21.0.7.6-hotspot\bin"/>
-    <property name="sun.java.command" value="C:\Users\dhiebert\AppData\Local\Temp\surefire1765541013839672420\surefirebooter-20250603144947780_3.jar C:\Users\dhiebert\AppData\Local\Temp\surefire1765541013839672420 2025-06-03T14-49-47_614-jvmRun1 surefire-20250603144947780_1tmp surefire_0-20250603144947780_2tmp"/>
+    <property name="sun.java.command" value="C:\Users\dhiebert\AppData\Local\Temp\surefire16989141922371589899\surefirebooter-20250603145719683_3.jar C:\Users\dhiebert\AppData\Local\Temp\surefire16989141922371589899 2025-06-03T14-57-19_448-jvmRun1 surefire-20250603145719683_1tmp surefire_0-20250603145719683_2tmp"/>
     <property name="testfx.verbose" value="true"/>
     <property name="jdk.debug" value="release"/>
     <property name="test" value="MvvmfxViewLoadingTest#testMvvmfxViewLoading"/>
@@ -41,7 +41,7 @@
     <property name="java.specification.name" value="Java Platform API Specification"/>
     <property name="testfx.robot" value="glass"/>
     <property name="java.awt.headless" value="false"/>
-    <property name="surefire.real.class.path" value="C:\Users\dhiebert\AppData\Local\Temp\surefire1765541013839672420\surefirebooter-20250603144947780_3.jar"/>
+    <property name="surefire.real.class.path" value="C:\Users\dhiebert\AppData\Local\Temp\surefire16989141922371589899\surefirebooter-20250603145719683_3.jar"/>
     <property name="user.script" value=""/>
     <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
     <property name="testfx.debug" value="true"/>
@@ -76,11 +76,8 @@
     <property name="java.class.version" value="65.0"/>
     <property name="testfx.setup.timeout" value="5000"/>
   </properties>
-  <testcase name="testMvvmfxViewLoading" classname="org.frcpm.mvvm.views.MvvmfxViewLoadingTest" time="2.682">
-    <failure message="FX Thread exception: javafx.fxml.LoadException: No controller specified.&#10;/C:/Users/dhiebert/Local%20Repositories/Project%20Management%202.0/target/classes/org/frcpm/mvvm/views/ProjectListMvvmView.fxml:24&#10;" type="org.opentest4j.AssertionFailedError"><![CDATA[org.opentest4j.AssertionFailedError: 
-FX Thread exception: javafx.fxml.LoadException: No controller specified.
-/C:/Users/dhiebert/Local%20Repositories/Project%20Management%202.0/target/classes/org/frcpm/mvvm/views/ProjectListMvvmView.fxml:24
-
+  <testcase name="testMvvmfxViewLoading" classname="org.frcpm.mvvm.views.MvvmfxViewLoadingTest" time="2.858">
+    <failure message="FX Thread exception: java.io.IOException: Could not load the controller for the View /org/frcpm/mvvm/views/ProjectListMvvmView.fxml maybe your missed the fx:controller in your fxml?" type="org.opentest4j.AssertionFailedError"><![CDATA[org.opentest4j.AssertionFailedError: FX Thread exception: java.io.IOException: Could not load the controller for the View /org/frcpm/mvvm/views/ProjectListMvvmView.fxml maybe your missed the fx:controller in your fxml?
 	at org.junit.jupiter.api.AssertionUtils.fail(AssertionUtils.java:38)
 	at org.junit.jupiter.api.Assertions.fail(Assertions.java:138)
 	at org.frcpm.mvvm.views.MvvmfxViewLoadingTest.testMvvmfxViewLoading(MvvmfxViewLoadingTest.java:99)
@@ -92,128 +89,124 @@ FX Thread exception: javafx.fxml.LoadException: No controller specified.
 === MVVMFX VIEW LOADING TEST START ===
 Running on FX Thread - attempting FluentViewLoader...
 ]]></system-out>
-    <system-err><![CDATA[Jun 03, 2025 2:49:48 PM org.frcpm.testfx.BaseFxTest loadTestProperties
+    <system-err><![CDATA[Jun 03, 2025 2:57:20 PM org.frcpm.testfx.BaseFxTest loadTestProperties
 INFO: TestFX properties loaded, headless mode: false
-Jun 03, 2025 2:49:48 PM com.sun.javafx.application.PlatformImpl startup
+Jun 03, 2025 2:57:20 PM com.sun.javafx.application.PlatformImpl startup
 WARNING: Unsupported JavaFX configuration: classes were loaded from 'unnamed module @372f7a8d'
-Jun 03, 2025 2:49:49 PM org.frcpm.di.TestModule initialize
+Jun 03, 2025 2:57:21 PM org.frcpm.di.TestModule initialize
 INFO: Initializing TestModule
-Jun 03, 2025 2:49:49 PM org.frcpm.di.ServiceLocator clear
+Jun 03, 2025 2:57:21 PM org.frcpm.di.ServiceLocator clear
 INFO: ServiceLocator cleared
-Jun 03, 2025 2:49:49 PM org.frcpm.di.TestModule createMockRepositories
+Jun 03, 2025 2:57:21 PM org.frcpm.di.TestModule createMockRepositories
 INFO: Creating mock repositories
 WARNING: A Java agent has been loaded dynamically (C:\Users\dhiebert\.m2\repository\net\bytebuddy\byte-buddy-agent\1.14.11\byte-buddy-agent-1.14.11.jar)
 WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
 WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
 WARNING: Dynamic loading of agents will be disallowed by default in a future release
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Creating mock services with async support
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Creating TestableTaskServiceAsyncImpl...
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Successfully created TaskService
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Creating TestableTeamMemberServiceAsyncImpl...
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Successfully created TeamMemberService
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Creating TestableComponentServiceAsyncImpl...
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Successfully created ComponentService
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Creating TestableMeetingServiceAsyncImpl...
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Successfully created MeetingService
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Creating TestableMilestoneServiceAsyncImpl...
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Successfully created MilestoneService
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Creating TestableSubsystemServiceAsyncImpl...
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Successfully created SubsystemService
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Creating TestableSubteamServiceAsyncImpl...
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Successfully created SubteamService
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Creating TestableAttendanceServiceAsyncImpl...
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Successfully created AttendanceService
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Creating TestableGanttDataServiceAsyncImpl...
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Successfully created GanttDataService
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Creating TestableVisualizationServiceAsyncImpl...
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Successfully created VisualizationService
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Creating TestableMetricsCalculationServiceAsyncImpl...
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Successfully created MetricsCalculationService
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Creating TestableReportGenerationServiceAsyncImpl...
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Successfully created ReportGenerationService
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Creating pure mock services...
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Successfully created pure mock services
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule createMockServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule createMockServices
 INFO: Successfully created all mock services
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule registerWithServiceLocator
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule registerWithServiceLocator
 INFO: Registering mocks with ServiceLocator
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule configureMvvmFxDependencyInjection
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule configureMvvmFxDependencyInjection
 INFO: Configuring MVVMFx dependency injection
-Jun 03, 2025 2:49:50 PM org.frcpm.di.TestModule initialize
+Jun 03, 2025 2:57:22 PM org.frcpm.di.TestModule initialize
 INFO: TestModule initialization complete
-Jun 03, 2025 2:49:50 PM org.frcpm.mvvm.MvvmConfig initialize
+Jun 03, 2025 2:57:22 PM org.frcpm.mvvm.MvvmConfig initialize
 INFO: Initializing MVVMFx framework
-Jun 03, 2025 2:49:50 PM org.frcpm.di.ServiceLocator initialize
+Jun 03, 2025 2:57:22 PM org.frcpm.di.ServiceLocator initialize
 INFO: Initializing ServiceLocator
-Jun 03, 2025 2:49:50 PM org.frcpm.di.ServiceLocator registerRepositories
+Jun 03, 2025 2:57:22 PM org.frcpm.di.ServiceLocator registerRepositories
 INFO: Registering repositories...
-Jun 03, 2025 2:49:50 PM org.frcpm.di.ServiceLocator registerServices
+Jun 03, 2025 2:57:22 PM org.frcpm.di.ServiceLocator registerServices
 INFO: Registering services...
-Jun 03, 2025 2:49:50 PM org.frcpm.di.ServiceLocator injectRepositories
+Jun 03, 2025 2:57:22 PM org.frcpm.di.ServiceLocator injectRepositories
 INFO: Injecting repositories into services...
-Jun 03, 2025 2:49:50 PM org.frcpm.di.ServiceLocator injectRepository
+Jun 03, 2025 2:57:22 PM org.frcpm.di.ServiceLocator injectRepository
 WARNING: Field not found: projectRepository in ProjectServiceImpl
-Jun 03, 2025 2:49:50 PM org.frcpm.di.ServiceLocator injectRepository
+Jun 03, 2025 2:57:22 PM org.frcpm.di.ServiceLocator injectRepository
 WARNING: Field not found: taskRepository in TaskServiceImpl
-Jun 03, 2025 2:49:50 PM org.frcpm.di.ServiceLocator injectRepository
+Jun 03, 2025 2:57:22 PM org.frcpm.di.ServiceLocator injectRepository
 WARNING: Field not found: projectRepository in TaskServiceImpl
-Jun 03, 2025 2:49:50 PM org.frcpm.di.ServiceLocator injectRepository
+Jun 03, 2025 2:57:22 PM org.frcpm.di.ServiceLocator injectRepository
 WARNING: Field not found: teamMemberRepository in TeamMemberServiceImpl
-Jun 03, 2025 2:49:50 PM org.frcpm.di.ServiceLocator injectRepository
+Jun 03, 2025 2:57:22 PM org.frcpm.di.ServiceLocator injectRepository
 WARNING: Field not found: subteamRepository in SubteamServiceImpl
-Jun 03, 2025 2:49:50 PM org.frcpm.di.ServiceLocator injectRepository
+Jun 03, 2025 2:57:22 PM org.frcpm.di.ServiceLocator injectRepository
 WARNING: Field not found: subsystemRepository in SubsystemServiceImpl
-Jun 03, 2025 2:49:50 PM org.frcpm.di.ServiceLocator injectRepository
+Jun 03, 2025 2:57:22 PM org.frcpm.di.ServiceLocator injectRepository
 WARNING: Field not found: componentRepository in ComponentServiceImpl
-Jun 03, 2025 2:49:50 PM org.frcpm.di.ServiceLocator injectRepository
+Jun 03, 2025 2:57:22 PM org.frcpm.di.ServiceLocator injectRepository
 WARNING: Field not found: meetingRepository in MeetingServiceImpl
-Jun 03, 2025 2:49:50 PM org.frcpm.di.ServiceLocator injectRepository
+Jun 03, 2025 2:57:22 PM org.frcpm.di.ServiceLocator injectRepository
 WARNING: Field not found: attendanceRepository in AttendanceServiceImpl
-Jun 03, 2025 2:49:50 PM org.frcpm.di.ServiceLocator injectRepository
+Jun 03, 2025 2:57:22 PM org.frcpm.di.ServiceLocator injectRepository
 WARNING: Field not found: milestoneRepository in MilestoneServiceImpl
-Jun 03, 2025 2:49:50 PM org.frcpm.di.ServiceLocator initialize
+Jun 03, 2025 2:57:22 PM org.frcpm.di.ServiceLocator initialize
 INFO: ServiceLocator initialization complete
-Jun 03, 2025 2:49:50 PM org.frcpm.mvvm.MvvmConfig initialize
+Jun 03, 2025 2:57:22 PM org.frcpm.mvvm.MvvmConfig initialize
 INFO: Set global resource bundle: java.util.PropertyResourceBundle@3b95d13c
-Jun 03, 2025 2:49:50 PM org.frcpm.mvvm.MvvmConfig initialize
+Jun 03, 2025 2:57:22 PM org.frcpm.mvvm.MvvmConfig initialize
 INFO: Set mvvmfx.resource.bundle.path to: org.frcpm.mvvm.views
-Jun 03, 2025 2:49:50 PM org.frcpm.mvvm.MvvmConfig setupNotifications
+Jun 03, 2025 2:57:22 PM org.frcpm.mvvm.MvvmConfig setupNotifications
 INFO: Setting up global notification system
-Jun 03, 2025 2:49:50 PM org.frcpm.mvvm.MvvmConfig initialize
+Jun 03, 2025 2:57:22 PM org.frcpm.mvvm.MvvmConfig initialize
 INFO: MVVMFx framework initialized successfully
-Exception in FX Thread: javafx.fxml.LoadException: No controller specified.
-/C:/Users/dhiebert/Local%20Repositories/Project%20Management%202.0/target/classes/org/frcpm/mvvm/views/ProjectListMvvmView.fxml:24
-
-java.lang.RuntimeException: javafx.fxml.LoadException: No controller specified.
-/C:/Users/dhiebert/Local%20Repositories/Project%20Management%202.0/target/classes/org/frcpm/mvvm/views/ProjectListMvvmView.fxml:24
-
+Exception in FX Thread: java.io.IOException: Could not load the controller for the View /org/frcpm/mvvm/views/ProjectListMvvmView.fxml maybe your missed the fx:controller in your fxml?
+java.lang.RuntimeException: java.io.IOException: Could not load the controller for the View /org/frcpm/mvvm/views/ProjectListMvvmView.fxml maybe your missed the fx:controller in your fxml?
 	at de.saxsys.mvvmfx.internal.viewloader.FxmlViewLoader.loadFxmlViewTuple(FxmlViewLoader.java:273)
 	at de.saxsys.mvvmfx.internal.viewloader.FxmlViewLoader.loadFxmlViewTuple(FxmlViewLoader.java:82)
 	at de.saxsys.mvvmfx.FluentViewLoader$FxmlViewStep.load(FluentViewLoader.java:333)
@@ -224,33 +217,21 @@ java.lang.RuntimeException: javafx.fxml.LoadException: No controller specified.
 	at com.sun.glass.ui.monocle.RunnableProcessor.runLoop(RunnableProcessor.java:92)
 	at com.sun.glass.ui.monocle.RunnableProcessor.run(RunnableProcessor.java:51)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
-Caused by: javafx.fxml.LoadException: No controller specified.
-/C:/Users/dhiebert/Local%20Repositories/Project%20Management%202.0/target/classes/org/frcpm/mvvm/views/ProjectListMvvmView.fxml:24
-
-	at javafx.fxml.FXMLLoader.constructLoadException(FXMLLoader.java:2718)
-	at javafx.fxml.FXMLLoader$Element.getControllerMethodHandle(FXMLLoader.java:570)
-	at javafx.fxml.FXMLLoader$Element.processEventHandlerAttributes(FXMLLoader.java:612)
-	at javafx.fxml.FXMLLoader$ValueElement.processEndElement(FXMLLoader.java:783)
-	at javafx.fxml.FXMLLoader.processEndElement(FXMLLoader.java:2969)
-	at javafx.fxml.FXMLLoader.loadImpl(FXMLLoader.java:2654)
-	at javafx.fxml.FXMLLoader.loadImpl(FXMLLoader.java:2563)
-	at javafx.fxml.FXMLLoader.load(FXMLLoader.java:2531)
-	at de.saxsys.mvvmfx.internal.viewloader.FxmlViewLoader.loadFxmlViewTuple(FxmlViewLoader.java:216)
+Caused by: java.io.IOException: Could not load the controller for the View /org/frcpm/mvvm/views/ProjectListMvvmView.fxml maybe your missed the fx:controller in your fxml?
+	at de.saxsys.mvvmfx.internal.viewloader.FxmlViewLoader.loadFxmlViewTuple(FxmlViewLoader.java:224)
 	... 9 more
-FX Thread threw exception: javafx.fxml.LoadException: No controller specified.
-/C:/Users/dhiebert/Local%20Repositories/Project%20Management%202.0/target/classes/org/frcpm/mvvm/views/ProjectListMvvmView.fxml:24
-
-Jun 03, 2025 2:49:51 PM org.frcpm.mvvm.MvvmConfig shutdown
+FX Thread threw exception: java.io.IOException: Could not load the controller for the View /org/frcpm/mvvm/views/ProjectListMvvmView.fxml maybe your missed the fx:controller in your fxml?
+Jun 03, 2025 2:57:23 PM org.frcpm.mvvm.MvvmConfig shutdown
 INFO: Shutting down MVVMFx framework
-Jun 03, 2025 2:49:51 PM org.frcpm.di.ServiceLocator shutdown
+Jun 03, 2025 2:57:23 PM org.frcpm.di.ServiceLocator shutdown
 INFO: Shutting down ServiceLocator
-Jun 03, 2025 2:49:51 PM org.frcpm.di.ServiceLocator clear
+Jun 03, 2025 2:57:23 PM org.frcpm.di.ServiceLocator clear
 INFO: ServiceLocator cleared
-Jun 03, 2025 2:49:51 PM org.frcpm.mvvm.MvvmConfig shutdown
+Jun 03, 2025 2:57:23 PM org.frcpm.mvvm.MvvmConfig shutdown
 INFO: MVVMFx framework shut down successfully
-Jun 03, 2025 2:49:51 PM org.frcpm.di.ServiceLocator clear
+Jun 03, 2025 2:57:23 PM org.frcpm.di.ServiceLocator clear
 INFO: ServiceLocator cleared
-Jun 03, 2025 2:49:51 PM org.frcpm.testfx.BaseFxTest cleanUp
+Jun 03, 2025 2:57:23 PM org.frcpm.testfx.BaseFxTest cleanUp
 INFO: TestFX cleanup completed
 ]]></system-err>
   </testcase>
