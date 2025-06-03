@@ -95,126 +95,163 @@ public class TestModule {
      * ALL services with async capabilities use testable async implementations.
      * Services without async needs use testable sync implementations.
      * NO spy pattern needed - all async methods are directly stubbable.
+     * 
+     * ENHANCED: Added error handling and verification.
      */
     private static void createMockServices() {
         LOGGER.info("Creating mock services with async support");
         
-        // ASYNC SERVICES - Use testable async implementations (directly stubbable)
-        
-        // Task service - async implementation
-        TaskService taskService = new TestableTaskServiceAsyncImpl(
-            (TaskRepository) MOCK_REPOSITORIES.get(TaskRepository.class),
-            (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class),
-            (ComponentRepository) MOCK_REPOSITORIES.get(ComponentRepository.class)
-        );
-        
-        // Team member service - async implementation
-        TeamMemberService teamMemberService = new TestableTeamMemberServiceAsyncImpl(
-            (TeamMemberRepository) MOCK_REPOSITORIES.get(TeamMemberRepository.class),
-            (SubteamRepository) MOCK_REPOSITORIES.get(SubteamRepository.class)
-        );
-        
-        // Component service - async implementation (will be created)
-        ComponentService componentService = new TestableComponentServiceAsyncImpl(
-            (ComponentRepository) MOCK_REPOSITORIES.get(ComponentRepository.class),
-            (TaskRepository) MOCK_REPOSITORIES.get(TaskRepository.class)
-        );
-        
-        // Meeting service - async implementation (will be created)
-        MeetingService meetingService = new TestableMeetingServiceAsyncImpl(
-            (MeetingRepository) MOCK_REPOSITORIES.get(MeetingRepository.class),
-            (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class)
-        );
-        
-        // Milestone service - async implementation (will be created)
-        MilestoneService milestoneService = new TestableMilestoneServiceAsyncImpl(
-            (MilestoneRepository) MOCK_REPOSITORIES.get(MilestoneRepository.class),
-            (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class)
-        );
-        
-        // SYNC SERVICES - Use testable implementations (no async methods needed)
-        
-        // Subsystem service - sync implementation  
-        SubsystemService subsystemService = new TestableSubsystemServiceImpl(
-            (SubsystemRepository) MOCK_REPOSITORIES.get(SubsystemRepository.class),
-            (SubteamRepository) MOCK_REPOSITORIES.get(SubteamRepository.class)
-        );
-        
-        // Subteam service - sync implementation
-        SubteamService subteamService = new TestableSubteamServiceImpl(
-            (SubteamRepository) MOCK_REPOSITORIES.get(SubteamRepository.class)
-        );
-        
-        // Attendance service - sync implementation
-        AttendanceService attendanceService = new TestableAttendanceServiceImpl(
-            (AttendanceRepository) MOCK_REPOSITORIES.get(AttendanceRepository.class),
-            (MeetingRepository) MOCK_REPOSITORIES.get(MeetingRepository.class),
-            (TeamMemberRepository) MOCK_REPOSITORIES.get(TeamMemberRepository.class)
-        );
+        try {
+            // ASYNC SERVICES - Use testable async implementations (directly stubbable)
+            
+            // Task service - async implementation
+            LOGGER.info("Creating TestableTaskServiceAsyncImpl...");
+            TaskService taskService = new TestableTaskServiceAsyncImpl(
+                (TaskRepository) MOCK_REPOSITORIES.get(TaskRepository.class),
+                (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class),
+                (ComponentRepository) MOCK_REPOSITORIES.get(ComponentRepository.class)
+            );
+            LOGGER.info("Successfully created TaskService");
+            
+            // Team member service - async implementation
+            LOGGER.info("Creating TestableTeamMemberServiceAsyncImpl...");
+            TeamMemberService teamMemberService = new TestableTeamMemberServiceAsyncImpl(
+                (TeamMemberRepository) MOCK_REPOSITORIES.get(TeamMemberRepository.class),
+                (SubteamRepository) MOCK_REPOSITORIES.get(SubteamRepository.class)
+            );
+            LOGGER.info("Successfully created TeamMemberService");
+            
+            // Component service - async implementation
+            LOGGER.info("Creating TestableComponentServiceAsyncImpl...");
+            ComponentService componentService = new TestableComponentServiceAsyncImpl(
+                (ComponentRepository) MOCK_REPOSITORIES.get(ComponentRepository.class),
+                (TaskRepository) MOCK_REPOSITORIES.get(TaskRepository.class)
+            );
+            LOGGER.info("Successfully created ComponentService");
+            
+            // Meeting service - async implementation
+            LOGGER.info("Creating TestableMeetingServiceAsyncImpl...");
+            MeetingService meetingService = new TestableMeetingServiceAsyncImpl(
+                (MeetingRepository) MOCK_REPOSITORIES.get(MeetingRepository.class),
+                (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class)
+            );
+            LOGGER.info("Successfully created MeetingService");
+            
+            // Milestone service - async implementation
+            LOGGER.info("Creating TestableMilestoneServiceAsyncImpl...");
+            MilestoneService milestoneService = new TestableMilestoneServiceAsyncImpl(
+                (MilestoneRepository) MOCK_REPOSITORIES.get(MilestoneRepository.class),
+                (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class)
+            );
+            LOGGER.info("Successfully created MilestoneService");
+            
+            // SYNC SERVICES - Use testable implementations (no async methods needed)
+            
+            // Subsystem service - use async implementation for consistency
+            LOGGER.info("Creating TestableSubsystemServiceAsyncImpl...");
+            SubsystemService subsystemService = new TestableSubsystemServiceAsyncImpl(
+                (SubsystemRepository) MOCK_REPOSITORIES.get(SubsystemRepository.class),
+                (SubteamRepository) MOCK_REPOSITORIES.get(SubteamRepository.class)
+            );
+            LOGGER.info("Successfully created SubsystemService");
+            
+            // Subteam service - use async implementation for consistency
+            LOGGER.info("Creating TestableSubteamServiceAsyncImpl...");
+            SubteamService subteamService = new TestableSubteamServiceAsyncImpl(
+                (SubteamRepository) MOCK_REPOSITORIES.get(SubteamRepository.class)
+            );
+            LOGGER.info("Successfully created SubteamService");
+            
+            // Attendance service - use async implementation for consistency
+            LOGGER.info("Creating TestableAttendanceServiceAsyncImpl...");
+            AttendanceService attendanceService = new TestableAttendanceServiceAsyncImpl(
+                (AttendanceRepository) MOCK_REPOSITORIES.get(AttendanceRepository.class),
+                (MeetingRepository) MOCK_REPOSITORIES.get(MeetingRepository.class),
+                (TeamMemberRepository) MOCK_REPOSITORIES.get(TeamMemberRepository.class)
+            );
+            LOGGER.info("Successfully created AttendanceService");
 
-        // Gantt chart service - sync implementation
-        GanttDataService ganttDataService = new TestableGanttDataServiceImpl(
-            (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class),
-            (TaskRepository) MOCK_REPOSITORIES.get(TaskRepository.class),
-            (MilestoneRepository) MOCK_REPOSITORIES.get(MilestoneRepository.class),
-            Mockito.mock(GanttChartTransformationService.class)
-        );
+            // Gantt chart service - use async implementation for consistency
+            LOGGER.info("Creating TestableGanttDataServiceAsyncImpl...");
+            GanttDataService ganttDataService = new TestableGanttDataServiceAsyncImpl(
+                (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class),
+                (TaskRepository) MOCK_REPOSITORIES.get(TaskRepository.class),
+                (MilestoneRepository) MOCK_REPOSITORIES.get(MilestoneRepository.class),
+                Mockito.mock(GanttChartTransformationService.class)
+            );
+            LOGGER.info("Successfully created GanttDataService");
 
-        // Visualization service - sync implementation
-        VisualizationService visualizationService = new TestableVisualizationServiceImpl(
-            (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class),
-            (TaskRepository) MOCK_REPOSITORIES.get(TaskRepository.class),
-            (MilestoneRepository) MOCK_REPOSITORIES.get(MilestoneRepository.class),
-            (SubsystemRepository) MOCK_REPOSITORIES.get(SubsystemRepository.class),
-            ganttDataService
-        );
-        
-        // Metrics calculation service - sync implementation
-        MetricsCalculationService metricsService = new TestableMetricsCalculationServiceImpl(
-            (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class),
-            (TaskRepository) MOCK_REPOSITORIES.get(TaskRepository.class),
-            (TeamMemberRepository) MOCK_REPOSITORIES.get(TeamMemberRepository.class),
-            (MilestoneRepository) MOCK_REPOSITORIES.get(MilestoneRepository.class),
-            (AttendanceRepository) MOCK_REPOSITORIES.get(AttendanceRepository.class),
-            (MeetingRepository) MOCK_REPOSITORIES.get(MeetingRepository.class),
-            (SubsystemRepository) MOCK_REPOSITORIES.get(SubsystemRepository.class)
-        );
-        
-        // Report generation service - sync implementation
-        ReportGenerationService reportService = new TestableReportGenerationServiceImpl(
-            (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class),
-            (TaskRepository) MOCK_REPOSITORIES.get(TaskRepository.class),
-            (TeamMemberRepository) MOCK_REPOSITORIES.get(TeamMemberRepository.class),
-            (MilestoneRepository) MOCK_REPOSITORIES.get(MilestoneRepository.class),
-            (AttendanceRepository) MOCK_REPOSITORIES.get(AttendanceRepository.class),
-            (MeetingRepository) MOCK_REPOSITORIES.get(MeetingRepository.class),
-            (SubsystemRepository) MOCK_REPOSITORIES.get(SubsystemRepository.class),
-            metricsService,
-            ganttDataService,
-            visualizationService
-        );
-        
-        // PURE MOCK SERVICES - Services that don't need implementation details
-        ProjectService projectService = Mockito.mock(ProjectService.class);
-        DialogService dialogService = Mockito.mock(DialogService.class);
-        GanttChartTransformationService transformationService = Mockito.mock(GanttChartTransformationService.class);
-        
-        // Store services in service map
-        MOCK_SERVICES.put(TaskService.class, taskService);
-        MOCK_SERVICES.put(TeamMemberService.class, teamMemberService);
-        MOCK_SERVICES.put(ComponentService.class, componentService);
-        MOCK_SERVICES.put(MeetingService.class, meetingService);
-        MOCK_SERVICES.put(MilestoneService.class, milestoneService);
-        MOCK_SERVICES.put(SubsystemService.class, subsystemService);
-        MOCK_SERVICES.put(SubteamService.class, subteamService);
-        MOCK_SERVICES.put(AttendanceService.class, attendanceService);
-        MOCK_SERVICES.put(ProjectService.class, projectService);
-        MOCK_SERVICES.put(DialogService.class, dialogService);
-        MOCK_SERVICES.put(GanttDataService.class, ganttDataService);
-        MOCK_SERVICES.put(GanttChartTransformationService.class, transformationService);
-        MOCK_SERVICES.put(VisualizationService.class, visualizationService);
-        MOCK_SERVICES.put(MetricsCalculationService.class, metricsService);
-        MOCK_SERVICES.put(ReportGenerationService.class, reportService);
+            // Visualization service - use async implementation for consistency
+            LOGGER.info("Creating TestableVisualizationServiceAsyncImpl...");
+            VisualizationService visualizationService = new TestableVisualizationServiceAsyncImpl(
+                (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class),
+                (TaskRepository) MOCK_REPOSITORIES.get(TaskRepository.class),
+                (MilestoneRepository) MOCK_REPOSITORIES.get(MilestoneRepository.class),
+                (SubsystemRepository) MOCK_REPOSITORIES.get(SubsystemRepository.class),
+                ganttDataService
+            );
+            LOGGER.info("Successfully created VisualizationService");
+            
+            // Metrics calculation service - use async implementation for consistency
+            LOGGER.info("Creating TestableMetricsCalculationServiceAsyncImpl...");
+            MetricsCalculationService metricsService = new TestableMetricsCalculationServiceAsyncImpl(
+                (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class),
+                (TaskRepository) MOCK_REPOSITORIES.get(TaskRepository.class),
+                (TeamMemberRepository) MOCK_REPOSITORIES.get(TeamMemberRepository.class),
+                (MilestoneRepository) MOCK_REPOSITORIES.get(MilestoneRepository.class),
+                (AttendanceRepository) MOCK_REPOSITORIES.get(AttendanceRepository.class),
+                (MeetingRepository) MOCK_REPOSITORIES.get(MeetingRepository.class),
+                (SubsystemRepository) MOCK_REPOSITORIES.get(SubsystemRepository.class)
+            );
+            LOGGER.info("Successfully created MetricsCalculationService");
+            
+            // Report generation service - use async implementation for consistency
+            LOGGER.info("Creating TestableReportGenerationServiceAsyncImpl...");
+            ReportGenerationService reportService = new TestableReportGenerationServiceAsyncImpl(
+                (ProjectRepository) MOCK_REPOSITORIES.get(ProjectRepository.class),
+                (TaskRepository) MOCK_REPOSITORIES.get(TaskRepository.class),
+                (TeamMemberRepository) MOCK_REPOSITORIES.get(TeamMemberRepository.class),
+                (MilestoneRepository) MOCK_REPOSITORIES.get(MilestoneRepository.class),
+                (AttendanceRepository) MOCK_REPOSITORIES.get(AttendanceRepository.class),
+                (MeetingRepository) MOCK_REPOSITORIES.get(MeetingRepository.class),
+                (SubsystemRepository) MOCK_REPOSITORIES.get(SubsystemRepository.class),
+                metricsService,
+                ganttDataService,
+                visualizationService
+            );
+            LOGGER.info("Successfully created ReportGenerationService");
+            
+            // PURE MOCK SERVICES - Services that don't need implementation details
+            LOGGER.info("Creating pure mock services...");
+            ProjectService projectService = Mockito.mock(ProjectService.class);
+            DialogService dialogService = Mockito.mock(DialogService.class);
+            GanttChartTransformationService transformationService = Mockito.mock(GanttChartTransformationService.class);
+            LOGGER.info("Successfully created pure mock services");
+            
+            // Store services in service map
+            MOCK_SERVICES.put(TaskService.class, taskService);
+            MOCK_SERVICES.put(TeamMemberService.class, teamMemberService);
+            MOCK_SERVICES.put(ComponentService.class, componentService);
+            MOCK_SERVICES.put(MeetingService.class, meetingService);
+            MOCK_SERVICES.put(MilestoneService.class, milestoneService);
+            MOCK_SERVICES.put(SubsystemService.class, subsystemService);
+            MOCK_SERVICES.put(SubteamService.class, subteamService);
+            MOCK_SERVICES.put(AttendanceService.class, attendanceService);
+            MOCK_SERVICES.put(ProjectService.class, projectService);
+            MOCK_SERVICES.put(DialogService.class, dialogService);
+            MOCK_SERVICES.put(GanttDataService.class, ganttDataService);
+            MOCK_SERVICES.put(GanttChartTransformationService.class, transformationService);
+            MOCK_SERVICES.put(VisualizationService.class, visualizationService);
+            MOCK_SERVICES.put(MetricsCalculationService.class, metricsService);
+            MOCK_SERVICES.put(ReportGenerationService.class, reportService);
+            
+            LOGGER.info("Successfully created all mock services");
+            
+        } catch (Exception e) {
+            LOGGER.severe("Error creating mock services: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to create mock services", e);
+        }
     }
     
     /**

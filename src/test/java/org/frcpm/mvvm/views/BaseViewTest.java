@@ -15,11 +15,13 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.MockitoAnnotations;
 
+import java.util.ResourceBundle;
 import java.util.logging.Logger;
 
 /**
  * Base class for View tests using TestFX.
  * Provides common setup and teardown functionality for View testing.
+ * FIXED: Enhanced MVVMFx initialization and resource bundle handling.
  */
 public abstract class BaseViewTest<V extends FxmlView<VM>, VM extends ViewModel> extends BaseFxTest {
     
@@ -29,6 +31,7 @@ public abstract class BaseViewTest<V extends FxmlView<VM>, VM extends ViewModel>
     protected V view;
     protected VM viewModel;
     protected ViewTuple<V, VM> viewTuple;
+    protected ResourceBundle resources;
     
     /**
      * Sets up the view for testing.
@@ -57,10 +60,37 @@ public abstract class BaseViewTest<V extends FxmlView<VM>, VM extends ViewModel>
         // Initialize Mockito annotations
         mockitoCloseable = MockitoAnnotations.openMocks(this);
         
-        // Initialize TestModule and MvvmConfig
+        // Initialize TestModule FIRST
         TestModule.initialize();
+        
+        // Initialize MvvmConfig AFTER TestModule
         if (!MvvmConfig.isInitialized()) {
             MvvmConfig.initialize();
+        }
+        
+        // Load resource bundle for the view
+        loadResourceBundle();
+    }
+    
+    /**
+     * Loads the resource bundle for the view.
+     */
+    private void loadResourceBundle() {
+        try {
+            String viewClassName = getViewClass().getSimpleName();
+            String bundleName = "org.frcpm.mvvm.views." + viewClassName;
+            resources = ResourceBundle.getBundle(bundleName);
+            LOGGER.info("Loaded resource bundle: " + bundleName);
+        } catch (Exception e) {
+            LOGGER.warning("Could not load resource bundle for " + getViewClass().getSimpleName() + ": " + e.getMessage());
+            // Try to load common bundle as fallback
+            try {
+                resources = ResourceBundle.getBundle("org.frcpm.mvvm.views.common");
+                LOGGER.info("Loaded fallback common resource bundle");
+            } catch (Exception e2) {
+                LOGGER.warning("Could not load common resource bundle: " + e2.getMessage());
+                resources = null;
+            }
         }
     }
     
@@ -87,27 +117,67 @@ public abstract class BaseViewTest<V extends FxmlView<VM>, VM extends ViewModel>
     
     /**
      * Creates and shows the view in the provided stage.
+     * FIXED: Enhanced error handling and resource bundle support.
      * 
      * @param stage the stage to show the view in
      */
     protected void createAndShowView(Stage stage) {
-        // Load the view with FluentViewLoader
-        viewTuple = FluentViewLoader.fxmlView(getViewClass()).load();
-        view = viewTuple.getCodeBehind();
-        viewModel = viewTuple.getViewModel();
-        
-        // Create scene with view root
-        Parent root = viewTuple.getView();
-        Scene scene = new Scene(root);
-        
-        // Set scene in stage and show
-        stage.setScene(scene);
-        stage.setTitle(getViewClass().getSimpleName());
-        stage.show();
-        stage.toFront();
-        
-        // Wait for the scene to be shown
-        waitForFxEvents();
+        try {
+            LOGGER.info("Creating view: " + getViewClass().getSimpleName());
+            
+            // Load the view with FluentViewLoader
+            FluentViewLoader.ViewBuilder<V> builder = FluentViewLoader.fxmlView(getViewClass());
+            
+            // Add resource bundle if available
+            if (resources != null) {
+                builder = builder.resourceBundle(resources);
+            }
+            
+            // Load the view
+            viewTuple = builder.load();
+            
+            if (viewTuple == null) {
+                throw new RuntimeException("ViewTuple is null - MVVMFx failed to load view");
+            }
+            
+            view = viewTuple.getCodeBehind();
+            viewModel = viewTuple.getViewModel();
+            
+            if (view == null) {
+                throw new RuntimeException("View is null - MVVMFx failed to create view instance");
+            }
+            
+            if (viewModel == null) {
+                throw new RuntimeException("ViewModel is null - MVVMFx failed to inject ViewModel");
+            }
+            
+            LOGGER.info("Successfully created view and ViewModel: " + view.getClass().getSimpleName() + 
+                       " with " + viewModel.getClass().getSimpleName());
+            
+            // Create scene with view root
+            Parent root = viewTuple.getView();
+            if (root == null) {
+                throw new RuntimeException("View root is null - FXML loading failed");
+            }
+            
+            Scene scene = new Scene(root);
+            
+            // Set scene in stage and show
+            stage.setScene(scene);
+            stage.setTitle(getViewClass().getSimpleName());
+            stage.show();
+            stage.toFront();
+            
+            // Wait for the scene to be shown
+            waitForFxEvents();
+            
+            LOGGER.info("Successfully displayed view in stage");
+            
+        } catch (Exception e) {
+            LOGGER.severe("Failed to create and show view: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to create view: " + e.getMessage(), e);
+        }
     }
     
     /**
