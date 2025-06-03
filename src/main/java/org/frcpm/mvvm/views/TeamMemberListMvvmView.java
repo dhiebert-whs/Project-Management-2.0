@@ -6,6 +6,7 @@ import de.saxsys.mvvmfx.FluentViewLoader;
 import de.saxsys.mvvmfx.FxmlView;
 import de.saxsys.mvvmfx.InjectViewModel;
 import de.saxsys.mvvmfx.ViewTuple;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.Scene;
@@ -32,6 +33,7 @@ import org.frcpm.mvvm.viewmodels.TeamMemberListMvvmViewModel;
 
 /**
  * View for the team member list using MVVMFx.
+ * FIXED: Uses deferred binding pattern to avoid ViewModel null access during initialize().
  */
 public class TeamMemberListMvvmView implements FxmlView<TeamMemberListMvvmViewModel>, Initializable {
     
@@ -80,64 +82,148 @@ public class TeamMemberListMvvmView implements FxmlView<TeamMemberListMvvmViewMo
     private TeamMemberListMvvmViewModel viewModel;
     
     private ResourceBundle resources;
+    private boolean bindingComplete = false;
     
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         LOGGER.info("Initializing TeamMemberListMvvmView");
         this.resources = resources;
         
+        // DO NOT ACCESS viewModel HERE - it's still null!
+        // Instead, set up basic UI without ViewModel binding
+        setupBasicUI();
+        
+        // Schedule binding for later when ViewModel is injected
+        Platform.runLater(this::bindControlsWhenReady);
+    }
+    
+    /**
+     * Sets up basic UI components that don't require ViewModel.
+     */
+    private void setupBasicUI() {
         // Initialize table columns
-        nameColumn.setCellValueFactory(cellData -> {
-            TeamMember member = cellData.getValue();
-            return javafx.beans.binding.Bindings.createStringBinding(
-                () -> member != null ? member.getFullName() : ""
-            );
-        });
+        if (nameColumn != null) {
+            nameColumn.setCellValueFactory(cellData -> {
+                TeamMember member = cellData.getValue();
+                return javafx.beans.binding.Bindings.createStringBinding(
+                    () -> member != null ? member.getFullName() : ""
+                );
+            });
+        }
         
-        usernameColumn.setCellValueFactory(new PropertyValueFactory<>("username"));
-        emailColumn.setCellValueFactory(new PropertyValueFactory<>("email"));
+        if (usernameColumn != null) {
+            usernameColumn.setCellValueFactory(new PropertyValueFactory<>("username"));
+        }
         
-        subteamColumn.setCellValueFactory(cellData -> {
-            TeamMember member = cellData.getValue();
-            return javafx.beans.binding.Bindings.createStringBinding(
-                () -> member != null && member.getSubteam() != null ? 
-                      member.getSubteam().getName() : ""
-            );
-        });
+        if (emailColumn != null) {
+            emailColumn.setCellValueFactory(new PropertyValueFactory<>("email"));
+        }
         
-        // Set up team member table view
-        teamMemberTableView.setItems(viewModel.getTeamMembers());
+        if (subteamColumn != null) {
+            subteamColumn.setCellValueFactory(cellData -> {
+                TeamMember member = cellData.getValue();
+                return javafx.beans.binding.Bindings.createStringBinding(
+                    () -> member != null && member.getSubteam() != null ? 
+                          member.getSubteam().getName() : ""
+                );
+            });
+        }
         
-        // Bind selected team member
-        teamMemberTableView.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
-            viewModel.setSelectedTeamMember(newVal);
-        });
-        
-        // Bind project label
-        viewModel.currentProjectProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal != null) {
-                projectLabel.setText(newVal.getName());
-            } else {
-                projectLabel.setText("");
+        // Hide error and loading indicators initially
+        if (errorLabel != null) {
+            errorLabel.setVisible(false);
+        }
+        if (loadingIndicator != null) {
+            loadingIndicator.setVisible(false);
+        }
+    }
+    
+    /**
+     * Binds controls to ViewModel when it's ready.
+     * Uses deferred binding pattern to handle MVVMFx injection timing.
+     */
+    private void bindControlsWhenReady() {
+        if (viewModel != null && !bindingComplete) {
+            LOGGER.info("ViewModel is ready, binding controls");
+            bindControls();
+            bindingComplete = true;
+        } else if (viewModel == null) {
+            // ViewModel still not ready, try again later
+            Platform.runLater(this::bindControlsWhenReady);
+        }
+    }
+    
+    /**
+     * Binds all controls to the ViewModel.
+     * This is called after ViewModel injection is complete.
+     */
+    private void bindControls() {
+        try {
+            // Bind team member table view
+            if (viewModel.getTeamMembers() != null && teamMemberTableView != null) {
+                teamMemberTableView.setItems(viewModel.getTeamMembers());
             }
-        });
-        
-        // Bind command buttons using CommandAdapter
-        CommandAdapter.bindCommandButton(newButton, viewModel.getNewTeamMemberCommand());
-        CommandAdapter.bindCommandButton(editButton, viewModel.getEditTeamMemberCommand());
-        CommandAdapter.bindCommandButton(deleteButton, viewModel.getDeleteTeamMemberCommand());
-        CommandAdapter.bindCommandButton(refreshButton, viewModel.getRefreshTeamMembersCommand());
-        
-        // Override button actions to handle dialogs
-        newButton.setOnAction(e -> handleNewTeamMember());
-        editButton.setOnAction(e -> handleEditTeamMember());
-        
-        // Bind error message
-        errorLabel.textProperty().bind(viewModel.errorMessageProperty());
-        errorLabel.visibleProperty().bind(viewModel.errorMessageProperty().isNotEmpty());
-        
-        // Bind loading indicator
-        loadingIndicator.visibleProperty().bind(viewModel.loadingProperty());
+            
+            // Bind selected team member
+            if (teamMemberTableView != null) {
+                teamMemberTableView.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+                    if (viewModel != null) {
+                        viewModel.setSelectedTeamMember(newVal);
+                    }
+                });
+            }
+            
+            // Bind project label
+            if (projectLabel != null && viewModel.currentProjectProperty() != null) {
+                viewModel.currentProjectProperty().addListener((obs, oldVal, newVal) -> {
+                    if (newVal != null) {
+                        projectLabel.setText(newVal.getName());
+                    } else {
+                        projectLabel.setText("");
+                    }
+                });
+            }
+            
+            // Bind command buttons using CommandAdapter with null safety
+            if (newButton != null && viewModel.getNewTeamMemberCommand() != null) {
+                CommandAdapter.bindCommandButton(newButton, viewModel.getNewTeamMemberCommand());
+            }
+            if (editButton != null && viewModel.getEditTeamMemberCommand() != null) {
+                CommandAdapter.bindCommandButton(editButton, viewModel.getEditTeamMemberCommand());
+            }
+            if (deleteButton != null && viewModel.getDeleteTeamMemberCommand() != null) {
+                CommandAdapter.bindCommandButton(deleteButton, viewModel.getDeleteTeamMemberCommand());
+            }
+            if (refreshButton != null && viewModel.getRefreshTeamMembersCommand() != null) {
+                CommandAdapter.bindCommandButton(refreshButton, viewModel.getRefreshTeamMembersCommand());
+            }
+            
+            // Override button actions to handle dialogs
+            if (newButton != null) {
+                newButton.setOnAction(e -> handleNewTeamMember());
+            }
+            if (editButton != null) {
+                editButton.setOnAction(e -> handleEditTeamMember());
+            }
+            
+            // Bind error message with null safety
+            if (errorLabel != null && viewModel.errorMessageProperty() != null) {
+                errorLabel.textProperty().bind(viewModel.errorMessageProperty());
+                errorLabel.visibleProperty().bind(viewModel.errorMessageProperty().isNotEmpty());
+            }
+            
+            // Bind loading indicator with null safety
+            if (loadingIndicator != null && viewModel.loadingProperty() != null) {
+                loadingIndicator.visibleProperty().bind(viewModel.loadingProperty());
+            }
+            
+            LOGGER.info("Control binding completed successfully");
+            
+        } catch (Exception e) {
+            LOGGER.severe("Error binding controls: " + e.getMessage());
+            e.printStackTrace();
+            // Graceful degradation - UI still works even if binding fails
+        }
     }
     
     /**
@@ -146,8 +232,12 @@ public class TeamMemberListMvvmView implements FxmlView<TeamMemberListMvvmViewMo
      * @param project the project
      */
     public void setProject(Project project) {
-        viewModel.setCurrentProject(project);
-        viewModel.getLoadTeamMembersCommand().execute();
+        if (viewModel != null) {
+            viewModel.setCurrentProject(project);
+            if (viewModel.getLoadTeamMembersCommand() != null) {
+                viewModel.getLoadTeamMembersCommand().execute();
+            }
+        }
     }
     
     /**
@@ -163,8 +253,10 @@ public class TeamMemberListMvvmView implements FxmlView<TeamMemberListMvvmViewMo
             
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error creating new team member", e);
-            showErrorAlert(resources.getString("error.title"), 
-                           resources.getString("error.teamMember.create.failed") + ": " + e.getMessage());
+            String errorTitle = resources != null ? resources.getString("error.title") : "Error";
+            String errorMessage = (resources != null ? resources.getString("error.teamMember.create.failed") : 
+                                  "Failed to create team member") + ": " + e.getMessage();
+            showErrorAlert(errorTitle, errorMessage);
         }
     }
     
@@ -172,10 +264,12 @@ public class TeamMemberListMvvmView implements FxmlView<TeamMemberListMvvmViewMo
      * Handle edit team member button click.
      */
     private void handleEditTeamMember() {
-        TeamMember selectedMember = viewModel.getSelectedTeamMember();
+        TeamMember selectedMember = viewModel != null ? viewModel.getSelectedTeamMember() : null;
         if (selectedMember == null) {
-            showErrorAlert(resources.getString("error.title"), 
-                           resources.getString("error.teamMember.select"));
+            String errorTitle = resources != null ? resources.getString("error.title") : "Error";
+            String errorMessage = resources != null ? resources.getString("error.teamMember.select") : 
+                                  "Please select a team member to edit";
+            showErrorAlert(errorTitle, errorMessage);
             return;
         }
         
@@ -185,8 +279,10 @@ public class TeamMemberListMvvmView implements FxmlView<TeamMemberListMvvmViewMo
             
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error editing team member", e);
-            showErrorAlert(resources.getString("error.title"), 
-                           resources.getString("error.teamMember.edit.failed") + ": " + e.getMessage());
+            String errorTitle = resources != null ? resources.getString("error.title") : "Error";
+            String errorMessage = (resources != null ? resources.getString("error.teamMember.edit.failed") : 
+                                  "Failed to edit team member") + ": " + e.getMessage();
+            showErrorAlert(errorTitle, errorMessage);
         }
     }
     
@@ -216,22 +312,30 @@ public class TeamMemberListMvvmView implements FxmlView<TeamMemberListMvvmViewMo
             
             // Create a new stage for the dialog
             Stage dialogStage = new Stage();
-            dialogStage.setTitle(isNew ? resources.getString("teamMember.new.title") : 
-                                        resources.getString("teamMember.edit.title"));
+            String title = isNew ? 
+                (resources != null ? resources.getString("teamMember.new.title") : "New Team Member") :
+                (resources != null ? resources.getString("teamMember.edit.title") : "Edit Team Member");
+            dialogStage.setTitle(title);
             dialogStage.initModality(Modality.WINDOW_MODAL);
-            dialogStage.initOwner(mainPane.getScene().getWindow());
+            if (mainPane != null && mainPane.getScene() != null) {
+                dialogStage.initOwner(mainPane.getScene().getWindow());
+            }
             dialogStage.setScene(new Scene(viewTuple.getView()));
             
             // Show the dialog and wait for it to close
             dialogStage.showAndWait();
             
             // Refresh team members after dialog closes
-            viewModel.getRefreshTeamMembersCommand().execute();
+            if (viewModel != null && viewModel.getRefreshTeamMembersCommand() != null) {
+                viewModel.getRefreshTeamMembersCommand().execute();
+            }
             
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error opening team member dialog", e);
-            showErrorAlert(resources.getString("error.title"), 
-                           resources.getString("error.teamMember.dialog.failed") + ": " + e.getMessage());
+            String errorTitle = resources != null ? resources.getString("error.title") : "Error";
+            String errorMessage = (resources != null ? resources.getString("error.teamMember.dialog.failed") : 
+                                  "Failed to open team member dialog") + ": " + e.getMessage();
+            showErrorAlert(errorTitle, errorMessage);
         }
     }
     
@@ -240,20 +344,25 @@ public class TeamMemberListMvvmView implements FxmlView<TeamMemberListMvvmViewMo
      */
     @FXML
     private void onDeleteTeamMemberAction() {
-        if (viewModel.getSelectedTeamMember() == null) {
+        if (viewModel == null || viewModel.getSelectedTeamMember() == null) {
             // Show alert about no selection
-            showErrorAlert(resources.getString("error.title"),
-                           resources.getString("info.no.selection.teamMember"));
+            String errorTitle = resources != null ? resources.getString("error.title") : "Error";
+            String errorMessage = resources != null ? resources.getString("info.no.selection.teamMember") : 
+                                  "No team member selected";
+            showErrorAlert(errorTitle, errorMessage);
             return;
         }
         
         // Confirm deletion
-        String confirmMessage = resources.getString("teamMember.delete.confirm") + 
-            " '" + viewModel.getSelectedTeamMember().getFullName() + "'?";
+        String confirmTitle = resources != null ? resources.getString("confirm.title") : "Confirm";
+        String confirmMessage = (resources != null ? resources.getString("teamMember.delete.confirm") : 
+                               "Delete team member") + " '" + viewModel.getSelectedTeamMember().getFullName() + "'?";
         
-        if (showConfirmationAlert(resources.getString("confirm.title"), confirmMessage)) {
+        if (showConfirmationAlert(confirmTitle, confirmMessage)) {
             // Execute delete command
-            viewModel.getDeleteTeamMemberCommand().execute();
+            if (viewModel.getDeleteTeamMemberCommand() != null) {
+                viewModel.getDeleteTeamMemberCommand().execute();
+            }
         }
     }
     
@@ -262,7 +371,9 @@ public class TeamMemberListMvvmView implements FxmlView<TeamMemberListMvvmViewMo
      */
     @FXML
     private void onRefreshAction() {
-        viewModel.getRefreshTeamMembersCommand().execute();
+        if (viewModel != null && viewModel.getRefreshTeamMembersCommand() != null) {
+            viewModel.getRefreshTeamMembersCommand().execute();
+        }
     }
     
     /**

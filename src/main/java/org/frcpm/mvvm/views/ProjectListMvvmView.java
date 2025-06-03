@@ -4,6 +4,7 @@ package org.frcpm.mvvm.views;
 
 import de.saxsys.mvvmfx.FxmlView;
 import de.saxsys.mvvmfx.InjectViewModel;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
@@ -22,7 +23,7 @@ import org.frcpm.mvvm.viewmodels.ProjectListMvvmViewModel;
 
 /**
  * View for the project list using MVVMFx.
- * This is the first implementation using the MVVMFx framework.
+ * FIXED: Uses deferred binding pattern to avoid ViewModel null access during initialize().
  */
 public class ProjectListMvvmView implements FxmlView<ProjectListMvvmViewModel>, Initializable {
     
@@ -56,15 +57,25 @@ public class ProjectListMvvmView implements FxmlView<ProjectListMvvmViewModel>, 
     private ProjectListMvvmViewModel viewModel;
     
     private ResourceBundle resources;
+    private boolean bindingComplete = false;
     
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         LOGGER.info("Initializing ProjectListMvvmView");
         this.resources = resources;
         
-        // Set up project list view
-        projectListView.setItems(viewModel.getProjects());
+        // DO NOT ACCESS viewModel HERE - it's still null!
+        // Instead, set up basic UI without ViewModel binding
+        setupBasicUI();
         
+        // Schedule binding for later when ViewModel is injected
+        Platform.runLater(this::bindControlsWhenReady);
+    }
+    
+    /**
+     * Sets up basic UI components that don't require ViewModel.
+     */
+    private void setupBasicUI() {
         // Set cell factory for better display
         projectListView.setCellFactory(lv -> new javafx.scene.control.ListCell<Project>() {
             @Override
@@ -74,26 +85,85 @@ public class ProjectListMvvmView implements FxmlView<ProjectListMvvmViewModel>, 
             }
         });
         
-        // Bind selected project
-        projectListView.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
-            viewModel.setSelectedProject(newVal);
-        });
-        
-        // Bind command buttons using CommandAdapter to convert MVVMFx commands to the app's command system
-        CommandAdapter.bindCommandButton(newProjectButton, viewModel.getNewProjectCommand());
-        CommandAdapter.bindCommandButton(openProjectButton, viewModel.getOpenProjectCommand());
-        CommandAdapter.bindCommandButton(importProjectButton, viewModel.getImportProjectCommand());
-        CommandAdapter.bindCommandButton(deleteProjectButton, viewModel.getDeleteProjectCommand());
-        
-        // Bind error message
-        errorLabel.textProperty().bind(viewModel.errorMessageProperty());
-        errorLabel.visibleProperty().bind(viewModel.errorMessageProperty().isNotEmpty());
-        
-        // Bind loading indicator
-        loadingIndicator.visibleProperty().bind(viewModel.loadingProperty());
-        
-        // Initial data load
-        viewModel.getLoadProjectsCommand().execute();
+        // Hide error and loading indicators initially
+        if (errorLabel != null) {
+            errorLabel.setVisible(false);
+        }
+        if (loadingIndicator != null) {
+            loadingIndicator.setVisible(false);
+        }
+    }
+    
+    /**
+     * Binds controls to ViewModel when it's ready.
+     * Uses deferred binding pattern to handle MVVMFx injection timing.
+     */
+    private void bindControlsWhenReady() {
+        if (viewModel != null && !bindingComplete) {
+            LOGGER.info("ViewModel is ready, binding controls");
+            bindControls();
+            bindingComplete = true;
+        } else if (viewModel == null) {
+            // ViewModel still not ready, try again later
+            Platform.runLater(this::bindControlsWhenReady);
+        }
+    }
+    
+    /**
+     * Binds all controls to the ViewModel.
+     * This is called after ViewModel injection is complete.
+     */
+    private void bindControls() {
+        try {
+            // Bind project list view
+            if (viewModel.getProjects() != null) {
+                projectListView.setItems(viewModel.getProjects());
+            }
+            
+            // Bind selected project
+            projectListView.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+                if (viewModel != null) {
+                    viewModel.setSelectedProject(newVal);
+                }
+            });
+            
+            // Bind command buttons using CommandAdapter to convert MVVMFx commands
+            if (newProjectButton != null && viewModel.getNewProjectCommand() != null) {
+                CommandAdapter.bindCommandButton(newProjectButton, viewModel.getNewProjectCommand());
+            }
+            if (openProjectButton != null && viewModel.getOpenProjectCommand() != null) {
+                CommandAdapter.bindCommandButton(openProjectButton, viewModel.getOpenProjectCommand());
+            }
+            if (importProjectButton != null && viewModel.getImportProjectCommand() != null) {
+                CommandAdapter.bindCommandButton(importProjectButton, viewModel.getImportProjectCommand());
+            }
+            if (deleteProjectButton != null && viewModel.getDeleteProjectCommand() != null) {
+                CommandAdapter.bindCommandButton(deleteProjectButton, viewModel.getDeleteProjectCommand());
+            }
+            
+            // Bind error message with null safety
+            if (errorLabel != null && viewModel.errorMessageProperty() != null) {
+                errorLabel.textProperty().bind(viewModel.errorMessageProperty());
+                errorLabel.visibleProperty().bind(viewModel.errorMessageProperty().isNotEmpty());
+            }
+            
+            // Bind loading indicator with null safety
+            if (loadingIndicator != null && viewModel.loadingProperty() != null) {
+                loadingIndicator.visibleProperty().bind(viewModel.loadingProperty());
+            }
+            
+            // Initial data load after binding is complete
+            if (viewModel.getLoadProjectsCommand() != null) {
+                viewModel.getLoadProjectsCommand().execute();
+            }
+            
+            LOGGER.info("Control binding completed successfully");
+            
+        } catch (Exception e) {
+            LOGGER.severe("Error binding controls: " + e.getMessage());
+            e.printStackTrace();
+            // Graceful degradation - UI still works even if binding fails
+        }
     }
     
     /**
@@ -101,7 +171,9 @@ public class ProjectListMvvmView implements FxmlView<ProjectListMvvmViewModel>, 
      */
     @FXML
     private void onNewProjectAction() {
-        viewModel.getNewProjectCommand().execute();
+        if (viewModel != null && viewModel.getNewProjectCommand() != null) {
+            viewModel.getNewProjectCommand().execute();
+        }
     }
     
     /**
@@ -109,7 +181,9 @@ public class ProjectListMvvmView implements FxmlView<ProjectListMvvmViewModel>, 
      */
     @FXML
     private void onOpenProjectAction() {
-        viewModel.getOpenProjectCommand().execute();
+        if (viewModel != null && viewModel.getOpenProjectCommand() != null) {
+            viewModel.getOpenProjectCommand().execute();
+        }
     }
     
     /**
@@ -117,7 +191,9 @@ public class ProjectListMvvmView implements FxmlView<ProjectListMvvmViewModel>, 
      */
     @FXML
     private void onImportProjectAction() {
-        viewModel.getImportProjectCommand().execute();
+        if (viewModel != null && viewModel.getImportProjectCommand() != null) {
+            viewModel.getImportProjectCommand().execute();
+        }
     }
     
     /**
@@ -125,22 +201,26 @@ public class ProjectListMvvmView implements FxmlView<ProjectListMvvmViewModel>, 
      */
     @FXML
     private void onDeleteProjectAction() {
-        if (viewModel.getSelectedProject() == null) {
+        if (viewModel == null || viewModel.getSelectedProject() == null) {
             // Show alert about no selection
-            String message = resources.getString("info.no.selection.project");
-            // This would typically show an alert dialog
+            String message = resources != null ? 
+                resources.getString("info.no.selection.project") : 
+                "No project selected";
             LOGGER.warning(message);
             return;
         }
         
         // Confirm deletion
-        String confirmMessage = resources.getString("project.delete.confirm") + 
-            " '" + viewModel.getSelectedProject().getName() + "'?";
+        String confirmMessage = (resources != null ? 
+            resources.getString("project.delete.confirm") : 
+            "Delete project") + " '" + viewModel.getSelectedProject().getName() + "'?";
         
         // This would typically show a confirmation dialog
         LOGGER.info(confirmMessage);
         
-        // Execute delete command (this would normally happen after confirmation)
-        viewModel.getDeleteProjectCommand().execute();
+        // Execute delete command
+        if (viewModel.getDeleteProjectCommand() != null) {
+            viewModel.getDeleteProjectCommand().execute();
+        }
     }
 }
