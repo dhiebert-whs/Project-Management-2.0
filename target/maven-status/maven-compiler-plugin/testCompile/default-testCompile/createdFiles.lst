@@ -30,9 +30,11 @@ org\frcpm\repositories\specific\MeetingRepositoryTest.class
 org\frcpm\repositories\specific\ComponentRepositoryTest.class
 org\frcpm\services\impl\SubteamServiceTest.class
 org\frcpm\mvvm\viewmodels\SubsystemDetailMvvmViewModelTest.class
+org\frcpm\mvvm\views\FileVerificationTest.class
 org\frcpm\mvvm\viewmodels\DailyMvvmViewModelTest.class
 org\frcpm\services\impl\AttendanceServiceTest.class
 org\frcpm\repositories\specific\SubteamRepositoryTest.class
+org\frcpm\mvvm\views\ViewClassDiagnosticTest.class
 org\frcpm\testfx\BaseFxTest.class
 org\frcpm\mvvm\viewmodels\ComponentDetailMvvmViewModelTest.class
 org\frcpm\mvvm\viewmodels\SubteamDetailMvvmViewModelTest.class

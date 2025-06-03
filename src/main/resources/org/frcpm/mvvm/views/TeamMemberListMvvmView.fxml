@@ -24,27 +24,22 @@
       <center>
          <VBox spacing="10.0">
             <children>
-               <!-- Team Member Table -->
                <TableView fx:id="teamMemberTableView" prefHeight="400.0" VBox.vgrow="ALWAYS">
                  <columns>
                    <TableColumn fx:id="nameColumn" prefWidth="150.0" text="Name" />
                    <TableColumn fx:id="usernameColumn" prefWidth="120.0" text="Username" />
-                     <TableColumn fx:id="emailColumn" prefWidth="200.0" text="Email" />
-                     <TableColumn fx:id="subteamColumn" prefWidth="120.0" text="Subteam" />
+                   <TableColumn fx:id="emailColumn" prefWidth="200.0" text="Email" />
+                   <TableColumn fx:id="subteamColumn" prefWidth="120.0" text="Subteam" />
                  </columns>
                </TableView>
-               
-               <!-- Button Bar -->
                <HBox spacing="10.0">
                   <children>
-                     <Button fx:id="newButton" mnemonicParsing="false" text="New" />
-                     <Button fx:id="editButton" mnemonicParsing="false" text="Edit" />
-                     <Button fx:id="deleteButton" mnemonicParsing="false" text="Delete" />
-                     <Button fx:id="refreshButton" mnemonicParsing="false" text="Refresh" />
+                     <Button fx:id="newButton" text="New" />
+                     <Button fx:id="editButton" text="Edit" />
+                     <Button fx:id="deleteButton" text="Delete" />
+                     <Button fx:id="refreshButton" text="Refresh" />
                   </children>
                </HBox>
-               
-               <!-- Status Bar -->
                <HBox spacing="10.0">
                   <children>
                      <Label fx:id="errorLabel" style="-fx-text-fill: red;" visible="false" />

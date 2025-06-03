@@ -22,12 +22,14 @@ C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\fr
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\mvvm\viewmodels\TeamMemberListMvvmViewModelTest.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\mvvm\viewmodels\TeamMemberSelectionMvvmViewModelTest.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\mvvm\views\BaseViewTest.java
+C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\mvvm\views\FileVerificationTest.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\mvvm\views\FXMLDiagnosticTest.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\mvvm\views\MinimalDebugTest.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\mvvm\views\MvvmfxViewLoadingTest.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\mvvm\views\ProjectListMvvmViewTest.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\mvvm\views\SimpleDiagnosticTest.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\mvvm\views\TeamMemberListMvvmViewTest.java
+C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\mvvm\views\ViewClassDiagnosticTest.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\repositories\BaseRepositoryTest.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\repositories\specific\AttendanceRepositoryTest.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\repositories\specific\ComponentRepositoryTest.java

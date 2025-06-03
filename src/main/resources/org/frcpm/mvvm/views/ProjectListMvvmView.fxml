@@ -13,20 +13,15 @@
       <center>
          <VBox spacing="10.0">
             <children>
-               <!-- Project List -->
                <ListView fx:id="projectListView" prefHeight="400.0" VBox.vgrow="ALWAYS" />
-               
-               <!-- Button Bar -->
                <HBox spacing="10.0">
                   <children>
-                     <Button fx:id="newProjectButton" mnemonicParsing="false" text="New Project" />
-                     <Button fx:id="openProjectButton" mnemonicParsing="false" text="Open Project" />
-                     <Button fx:id="importProjectButton" mnemonicParsing="false" text="Import Project" />
-                     <Button fx:id="deleteProjectButton" mnemonicParsing="false" text="Delete Project" />
+                     <Button fx:id="newProjectButton" text="New Project" />
+                     <Button fx:id="openProjectButton" text="Open Project" />
+                     <Button fx:id="importProjectButton" text="Import Project" />
+                     <Button fx:id="deleteProjectButton" text="Delete Project" />
                   </children>
                </HBox>
-               
-               <!-- Status Bar -->
                <HBox spacing="10.0">
                   <children>
                      <Label fx:id="errorLabel" style="-fx-text-fill: red;" visible="false" />
