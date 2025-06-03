@@ -126,15 +126,14 @@ public abstract class BaseViewTest<V extends FxmlView<VM>, VM extends ViewModel>
             LOGGER.info("Creating view: " + getViewClass().getSimpleName());
             
             // Load the view with FluentViewLoader
-            FluentViewLoader.ViewBuilder<V> builder = FluentViewLoader.fxmlView(getViewClass());
-            
-            // Add resource bundle if available
+            // Use the correct MVVMFx API without intermediate variables
             if (resources != null) {
-                builder = builder.resourceBundle(resources);
+                viewTuple = FluentViewLoader.fxmlView(getViewClass())
+                    .resourceBundle(resources)
+                    .load();
+            } else {
+                viewTuple = FluentViewLoader.fxmlView(getViewClass()).load();
             }
-            
-            // Load the view
-            viewTuple = builder.load();
             
             if (viewTuple == null) {
                 throw new RuntimeException("ViewTuple is null - MVVMFx failed to load view");
