@@ -10,7 +10,7 @@
    <?import javafx.scene.layout.VBox?>
    
    <!-- src/main/resources/org/frcpm/mvvm/views/ProjectListMvvmView.fxml -->
-   <!-- FIXED: Added fx:controller back - MVVMFx needs it for View class identification -->
+   <!-- FIXED: Ensured fx:controller is properly specified for MVVMFx -->
    <BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.frcpm.mvvm.views.ProjectListMvvmView">
       <center>
          <VBox spacing="10.0">
