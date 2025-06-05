@@ -2,42 +2,42 @@
 package org.frcpm.services.impl;
 
 import org.frcpm.models.*;
-import org.frcpm.repositories.specific.*;
+import org.frcpm.repositories.spring.*;
 import org.frcpm.services.MetricsCalculationService;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Implementation of the MetricsCalculationService interface.
+ * Spring Boot implementation of the MetricsCalculationService interface.
  * Provides methods to calculate performance metrics for
  * project management purposes.
+ * Converted from ServiceLocator pattern to Spring dependency injection.
  */
+@Service("metricsCalculationServiceImpl")
+@Transactional
 public class MetricsCalculationServiceImpl implements MetricsCalculationService {
     
     private static final Logger LOGGER = Logger.getLogger(MetricsCalculationServiceImpl.class.getName());
     
-    private ProjectRepository projectRepository;
-    private TaskRepository taskRepository;
-    private TeamMemberRepository teamMemberRepository;
-    private MilestoneRepository milestoneRepository;
-    private AttendanceRepository attendanceRepository;
-    private MeetingRepository meetingRepository;
-    private SubsystemRepository subsystemRepository;
+    private final ProjectRepository projectRepository;
+    private final TaskRepository taskRepository;
+    private final TeamMemberRepository teamMemberRepository;
+    private final MilestoneRepository milestoneRepository;
+    private final AttendanceRepository attendanceRepository;
+    private final MeetingRepository meetingRepository;
+    private final SubsystemRepository subsystemRepository;
     
     /**
-     * Default constructor for MVVMFx dependency injection.
-     */
-    public MetricsCalculationServiceImpl() {
-        // Default constructor for dependency injection
-    }
-    
-    /**
-     * Constructor with repository injection for testing.
+     * Constructor with dependency injection for Spring Boot.
      */
     public MetricsCalculationServiceImpl(
             ProjectRepository projectRepository,
@@ -358,7 +358,7 @@ public class MetricsCalculationServiceImpl implements MetricsCalculationService 
             for (Meeting meeting : meetings) {
                 List<Attendance> attendances = meeting.getAttendances();
                 totalAttendanceRecords += attendances.size();
-                totalPresent += attendances.stream().filter(Attendance::isPresent).count();
+                totalPresent += (int) attendances.stream().filter(Attendance::isPresent).count();
             }
             
             metrics.put("totalMeetings", totalMeetings);
@@ -662,355 +662,4 @@ public class MetricsCalculationServiceImpl implements MetricsCalculationService 
                 // Priority distribution
                 Map<Task.Priority, Long> priorityCounts = subsystemTasks.stream()
                         .collect(Collectors.groupingBy(Task::getPriority, Collectors.counting()));
-                subsystemMetric.put("priorityCounts", priorityCounts);
-                
-                // Calculate average task durations
-                OptionalDouble avgEstimatedDuration = subsystemTasks.stream()
-                        .mapToLong(t -> t.getEstimatedDuration().toHours())
-                        .average();
-                subsystemMetric.put("averageEstimatedDurationHours", avgEstimatedDuration.orElse(0.0));
-                
-                // Check subsystem status
-                subsystemMetric.put("status", subsystem.getStatus().getDisplayName());
-                
-                // Add to the map of all subsystem metrics
-                subsystemMetrics.put(subsystem.getId(), subsystemMetric);
-            }
-            
-            metrics.put("subsystemMetrics", subsystemMetrics);
-            
-            // Calculate overall subsystem statistics
-            int totalSubsystems = tasksBySubsystem.size();
-            metrics.put("totalSubsystems", totalSubsystems);
-            
-            long completedSubsystems = tasksBySubsystem.entrySet().stream()
-                    .filter(entry -> entry.getKey().getStatus() == Subsystem.Status.COMPLETED)
-                    .count();
-            metrics.put("completedSubsystems", completedSubsystems);
-            
-            double subsystemCompletionRate = totalSubsystems > 0 ? 
-                    100.0 * completedSubsystems / totalSubsystems : 0.0;
-            metrics.put("subsystemCompletionRate", subsystemCompletionRate);
-            
-            return metrics;
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error calculating subsystem performance metrics", e);
-            return metrics;
-        }
-    }
-    
-    @Override
-    public Map<String, Object> generateProjectHealthDashboard(Long projectId) {
-        LOGGER.info("Generating project health dashboard for project ID: " + projectId);
-        
-        Map<String, Object> dashboard = new HashMap<>();
-        
-        try {
-            // Get project
-            Optional<Project> projectOpt = projectRepository.findById(projectId);
-            if (!projectOpt.isPresent()) {
-                LOGGER.warning("Project not found with ID: " + projectId);
-                return dashboard;
-            }
-            
-            Project project = projectOpt.get();
-            
-            // Add basic project information
-            dashboard.put("projectId", project.getId());
-            dashboard.put("projectName", project.getName());
-            dashboard.put("startDate", project.getStartDate());
-            dashboard.put("goalEndDate", project.getGoalEndDate());
-            dashboard.put("hardDeadline", project.getHardDeadline());
-            
-            // Calculate project progress metrics
-            Map<String, Object> progressMetrics = calculateProjectProgressMetrics(projectId);
-            dashboard.put("progressMetrics", progressMetrics);
-            
-            // Calculate timeline deviation metrics
-            Map<String, Object> timelineMetrics = calculateTimelineDeviationMetrics(projectId);
-            dashboard.put("timelineMetrics", timelineMetrics);
-            
-            // Calculate task completion metrics
-            Map<String, Object> taskMetrics = calculateTaskCompletionMetrics(projectId);
-            dashboard.put("taskMetrics", taskMetrics);
-            
-            // Calculate attendance metrics
-            Map<String, Object> attendanceMetrics = calculateAttendanceMetrics(projectId, null, null);
-            dashboard.put("attendanceMetrics", attendanceMetrics);
-            
-            // Calculate subsystem performance metrics
-            Map<String, Object> subsystemMetrics = calculateSubsystemPerformanceMetrics(projectId);
-            dashboard.put("subsystemMetrics", subsystemMetrics);
-            
-            // Calculate team performance metrics
-            Map<String, Object> teamMetrics = calculateTeamPerformanceMetrics(projectId, null, null);
-            dashboard.put("teamMetrics", teamMetrics);
-            
-            // Overall project health score (0-100)
-            double healthScore = calculateProjectHealthScore(
-                    progressMetrics,
-                    timelineMetrics,
-                    taskMetrics,
-                    attendanceMetrics
-            );
-            dashboard.put("healthScore", healthScore);
-            
-            // Health status
-            String healthStatus = determineHealthStatus(healthScore);
-            dashboard.put("healthStatus", healthStatus);
-            
-            // Add list of at-risk tasks
-            List<Long> tasksAtRiskIds = (List<Long>) timelineMetrics.getOrDefault("tasksAtRiskIds", new ArrayList<>());
-            dashboard.put("tasksAtRiskIds", tasksAtRiskIds);
-            
-            // Add list of bottleneck tasks
-            List<Long> bottleneckTaskIds = (List<Long>) taskMetrics.getOrDefault("bottleneckTaskIds", new ArrayList<>());
-            dashboard.put("bottleneckTaskIds", bottleneckTaskIds);
-            
-            return dashboard;
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error generating project health dashboard", e);
-            return dashboard;
-        }
-    }
-    
-    // Helper methods
-    
-    /**
-     * Calculates the completion percentage for a list of tasks.
-     * 
-     * @param tasks the list of tasks
-     * @return the completion percentage (0-100)
-     */
-    private double calculateTaskCompletionPercentage(List<Task> tasks) {
-        if (tasks == null || tasks.isEmpty()) {
-            return 0.0;
-        }
-        
-        double totalProgress = tasks.stream().mapToInt(Task::getProgress).sum();
-        return totalProgress / tasks.size();
-    }
-    
-    /**
-     * Determines the task status based on the progress.
-     * 
-     * @param task the task to check
-     * @return the task status
-     */
-    private TaskStatus determineTaskStatus(Task task) {
-        if (task.isCompleted()) {
-            return TaskStatus.COMPLETED;
-        } else if (task.getProgress() > 0) {
-            return TaskStatus.IN_PROGRESS;
-        } else {
-            return TaskStatus.NOT_STARTED;
-        }
-    }
-    
-    /**
-     * Calculates the count of tasks by status.
-     * 
-     * @param tasks the list of tasks
-     * @return map of status to count
-     */
-    private Map<TaskStatus, Long> calculateTaskStatusCounts(List<Task> tasks) {
-        Map<TaskStatus, Long> counts = new HashMap<>();
-        
-        // Initialize with all status types
-        for (TaskStatus status : TaskStatus.values()) {
-            counts.put(status, 0L);
-        }
-        
-        // Count tasks by status
-        for (Task task : tasks) {
-            TaskStatus status = determineTaskStatus(task);
-            counts.put(status, counts.getOrDefault(status, 0L) + 1);
-        }
-        
-        return counts;
-    }
-    
-    /**
-     * Calculates task status counts by priority.
-     * 
-     * @param tasks the list of tasks
-     * @return nested map of priority to status counts
-     */
-    private Map<Task.Priority, Map<TaskStatus, Long>> calculateTaskStatusByPriority(List<Task> tasks) {
-        Map<Task.Priority, Map<TaskStatus, Long>> result = new HashMap<>();
-        
-        // Initialize with all priority types
-        for (Task.Priority priority : Task.Priority.values()) {
-            Map<TaskStatus, Long> statusMap = new HashMap<>();
-            
-            for (TaskStatus status : TaskStatus.values()) {
-                statusMap.put(status, 0L);
-            }
-            
-            result.put(priority, statusMap);
-        }
-        
-        // Count tasks by priority and status
-        for (Task task : tasks) {
-            TaskStatus status = determineTaskStatus(task);
-            Task.Priority priority = task.getPriority();
-            
-            Map<TaskStatus, Long> statusMap = result.get(priority);
-            statusMap.put(status, statusMap.getOrDefault(status, 0L) + 1);
-        }
-        
-        return result;
-    }
-    
-    /**
-     * Identifies bottleneck tasks in a project.
-     * 
-     * @param tasks the list of tasks
-     * @return list of bottleneck tasks
-     */
-    private List<Task> identifyBottleneckTasks(List<Task> tasks) {
-        // Define criteria for bottleneck tasks:
-        // 1. Not completed
-        // 2. Has dependencies on it (other tasks depend on it)
-        // 3. Progress is below average for the project
-        
-        double avgProgress = tasks.stream()
-                .filter(t -> !t.isCompleted())
-                .mapToInt(Task::getProgress)
-                .average()
-                .orElse(0.0);
-        
-        return tasks.stream()
-                .filter(task -> 
-                    !task.isCompleted() && 
-                    !task.getPostDependencies().isEmpty() && 
-                    task.getProgress() < avgProgress)
-                .collect(Collectors.toList());
-    }
-    
-    /**
-     * Estimates the project end date based on current progress.
-     * 
-     * @param project the project
-     * @param tasks the list of tasks
-     * @return the estimated end date
-     */
-    private LocalDate estimateProjectEndDate(Project project, List<Task> tasks) {
-        LocalDate today = LocalDate.now();
-        
-        // If project hasn't started or has no tasks, return the planned end date
-        if (today.isBefore(project.getStartDate()) || tasks.isEmpty()) {
-            return project.getGoalEndDate();
-        }
-        
-        // Calculate overall progress
-        double progress = calculateTaskCompletionPercentage(tasks);
-        
-        // If no progress, return the planned end date
-        if (progress <= 0) {
-            return project.getGoalEndDate();
-        }
-        
-        // Calculate elapsed time since project start
-        long elapsedDays = ChronoUnit.DAYS.between(project.getStartDate(), today);
-        
-        // Estimate total days needed based on current progress rate
-        long estimatedTotalDays = progress > 0 ? Math.round(elapsedDays * 100 / progress) : 0;
-        
-        // Calculate remaining days
-        long remainingDays = estimatedTotalDays - elapsedDays;
-        
-        // Estimate end date
-        return today.plusDays(remainingDays);
-    }
-    
-    /**
-     * Gets the week of year for a date.
-     * 
-     * @param date the date
-     * @return the week of year
-     */
-    private int getWeekOfYear(LocalDate date) {
-        return date.get(java.time.temporal.WeekFields.of(Locale.getDefault()).weekOfYear());
-    }
-    
-    /**
-     * Calculates the overall project health score based on various metrics.
-     * 
-     * @param progressMetrics project progress metrics
-     * @param timelineMetrics timeline deviation metrics
-     * @param taskMetrics task completion metrics
-     * @param attendanceMetrics attendance metrics
-     * @return the health score (0-100)
-     */
-    private double calculateProjectHealthScore(
-            Map<String, Object> progressMetrics,
-            Map<String, Object> timelineMetrics,
-            Map<String, Object> taskMetrics,
-            Map<String, Object> attendanceMetrics) {
-        
-        // Extract key metrics with default values
-        double completionPercentage = getDoubleValue(progressMetrics, "completionPercentage", 0.0);
-        double timeProgressPercentage = getDoubleValue(progressMetrics, "timeProgressPercentage", 0.0);
-        double scheduleVariance = getDoubleValue(progressMetrics, "scheduleVariance", 0.0);
-        double projectedDelay = getDoubleValue(timelineMetrics, "projectedDelay", 0.0);
-        double overallAttendanceRate = getDoubleValue(attendanceMetrics, "overallAttendanceRate", 0.0);
-        
-        // Calculate schedule performance score (40%)
-        double scheduleScore = 40.0;
-        if (timeProgressPercentage > 0) {
-            // Penalize if behind schedule, reward if ahead
-            scheduleScore = Math.max(0, Math.min(50, 40 + 0.5 * scheduleVariance));
-        }
-        
-        // Calculate task completion score (30%)
-        double taskScore = 30.0 * (completionPercentage / 100.0);
-        
-        // Calculate timeline adherence score (20%)
-        double timelineScore = 20.0;
-        if (projectedDelay > 0) {
-            // Reduce score based on projected delay (up to 10 days)
-            timelineScore = Math.max(0, 20.0 - 2.0 * Math.min(10, projectedDelay));
-        }
-        
-        // Calculate attendance score (10%)
-        double attendanceScore = 10.0 * (overallAttendanceRate / 100.0);
-        
-        // Calculate overall health score
-        return scheduleScore + taskScore + timelineScore + attendanceScore;
-    }
-    
-    /**
-     * Determines the health status based on the health score.
-     * 
-     * @param healthScore the health score
-     * @return the health status
-     */
-    private String determineHealthStatus(double healthScore) {
-        if (healthScore >= 80) {
-            return "Healthy";
-        } else if (healthScore >= 60) {
-            return "Moderate";
-        } else if (healthScore >= 40) {
-            return "At Risk";
-        } else {
-            return "Critical";
-        }
-    }
-    
-    /**
-     * Safely gets a double value from a map with a default.
-     * 
-     * @param map the map
-     * @param key the key
-     * @param defaultValue the default value
-     * @return the value, or default if not found or not a number
-     */
-    private double getDoubleValue(Map<String, Object> map, String key, double defaultValue) {
-        Object value = map.get(key);
-        if (value instanceof Number) {
-            return ((Number) value).doubleValue();
-        }
-        return defaultValue;
-    }
-}
+                subsystemMetric

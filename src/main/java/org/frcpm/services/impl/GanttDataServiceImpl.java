@@ -5,24 +5,30 @@ import org.frcpm.models.GanttChartData;
 import org.frcpm.models.Milestone;
 import org.frcpm.models.Project;
 import org.frcpm.models.Task;
-import org.frcpm.repositories.RepositoryFactory;
-import org.frcpm.repositories.specific.MilestoneRepository;
-import org.frcpm.repositories.specific.ProjectRepository;
-import org.frcpm.repositories.specific.TaskRepository;
+import org.frcpm.repositories.spring.MilestoneRepository;
+import org.frcpm.repositories.spring.ProjectRepository;
+import org.frcpm.repositories.spring.TaskRepository;
 import org.frcpm.services.GanttChartTransformationService;
 import org.frcpm.services.GanttDataService;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
- * Implementation of the GanttDataService interface.
+ * Spring Boot implementation of the GanttDataService interface.
  * Provides methods for formatting and analyzing task data for Gantt chart visualization.
+ * Converted from ServiceLocator pattern to Spring dependency injection.
  */
+@Service("ganttDataServiceImpl")
+@Transactional
 public class GanttDataServiceImpl implements GanttDataService {
     
     private static final Logger LOGGER = Logger.getLogger(GanttDataServiceImpl.class.getName());
@@ -34,47 +40,24 @@ public class GanttDataServiceImpl implements GanttDataService {
     private final GanttChartTransformationService transformationService;
     
     /**
-     * Creates a new GanttDataServiceImpl with default repositories.
-     */
-    public GanttDataServiceImpl() {
-        this.projectRepository = RepositoryFactory.getProjectRepository();
-        this.taskRepository = RepositoryFactory.getTaskRepository();
-        this.milestoneRepository = RepositoryFactory.getMilestoneRepository();
-        this.transformationService = new GanttChartTransformationService();
-    }
-    
-    /**
-     * Creates a new GanttDataServiceImpl with specified repositories.
-     * This constructor is mainly used for testing.
-     * 
-     * @param projectRepository the project repository
-     * @param taskRepository the task repository
-     * @param milestoneRepository the milestone repository
-     */
-    public GanttDataServiceImpl(ProjectRepository projectRepository, TaskRepository taskRepository, 
-                               MilestoneRepository milestoneRepository) {
-        this.projectRepository = projectRepository;
-        this.taskRepository = taskRepository;
-        this.milestoneRepository = milestoneRepository;
-        this.transformationService = new GanttChartTransformationService();
-    }
-    
-    /**
-     * Creates a new GanttDataServiceImpl with specified repositories and transformation service.
-     * This constructor is mainly used for testing.
+     * Constructor with dependency injection for Spring Boot.
      * 
      * @param projectRepository the project repository
      * @param taskRepository the task repository
      * @param milestoneRepository the milestone repository
      * @param transformationService the transformation service
      */
-    public GanttDataServiceImpl(ProjectRepository projectRepository, TaskRepository taskRepository, 
-                               MilestoneRepository milestoneRepository, GanttChartTransformationService transformationService) {
+    public GanttDataServiceImpl(ProjectRepository projectRepository, 
+                               TaskRepository taskRepository, 
+                               MilestoneRepository milestoneRepository,
+                               GanttChartTransformationService transformationService) {
         this.projectRepository = projectRepository;
         this.taskRepository = taskRepository;
         this.milestoneRepository = milestoneRepository;
         this.transformationService = transformationService;
     }
+    
+
     
     @Override
     public Map<String, Object> formatTasksForGantt(Long projectId, LocalDate startDate, LocalDate endDate) {
@@ -342,5 +325,37 @@ public class GanttDataServiceImpl implements GanttDataService {
     @Override
     public GanttChartTransformationService getTransformationService() {
         return this.transformationService;
+    }
+    
+    // Spring @Async methods for background processing
+    
+    @Async
+    public CompletableFuture<Map<String, Object>> formatTasksForGanttAsync(Long projectId, LocalDate startDate, LocalDate endDate) {
+        return CompletableFuture.completedFuture(formatTasksForGantt(projectId, startDate, endDate));
+    }
+    
+    @Async
+    public CompletableFuture<Map<String, Object>> applyFiltersToGanttDataAsync(Map<String, Object> ganttData, Map<String, Object> filterCriteria) {
+        return CompletableFuture.completedFuture(applyFiltersToGanttData(ganttData, filterCriteria));
+    }
+    
+    @Async
+    public CompletableFuture<List<Long>> calculateCriticalPathAsync(Long projectId) {
+        return CompletableFuture.completedFuture(calculateCriticalPath(projectId));
+    }
+    
+    @Async
+    public CompletableFuture<Map<String, Object>> getGanttDataForDateAsync(Long projectId, LocalDate date) {
+        return CompletableFuture.completedFuture(getGanttDataForDate(projectId, date));
+    }
+    
+    @Async
+    public CompletableFuture<Map<Long, List<Long>>> getTaskDependenciesAsync(Long projectId) {
+        return CompletableFuture.completedFuture(getTaskDependencies(projectId));
+    }
+    
+    @Async
+    public CompletableFuture<List<Long>> identifyBottlenecksAsync(Long projectId) {
+        return CompletableFuture.completedFuture(identifyBottlenecks(projectId));
     }
 }

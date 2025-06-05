@@ -31,7 +31,6 @@ public class MilestoneServiceImpl extends AbstractSpringService<Milestone, Long,
     
     private final ProjectRepository projectRepository;
     
-    @Autowired
     public MilestoneServiceImpl(MilestoneRepository milestoneRepository, 
                                ProjectRepository projectRepository) {
         super(milestoneRepository);

@@ -29,7 +29,6 @@ public class SubsystemServiceImpl extends AbstractSpringService<Subsystem, Long,
     
     private final SubteamRepository subteamRepository;
     
-    @Autowired
     public SubsystemServiceImpl(SubsystemRepository subsystemRepository, 
                                SubteamRepository subteamRepository) {
         super(subsystemRepository);

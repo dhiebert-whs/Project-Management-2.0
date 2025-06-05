@@ -25,7 +25,7 @@ public class SubteamServiceImpl extends AbstractSpringService<Subteam, Long, Sub
     
     private static final Logger LOGGER = Logger.getLogger(SubteamServiceImpl.class.getName());
     
-    @Autowired
+    
     public SubteamServiceImpl(SubteamRepository subteamRepository) {
         super(subteamRepository);
     }
