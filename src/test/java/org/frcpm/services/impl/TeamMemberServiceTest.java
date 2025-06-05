@@ -69,7 +69,7 @@ public class TeamMemberServiceTest extends BaseServiceTest {
         MvvmFX.setCustomDependencyInjector(type -> {
             if (type == TeamMemberRepository.class) return teamMemberRepository;
             if (type == SubteamRepository.class) return subteamRepository;
-            if (type == TeamMemberService.class) return teamMemberService;
+            if (type == TeamMemberServiceImpl.class) return teamMemberService;
             return null;
         });
     }

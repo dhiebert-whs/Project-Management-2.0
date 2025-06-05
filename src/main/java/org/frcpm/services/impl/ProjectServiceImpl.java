@@ -1,59 +1,118 @@
+// src/main/java/org/frcpm/services/impl/ProjectServiceImpl.java
+
 package org.frcpm.services.impl;
 
 import org.frcpm.models.Project;
 import org.frcpm.models.Task;
-import org.frcpm.repositories.RepositoryFactory;
 import org.frcpm.repositories.specific.ProjectRepository;
 import org.frcpm.repositories.specific.TaskRepository;
-import org.frcpm.services.ProjectService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Implementation of ProjectService using repository layer.
+ * Spring Boot implementation of ProjectService.
+ * Converted from TestableProjectServiceImpl to use Spring dependency injection.
  */
-public class ProjectServiceImpl extends AbstractService<Project, Long, ProjectRepository> 
-        implements ProjectService {
+@Service("projectServiceImpl")
+@Transactional
+public class ProjectServiceImpl implements org.frcpm.services.ProjectService {
     
     private static final Logger LOGGER = Logger.getLogger(ProjectServiceImpl.class.getName());
+    
+    // Dependencies injected via Spring
+    private final ProjectRepository projectRepository;
     private final TaskRepository taskRepository;
     
-    public ProjectServiceImpl() {
-        super(RepositoryFactory.getProjectRepository());
-        this.taskRepository = RepositoryFactory.getTaskRepository();
+    @Autowired
+    public ProjectServiceImpl(ProjectRepository projectRepository, TaskRepository taskRepository) {
+        this.projectRepository = projectRepository;
+        this.taskRepository = taskRepository;
+    }
+
+    @Override
+    public Project findById(Long id) {
+        if (id == null) {
+            return null;
+        }
+        return projectRepository.findById(id).orElse(null);
     }
     
     @Override
-    public List<Project> findByName(String name) {
-        return repository.findByName(name);
+    public List<Project> findAll() {
+        return projectRepository.findAll();
     }
     
     @Override
-    public List<Project> findByDeadlineBefore(LocalDate date) {
-        return repository.findByDeadlineBefore(date);
-    }
-    
-    @Override
-    public List<Project> findByStartDateAfter(LocalDate date) {
+    public Project save(Project entity) {
         try {
-            if (date == null) {
-                throw new IllegalArgumentException("Date cannot be null");
-            }
-            return repository.findByStartDateAfter(date);
+            return projectRepository.save(entity);
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error finding projects by start date", e);
-            return List.of();
+            LOGGER.log(Level.SEVERE, "Error saving project", e);
+            throw new RuntimeException("Failed to save project", e);
         }
     }
     
     @Override
-    public Project createProject(String name, LocalDate startDate, LocalDate goalEndDate, 
-                                 LocalDate hardDeadline) {
+    public void delete(Project entity) {
+        try {
+            projectRepository.delete(entity);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error deleting project", e);
+            throw new RuntimeException("Failed to delete project", e);
+        }
+    }
+    
+    @Override
+    public boolean deleteById(Long id) {
+        try {
+            return projectRepository.deleteById(id);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error deleting project by ID", e);
+            throw new RuntimeException("Failed to delete project by ID", e);
+        }
+    }
+    
+    @Override
+    public long count() {
+        return projectRepository.count();
+    }
+    
+    @Override
+    public List<Project> findByName(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Name cannot be empty");
+        }
+        return projectRepository.findByName(name);
+    }
+    
+    @Override
+    public List<Project> findByDeadlineBefore(LocalDate date) {
+        if (date == null) {
+            throw new IllegalArgumentException("Date cannot be null");
+        }
+        return projectRepository.findByDeadlineBefore(date);
+    }
+    
+    @Override
+    public List<Project> findByStartDateAfter(LocalDate date) {
+        if (date == null) {
+            throw new IllegalArgumentException("Date cannot be null");
+        }
+        return projectRepository.findByStartDateAfter(date);
+    }
+    
+    @Override
+    public Project createProject(String name, LocalDate startDate, LocalDate goalEndDate, LocalDate hardDeadline) {
         if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("Project name cannot be empty");
         }
@@ -148,7 +207,7 @@ public class ProjectServiceImpl extends AbstractService<Project, Long, ProjectRe
                     (double) completedTasks / totalTasks * 100 : 0;
             
             summary.put("totalTasks", totalTasks);
-            summary.put("completedTasks", (int) completedTasks); // Convert to int to match test expectations
+            summary.put("completedTasks", (int) completedTasks);
             summary.put("completionPercentage", completionPercentage);
             
             // Calculate days remaining
@@ -178,6 +237,68 @@ public class ProjectServiceImpl extends AbstractService<Project, Long, ProjectRe
             if (!summary.containsKey("totalMilestones")) summary.put("totalMilestones", 0);
             
             return summary;
+        }
+    }
+
+    // Async methods using Spring's @Async
+    
+    @org.springframework.scheduling.annotation.Async
+    public CompletableFuture<List<Project>> findAllAsync() {
+        try {
+            List<Project> result = findAll();
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<List<Project>> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
+        }
+    }
+    
+    @org.springframework.scheduling.annotation.Async
+    public CompletableFuture<Project> findByIdAsync(Long id) {
+        try {
+            Project result = findById(id);
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<Project> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
+        }
+    }
+    
+    @org.springframework.scheduling.annotation.Async
+    public CompletableFuture<Project> saveAsync(Project entity) {
+        try {
+            Project result = save(entity);
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<Project> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
+        }
+    }
+    
+    @org.springframework.scheduling.annotation.Async
+    public CompletableFuture<Boolean> deleteByIdAsync(Long id) {
+        try {
+            boolean result = deleteById(id);
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<Boolean> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
+        }
+    }
+    
+    @org.springframework.scheduling.annotation.Async
+    public CompletableFuture<Map<String, Object>> getProjectSummaryAsync(Long projectId) {
+        try {
+            Map<String, Object> result = getProjectSummary(projectId);
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<Map<String, Object>> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
         }
     }
 }

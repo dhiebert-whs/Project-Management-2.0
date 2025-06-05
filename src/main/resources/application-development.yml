@@ -1,0 +1,213 @@
+# FRC Project Management System - Development Profile Configuration
+# Version 2.0.0 - Spring Boot Migration
+#
+# This configuration overrides default settings for local development,
+# providing enhanced debugging, faster iteration, and development tools
+# while preserving the existing H2 database setup from the JavaFX version.
+
+spring:
+  # DataSource Configuration (preserves existing H2 setup)
+  datasource:
+    url: jdbc:h2:./db/frc-project-dev;DB_CLOSE_ON_EXIT=FALSE;DB_CLOSE_DELAY=-1;MODE=LEGACY
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+    hikari:
+      connection-timeout: 20000
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      leak-detection-threshold: 60000
+    
+  # JPA Configuration (enhanced for development)
+  jpa:
+    hibernate:
+      ddl-auto: create-drop  # Fresh schema on each restart for clean testing
+    show-sql: true           # Show SQL queries for debugging
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true     # Pretty-print SQL queries
+        use_sql_comments: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+        generate_statistics: true
+        
+  # H2 Console (enabled for development)
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: false  # Security: only local access
+        trace: false
+        
+  # Thymeleaf (development optimizations)
+  thymeleaf:
+    cache: false            # Disable template caching for live reload
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: HTML
+    encoding: UTF-8
+    servlet:
+      content-type: text/html;charset=UTF-8
+      
+  # Web Resources (development settings)
+  web:
+    resources:
+      cache:
+        period: 0           # Disable caching for immediate changes
+      static-locations: 
+        - classpath:/static/
+        - file:src/main/resources/static/  # Direct file access for live editing
+        
+  # DevTools Configuration
+  devtools:
+    restart:
+      enabled: true
+      additional-paths: src/main/java
+      exclude: static/**,templates/**
+    livereload:
+      enabled: true
+      port: 35729
+    add-properties: true
+
+# Server Configuration (development)
+server:
+  port: 8080
+  servlet:
+    session:
+      cookie:
+        secure: false      # Allow non-HTTPS for local development
+        same-site: lax
+  error:
+    include-stacktrace: always  # Full stack traces for debugging
+    include-exception: true
+    include-message: always
+    include-binding-errors: always
+
+# Enhanced Logging for Development
+logging:
+  level:
+    org.frcpm: DEBUG                    # Detailed application logging
+    org.springframework.web: DEBUG      # Web request logging
+    org.springframework.security: DEBUG # Security debugging
+    org.hibernate.SQL: DEBUG           # SQL query logging
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE  # Parameter binding
+    org.springframework.transaction: DEBUG  # Transaction debugging
+    org.springframework.data.jpa: DEBUG     # JPA debugging
+    de.saxsys.mvvmfx: DEBUG             # MVVMFx framework (if still present)
+  pattern:
+    console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/frc-project-dev.log
+
+# Development-specific Application Properties
+app:
+  # Development team settings
+  team:
+    default-name: "Development Team"
+    default-number: 9999
+    
+  # Relaxed development settings
+  project:
+    max-active-projects: 10  # Higher limit for testing
+    
+  task:
+    max-dependencies: 20     # Higher limit for complex testing scenarios
+    
+  # Development file upload settings
+  upload:
+    max-file-size: 50MB      # Larger files for testing
+    temp-directory: ./temp/uploads
+    
+  # Development export settings
+  export:
+    output-directory: ./exports
+    
+  # Development chart settings
+  charts:
+    default-chart-height: 300  # Smaller for development screens
+    debug-mode: true
+    
+# Development Security (relaxed settings)
+spring.security:
+  user:
+    name: dev
+    password: dev
+    roles: ADMIN,DEVELOPER
+    
+# Development Database Initialization
+spring.sql.init:
+  mode: always
+  data-locations: 
+    - classpath:data-dev.sql  # Development test data
+  schema-locations:
+    - classpath:schema-dev.sql  # Development schema if needed
+
+# Development Actuator (more endpoints exposed)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"  # All endpoints for development monitoring
+      cors:
+        allowed-origins: "*"
+        allowed-methods: GET,POST
+  endpoint:
+    health:
+      show-details: always
+    shutdown:
+      enabled: true  # Allow graceful shutdown in development
+
+# Development-specific Info
+info:
+  environment: development
+  database:
+    url: "jdbc:h2:./db/frc-project-dev"
+    console: "http://localhost:8080/h2-console"
+  endpoints:
+    h2-console: "http://localhost:8080/h2-console"
+    application: "http://localhost:8080"
+    actuator: "http://localhost:8080/actuator"
+  development:
+    features:
+      - "H2 Console Access"
+      - "Live Template Reload"
+      - "Enhanced SQL Logging"
+      - "Full Stack Traces"
+      - "All Actuator Endpoints"
+      - "Relaxed Security"
+    notes:
+      - "Database recreated on each restart (create-drop)"
+      - "Template and static resource caching disabled"
+      - "Enhanced logging for debugging"
+      - "Development credentials: dev/dev"
+
+# TODO: Development Phase 2 Enhancements
+# 
+# The following development features will be added in Phase 2:
+#
+# 1. Hot Reload Configuration:
+#    - Live service layer reload
+#    - Template hot swapping
+#    - CSS/JS live updates
+#
+# 2. Development Data:
+#    - Sample FRC team data
+#    - Test build season scenarios
+#    - Mock competition schedules
+#
+# 3. Development Tools:
+#    - SQL query profiling
+#    - Performance monitoring
+#    - Memory usage tracking
+#
+# 4. Integration Testing:
+#    - Test database seeding
+#    - Mock external services
+#    - Automated browser testing setup

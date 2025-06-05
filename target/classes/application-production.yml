@@ -1,0 +1,274 @@
+# FRC Project Management System - Production Profile Configuration
+# Version 2.0.0 - Spring Boot Migration
+#
+# This configuration provides production-ready settings optimized for
+# FRC team deployments. It uses SQLite for improved reliability and
+# implements security best practices while maintaining zero operational costs.
+
+spring:
+  # DataSource Configuration (SQLite for production reliability)
+  datasource:
+    url: jdbc:sqlite:./db/frc-project.db
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      connection-timeout: 30000
+      maximum-pool-size: 5        # Conservative for FRC team environments
+      minimum-idle: 1
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 120000
+      data-source-properties:
+        journal_mode: WAL         # Write-Ahead Logging for better concurrency
+        synchronous: NORMAL       # Balance between safety and performance
+        cache_size: 2000          # 2MB cache
+        temp_store: MEMORY        # Use memory for temporary storage
+    
+  # JPA Configuration (production optimized)
+  jpa:
+    hibernate:
+      ddl-auto: validate          # Never auto-modify production schema
+    show-sql: false               # Disable SQL logging for performance
+    properties:
+      hibernate:
+        dialect: org.hibernate.community.dialect.SQLiteDialect
+        format_sql: false
+        jdbc:
+          batch_size: 50          # Larger batches for better performance
+        order_inserts: true
+        order_updates: true
+        connection:
+          provider_class: org.hibernate.hikaricp.internal.HikariCPConnectionProvider
+        cache:
+          use_second_level_cache: true
+          use_query_cache: true
+          region.factory_class: org.hibernate.cache.jcache.JCacheRegionFactory
+        
+  # H2 Console (disabled in production)
+  h2:
+    console:
+      enabled: false
+        
+  # Thymeleaf (production optimized)
+  thymeleaf:
+    cache: true                   # Enable template caching
+    check-template: false         # Skip template existence checks
+    check-template-location: false
+    enable-spring-el-compiler: true
+    servlet:
+      content-type: text/html;charset=UTF-8
+      
+  # Web Resources (production caching)
+  web:
+    resources:
+      cache:
+        period: 604800            # 7 days cache
+        cachecontrol:
+          max-age: 604800
+          cache-public: true
+      chain:
+        strategy:
+          content:
+            enabled: true
+            paths: /**
+        cache: true
+        
+  # Security Configuration (production hardened)
+  security:
+    user:
+      name: ${ADMIN_USERNAME:admin}
+      password: ${ADMIN_PASSWORD:#{T(java.util.UUID).randomUUID().toString()}}
+      roles: ADMIN
+    require-ssl: false            # Set to true if using HTTPS
+
+# Server Configuration (production)
+server:
+  port: ${PORT:8080}
+  servlet:
+    session:
+      timeout: 30m
+      cookie:
+        name: FRCPM_SESSION
+        http-only: true
+        secure: ${COOKIE_SECURE:false}  # Set to true with HTTPS
+        same-site: strict
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+    min-response-size: 1024
+  tomcat:
+    max-threads: 50               # Conservative for team environments
+    min-spare-threads: 5
+    max-connections: 200
+  error:
+    include-stacktrace: never     # Hide stack traces in production
+    include-exception: false
+    include-message: on_param
+    include-binding-errors: never
+
+# Production Logging (optimized for monitoring)
+logging:
+  level:
+    org.frcpm: INFO
+    org.springframework: WARN
+    org.hibernate: WARN
+    org.sqlite: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} %-5level [%thread] %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} %-5level [%thread] %logger{36} - %msg%n"
+  file:
+    name: /app/logs/frc-project-management.log
+    max-size: 50MB
+    max-history: 10
+    total-size-cap: 500MB
+  logback:
+    rollingpolicy:
+      clean-history-on-start: true
+
+# Production Application Properties
+app:
+  # Production team settings
+  team:
+    default-name: ${TEAM_NAME:FRC Team}
+    default-number: ${TEAM_NUMBER:0}
+    
+  # Production limits (conservative for stability)
+  project:
+    max-active-projects: 5
+    
+  task:
+    max-dependencies: 10
+    
+  meeting:
+    max-attendees: 50
+    
+  # Production file upload settings
+  upload:
+    max-file-size: 10MB
+    allowed-extensions: pdf,doc,docx,xls,xlsx,png,jpg,jpeg,gif
+    temp-directory: /app/temp/uploads
+    
+  # Production export settings
+  export:
+    output-directory: /app/exports
+    cleanup-days: 30              # Auto-cleanup old exports
+    
+  # Production chart settings
+  charts:
+    default-chart-height: 400
+    debug-mode: false
+
+# Production Actuator (limited endpoints)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+      show-components: when-authorized
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+
+# Production Info
+info:
+  app:
+    name: FRC Project Management System
+    version: 2.0.0
+    environment: production
+  build:
+    artifact: frc-project-manager
+    name: FRC Project Management System
+    time: ${BUILD_TIME:unknown}
+    version: ${BUILD_VERSION:2.0.0}
+  database:
+    type: SQLite
+    location: ./db/frc-project.db
+  deployment:
+    platform: ${DEPLOYMENT_PLATFORM:Oracle Cloud Always Free}
+    region: ${DEPLOYMENT_REGION:unknown}
+
+# Database Migration Configuration
+spring.sql.init:
+  mode: never                     # No automatic SQL execution in production
+  continue-on-error: false
+
+# Production Health Checks
+health:
+  database:
+    enabled: true
+  diskspace:
+    enabled: true
+    threshold: 1GB                # Alert when less than 1GB free space
+  ping:
+    enabled: true
+
+# Production Security Headers
+server.servlet.session.cookie:
+  http-only: true
+  secure: ${COOKIE_SECURE:false}
+  same-site: strict
+
+# Production Environment Variables Documentation
+# Set these environment variables for production deployment:
+#
+# Required:
+#   ADMIN_USERNAME - Admin user login name
+#   ADMIN_PASSWORD - Secure admin password (use strong password generator)
+#   
+# Optional:
+#   PORT - Server port (default: 8080)
+#   TEAM_NAME - FRC team name
+#   TEAM_NUMBER - FRC team number
+#   COOKIE_SECURE - Set to true if using HTTPS
+#   BUILD_TIME - Build timestamp
+#   BUILD_VERSION - Application version
+#   DEPLOYMENT_PLATFORM - Deployment platform name
+#   DEPLOYMENT_REGION - Deployment region
+#
+# Oracle Cloud Always Free Deployment Example:
+#   export ADMIN_USERNAME=frcadmin
+#   export ADMIN_PASSWORD=$(openssl rand -base64 32)
+#   export TEAM_NAME="Robotics Warriors"
+#   export TEAM_NUMBER=1234
+#   export COOKIE_SECURE=true
+#   export DEPLOYMENT_PLATFORM="Oracle Cloud Always Free"
+#   export DEPLOYMENT_REGION="us-ashburn-1"
+
+# TODO: Production Phase 2 Enhancements
+#
+# The following production features will be added in Phase 2:
+#
+# 1. Advanced Security:
+#    - SSL/TLS certificate configuration
+#    - COPPA compliance monitoring
+#    - Security audit logging
+#    - Rate limiting and DDoS protection
+#
+# 2. High Availability:
+#    - Database backup automation
+#    - Application health monitoring
+#    - Graceful shutdown handling
+#    - Zero-downtime deployment support
+#
+# 3. Performance Optimization:
+#    - Database connection pooling tuning
+#    - JVM memory optimization
+#    - Static resource CDN integration
+#    - Application performance monitoring
+#
+# 4. Operations:
+#    - Structured logging with correlation IDs
+#    - Metrics and alerting integration
+#    - Automated backup verification
+#    - Disaster recovery procedures

@@ -86,7 +86,7 @@ public class TaskServiceTest extends BaseServiceTest {
             if (type == TaskRepository.class) return taskRepository;
             if (type == ProjectRepository.class) return projectRepository;
             if (type == ComponentRepository.class) return componentRepository;
-            if (type == TaskService.class) return taskService;
+            if (type == TaskServiceImpl.class) return taskService;
             return null;
         });
     }

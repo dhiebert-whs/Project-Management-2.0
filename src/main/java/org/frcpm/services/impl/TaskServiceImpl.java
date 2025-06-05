@@ -1,65 +1,126 @@
+// src/main/java/org/frcpm/services/impl/TaskServiceImpl.java
+
 package org.frcpm.services.impl;
 
-import org.frcpm.config.DatabaseConfig;
 import org.frcpm.models.Project;
 import org.frcpm.models.Subsystem;
 import org.frcpm.models.Task;
 import org.frcpm.models.TeamMember;
-import org.frcpm.repositories.RepositoryFactory;
+import org.frcpm.repositories.specific.ComponentRepository;
+import org.frcpm.repositories.specific.ProjectRepository;
 import org.frcpm.repositories.specific.TaskRepository;
-import org.frcpm.services.TaskService;
-
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.Query;
-import jakarta.persistence.TypedQuery;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Implementation of TaskService using repository layer.
+ * Spring Boot implementation of TaskService.
+ * Converted from TestableTaskServiceImpl to use Spring dependency injection.
  */
-public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository> implements TaskService {
-
+@Service("taskServiceImpl")
+@Transactional
+public class TaskServiceImpl implements org.frcpm.services.TaskService {
+    
     private static final Logger LOGGER = Logger.getLogger(TaskServiceImpl.class.getName());
-
-    public TaskServiceImpl() {
-        super(RepositoryFactory.getTaskRepository());
+    
+    // Dependencies injected via Spring
+    private final TaskRepository taskRepository;
+    private final ProjectRepository projectRepository;
+    private final ComponentRepository componentRepository;
+    
+    @Autowired
+    public TaskServiceImpl(
+            TaskRepository taskRepository,
+            ProjectRepository projectRepository,
+            ComponentRepository componentRepository) {
+        this.taskRepository = taskRepository;
+        this.projectRepository = projectRepository;
+        this.componentRepository = componentRepository;
     }
 
+    @Override
+    public Task findById(Long id) {
+        if (id == null) {
+            return null;
+        }
+        return taskRepository.findById(id).orElse(null);
+    }
+    
+    @Override
+    public List<Task> findAll() {
+        return taskRepository.findAll();
+    }
+    
+    @Override
+    public Task save(Task entity) {
+        try {
+            return taskRepository.save(entity);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error saving task", e);
+            throw new RuntimeException("Failed to save task", e);
+        }
+    }
+    
+    @Override
+    public void delete(Task entity) {
+        try {
+            taskRepository.delete(entity);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error deleting task", e);
+            throw new RuntimeException("Failed to delete task", e);
+        }
+    }
+    
+    @Override
+    public boolean deleteById(Long id) {
+        try {
+            return taskRepository.deleteById(id);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error deleting task by ID", e);
+            throw new RuntimeException("Failed to delete task by ID", e);
+        }
+    }
+    
+    @Override
+    public long count() {
+        return taskRepository.count();
+    }
+    
     @Override
     public List<Task> findByProject(Project project) {
-        return repository.findByProject(project);
+        return taskRepository.findByProject(project);
     }
-
+    
     @Override
     public List<Task> findBySubsystem(Subsystem subsystem) {
-        return repository.findBySubsystem(subsystem);
+        return taskRepository.findBySubsystem(subsystem);
     }
-
+    
     @Override
     public List<Task> findByAssignedMember(TeamMember member) {
         if (member == null) {
             throw new IllegalArgumentException("Member cannot be null");
         }
-
-        return repository.findByAssignedMember(member);
+        return taskRepository.findByAssignedMember(member);
     }
-
+    
     @Override
     public List<Task> findByCompleted(boolean completed) {
-        return repository.findByCompleted(completed);
+        return taskRepository.findByCompleted(completed);
     }
-
+    
     @Override
     public Task createTask(String title, Project project, Subsystem subsystem,
-            double estimatedHours, Task.Priority priority,
+            double estimatedHours, Task.Priority priority, 
             LocalDate startDate, LocalDate endDate) {
         if (title == null || title.trim().isEmpty()) {
             throw new IllegalArgumentException("Task title cannot be empty");
@@ -97,7 +158,7 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
 
         return save(task);
     }
-
+    
     @Override
     public Task updateTaskProgress(Long taskId, int progress, boolean completed) {
         if (taskId == null) {
@@ -123,60 +184,34 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
 
         return save(task);
     }
-
+    
     @Override
     public Task assignMembers(Long taskId, Set<TeamMember> members) {
         if (taskId == null) {
             throw new IllegalArgumentException("Task ID cannot be null");
         }
 
-        EntityManager em = null;
-        try {
-            em = DatabaseConfig.getEntityManager();
-            em.getTransaction().begin();
+        Task task = findById(taskId);
+        if (task == null) {
+            LOGGER.log(Level.WARNING, "Task not found with ID: {0}", taskId);
+            return null;
+        }
 
-            // Get a fully managed Task entity
-            Task task = em.find(Task.class, taskId);
-            if (task == null) {
-                LOGGER.log(Level.WARNING, "Task not found with ID: {0}", taskId);
-                em.getTransaction().rollback();
-                return null;
-            }
+        // Clear existing assignments
+        task.getAssignedTo().clear();
 
-            // Clear existing assignments
-            task.getAssignedTo().clear();
-
-            // Add new assignments
-            if (members != null) {
-                for (TeamMember member : members) {
-                    if (member != null && member.getId() != null) {
-                        // We need to make sure we're using the exact same member instance
-                        // from the test to ensure proper identity comparison
-                        task.getAssignedTo().add(member);
-                    }
+        // Add new assignments
+        if (members != null) {
+            for (TeamMember member : members) {
+                if (member != null && member.getId() != null) {
+                    task.assignMember(member);
                 }
             }
-
-            // Flush and commit changes
-            em.flush();
-            em.getTransaction().commit();
-
-            // Important: We need to return the same task object with the
-            // same collection instances to ensure the test's identity comparison works
-            return task;
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error assigning members to task: {0}", e.getMessage());
-            if (em != null && em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
-            throw new RuntimeException("Failed to assign members to task: " + e.getMessage(), e);
-        } finally {
-            if (em != null) {
-                em.close();
-            }
         }
-    }
 
+        return save(task);
+    }
+    
     @Override
     public boolean addDependency(Long taskId, Long dependencyId) {
         if (taskId == null || dependencyId == null) {
@@ -209,66 +244,36 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
             return false;
         }
     }
-
+    
     @Override
     public boolean removeDependency(Long taskId, Long dependencyId) {
         if (taskId == null || dependencyId == null) {
             throw new IllegalArgumentException("Task IDs cannot be null");
         }
 
-        EntityManager em = null;
         try {
-            em = DatabaseConfig.getEntityManager();
-            em.getTransaction().begin();
-
-            // Get managed instances
-            Task task = em.find(Task.class, taskId);
-            Task dependency = em.find(Task.class, dependencyId);
+            // Get task and dependency objects
+            Task task = findById(taskId);
+            Task dependency = findById(dependencyId);
 
             if (task == null || dependency == null) {
-                LOGGER.log(Level.WARNING, "Task not found with ID: {0} or {1}",
-                        new Object[] { taskId, dependencyId });
-                em.getTransaction().rollback();
                 return false;
             }
 
-            // Check if dependency exists
-            boolean exists = false;
-            for (Task dep : task.getPreDependencies()) {
-                if (dep.getId().equals(dependencyId)) {
-                    exists = true;
-                    break;
-                }
-            }
+            // Remove the dependency relationship
+            task.removePreDependency(dependency);
 
-            if (!exists) {
-                LOGGER.log(Level.WARNING, "Dependency does not exist between tasks {0} and {1}",
-                        new Object[] { taskId, dependencyId });
-                em.getTransaction().rollback();
-                return false;
-            }
+            // Save the changes
+            save(task);
+            save(dependency);
 
-            // Manually maintain both sides of the relationship
-            task.getPreDependencies().remove(dependency);
-            dependency.getPostDependencies().remove(task);
-
-            // Ensure changes are persisted
-            em.flush();
-            em.getTransaction().commit();
             return true;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error removing dependency", e);
-            if (em != null && em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
-            throw new RuntimeException("Failed to remove dependency: " + e.getMessage(), e);
-        } finally {
-            if (em != null) {
-                em.close();
-            }
+            return false;
         }
     }
-
+    
     @Override
     public List<Task> getTasksDueSoon(Long projectId, int days) {
         if (projectId == null) {
@@ -279,16 +284,17 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
             throw new IllegalArgumentException("Days must be positive");
         }
 
-        Project project = RepositoryFactory.getProjectRepository().findById(projectId).orElse(null);
+        // Use project repository instead of static RepositoryFactory access
+        Project project = projectRepository.findById(projectId).orElse(null);
         if (project == null) {
             LOGGER.log(Level.WARNING, "Project not found with ID: {0}", projectId);
-            return new ArrayList<>();
+            return List.of();
         }
 
         LocalDate today = LocalDate.now();
         LocalDate dueBefore = today.plusDays(days);
 
-        List<Task> allTasks = repository.findByProject(project);
+        List<Task> allTasks = taskRepository.findByProject(project);
         List<Task> dueSoonTasks = new ArrayList<>();
 
         for (Task task : allTasks) {
@@ -300,7 +306,7 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
 
         return dueSoonTasks;
     }
-
+    
     @Override
     public Task updateRequiredComponents(Long taskId, Set<Long> componentIds) {
         if (taskId == null) {
@@ -318,9 +324,6 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
 
         // Add new component relationships if componentIds is not null or empty
         if (componentIds != null && !componentIds.isEmpty()) {
-            // Get component repository to find components by their IDs
-            var componentRepository = RepositoryFactory.getComponentRepository();
-
             for (Long componentId : componentIds) {
                 var componentOpt = componentRepository.findById(componentId);
                 if (componentOpt.isPresent()) {
@@ -335,139 +338,115 @@ public class TaskServiceImpl extends AbstractService<Task, Long, TaskRepository>
         return save(task);
     }
 
-    private boolean checkCircularDependency(Task dependency, Task task, EntityManager em) {
-        // Simple SQL-based check for immediate circular dependency
-        TypedQuery<Long> query = em.createQuery(
-                "SELECT COUNT(t) FROM Task t JOIN t.preDependencies d " +
-                        "WHERE t.id = :depId AND d.id = :taskId",
-                Long.class);
-        query.setParameter("depId", dependency.getId());
-        query.setParameter("taskId", task.getId());
-
-        Long count = query.getSingleResult();
-        LOGGER.log(Level.INFO, "Circular dependency check: {0} ({1} → {2})",
-                new Object[] { count, dependency.getId(), task.getId() });
-
-        return count > 0;
-    }
-
-    /**
-     * Override findById to eagerly fetch collections
-     */
-    @Override
-    public Task findById(Long id) {
-        if (id == null) {
-            return null;
-        }
-
-        EntityManager em = null;
+    // Async methods using Spring's @Async
+    
+    @org.springframework.scheduling.annotation.Async
+    public CompletableFuture<List<Task>> findAllAsync() {
         try {
-            em = DatabaseConfig.getEntityManager();
-
-            // Use JPQL with fetch joins to eagerly load collections
-            TypedQuery<Task> query = em.createQuery(
-                    "SELECT DISTINCT t FROM Task t " +
-                            "LEFT JOIN FETCH t.assignedTo " +
-                            "LEFT JOIN FETCH t.preDependencies " +
-                            "LEFT JOIN FETCH t.postDependencies " +
-                            "LEFT JOIN FETCH t.requiredComponents " +
-                            "WHERE t.id = :id",
-                    Task.class);
-            query.setParameter("id", id);
-
-            try {
-                return query.getSingleResult();
-            } catch (jakarta.persistence.NoResultException e) {
-                LOGGER.log(Level.WARNING, "Task not found with ID: {0}", id);
-                return null;
-            }
+            List<Task> result = findAll();
+            return CompletableFuture.completedFuture(result);
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error fetching task with collections", e);
-            return null;
-        } finally {
-            if (em != null) {
-                em.close();
-            }
+            CompletableFuture<List<Task>> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
         }
     }
-
-    /**
-     * Checks if adding dependency as a pre-dependency of task would create a
-     * circular dependency.
-     * 
-     * @param dependency the dependency task
-     * @param task       the task that would depend on the dependency
-     * @param em         the entity manager
-     * @return true if adding the dependency would create a circular dependency,
-     *         false otherwise
-     */
-    private boolean wouldCreateCircularDependency(Task dependency, Task task, EntityManager em) {
-        // If dependency depends on task, there would be a direct cycle
-        if (hasDependencyPath(dependency, task, em)) {
-            return true;
+    
+    @org.springframework.scheduling.annotation.Async
+    public CompletableFuture<Task> findByIdAsync(Long id) {
+        try {
+            Task result = findById(id);
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<Task> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
         }
-
-        // Check for indirect cycles through other tasks
-        return hasIndirectCircularDependency(dependency, task, new HashSet<>(), em);
     }
-
-    /**
-     * Checks if there is a direct dependency path from the source task to the
-     * target task.
-     * 
-     * @param source the source task
-     * @param target the target task
-     * @param em     the entity manager
-     * @return true if the source task depends on the target task, false otherwise
-     */
-    private boolean hasDependencyPath(Task source, Task target, EntityManager em) {
-        TypedQuery<Long> query = em.createQuery(
-                "SELECT COUNT(t) FROM Task t JOIN t.preDependencies d " +
-                        "WHERE t.id = :sourceId AND d.id = :targetId",
-                Long.class);
-        query.setParameter("sourceId", source.getId());
-        query.setParameter("targetId", target.getId());
-
-        return query.getSingleResult() > 0;
+    
+    @org.springframework.scheduling.annotation.Async
+    public CompletableFuture<Task> saveAsync(Task entity) {
+        try {
+            Task result = save(entity);
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<Task> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
+        }
     }
-
-    /**
-     * Recursively checks for indirect circular dependencies.
-     * 
-     * @param current the current task in the dependency chain
-     * @param target  the original task we're checking for cycles with
-     * @param visited set of already visited task IDs to avoid infinite recursion
-     * @param em      the entity manager
-     * @return true if an indirect circular dependency is detected, false otherwise
-     */
-    private boolean hasIndirectCircularDependency(Task current, Task target, Set<Long> visited, EntityManager em) {
-        // Skip already visited tasks to prevent infinite recursion
-        if (visited.contains(current.getId())) {
-            return false;
+    
+    @org.springframework.scheduling.annotation.Async
+    public CompletableFuture<Boolean> deleteByIdAsync(Long id) {
+        try {
+            boolean result = deleteById(id);
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<Boolean> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
         }
-
-        // Mark current task as visited
-        visited.add(current.getId());
-
-        // Get all tasks that depend on the current task
-        TypedQuery<Task> query = em.createQuery(
-                "SELECT t FROM Task t JOIN t.preDependencies d WHERE d.id = :currentId",
-                Task.class);
-        query.setParameter("currentId", current.getId());
-        List<Task> postDependencies = query.getResultList();
-
-        for (Task postDep : postDependencies) {
-            // Check if we found our target (which would create a cycle)
-            if (postDep.getId().equals(target.getId())) {
-                return true;
-            }
-
-            // Recursively check for cycles through this task's dependencies
-            if (hasIndirectCircularDependency(postDep, target, visited, em)) {
-                return true;
-            }
+    }
+    
+    @org.springframework.scheduling.annotation.Async
+    public CompletableFuture<List<Task>> findByProjectAsync(Project project) {
+        try {
+            List<Task> result = findByProject(project);
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<List<Task>> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
         }
-
-        return false;
+    }
+    
+    @org.springframework.scheduling.annotation.Async
+    public CompletableFuture<Task> createTaskAsync(String title, Project project, Subsystem subsystem,
+                                                  double estimatedHours, Task.Priority priority,
+                                                  LocalDate startDate, LocalDate endDate) {
+        try {
+            Task result = createTask(title, project, subsystem, estimatedHours, priority, startDate, endDate);
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<Task> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
+        }
+    }
+    
+    @org.springframework.scheduling.annotation.Async
+    public CompletableFuture<Task> updateTaskProgressAsync(Long taskId, int progress, boolean completed) {
+        try {
+            Task result = updateTaskProgress(taskId, progress, completed);
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<Task> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
+        }
+    }
+    
+    @org.springframework.scheduling.annotation.Async
+    public CompletableFuture<Task> assignMembersAsync(Long taskId, Set<TeamMember> members) {
+        try {
+            Task result = assignMembers(taskId, members);
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<Task> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
+        }
+    }
+    
+    @org.springframework.scheduling.annotation.Async
+    public CompletableFuture<List<Task>> getTasksDueSoonAsync(Long projectId, int days) {
+        try {
+            List<Task> result = getTasksDueSoon(projectId, days);
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<List<Task>> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
+        }
     }
 }

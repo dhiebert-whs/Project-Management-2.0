@@ -1,0 +1,191 @@
+# FRC Project Management System - Main Application Configuration
+# Version 2.0.0 - Spring Boot Migration
+#
+# This configuration file replaces the previous JavaFX-based setup with
+# Spring Boot web application settings while preserving the existing
+# database and service layer infrastructure.
+
+spring:
+  application:
+    name: frc-project-management
+  
+  # Profile Configuration
+  profiles:
+    active: development
+    
+  # JPA Configuration (preserves existing database schema)
+  jpa:
+    hibernate:
+      ddl-auto: update  # Preserves existing data while allowing schema evolution
+    show-sql: false     # Set to true in development profile
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect  # Will be overridden by profile
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+        connection:
+          provider_class: org.hibernate.hikaricp.internal.HikariCPConnectionProvider
+    defer-datasource-initialization: true
+    
+  # SQL Initialization
+  sql:
+    init:
+      mode: embedded
+      continue-on-error: false
+      
+  # H2 Console (development only)
+  h2:
+    console:
+      enabled: false  # Enabled in development profile
+      path: /h2-console
+      settings:
+        web-allow-others: false
+        trace: false
+      
+  # Thymeleaf Template Engine
+  thymeleaf:
+    cache: true       # Disabled in development profile
+    mode: HTML
+    encoding: UTF-8
+    prefix: classpath:/templates/
+    suffix: .html
+    servlet:
+      content-type: text/html
+    
+  # Web Resources
+  web:
+    resources:
+      static-locations: classpath:/static/
+      cache:
+        period: 86400   # 24 hours cache
+        cachecontrol:
+          max-age: 86400
+        
+  # Security Configuration
+  security:
+    user:
+      name: admin
+      password: admin   # Changed in production profile
+      roles: ADMIN
+    
+  # Session Management
+  session:
+    store-type: none
+    timeout: 30m      # 30 minute default session timeout
+
+# Server Configuration
+server:
+  port: 8080
+  servlet:
+    context-path: /
+    session:
+      timeout: 30m
+      cookie:
+        name: FRCPM_SESSION
+        http-only: true
+        secure: false   # Set to true in production
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: on_param
+    include-exception: false
+
+# Logging Configuration
+logging:
+  level:
+    org.frcpm: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/frc-project-management.log
+    max-size: 10MB
+    max-history: 30
+
+# Management Endpoints (Actuator)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+      show-components: always
+  info:
+    env:
+      enabled: true
+
+# Application Information
+info:
+  app:
+    name: FRC Project Management System
+    version: 2.0.0
+    description: Web-based project management system for FIRST Robotics Competition teams
+    team: FRC Project Management Team
+  migration:
+    from: JavaFX MVVM Application
+    to: Spring Boot Web Application
+    phase: "Phase 1 - Foundation & Web Framework Setup"
+    
+# FRC-Specific Application Properties
+app:
+  name: FRC Project Management System
+  version: 2.0.0
+  description: Project management system for FIRST Robotics Competition teams
+  
+  # Team Configuration (will be moved to database in Phase 2)
+  team:
+    default-name: "FRC Team"
+    default-number: 0
+    
+  # Build Season Configuration
+  build-season:
+    default-length-weeks: 6
+    default-competition-buffer-days: 7
+    
+  # Project Configuration
+  project:
+    max-active-projects: 5
+    default-milestone-count: 4
+    
+  # Task Configuration  
+  task:
+    max-dependencies: 10
+    default-progress-increment: 5
+    
+  # Meeting Configuration
+  meeting:
+    default-duration-minutes: 120
+    max-attendees: 50
+    
+  # File Upload Configuration
+  upload:
+    max-file-size: 10MB
+    allowed-extensions: pdf,doc,docx,xls,xlsx,png,jpg,jpeg,gif
+    
+  # Export Configuration
+  export:
+    pdf-enabled: true
+    excel-enabled: true
+    json-enabled: true
+    
+  # Chart Configuration (preserves Chart-FX integration)
+  charts:
+    gantt-enabled: true
+    metrics-enabled: true
+    default-chart-height: 400
+    
+# Spring Boot Actuator Health Indicators
+# (Useful for deployment monitoring)
+health:
+  database:
+    enabled: true
+  diskspace:
+    enabled: true
+    threshold: 100MB

@@ -1,63 +1,129 @@
+// src/main/java/org/frcpm/services/impl/TeamMemberServiceImpl.java
+
 package org.frcpm.services.impl;
 
-import org.frcpm.config.DatabaseConfig;
 import org.frcpm.models.Subteam;
 import org.frcpm.models.TeamMember;
-import org.frcpm.repositories.RepositoryFactory;
 import org.frcpm.repositories.specific.SubteamRepository;
 import org.frcpm.repositories.specific.TeamMemberRepository;
-import org.frcpm.services.TeamMemberService;
-
-import jakarta.persistence.EntityManager;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Implementation of TeamMemberService using repository layer.
+ * Spring Boot implementation of TeamMemberService.
+ * Converted from TestableTeamMemberServiceImpl to use Spring dependency injection.
  */
-public class TeamMemberServiceImpl extends AbstractService<TeamMember, Long, TeamMemberRepository> 
-        implements TeamMemberService {
+@Service("teamMemberServiceImpl")
+@Transactional
+public class TeamMemberServiceImpl implements org.frcpm.services.TeamMemberService {
     
     private static final Logger LOGGER = Logger.getLogger(TeamMemberServiceImpl.class.getName());
+    
+    // Dependencies injected via Spring
+    private final TeamMemberRepository teamMemberRepository;
     private final SubteamRepository subteamRepository;
     
-    public TeamMemberServiceImpl() {
-        super(RepositoryFactory.getTeamMemberRepository());
-        this.subteamRepository = RepositoryFactory.getSubteamRepository();
+    @Autowired
+    public TeamMemberServiceImpl(
+            TeamMemberRepository teamMemberRepository,
+            SubteamRepository subteamRepository) {
+        this.teamMemberRepository = teamMemberRepository;
+        this.subteamRepository = subteamRepository;
+    }
+
+    @Override
+    public TeamMember findById(Long id) {
+        if (id == null) {
+            return null;
+        }
+        return teamMemberRepository.findById(id).orElse(null);
+    }
+    
+    @Override
+    public List<TeamMember> findAll() {
+        return teamMemberRepository.findAll();
+    }
+    
+    @Override
+    public TeamMember save(TeamMember entity) {
+        try {
+            return teamMemberRepository.save(entity);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error saving team member", e);
+            throw new RuntimeException("Failed to save team member", e);
+        }
+    }
+    
+    @Override
+    public void delete(TeamMember entity) {
+        try {
+            teamMemberRepository.delete(entity);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error deleting team member", e);
+            throw new RuntimeException("Failed to delete team member", e);
+        }
+    }
+    
+    @Override
+    public boolean deleteById(Long id) {
+        try {
+            return teamMemberRepository.deleteById(id);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error deleting team member by ID", e);
+            throw new RuntimeException("Failed to delete team member by ID", e);
+        }
+    }
+    
+    @Override
+    public long count() {
+        return teamMemberRepository.count();
     }
     
     @Override
     public Optional<TeamMember> findByUsername(String username) {
-        return repository.findByUsername(username);
+        if (username == null || username.trim().isEmpty()) {
+            return Optional.empty();
+        }
+        return teamMemberRepository.findByUsername(username);
     }
     
     @Override
     public List<TeamMember> findBySubteam(Subteam subteam) {
-        return repository.findBySubteam(subteam);
+        if (subteam == null) {
+            throw new IllegalArgumentException("Subteam cannot be null");
+        }
+        return teamMemberRepository.findBySubteam(subteam);
     }
     
     @Override
     public List<TeamMember> findBySkill(String skill) {
-        return repository.findBySkill(skill);
+        if (skill == null || skill.trim().isEmpty()) {
+            throw new IllegalArgumentException("Skill cannot be empty");
+        }
+        return teamMemberRepository.findBySkill(skill);
     }
     
     @Override
     public List<TeamMember> findLeaders() {
-        return repository.findLeaders();
+        return teamMemberRepository.findLeaders();
     }
     
     @Override
     public TeamMember createTeamMember(String username, String firstName, String lastName, 
-                                    String email, String phone, boolean isLeader) {
+                                      String email, String phone, boolean isLeader) {
         if (username == null || username.trim().isEmpty()) {
             throw new IllegalArgumentException("Username cannot be empty");
         }
         
-        // Check if username already exists for test environments
-        Optional<TeamMember> existing = repository.findByUsername(username);
+        // Check if username already exists
+        Optional<TeamMember> existing = teamMemberRepository.findByUsername(username);
         if (existing.isPresent()) {
             // In test environment, update the existing entity instead
             if (System.getProperty("test.environment") != null) {
@@ -80,71 +146,41 @@ public class TeamMemberServiceImpl extends AbstractService<TeamMember, Long, Tea
         
         return save(member);
     }
-  
+    
     @Override
-    public TeamMember assignToSubteam(Long teamMemberId, Long subteamId) {
-        if (teamMemberId == null) {
+    public TeamMember assignToSubteam(Long memberId, Long subteamId) {
+        if (memberId == null) {
             throw new IllegalArgumentException("Team member ID cannot be null");
         }
         
-        EntityManager em = null;
-        try {
-            em = DatabaseConfig.getEntityManager();
-            em.getTransaction().begin();
-            
-            // Get managed instances with eagerly loaded collections
-            TeamMember teamMember = em.find(TeamMember.class, teamMemberId);
-            if (teamMember == null) {
-                LOGGER.log(Level.WARNING, "Team member not found with ID: {0}", teamMemberId);
-                em.getTransaction().rollback();
+        TeamMember member = findById(memberId);
+        if (member == null) {
+            LOGGER.log(Level.WARNING, "Team member not found with ID: {0}", memberId);
+            return null;
+        }
+        
+        // Remove from current subteam if any
+        Subteam currentSubteam = member.getSubteam();
+        if (currentSubteam != null) {
+            // Get the current subteam to avoid LazyInitializationException
+            currentSubteam.getMembers().remove(member);
+            member.setSubteam(null);
+        }
+        
+        // Assign to new subteam if not null
+        if (subteamId != null) {
+            Optional<Subteam> subteamOpt = subteamRepository.findById(subteamId);
+            if (subteamOpt.isEmpty()) {
+                LOGGER.log(Level.WARNING, "Subteam not found with ID: {0}", subteamId);
                 return null;
             }
             
-            // First remove from current subteam if any
-            Subteam currentSubteam = teamMember.getSubteam();
-            if (currentSubteam != null) {
-                // We need to get a managed instance of the current subteam
-                Subteam managedCurrentSubteam = em.find(Subteam.class, currentSubteam.getId());
-                if (managedCurrentSubteam != null) {
-                    // Remove the member from the subteam's members collection
-                    managedCurrentSubteam.getMembers().remove(teamMember);
-                    // Set the member's subteam to null
-                    teamMember.setSubteam(null);
-                }
-            }
-            
-            // Now assign to new subteam if not null
-            if (subteamId != null) {
-                Subteam newSubteam = em.find(Subteam.class, subteamId);
-                if (newSubteam == null) {
-                    LOGGER.log(Level.WARNING, "Subteam not found with ID: {0}", subteamId);
-                    em.getTransaction().rollback();
-                    return null;
-                }
-                
-                // Add the member to the subteam's members collection
-                newSubteam.getMembers().add(teamMember);
-                // Set the member's subteam
-                teamMember.setSubteam(newSubteam);
-            }
-            
-            // Flush to synchronize with database
-            em.flush();
-            em.getTransaction().commit();
-            
-            // Return a fresh instance to avoid stale data
-            return findById(teamMemberId);
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error assigning team member to subteam", e);
-            if (em != null && em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
-            throw new RuntimeException("Failed to assign team member to subteam: " + e.getMessage(), e);
-        } finally {
-            if (em != null) {
-                em.close();
-            }
+            Subteam subteam = subteamOpt.get();
+            subteam.getMembers().add(member);
+            member.setSubteam(subteam);
         }
+        
+        return save(member);
     }
     
     @Override
@@ -184,5 +220,91 @@ public class TeamMemberServiceImpl extends AbstractService<TeamMember, Long, Tea
         }
         
         return save(member);
+    }
+
+    // Async methods using Spring's @Async
+    
+    @org.springframework.scheduling.annotation.Async
+    public CompletableFuture<List<TeamMember>> findAllAsync() {
+        try {
+            List<TeamMember> result = findAll();
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<List<TeamMember>> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
+        }
+    }
+    
+    @org.springframework.scheduling.annotation.Async
+    public CompletableFuture<TeamMember> findByIdAsync(Long id) {
+        try {
+            TeamMember result = findById(id);
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<TeamMember> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
+        }
+    }
+    
+    @org.springframework.scheduling.annotation.Async
+    public CompletableFuture<TeamMember> saveAsync(TeamMember entity) {
+        try {
+            TeamMember result = save(entity);
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<TeamMember> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
+        }
+    }
+    
+    @org.springframework.scheduling.annotation.Async
+    public CompletableFuture<Boolean> deleteByIdAsync(Long id) {
+        try {
+            boolean result = deleteById(id);
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<Boolean> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
+        }
+    }
+    
+    @org.springframework.scheduling.annotation.Async
+    public CompletableFuture<Optional<TeamMember>> findByUsernameAsync(String username) {
+        try {
+            Optional<TeamMember> result = findByUsername(username);
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<Optional<TeamMember>> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
+        }
+    }
+    
+    @org.springframework.scheduling.annotation.Async
+    public CompletableFuture<List<TeamMember>> findBySubteamAsync(Subteam subteam) {
+        try {
+            List<TeamMember> result = findBySubteam(subteam);
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<List<TeamMember>> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
+        }
+    }
+    
+    @org.springframework.scheduling.annotation.Async
+    public CompletableFuture<List<TeamMember>> findLeadersAsync() {
+        try {
+            List<TeamMember> result = findLeaders();
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<List<TeamMember>> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
+        }
     }
 }

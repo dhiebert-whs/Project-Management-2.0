@@ -2,53 +2,81 @@ package org.frcpm.services.impl;
 
 import org.frcpm.models.Subteam;
 import org.frcpm.models.Subsystem;
-import org.frcpm.repositories.RepositoryFactory;
-import org.frcpm.repositories.specific.SubsystemRepository;
-import org.frcpm.repositories.specific.SubteamRepository;
+import org.frcpm.repositories.spring.SubsystemRepository;
+import org.frcpm.repositories.spring.SubteamRepository;
 import org.frcpm.services.SubsystemService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Implementation of SubsystemService using repository layer.
+ * Spring Boot implementation of SubsystemService.
+ * Converted from JavaFX/MVVMFx to Spring Boot with dependency injection.
  */
-public class SubsystemServiceImpl extends AbstractService<Subsystem, Long, SubsystemRepository> 
+@Service("subsystemServiceImpl")
+@Transactional
+public class SubsystemServiceImpl extends AbstractSpringService<Subsystem, Long, SubsystemRepository> 
         implements SubsystemService {
     
     private static final Logger LOGGER = Logger.getLogger(SubsystemServiceImpl.class.getName());
+    
     private final SubteamRepository subteamRepository;
     
-    public SubsystemServiceImpl() {
-        super(RepositoryFactory.getSubsystemRepository());
-        this.subteamRepository = RepositoryFactory.getSubteamRepository();
+    @Autowired
+    public SubsystemServiceImpl(SubsystemRepository subsystemRepository, 
+                               SubteamRepository subteamRepository) {
+        super(subsystemRepository);
+        this.subteamRepository = subteamRepository;
     }
+
+    @Override
+    protected String getEntityName() {
+        return "subsystem";
+    }
+
+    // Basic CRUD operations inherited from AbstractSpringService
+
+    // Subsystem-specific operations
     
     @Override
     public Optional<Subsystem> findByName(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            return Optional.empty();
+        }
         return repository.findByName(name);
     }
     
     @Override
     public List<Subsystem> findByStatus(Subsystem.Status status) {
+        if (status == null) {
+            throw new IllegalArgumentException("Status cannot be null");
+        }
         return repository.findByStatus(status);
     }
     
     @Override
     public List<Subsystem> findByResponsibleSubteam(Subteam subteam) {
+        if (subteam == null) {
+            throw new IllegalArgumentException("Subteam cannot be null");
+        }
         return repository.findByResponsibleSubteam(subteam);
     }
     
     @Override
     public Subsystem createSubsystem(String name, String description, 
-                                    Subsystem.Status status, Long responsibleSubteamId) {
+                                   Subsystem.Status status, Long responsibleSubteamId) {
         if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("Subsystem name cannot be empty");
         }
         
-        // Check if already exists for test environments
+        // Check if already exists
         Optional<Subsystem> existing = repository.findByName(name);
         if (existing.isPresent()) {
             // In test environment, update the existing entity instead
@@ -59,9 +87,9 @@ public class SubsystemServiceImpl extends AbstractService<Subsystem, Long, Subsy
                     existingSubsystem.setStatus(status);
                 }
                 if (responsibleSubteamId != null) {
-                    Subteam subteam = subteamRepository.findById(responsibleSubteamId).orElse(null);
-                    if (subteam != null) {
-                        existingSubsystem.setResponsibleSubteam(subteam);
+                    Optional<Subteam> subteam = subteamRepository.findById(responsibleSubteamId);
+                    if (subteam.isPresent()) {
+                        existingSubsystem.setResponsibleSubteam(subteam.get());
                     }
                 } else {
                     existingSubsystem.setResponsibleSubteam(null);
@@ -81,11 +109,11 @@ public class SubsystemServiceImpl extends AbstractService<Subsystem, Long, Subsy
         }
         
         if (responsibleSubteamId != null) {
-            Subteam subteam = subteamRepository.findById(responsibleSubteamId).orElse(null);
-            if (subteam == null) {
+            Optional<Subteam> subteam = subteamRepository.findById(responsibleSubteamId);
+            if (subteam.isEmpty()) {
                 LOGGER.log(Level.WARNING, "Subteam not found with ID: {0}", responsibleSubteamId);
             } else {
-                subsystem.setResponsibleSubteam(subteam);
+                subsystem.setResponsibleSubteam(subteam.get());
             }
         }
         
@@ -127,14 +155,62 @@ public class SubsystemServiceImpl extends AbstractService<Subsystem, Long, Subsy
         if (subteamId == null) {
             subsystem.setResponsibleSubteam(null);
         } else {
-            Subteam subteam = subteamRepository.findById(subteamId).orElse(null);
-            if (subteam == null) {
+            Optional<Subteam> subteam = subteamRepository.findById(subteamId);
+            if (subteam.isEmpty()) {
                 LOGGER.log(Level.WARNING, "Subteam not found with ID: {0}", subteamId);
                 return null;
             }
-            subsystem.setResponsibleSubteam(subteam);
+            subsystem.setResponsibleSubteam(subteam.get());
         }
         
         return save(subsystem);
+    }
+
+    // Spring @Async methods for background processing
+
+    @Async
+    public CompletableFuture<List<Subsystem>> findAllAsync() {
+        return CompletableFuture.completedFuture(findAll());
+    }
+
+    @Async
+    public CompletableFuture<Subsystem> findByIdAsync(Long id) {
+        return CompletableFuture.completedFuture(findById(id));
+    }
+
+    @Async
+    public CompletableFuture<Optional<Subsystem>> findByNameAsync(String name) {
+        return CompletableFuture.completedFuture(findByName(name));
+    }
+
+    @Async
+    public CompletableFuture<List<Subsystem>> findByStatusAsync(Subsystem.Status status) {
+        return CompletableFuture.completedFuture(findByStatus(status));
+    }
+
+    @Async
+    public CompletableFuture<List<Subsystem>> findByResponsibleSubteamAsync(Subteam subteam) {
+        return CompletableFuture.completedFuture(findByResponsibleSubteam(subteam));
+    }
+
+    @Async
+    public CompletableFuture<Subsystem> saveAsync(Subsystem subsystem) {
+        return CompletableFuture.completedFuture(save(subsystem));
+    }
+
+    @Async
+    public CompletableFuture<Subsystem> createSubsystemAsync(String name, String description, 
+                                                           Subsystem.Status status, Long responsibleSubteamId) {
+        return CompletableFuture.completedFuture(createSubsystem(name, description, status, responsibleSubteamId));
+    }
+
+    @Async
+    public CompletableFuture<Subsystem> updateStatusAsync(Long subsystemId, Subsystem.Status status) {
+        return CompletableFuture.completedFuture(updateStatus(subsystemId, status));
+    }
+
+    @Async
+    public CompletableFuture<Subsystem> assignResponsibleSubteamAsync(Long subsystemId, Long subteamId) {
+        return CompletableFuture.completedFuture(assignResponsibleSubteam(subsystemId, subteamId));
     }
 }
