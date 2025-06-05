@@ -6,13 +6,17 @@ import org.frcpm.models.Project;
 import org.frcpm.models.Subsystem;
 import org.frcpm.models.Task;
 import org.frcpm.models.TeamMember;
-import org.frcpm.repositories.specific.ComponentRepository;
-import org.frcpm.repositories.specific.ProjectRepository;
-import org.frcpm.repositories.specific.TaskRepository;
+import org.frcpm.repositories.spring.ComponentRepository;
+import org.frcpm.repositories.spring.ProjectRepository;
+import org.frcpm.repositories.spring.TaskRepository;
+import org.frcpm.services.TaskService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -24,85 +28,52 @@ import java.util.logging.Logger;
 
 /**
  * Spring Boot implementation of TaskService.
- * Converted from TestableTaskServiceImpl to use Spring dependency injection.
+ * Updated to extend AbstractSpringService for consistent CRUD operations.
  */
 @Service("taskServiceImpl")
 @Transactional
-public class TaskServiceImpl implements org.frcpm.services.TaskService {
+public class TaskServiceImpl extends AbstractSpringService<Task, Long, TaskRepository> 
+        implements TaskService {
     
     private static final Logger LOGGER = Logger.getLogger(TaskServiceImpl.class.getName());
     
-    // Dependencies injected via Spring
-    private final TaskRepository taskRepository;
+    // Additional dependencies injected via constructor
     private final ProjectRepository projectRepository;
     private final ComponentRepository componentRepository;
     
-    @Autowired
+    @PersistenceContext
+    private EntityManager entityManager;
+    
     public TaskServiceImpl(
             TaskRepository taskRepository,
             ProjectRepository projectRepository,
             ComponentRepository componentRepository) {
-        this.taskRepository = taskRepository;
+        super(taskRepository);
         this.projectRepository = projectRepository;
         this.componentRepository = componentRepository;
     }
 
     @Override
-    public Task findById(Long id) {
-        if (id == null) {
-            return null;
-        }
-        return taskRepository.findById(id).orElse(null);
+    protected String getEntityName() {
+        return "task";
     }
     
-    @Override
-    public List<Task> findAll() {
-        return taskRepository.findAll();
-    }
-    
-    @Override
-    public Task save(Task entity) {
-        try {
-            return taskRepository.save(entity);
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error saving task", e);
-            throw new RuntimeException("Failed to save task", e);
-        }
-    }
-    
-    @Override
-    public void delete(Task entity) {
-        try {
-            taskRepository.delete(entity);
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error deleting task", e);
-            throw new RuntimeException("Failed to delete task", e);
-        }
-    }
-    
-    @Override
-    public boolean deleteById(Long id) {
-        try {
-            return taskRepository.deleteById(id);
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error deleting task by ID", e);
-            throw new RuntimeException("Failed to delete task by ID", e);
-        }
-    }
-    
-    @Override
-    public long count() {
-        return taskRepository.count();
-    }
+    // Task-specific business methods
     
     @Override
     public List<Task> findByProject(Project project) {
-        return taskRepository.findByProject(project);
+        if (project == null) {
+            throw new IllegalArgumentException("Project cannot be null");
+        }
+        return repository.findByProject(project);
     }
     
     @Override
     public List<Task> findBySubsystem(Subsystem subsystem) {
-        return taskRepository.findBySubsystem(subsystem);
+        if (subsystem == null) {
+            throw new IllegalArgumentException("Subsystem cannot be null");
+        }
+        return repository.findBySubsystem(subsystem);
     }
     
     @Override
@@ -110,12 +81,12 @@ public class TaskServiceImpl implements org.frcpm.services.TaskService {
         if (member == null) {
             throw new IllegalArgumentException("Member cannot be null");
         }
-        return taskRepository.findByAssignedMember(member);
+        return repository.findByAssignedMember(member);
     }
     
     @Override
     public List<Task> findByCompleted(boolean completed) {
-        return taskRepository.findByCompleted(completed);
+        return repository.findByCompleted(completed);
     }
     
     @Override
@@ -284,7 +255,7 @@ public class TaskServiceImpl implements org.frcpm.services.TaskService {
             throw new IllegalArgumentException("Days must be positive");
         }
 
-        // Use project repository instead of static RepositoryFactory access
+        // Use Spring Data JPA repository
         Project project = projectRepository.findById(projectId).orElse(null);
         if (project == null) {
             LOGGER.log(Level.WARNING, "Project not found with ID: {0}", projectId);
@@ -294,7 +265,7 @@ public class TaskServiceImpl implements org.frcpm.services.TaskService {
         LocalDate today = LocalDate.now();
         LocalDate dueBefore = today.plusDays(days);
 
-        List<Task> allTasks = taskRepository.findByProject(project);
+        List<Task> allTasks = repository.findByProject(project);
         List<Task> dueSoonTasks = new ArrayList<>();
 
         for (Task task : allTasks) {
@@ -338,9 +309,9 @@ public class TaskServiceImpl implements org.frcpm.services.TaskService {
         return save(task);
     }
 
-    // Async methods using Spring's @Async
+    // Spring Boot Async Methods
     
-    @org.springframework.scheduling.annotation.Async
+    @Async
     public CompletableFuture<List<Task>> findAllAsync() {
         try {
             List<Task> result = findAll();
@@ -352,7 +323,7 @@ public class TaskServiceImpl implements org.frcpm.services.TaskService {
         }
     }
     
-    @org.springframework.scheduling.annotation.Async
+    @Async
     public CompletableFuture<Task> findByIdAsync(Long id) {
         try {
             Task result = findById(id);
@@ -364,7 +335,7 @@ public class TaskServiceImpl implements org.frcpm.services.TaskService {
         }
     }
     
-    @org.springframework.scheduling.annotation.Async
+    @Async
     public CompletableFuture<Task> saveAsync(Task entity) {
         try {
             Task result = save(entity);
@@ -376,7 +347,7 @@ public class TaskServiceImpl implements org.frcpm.services.TaskService {
         }
     }
     
-    @org.springframework.scheduling.annotation.Async
+    @Async
     public CompletableFuture<Boolean> deleteByIdAsync(Long id) {
         try {
             boolean result = deleteById(id);
@@ -388,7 +359,7 @@ public class TaskServiceImpl implements org.frcpm.services.TaskService {
         }
     }
     
-    @org.springframework.scheduling.annotation.Async
+    @Async
     public CompletableFuture<List<Task>> findByProjectAsync(Project project) {
         try {
             List<Task> result = findByProject(project);
@@ -400,7 +371,7 @@ public class TaskServiceImpl implements org.frcpm.services.TaskService {
         }
     }
     
-    @org.springframework.scheduling.annotation.Async
+    @Async
     public CompletableFuture<Task> createTaskAsync(String title, Project project, Subsystem subsystem,
                                                   double estimatedHours, Task.Priority priority,
                                                   LocalDate startDate, LocalDate endDate) {
@@ -414,7 +385,7 @@ public class TaskServiceImpl implements org.frcpm.services.TaskService {
         }
     }
     
-    @org.springframework.scheduling.annotation.Async
+    @Async
     public CompletableFuture<Task> updateTaskProgressAsync(Long taskId, int progress, boolean completed) {
         try {
             Task result = updateTaskProgress(taskId, progress, completed);
@@ -426,7 +397,7 @@ public class TaskServiceImpl implements org.frcpm.services.TaskService {
         }
     }
     
-    @org.springframework.scheduling.annotation.Async
+    @Async
     public CompletableFuture<Task> assignMembersAsync(Long taskId, Set<TeamMember> members) {
         try {
             Task result = assignMembers(taskId, members);
@@ -438,7 +409,7 @@ public class TaskServiceImpl implements org.frcpm.services.TaskService {
         }
     }
     
-    @org.springframework.scheduling.annotation.Async
+    @Async
     public CompletableFuture<List<Task>> getTasksDueSoonAsync(Long projectId, int days) {
         try {
             List<Task> result = getTasksDueSoon(projectId, days);

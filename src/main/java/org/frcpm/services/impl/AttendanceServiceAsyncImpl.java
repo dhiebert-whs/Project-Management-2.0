@@ -606,4 +606,40 @@ public class AttendanceServiceAsyncImpl extends AbstractAsyncService<Attendance,
             return future;
         }
     }
+
+    @Override
+    public Attendance findById(Long id) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'findById'");
+    }
+
+    @Override
+    public List<Attendance> findAll() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'findAll'");
+    }
+
+    @Override
+    public Attendance save(Attendance entity) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'save'");
+    }
+
+    @Override
+    public void delete(Attendance entity) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'delete'");
+    }
+
+    @Override
+    public boolean deleteById(Long id) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'deleteById'");
+    }
+
+    @Override
+    public long count() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'count'");
+    }
 }

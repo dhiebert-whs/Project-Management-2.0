@@ -4,9 +4,11 @@ package org.frcpm.services.impl;
 
 import org.frcpm.models.Project;
 import org.frcpm.models.Task;
-import org.frcpm.repositories.specific.ProjectRepository;
-import org.frcpm.repositories.specific.TaskRepository;
+import org.frcpm.repositories.spring.ProjectRepository;
+import org.frcpm.repositories.spring.TaskRepository;
+import org.frcpm.services.ProjectService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,85 +16,42 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * Spring Boot implementation of ProjectService.
- * Converted from TestableProjectServiceImpl to use Spring dependency injection.
+ * Updated to extend AbstractSpringService for consistent CRUD operations.
  */
 @Service("projectServiceImpl")
 @Transactional
-public class ProjectServiceImpl implements org.frcpm.services.ProjectService {
+public class ProjectServiceImpl extends AbstractSpringService<Project, Long, ProjectRepository> 
+        implements ProjectService {
     
     private static final Logger LOGGER = Logger.getLogger(ProjectServiceImpl.class.getName());
     
-    // Dependencies injected via Spring
-    private final ProjectRepository projectRepository;
+    // Additional dependencies injected via constructor
     private final TaskRepository taskRepository;
     
-    @Autowired
     public ProjectServiceImpl(ProjectRepository projectRepository, TaskRepository taskRepository) {
-        this.projectRepository = projectRepository;
+        super(projectRepository);
         this.taskRepository = taskRepository;
     }
 
     @Override
-    public Project findById(Long id) {
-        if (id == null) {
-            return null;
-        }
-        return projectRepository.findById(id).orElse(null);
+    protected String getEntityName() {
+        return "project";
     }
     
-    @Override
-    public List<Project> findAll() {
-        return projectRepository.findAll();
-    }
-    
-    @Override
-    public Project save(Project entity) {
-        try {
-            return projectRepository.save(entity);
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error saving project", e);
-            throw new RuntimeException("Failed to save project", e);
-        }
-    }
-    
-    @Override
-    public void delete(Project entity) {
-        try {
-            projectRepository.delete(entity);
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error deleting project", e);
-            throw new RuntimeException("Failed to delete project", e);
-        }
-    }
-    
-    @Override
-    public boolean deleteById(Long id) {
-        try {
-            return projectRepository.deleteById(id);
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error deleting project by ID", e);
-            throw new RuntimeException("Failed to delete project by ID", e);
-        }
-    }
-    
-    @Override
-    public long count() {
-        return projectRepository.count();
-    }
+    // Project-specific business methods
     
     @Override
     public List<Project> findByName(String name) {
         if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("Name cannot be empty");
         }
-        return projectRepository.findByName(name);
+        return repository.findByNameContainingIgnoreCase(name);
     }
     
     @Override
@@ -100,7 +59,7 @@ public class ProjectServiceImpl implements org.frcpm.services.ProjectService {
         if (date == null) {
             throw new IllegalArgumentException("Date cannot be null");
         }
-        return projectRepository.findByDeadlineBefore(date);
+        return repository.findByHardDeadlineBefore(date);
     }
     
     @Override
@@ -108,7 +67,7 @@ public class ProjectServiceImpl implements org.frcpm.services.ProjectService {
         if (date == null) {
             throw new IllegalArgumentException("Date cannot be null");
         }
-        return projectRepository.findByStartDateAfter(date);
+        return repository.findByStartDateAfter(date);
     }
     
     @Override
@@ -198,7 +157,7 @@ public class ProjectServiceImpl implements org.frcpm.services.ProjectService {
             summary.put("goalEndDate", project.getGoalEndDate());
             summary.put("hardDeadline", project.getHardDeadline());
             
-            // Get task statistics
+            // Get task statistics using Spring Data JPA
             List<Task> tasks = taskRepository.findByProject(project);
             int totalTasks = tasks != null ? tasks.size() : 0;
             long completedTasks = tasks != null ? 
@@ -240,9 +199,9 @@ public class ProjectServiceImpl implements org.frcpm.services.ProjectService {
         }
     }
 
-    // Async methods using Spring's @Async
+    // Spring Boot Async Methods
     
-    @org.springframework.scheduling.annotation.Async
+    @Async
     public CompletableFuture<List<Project>> findAllAsync() {
         try {
             List<Project> result = findAll();
@@ -254,7 +213,7 @@ public class ProjectServiceImpl implements org.frcpm.services.ProjectService {
         }
     }
     
-    @org.springframework.scheduling.annotation.Async
+    @Async
     public CompletableFuture<Project> findByIdAsync(Long id) {
         try {
             Project result = findById(id);
@@ -266,7 +225,7 @@ public class ProjectServiceImpl implements org.frcpm.services.ProjectService {
         }
     }
     
-    @org.springframework.scheduling.annotation.Async
+    @Async
     public CompletableFuture<Project> saveAsync(Project entity) {
         try {
             Project result = save(entity);
@@ -278,7 +237,7 @@ public class ProjectServiceImpl implements org.frcpm.services.ProjectService {
         }
     }
     
-    @org.springframework.scheduling.annotation.Async
+    @Async
     public CompletableFuture<Boolean> deleteByIdAsync(Long id) {
         try {
             boolean result = deleteById(id);
@@ -290,13 +249,38 @@ public class ProjectServiceImpl implements org.frcpm.services.ProjectService {
         }
     }
     
-    @org.springframework.scheduling.annotation.Async
+    @Async
     public CompletableFuture<Map<String, Object>> getProjectSummaryAsync(Long projectId) {
         try {
             Map<String, Object> result = getProjectSummary(projectId);
             return CompletableFuture.completedFuture(result);
         } catch (Exception e) {
             CompletableFuture<Map<String, Object>> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
+        }
+    }
+    
+    @Async
+    public CompletableFuture<List<Project>> findByNameAsync(String name) {
+        try {
+            List<Project> result = findByName(name);
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<List<Project>> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
+        }
+    }
+    
+    @Async
+    public CompletableFuture<Project> createProjectAsync(String name, LocalDate startDate, 
+                                                        LocalDate goalEndDate, LocalDate hardDeadline) {
+        try {
+            Project result = createProject(name, startDate, goalEndDate, hardDeadline);
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<Project> future = new CompletableFuture<>();
             future.completeExceptionally(e);
             return future;
         }
