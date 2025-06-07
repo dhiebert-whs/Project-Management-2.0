@@ -7,7 +7,6 @@ import org.frcpm.models.Task;
 import org.frcpm.repositories.spring.ComponentRepository;
 import org.frcpm.repositories.spring.TaskRepository;
 import org.frcpm.services.ComponentService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +24,9 @@ import java.util.logging.Logger;
 /**
  * Spring Boot implementation of ComponentService.
  * Uses AbstractSpringService base class for consistent CRUD operations.
+ * 
+ * CRITICAL FIX: Removed misplaced @Autowired annotation and moved constructor to proper location.
+ * FOLLOWS PATTERN: Constructor injection WITHOUT @Autowired (Spring Boot 4.3+ best practice)
  */
 @Service("componentServiceImpl")
 @Transactional
@@ -33,8 +35,209 @@ public class ComponentServiceImpl extends AbstractSpringService<Component, Long,
     
     private static final Logger LOGGER = Logger.getLogger(ComponentServiceImpl.class.getName());
     
-    // Additional dependencies injected via Spring
+    // Additional dependencies injected via Spring - NO @Autowired needed
     private final TaskRepository taskRepository;
+    
+    // FIXED: Constructor moved to proper location with NO @Autowired annotation
+    // Spring Boot automatically injects dependencies via constructor since version 4.3
+    public ComponentServiceImpl(
+            ComponentRepository componentRepository,
+            TaskRepository taskRepository) {
+        super(componentRepository);
+        this.taskRepository = taskRepository;
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "component";
+    }
+    
+    // Component-specific business methods
+    
+    @Override
+    public Optional<Component> findByPartNumber(String partNumber) {
+        if (partNumber == null || partNumber.trim().isEmpty()) {
+            return Optional.empty();
+        }
+        return repository.findByPartNumber(partNumber);
+    }
+    
+    @Override
+    public List<Component> findByName(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Name cannot be empty");
+        }
+        return repository.findByName(name);
+    }
+    
+    @Override
+    public List<Component> findByDelivered(boolean delivered) {
+        return repository.findByDelivered(delivered);
+    }
+    
+    @Override
+    public Component createComponent(String name, String partNumber, 
+                                   String description, LocalDate expectedDelivery) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Component name cannot be empty");
+        }
+        
+        // Check if part number already exists
+        if (partNumber != null && !partNumber.trim().isEmpty()) {
+            Optional<Component> existing = repository.findByPartNumber(partNumber);
+            if (existing.isPresent()) {
+                // In test environment, update the existing entity instead
+                if (System.getProperty("test.environment") != null) {
+                    Component existingComponent = existing.get();
+                    existingComponent.setName(name);
+                    existingComponent.setDescription(description);
+                    existingComponent.setExpectedDelivery(expectedDelivery);
+                    return save(existingComponent);
+                } else {
+                    throw new IllegalArgumentException("Component with part number '" + partNumber + "' already exists");
+                }
+            }
+        }
+        
+        // Create new component
+        Component component;
+        if (partNumber != null && !partNumber.trim().isEmpty()) {
+            component = new Component(name, partNumber);
+        } else {
+            component = new Component(name);
+        }
+        
+        component.setDescription(description);
+        component.setExpectedDelivery(expectedDelivery);
+        
+        return save(component);
+    }
+    
+    @Override
+    public Component markAsDelivered(Long componentId, LocalDate deliveryDate) {
+        if (componentId == null) {
+            throw new IllegalArgumentException("Component ID cannot be null");
+        }
+        
+        Component component = findById(componentId);
+        if (component == null) {
+            LOGGER.log(Level.WARNING, "Component not found with ID: {0}", componentId);
+            return null;
+        }
+        
+        component.setDelivered(true);
+        
+        if (deliveryDate != null) {
+            component.setActualDelivery(deliveryDate);
+        } else {
+            component.setActualDelivery(LocalDate.now());
+        }
+        
+        return save(component);
+    }
+    
+    @Override
+    public Component updateExpectedDelivery(Long componentId, LocalDate expectedDelivery) {
+        if (componentId == null) {
+            throw new IllegalArgumentException("Component ID cannot be null");
+        }
+        
+        Component component = findById(componentId);
+        if (component == null) {
+            LOGGER.log(Level.WARNING, "Component not found with ID: {0}", componentId);
+            return null;
+        }
+        
+        component.setExpectedDelivery(expectedDelivery);
+        
+        return save(component);
+    }
+    
+    @Override
+    public Task associateComponentsWithTask(Long taskId, Set<Long> componentIds) {
+        if (taskId == null) {
+            throw new IllegalArgumentException("Task ID cannot be null");
+        }
+        
+        Task task = taskRepository.findById(taskId).orElse(null);
+        if (task == null) {
+            LOGGER.log(Level.WARNING, "Task not found with ID: {0}", taskId);
+            return null;
+        }
+        
+        // Clear existing components but maintain managed references
+        // Get a copy first to avoid concurrent modification
+        Set<Component> currentComponents = new HashSet<>(task.getRequiredComponents());
+        for (Component component : currentComponents) {
+            task.getRequiredComponents().remove(component);
+            component.getRequiredForTasks().remove(task);
+        }
+        
+        // Add new components
+        if (componentIds != null && !componentIds.isEmpty()) {
+            for (Long componentId : componentIds) {
+                Component component = repository.findById(componentId).orElse(null);
+                if (component != null) {
+                    // Use the entity helper method to maintain both sides of the relationship
+                    task.addRequiredComponent(component);
+                } else {
+                    LOGGER.log(Level.WARNING, "Component not found with ID: {0}", componentId);
+                }
+            }
+        }
+        
+        return taskRepository.save(task);
+    }
+
+    // Spring Boot Async Methods - NO @Autowired anywhere
+    
+    @Async
+    public CompletableFuture<List<Component>> findAllAsync() {
+        try {
+            List<Component> result = findAll();
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<List<Component>> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
+        }
+    }
+    
+    @Async
+    public CompletableFuture<Component> findByIdAsync(Long id) {
+        try {
+            Component result = findById(id);
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<Component> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
+        }
+    }
+    
+    @Async
+    public CompletableFuture<Component> saveAsync(Component entity) {
+        try {
+            Component result = save(entity);
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<Component> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
+        }
+    }
+    
+    @Async
+    public CompletableFuture<Boolean> deleteByIdAsync(Long id) {
+        try {
+            boolean result = deleteById(id);
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<Boolean> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
+        }
+    }
     
     @Async
     public CompletableFuture<Optional<Component>> findByPartNumberAsync(String partNumber) {
@@ -299,204 +502,4 @@ public class ComponentServiceImpl extends AbstractSpringService<Component, Long,
         }
         return future;
     }
-}Autowired
-    public ComponentServiceImpl(
-            ComponentRepository componentRepository,
-            TaskRepository taskRepository) {
-        super(componentRepository);
-        this.taskRepository = taskRepository;
-    }
-
-    @Override
-    protected String getEntityName() {
-        return "component";
-    }
-    
-    // Component-specific business methods
-    
-    @Override
-    public Optional<Component> findByPartNumber(String partNumber) {
-        if (partNumber == null || partNumber.trim().isEmpty()) {
-            return Optional.empty();
-        }
-        return repository.findByPartNumber(partNumber);
-    }
-    
-    @Override
-    public List<Component> findByName(String name) {
-        if (name == null || name.trim().isEmpty()) {
-            throw new IllegalArgumentException("Name cannot be empty");
-        }
-        return repository.findByName(name);
-    }
-    
-    @Override
-    public List<Component> findByDelivered(boolean delivered) {
-        return repository.findByDelivered(delivered);
-    }
-    
-    @Override
-    public Component createComponent(String name, String partNumber, 
-                                   String description, LocalDate expectedDelivery) {
-        if (name == null || name.trim().isEmpty()) {
-            throw new IllegalArgumentException("Component name cannot be empty");
-        }
-        
-        // Check if part number already exists
-        if (partNumber != null && !partNumber.trim().isEmpty()) {
-            Optional<Component> existing = repository.findByPartNumber(partNumber);
-            if (existing.isPresent()) {
-                // In test environment, update the existing entity instead
-                if (System.getProperty("test.environment") != null) {
-                    Component existingComponent = existing.get();
-                    existingComponent.setName(name);
-                    existingComponent.setDescription(description);
-                    existingComponent.setExpectedDelivery(expectedDelivery);
-                    return save(existingComponent);
-                } else {
-                    throw new IllegalArgumentException("Component with part number '" + partNumber + "' already exists");
-                }
-            }
-        }
-        
-        // Create new component
-        Component component;
-        if (partNumber != null && !partNumber.trim().isEmpty()) {
-            component = new Component(name, partNumber);
-        } else {
-            component = new Component(name);
-        }
-        
-        component.setDescription(description);
-        component.setExpectedDelivery(expectedDelivery);
-        
-        return save(component);
-    }
-    
-    @Override
-    public Component markAsDelivered(Long componentId, LocalDate deliveryDate) {
-        if (componentId == null) {
-            throw new IllegalArgumentException("Component ID cannot be null");
-        }
-        
-        Component component = findById(componentId);
-        if (component == null) {
-            LOGGER.log(Level.WARNING, "Component not found with ID: {0}", componentId);
-            return null;
-        }
-        
-        component.setDelivered(true);
-        
-        if (deliveryDate != null) {
-            component.setActualDelivery(deliveryDate);
-        } else {
-            component.setActualDelivery(LocalDate.now());
-        }
-        
-        return save(component);
-    }
-    
-    @Override
-    public Component updateExpectedDelivery(Long componentId, LocalDate expectedDelivery) {
-        if (componentId == null) {
-            throw new IllegalArgumentException("Component ID cannot be null");
-        }
-        
-        Component component = findById(componentId);
-        if (component == null) {
-            LOGGER.log(Level.WARNING, "Component not found with ID: {0}", componentId);
-            return null;
-        }
-        
-        component.setExpectedDelivery(expectedDelivery);
-        
-        return save(component);
-    }
-    
-    @Override
-    public Task associateComponentsWithTask(Long taskId, Set<Long> componentIds) {
-        if (taskId == null) {
-            throw new IllegalArgumentException("Task ID cannot be null");
-        }
-        
-        Task task = taskRepository.findById(taskId).orElse(null);
-        if (task == null) {
-            LOGGER.log(Level.WARNING, "Task not found with ID: {0}", taskId);
-            return null;
-        }
-        
-        // Clear existing components but maintain managed references
-        // Get a copy first to avoid concurrent modification
-        Set<Component> currentComponents = new HashSet<>(task.getRequiredComponents());
-        for (Component component : currentComponents) {
-            task.getRequiredComponents().remove(component);
-            component.getRequiredForTasks().remove(task);
-        }
-        
-        // Add new components
-        if (componentIds != null && !componentIds.isEmpty()) {
-            for (Long componentId : componentIds) {
-                Component component = repository.findById(componentId).orElse(null);
-                if (component != null) {
-                    // Use the entity helper method to maintain both sides of the relationship
-                    task.addRequiredComponent(component);
-                } else {
-                    LOGGER.log(Level.WARNING, "Component not found with ID: {0}", componentId);
-                }
-            }
-        }
-        
-        return taskRepository.save(task);
-    }
-
-    // Spring Boot Async Methods
-    
-    @Async
-    public CompletableFuture<List<Component>> findAllAsync() {
-        try {
-            List<Component> result = findAll();
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<List<Component>> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
-    }
-    
-    @Async
-    public CompletableFuture<Component> findByIdAsync(Long id) {
-        try {
-            Component result = findById(id);
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<Component> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
-    }
-    
-    @Async
-    public CompletableFuture<Component> saveAsync(Component entity) {
-        try {
-            Component result = save(entity);
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<Component> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
-    }
-    
-    @Async
-    public CompletableFuture<Boolean> deleteByIdAsync(Long id) {
-        try {
-            boolean result = deleteById(id);
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<Boolean> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
-    }
-    
-    @
+}
