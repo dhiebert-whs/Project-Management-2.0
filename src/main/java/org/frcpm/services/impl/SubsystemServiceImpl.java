@@ -5,7 +5,6 @@ import org.frcpm.models.Subsystem;
 import org.frcpm.repositories.spring.SubsystemRepository;
 import org.frcpm.repositories.spring.SubteamRepository;
 import org.frcpm.services.SubsystemService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

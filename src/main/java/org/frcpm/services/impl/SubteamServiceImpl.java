@@ -3,7 +3,6 @@ package org.frcpm.services.impl;
 import org.frcpm.models.Subteam;
 import org.frcpm.repositories.spring.SubteamRepository;
 import org.frcpm.services.SubteamService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
