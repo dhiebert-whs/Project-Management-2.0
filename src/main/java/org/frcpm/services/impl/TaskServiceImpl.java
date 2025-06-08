@@ -10,13 +10,10 @@ import org.frcpm.repositories.spring.ComponentRepository;
 import org.frcpm.repositories.spring.ProjectRepository;
 import org.frcpm.repositories.spring.TaskRepository;
 import org.frcpm.services.TaskService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -41,8 +38,6 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long, TaskRepos
     private final ProjectRepository projectRepository;
     private final ComponentRepository componentRepository;
     
-    @PersistenceContext
-    private EntityManager entityManager;
     
     public TaskServiceImpl(
             TaskRepository taskRepository,

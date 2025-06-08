@@ -7,13 +7,10 @@ import org.frcpm.models.TeamMember;
 import org.frcpm.repositories.spring.SubteamRepository;
 import org.frcpm.repositories.spring.TeamMemberRepository;
 import org.frcpm.services.TeamMemberService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -34,8 +31,6 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
     // Additional dependencies injected via constructor
     private final SubteamRepository subteamRepository;
     
-    @PersistenceContext
-    private EntityManager entityManager;
     
     public TeamMemberServiceImpl(
             TeamMemberRepository teamMemberRepository,
