@@ -145,14 +145,11 @@ class ComponentServiceTest {
     
     @Test
     void testDeleteById() {
-        // Setup
-        when(componentRepository.deleteById(anyLong())).thenReturn(true);
+        // Setup - Use doNothing() for void methods instead of when().thenReturn()
+        doNothing().when(componentRepository).deleteById(anyLong());
         
-        // Execute
-        boolean result = componentService.deleteById(1L);
-        
-        // Verify
-        assertTrue(result);
+        // Execute - deleteById returns void, so don't capture return value
+        componentService.deleteById(1L);
         
         // Verify repository was called
         verify(componentRepository).deleteById(1L);

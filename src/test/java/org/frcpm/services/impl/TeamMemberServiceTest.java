@@ -149,14 +149,11 @@ class TeamMemberServiceTest {
     
     @Test
     void testDeleteById() {
-        // Setup
-        when(teamMemberRepository.deleteById(anyLong())).thenReturn(true);
+        // Setup - Use doNothing() for void methods instead of when().thenReturn()
+        doNothing().when(teamMemberRepository).deleteById(anyLong());
         
-        // Execute
-        boolean result = teamMemberService.deleteById(1L);
-        
-        // Verify
-        assertTrue(result);
+        // Execute - deleteById returns void, so don't capture return value
+        teamMemberService.deleteById(1L);
         
         // Verify repository was called
         verify(teamMemberRepository).deleteById(1L);

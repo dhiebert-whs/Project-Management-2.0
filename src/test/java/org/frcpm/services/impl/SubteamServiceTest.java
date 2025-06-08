@@ -16,6 +16,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
@@ -127,16 +128,13 @@ class SubteamServiceTest {
         verify(subteamRepository).delete(testSubteam);
     }
     
-    @Test
+@Test
     void testDeleteById() {
-        // Setup
-        when(subteamRepository.deleteById(anyLong())).thenReturn(true);
+        // Setup - Use doNothing() for void methods instead of when().thenReturn()
+        doNothing().when(subteamRepository).deleteById(anyLong());
         
-        // Execute
-        boolean result = subteamService.deleteById(1L);
-        
-        // Verify
-        assertTrue(result);
+        // Execute - deleteById returns void, so don't capture return value
+        subteamService.deleteById(1L);
         
         // Verify repository was called
         verify(subteamRepository).deleteById(1L);

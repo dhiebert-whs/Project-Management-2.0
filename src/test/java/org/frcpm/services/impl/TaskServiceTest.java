@@ -186,14 +186,11 @@ class TaskServiceTest {
     
     @Test
     void testDeleteById() {
-        // Setup
-        when(taskRepository.deleteById(anyLong())).thenReturn(true);
+        // Setup - Use doNothing() for void methods instead of when().thenReturn()
+        doNothing().when(taskRepository).deleteById(anyLong());
         
-        // Execute
-        boolean result = taskService.deleteById(1L);
-        
-        // Verify
-        assertTrue(result);
+        // Execute - deleteById returns void, so don't capture return value
+        taskService.deleteById(1L);
         
         // Verify repository was called
         verify(taskRepository).deleteById(1L);

@@ -149,14 +149,11 @@ class SubsystemServiceTest {
     
     @Test
     void testDeleteById() {
-        // Setup
-        when(subsystemRepository.deleteById(anyLong())).thenReturn(true);
+        // Setup - Use doNothing() for void methods instead of when().thenReturn()
+        doNothing().when(subsystemRepository).deleteById(anyLong());
         
-        // Execute
-        boolean result = subsystemService.deleteById(1L);
-        
-        // Verify
-        assertTrue(result);
+        // Execute - deleteById returns void, so don't capture return value
+        subsystemService.deleteById(1L);
         
         // Verify repository was called
         verify(subsystemRepository).deleteById(1L);

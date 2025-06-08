@@ -151,14 +151,11 @@ class MeetingServiceTest {
     
     @Test
     void testDeleteById() {
-        // Setup
-        when(meetingRepository.deleteById(anyLong())).thenReturn(true);
+        // Setup - Use doNothing() for void methods instead of when().thenReturn()
+        doNothing().when(meetingRepository).deleteById(anyLong());
         
-        // Execute
-        boolean result = meetingService.deleteById(1L);
-        
-        // Verify
-        assertTrue(result);
+        // Execute - deleteById returns void, so don't capture return value
+        meetingService.deleteById(1L);
         
         // Verify repository was called
         verify(meetingRepository).deleteById(1L);
