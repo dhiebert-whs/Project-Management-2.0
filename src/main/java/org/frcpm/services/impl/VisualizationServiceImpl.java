@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javafx.scene.layout.Pane;
+
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -40,7 +41,6 @@ public class VisualizationServiceImpl implements VisualizationService {
     private final ProjectRepository projectRepository;
     private final TaskRepository taskRepository;
     private final MilestoneRepository milestoneRepository;
-    private final SubsystemRepository subsystemRepository;
     private final GanttDataService ganttDataService;
     
     /**
@@ -50,17 +50,15 @@ public class VisualizationServiceImpl implements VisualizationService {
             ProjectRepository projectRepository,
             TaskRepository taskRepository,
             MilestoneRepository milestoneRepository,
-            SubsystemRepository subsystemRepository,
             GanttDataService ganttDataService) {
         this.projectRepository = projectRepository;
         this.taskRepository = taskRepository;
         this.milestoneRepository = milestoneRepository;
-        this.subsystemRepository = subsystemRepository;
         this.ganttDataService = ganttDataService;
     }
     
     @Override
-    public Pane createGanttChartPane(
+    public Map<String, Object> createGanttChartPane(
             Long projectId,
             LocalDate startDate,
             LocalDate endDate,
@@ -68,52 +66,70 @@ public class VisualizationServiceImpl implements VisualizationService {
             boolean showMilestones,
             boolean showDependencies) {
         
-        LOGGER.info("Creating Gantt chart pane for project " + projectId);
+        LOGGER.info("Creating Gantt chart data for project " + projectId);
         
         try {
-            // Note: This method returns a JavaFX Pane which is primarily for desktop JavaFX applications
-            // In a Spring Boot web application, this would typically be replaced with web-based chart generation
-            // For now, we'll return an empty Pane and log that this is a placeholder
-            
-            LOGGER.info("Gantt chart visualization requested - this would be implemented with web-based charting in Phase 2");
-            
-            // In a real web implementation, this would:
-            // 1. Get Gantt data from ganttDataService
-            // 2. Transform it to Chart.js or similar web format
-            // 3. Return chart configuration data instead of JavaFX Pane
-            
+            // Get Gantt data from service
             Map<String, Object> ganttData = ganttDataService.formatTasksForGantt(projectId, startDate, endDate);
-            LOGGER.info("Retrieved Gantt data with " + 
-                ((List<?>) ganttData.getOrDefault("tasks", Collections.emptyList())).size() + " tasks");
             
-            // Return empty pane for now - will be replaced with web chart data in Phase 2
-            return new Pane();
+            if (ganttData == null || ganttData.isEmpty()) {
+                LOGGER.warning("No Gantt data available for project " + projectId);
+                return new HashMap<>(); // Return empty map if no data
+            }
+            
+            // Add chart configuration for web display
+            Map<String, Object> chartConfig = new HashMap<>(ganttData);
+            chartConfig.put("viewMode", viewMode);
+            chartConfig.put("showMilestones", showMilestones);
+            chartConfig.put("showDependencies", showDependencies);
+            chartConfig.put("chartType", "gantt");
+            
+            LOGGER.info("Gantt chart data prepared successfully");
+            return chartConfig;
             
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error creating Gantt chart pane", e);
-            return new Pane();
+            LOGGER.log(Level.SEVERE, "Error creating Gantt chart data", e);
+            return new HashMap<>(); // Return empty map on error
         }
     }
-    
+
     @Override
-    public Pane createDailyChartPane(Long projectId, LocalDate date) {
-        LOGGER.info("Creating daily chart pane for project " + projectId + " on date " + date);
+    public Map<String, Object> createDailyChartPane(Long projectId, LocalDate date) {
+        LOGGER.info("Creating daily chart data for project " + projectId + " on date " + date);
         
         try {
-            // Similar to Gantt chart - this is a placeholder for JavaFX functionality
-            // In web implementation, this would return chart configuration data
-            
+            // Use current date if not specified
             LocalDate targetDate = (date != null) ? date : LocalDate.now();
             
+            // Get Gantt data for the specific date
             Map<String, Object> dailyData = ganttDataService.getGanttDataForDate(projectId, targetDate);
-            LOGGER.info("Retrieved daily data for " + targetDate);
             
-            // Return empty pane for now - will be replaced with web chart data in Phase 2
-            return new Pane();
+            if (dailyData == null || dailyData.isEmpty()) {
+                LOGGER.warning("No daily data available for project " + projectId + " on date " + targetDate);
+                Map<String, Object> emptyData = new HashMap<>();
+                emptyData.put("date", targetDate.toString());
+                emptyData.put("tasks", new ArrayList<>());
+                emptyData.put("milestones", new ArrayList<>());
+                emptyData.put("chartType", "daily");
+                return emptyData;
+            }
+            
+            // Add chart configuration for web display
+            Map<String, Object> chartConfig = new HashMap<>(dailyData);
+            chartConfig.put("date", targetDate.toString());
+            chartConfig.put("chartType", "daily");
+            
+            LOGGER.info("Daily chart data prepared successfully");
+            return chartConfig;
             
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error creating daily chart pane", e);
-            return new Pane();
+            LOGGER.log(Level.SEVERE, "Error creating daily chart data", e);
+            Map<String, Object> errorData = new HashMap<>();
+            errorData.put("date", (date != null ? date : LocalDate.now()).toString());
+            errorData.put("tasks", new ArrayList<>());
+            errorData.put("milestones", new ArrayList<>());
+            errorData.put("chartType", "daily");
+            return errorData;
         }
     }
     
@@ -520,12 +536,12 @@ public class VisualizationServiceImpl implements VisualizationService {
     // Spring @Async methods for background processing
     
     @Async
-    public CompletableFuture<Pane> createGanttChartPaneAsync(Long projectId, LocalDate startDate, LocalDate endDate, String viewMode, boolean showMilestones, boolean showDependencies) {
+    public CompletableFuture<Map<String, Object>> createGanttChartPaneAsync(Long projectId, LocalDate startDate, LocalDate endDate, String viewMode, boolean showMilestones, boolean showDependencies) {
         return CompletableFuture.completedFuture(createGanttChartPane(projectId, startDate, endDate, viewMode, showMilestones, showDependencies));
     }
-    
+
     @Async
-    public CompletableFuture<Pane> createDailyChartPaneAsync(Long projectId, LocalDate date) {
+    public CompletableFuture<Map<String, Object>> createDailyChartPaneAsync(Long projectId, LocalDate date) {
         return CompletableFuture.completedFuture(createDailyChartPane(projectId, date));
     }
     

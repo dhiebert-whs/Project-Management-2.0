@@ -2,47 +2,49 @@
 package org.frcpm.services.impl;
 
 import org.frcpm.models.*;
-import org.frcpm.repositories.specific.*;
+import org.frcpm.repositories.spring.*;
 import org.frcpm.services.GanttDataService;
 import org.frcpm.services.MetricsCalculationService;
 import org.frcpm.services.ReportGenerationService;
 import org.frcpm.services.VisualizationService;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
- * Implementation of the ReportGenerationService interface.
- * Provides methods to generate reports for project management.
+ * Spring Boot implementation of the ReportGenerationService interface.
+ * Provides methods to generate various reports for project management and analysis.
+ * Converted from ServiceLocator pattern to Spring dependency injection.
  */
+@Service("reportGenerationServiceImpl")
+@Transactional
 public class ReportGenerationServiceImpl implements ReportGenerationService {
     
     private static final Logger LOGGER = Logger.getLogger(ReportGenerationServiceImpl.class.getName());
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     
-    private ProjectRepository projectRepository;
-    private TaskRepository taskRepository;
-    private TeamMemberRepository teamMemberRepository;
-    private MilestoneRepository milestoneRepository;
-    private AttendanceRepository attendanceRepository;
-    private MeetingRepository meetingRepository;
-    private SubsystemRepository subsystemRepository;
-    private MetricsCalculationService metricsService;
-    private GanttDataService ganttDataService;
-    private VisualizationService visualizationService;
-    
-    /**
-     * Default constructor for MVVMFx dependency injection.
-     */
-    public ReportGenerationServiceImpl() {
-        // Default constructor for dependency injection
-    }
+    private final ProjectRepository projectRepository;
+    private final TaskRepository taskRepository;
+    private final TeamMemberRepository teamMemberRepository;
+    private final MilestoneRepository milestoneRepository;
+    private final AttendanceRepository attendanceRepository;
+    private final MeetingRepository meetingRepository;
+    private final SubsystemRepository subsystemRepository;
+    private final MetricsCalculationService metricsService;
+    private final GanttDataService ganttDataService;
+    private final VisualizationService visualizationService;
     
     /**
-     * Constructor with repository and service injection for testing.
+     * Constructor with dependency injection for Spring Boot.
+     * NO @Autowired annotation needed - Spring automatically injects since 4.3+
      */
     public ReportGenerationServiceImpl(
             ProjectRepository projectRepository,
@@ -72,143 +74,66 @@ public class ReportGenerationServiceImpl implements ReportGenerationService {
         LOGGER.info("Generating project summary report for project ID: " + projectId);
         
         Map<String, Object> report = new HashMap<>();
-
-        // Add report metadata
-        report.put("reportType", "Project Summary");
-        report.put("generatedDate", LocalDate.now());
         
         try {
             // Get project
             Optional<Project> projectOpt = projectRepository.findById(projectId);
-            if (!projectOpt.isPresent()) {
+            if (projectOpt.isEmpty()) {
                 LOGGER.warning("Project not found with ID: " + projectId);
                 return report;
             }
             
             Project project = projectOpt.get();
-                        
-            // Add project details
-            Map<String, Object> projectDetails = new HashMap<>();
-            projectDetails.put("name", project.getName());
-            projectDetails.put("description", project.getDescription());
-            projectDetails.put("startDate", project.getStartDate());
-            projectDetails.put("goalEndDate", project.getGoalEndDate());
-            projectDetails.put("hardDeadline", project.getHardDeadline());
             
-            report.put("projectDetails", projectDetails);
+            // Basic project information
+            report.put("projectId", project.getId());
+            report.put("projectName", project.getName());
+            report.put("description", project.getDescription());
+            report.put("startDate", project.getStartDate().format(DATE_FORMATTER));
+            report.put("goalEndDate", project.getGoalEndDate().format(DATE_FORMATTER));
+            report.put("hardDeadline", project.getHardDeadline().format(DATE_FORMATTER));
             
-            // Get tasks for the project
+            // Get metrics from metrics service
+            Map<String, Object> progressMetrics = metricsService.calculateProjectProgressMetrics(projectId);
+            report.put("progressMetrics", progressMetrics);
+            
+            // Task summary
             List<Task> tasks = taskRepository.findByProject(project);
+            report.put("totalTasks", tasks.size());
+            report.put("completedTasks", tasks.stream().filter(Task::isCompleted).count());
             
-            // Add task statistics
-            Map<String, Object> taskStats = new HashMap<>();
-            taskStats.put("totalTasks", tasks.size());
-            
-            long completedTasks = tasks.stream().filter(Task::isCompleted).count();
-            taskStats.put("completedTasks", completedTasks);
-            
-            long inProgressTasks = tasks.stream()
-                    .filter(t -> !t.isCompleted() && t.getProgress() > 0).count();
-            taskStats.put("inProgressTasks", inProgressTasks);
-            
-            long notStartedTasks = tasks.size() - completedTasks - inProgressTasks;
-            taskStats.put("notStartedTasks", notStartedTasks);
-            
-            // Calculate completion percentage
-            double completionPercentage = tasks.isEmpty() ? 0.0 :
-                    tasks.stream().mapToInt(Task::getProgress).sum() / (double) tasks.size();
-            taskStats.put("completionPercentage", completionPercentage);
-            
-            report.put("taskStatistics", taskStats);
-            
-            // Get milestones for the project
+            // Milestone summary
             List<Milestone> milestones = milestoneRepository.findByProject(project);
+            report.put("totalMilestones", milestones.size());
+            report.put("passedMilestones", milestones.stream().filter(Milestone::isPassed).count());
             
-            // Add milestone statistics
-            Map<String, Object> milestoneStats = new HashMap<>();
-            milestoneStats.put("totalMilestones", milestones.size());
-            
-            long passedMilestones = milestones.stream().filter(Milestone::isPassed).count();
-            milestoneStats.put("passedMilestones", passedMilestones);
-            
-            // Add upcoming milestones
-            LocalDate today = LocalDate.now();
-            List<Map<String, Object>> upcomingMilestones = milestones.stream()
-                    .filter(m -> !m.getDate().isBefore(today))
-                    .sorted(Comparator.comparing(Milestone::getDate))
-                    .limit(5)
-                    .map(m -> {
-                        Map<String, Object> milestone = new HashMap<>();
-                        milestone.put("id", m.getId());
-                        milestone.put("name", m.getName());
-                        milestone.put("date", m.getDate());
-                        milestone.put("daysUntil", m.getDaysUntil());
-                        return milestone;
-                    })
-                    .collect(Collectors.toList());
-            
-            milestoneStats.put("upcomingMilestones", upcomingMilestones);
-            
-            report.put("milestoneStatistics", milestoneStats);
-            
-            // Add team statistics
-            Map<String, Object> teamStats = new HashMap<>();
-            
-            // Get all team members by looking at task assignments
-            Set<TeamMember> teamMembers = new HashSet<>();
-            for (Task task : tasks) {
-                teamMembers.addAll(task.getAssignedTo());
-            }
-            
-            teamStats.put("totalTeamMembers", teamMembers.size());
-            
-            // Get task distribution by team member
-            Map<Long, Integer> tasksByMember = new HashMap<>();
-            for (TeamMember member : teamMembers) {
-                int memberTasks = 0;
-                for (Task task : tasks) {
-                    if (task.getAssignedTo().contains(member)) {
-                        memberTasks++;
-                    }
+            // Team size (unique members from attendance records)
+            Set<TeamMember> uniqueMembers = new HashSet<>();
+            List<Meeting> meetings = meetingRepository.findByProject(project);
+            for (Meeting meeting : meetings) {
+                for (Attendance attendance : meeting.getAttendances()) {
+                    uniqueMembers.add(attendance.getMember());
                 }
-                tasksByMember.put(member.getId(), memberTasks);
             }
+            report.put("teamSize", uniqueMembers.size());
             
-            teamStats.put("tasksByMember", tasksByMember);
+            // Recent activity
+            LocalDate oneWeekAgo = LocalDate.now().minusWeeks(1);
+            List<Meeting> recentMeetings = meetings.stream()
+                .filter(m -> m.getDate().isAfter(oneWeekAgo))
+                .collect(Collectors.toList());
+            report.put("recentMeetingsCount", recentMeetings.size());
             
-            report.put("teamStatistics", teamStats);
+            // Risk indicators
+            LocalDate today = LocalDate.now();
+            long overdueTasks = tasks.stream()
+                .filter(t -> !t.isCompleted() && t.getEndDate() != null && t.getEndDate().isBefore(today))
+                .count();
+            report.put("overdueTasks", overdueTasks);
             
-            // Get timeline statistics
-            Map<String, Object> timelineStats = new HashMap<>();
-            
-            LocalDate currentDate = LocalDate.now();
-            long totalDays = project.getStartDate().until(project.getGoalEndDate()).getDays();
-            long elapsedDays = project.getStartDate().until(currentDate).getDays();
-            long remainingDays = Math.max(0, project.getGoalEndDate().until(currentDate).getDays());
-            
-            timelineStats.put("totalDays", totalDays);
-            timelineStats.put("elapsedDays", elapsedDays);
-            timelineStats.put("remainingDays", remainingDays);
-            
-            // Calculate time progression percentage
-            double timeProgressPercentage = totalDays > 0 ? 100.0 * elapsedDays / totalDays : 0.0;
-            timelineStats.put("timeProgressPercentage", timeProgressPercentage);
-            
-            // Calculate schedule variance
-            double scheduleVariance = completionPercentage - timeProgressPercentage;
-            timelineStats.put("scheduleVariance", scheduleVariance);
-            
-            String scheduleStatus;
-            if (Math.abs(scheduleVariance) <= 5) {
-                scheduleStatus = "On Schedule";
-            } else if (scheduleVariance < 0) {
-                scheduleStatus = "Behind Schedule";
-            } else {
-                scheduleStatus = "Ahead of Schedule";
-            }
-            timelineStats.put("scheduleStatus", scheduleStatus);
-            
-            report.put("timelineStatistics", timelineStats);
+            // Report metadata
+            report.put("generatedDate", LocalDate.now().format(DATE_FORMATTER));
+            report.put("reportType", "PROJECT_SUMMARY");
             
             return report;
         } catch (Exception e) {
@@ -226,56 +151,64 @@ public class ReportGenerationServiceImpl implements ReportGenerationService {
         try {
             // Get project
             Optional<Project> projectOpt = projectRepository.findById(projectId);
-            if (!projectOpt.isPresent()) {
+            if (projectOpt.isEmpty()) {
                 LOGGER.warning("Project not found with ID: " + projectId);
                 return report;
             }
             
             Project project = projectOpt.get();
             
-            // Add report metadata
-            report.put("reportType", "Team Performance");
-            report.put("generatedDate", LocalDate.now());
-            report.put("startDate", startDate);
-            report.put("endDate", endDate);
+            // Apply date filtering
+            LocalDate effectiveStartDate = startDate != null ? startDate : project.getStartDate();
+            LocalDate effectiveEndDate = endDate != null ? endDate : LocalDate.now();
             
-            // Add project details
-            Map<String, Object> projectDetails = new HashMap<>();
-            projectDetails.put("id", project.getId());
-            projectDetails.put("name", project.getName());
+            // Basic report information
+            report.put("projectId", project.getId());
+            report.put("projectName", project.getName());
+            report.put("startDate", effectiveStartDate.format(DATE_FORMATTER));
+            report.put("endDate", effectiveEndDate.format(DATE_FORMATTER));
             
-            report.put("projectDetails", projectDetails);
-            
-            // Get team performance metrics
-            Map<String, Object> teamMetrics = metricsService.calculateTeamPerformanceMetrics(projectId, startDate, endDate);
+            // Get metrics from metrics service
+            Map<String, Object> teamMetrics = metricsService.calculateTeamPerformanceMetrics(projectId, effectiveStartDate, effectiveEndDate);
             report.put("teamMetrics", teamMetrics);
             
-            // Get attendance metrics
-            Map<String, Object> attendanceMetrics = metricsService.calculateAttendanceMetrics(projectId, startDate, endDate);
+            // Attendance metrics
+            Map<String, Object> attendanceMetrics = metricsService.calculateAttendanceMetrics(projectId, effectiveStartDate, effectiveEndDate);
             report.put("attendanceMetrics", attendanceMetrics);
             
-            // Get task completion metrics
-            Map<String, Object> taskCompletionMetrics = metricsService.calculateTaskCompletionMetrics(projectId);
-            report.put("taskCompletionMetrics", taskCompletionMetrics);
+            // Individual performance summaries
+            List<Map<String, Object>> individualSummaries = new ArrayList<>();
             
-            // Get individual member performance
-            Map<String, Object> individualPerformance = new HashMap<>();
-            
-            // Get all team members involved in the project
+            // Get all team members from attendance records
             Set<TeamMember> teamMembers = new HashSet<>();
-            List<Task> tasks = taskRepository.findByProject(project);
-            for (Task task : tasks) {
-                teamMembers.addAll(task.getAssignedTo());
+            List<Meeting> meetings = meetingRepository.findByProject(project);
+            for (Meeting meeting : meetings) {
+                if (!meeting.getDate().isBefore(effectiveStartDate) && !meeting.getDate().isAfter(effectiveEndDate)) {
+                    for (Attendance attendance : meeting.getAttendances()) {
+                        teamMembers.add(attendance.getMember());
+                    }
+                }
             }
             
-            // Calculate metrics for each team member
+            // Generate individual summaries
             for (TeamMember member : teamMembers) {
-                Map<String, Object> memberMetrics = metricsService.calculateIndividualPerformanceMetrics(
-                        member.getId(), startDate, endDate);
-                individualPerformance.put(member.getId().toString(), memberMetrics);
+                Map<String, Object> memberSummary = new HashMap<>();
+                memberSummary.put("memberId", member.getId());
+                memberSummary.put("memberName", member.getFullName());
+                
+                // Get individual metrics
+                Map<String, Object> individualMetrics = metricsService.calculateIndividualPerformanceMetrics(
+                    member.getId(), effectiveStartDate, effectiveEndDate);
+                memberSummary.put("metrics", individualMetrics);
+                
+                individualSummaries.add(memberSummary);
             }
             
-            report.put("individualPerformance", individualPerformance);
+            report.put("individualSummaries", individualSummaries);
+            
+            // Report metadata
+            report.put("generatedDate", LocalDate.now().format(DATE_FORMATTER));
+            report.put("reportType", "TEAM_PERFORMANCE");
             
             return report;
         } catch (Exception e) {
@@ -284,802 +217,563 @@ public class ReportGenerationServiceImpl implements ReportGenerationService {
         }
     }
     
-// Continuing src/main/java/org/frcpm/services/impl/ReportGenerationServiceImpl.java
-
-@Override
-public Map<String, Object> generateMilestoneStatusReport(Long projectId) {
-    LOGGER.info("Generating milestone status report for project ID: " + projectId);
-    
-    Map<String, Object> report = new HashMap<>();
-    
-    try {
-        // Get project
-        Optional<Project> projectOpt = projectRepository.findById(projectId);
-        if (!projectOpt.isPresent()) {
-            LOGGER.warning("Project not found with ID: " + projectId);
-            return report;
-        }
+    @Override
+    public Map<String, Object> generateMilestoneStatusReport(Long projectId) {
+        LOGGER.info("Generating milestone status report for project ID: " + projectId);
         
-        Project project = projectOpt.get();
+        Map<String, Object> report = new HashMap<>();
         
-        // Add report metadata
-        report.put("reportType", "Milestone Status");
-        report.put("generatedDate", LocalDate.now());
-        
-        // Add project details
-        Map<String, Object> projectDetails = new HashMap<>();
-        projectDetails.put("id", project.getId());
-        projectDetails.put("name", project.getName());
-        projectDetails.put("startDate", project.getStartDate());
-        projectDetails.put("goalEndDate", project.getGoalEndDate());
-        projectDetails.put("hardDeadline", project.getHardDeadline());
-        
-        report.put("projectDetails", projectDetails);
-        
-        // Get all milestones for the project
-        List<Milestone> milestones = milestoneRepository.findByProject(project);
-        
-        // Add milestone statistics
-        Map<String, Object> milestoneStats = new HashMap<>();
-        milestoneStats.put("totalMilestones", milestones.size());
-        
-        LocalDate today = LocalDate.now();
-        
-        long passedMilestones = milestones.stream()
-                .filter(m -> m.getDate().isBefore(today))
-                .count();
-        milestoneStats.put("passedMilestones", passedMilestones);
-        
-        long upcomingMilestones = milestones.stream()
-                .filter(m -> m.getDate().isEqual(today) || m.getDate().isAfter(today))
-                .count();
-        milestoneStats.put("upcomingMilestones", upcomingMilestones);
-        
-        // Calculate milestone completion percentage
-        double milestoneCompletionPercentage = milestones.isEmpty() ? 0.0 :
-                100.0 * passedMilestones / milestones.size();
-        milestoneStats.put("milestoneCompletionPercentage", milestoneCompletionPercentage);
-        
-        report.put("milestoneStatistics", milestoneStats);
-        
-        // Add detailed milestone data
-        List<Map<String, Object>> milestoneDetails = new ArrayList<>();
-        
-        for (Milestone milestone : milestones) {
-            Map<String, Object> milestoneDetail = new HashMap<>();
-            milestoneDetail.put("id", milestone.getId());
-            milestoneDetail.put("name", milestone.getName());
-            milestoneDetail.put("description", milestone.getDescription());
-            milestoneDetail.put("date", milestone.getDate());
-            milestoneDetail.put("isPassed", milestone.isPassed());
-            milestoneDetail.put("daysUntil", milestone.getDaysUntil());
-            
-            // Status calculation
-            String status;
-            if (milestone.isPassed()) {
-                status = "Completed";
-            } else {
-                long daysUntil = milestone.getDaysUntil();
-                if (daysUntil < 0) {
-                    status = "Overdue";
-                } else if (daysUntil == 0) {
-                    status = "Due Today";
-                } else if (daysUntil <= 7) {
-                    status = "Upcoming (< 1 week)";
-                } else if (daysUntil <= 30) {
-                    status = "Upcoming (< 1 month)";
-                } else {
-                    status = "Future";
-                }
+        try {
+            // Get project
+            Optional<Project> projectOpt = projectRepository.findById(projectId);
+            if (projectOpt.isEmpty()) {
+                LOGGER.warning("Project not found with ID: " + projectId);
+                return report;
             }
-            milestoneDetail.put("status", status);
             
-            milestoneDetails.add(milestoneDetail);
-        }
-        
-        // Sort milestones by date
-        milestoneDetails.sort(Comparator.comparing(m -> ((LocalDate) m.get("date"))));
-        
-        report.put("milestones", milestoneDetails);
-        
-        // Add timeline visualization data
-        List<Map<String, Object>> timelineData = new ArrayList<>();
-        
-        for (Milestone milestone : milestones) {
-            Map<String, Object> timelineItem = new HashMap<>();
-            timelineItem.put("date", milestone.getDate());
-            timelineItem.put("name", milestone.getName());
-            timelineItem.put("isPassed", milestone.isPassed());
+            Project project = projectOpt.get();
             
-            timelineData.add(timelineItem);
-        }
-        
-        report.put("timelineData", timelineData);
-        
-        return report;
-    } catch (Exception e) {
-        LOGGER.log(Level.SEVERE, "Error generating milestone status report", e);
-        return report;
-    }
-}
-
-@Override
-public Map<String, Object> generateAttendanceReport(Long projectId, LocalDate startDate, LocalDate endDate) {
-    LOGGER.info("Generating attendance report for project ID: " + projectId);
-    
-    Map<String, Object> report = new HashMap<>();
-    
-    try {
-        // Get project
-        Optional<Project> projectOpt = projectRepository.findById(projectId);
-        if (!projectOpt.isPresent()) {
-            LOGGER.warning("Project not found with ID: " + projectId);
+            // Basic report information
+            report.put("projectId", project.getId());
+            report.put("projectName", project.getName());
+            
+            // Get all milestones
+            List<Milestone> milestones = milestoneRepository.findByProject(project);
+            
+            // Milestone summary
+            report.put("totalMilestones", milestones.size());
+            
+            // Categorize milestones
+            LocalDate today = LocalDate.now();
+            List<Map<String, Object>> milestoneDetails = new ArrayList<>();
+            
+            int passedCount = 0;
+            int upcomingCount = 0;
+            int overdueCount = 0;
+            
+            for (Milestone milestone : milestones) {
+                Map<String, Object> milestoneData = new HashMap<>();
+                milestoneData.put("id", milestone.getId());
+                milestoneData.put("name", milestone.getName());
+                milestoneData.put("description", milestone.getDescription());
+                milestoneData.put("date", milestone.getDate().format(DATE_FORMATTER));
+                milestoneData.put("passed", milestone.isPassed());
+                
+                if (milestone.isPassed()) {
+                    milestoneData.put("status", "PASSED");
+                    passedCount++;
+                } else if (milestone.getDate().isBefore(today)) {
+                    milestoneData.put("status", "OVERDUE");
+                    overdueCount++;
+                } else {
+                    milestoneData.put("status", "UPCOMING");
+                    upcomingCount++;
+                }
+                
+                // Calculate days until/since milestone
+                long daysDifference = today.until(milestone.getDate()).getDays();
+                milestoneData.put("daysDifference", daysDifference);
+                
+                milestoneDetails.add(milestoneData);
+            }
+            
+            // Sort milestones by date
+            milestoneDetails.sort((a, b) -> {
+                String dateA = (String) a.get("date");
+                String dateB = (String) b.get("date");
+                return dateA.compareTo(dateB);
+            });
+            
+            report.put("milestoneDetails", milestoneDetails);
+            report.put("passedCount", passedCount);
+            report.put("upcomingCount", upcomingCount);
+            report.put("overdueCount", overdueCount);
+            
+            // Calculate completion percentage
+            double completionPercentage = milestones.size() > 0 ? 
+                (double) passedCount / milestones.size() * 100 : 0;
+            report.put("completionPercentage", completionPercentage);
+            
+            // Report metadata
+            report.put("generatedDate", LocalDate.now().format(DATE_FORMATTER));
+            report.put("reportType", "MILESTONE_STATUS");
+            
+            return report;
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error generating milestone status report", e);
             return report;
         }
+    }
+    
+    @Override
+    public Map<String, Object> generateAttendanceReport(Long projectId, LocalDate startDate, LocalDate endDate) {
+        LOGGER.info("Generating attendance report for project ID: " + projectId);
         
-        Project project = projectOpt.get();
+        Map<String, Object> report = new HashMap<>();
         
-        // Add report metadata
-        report.put("reportType", "Attendance");
-        report.put("generatedDate", LocalDate.now());
-        report.put("startDate", startDate);
-        report.put("endDate", endDate);
-        
-        // Add project details
-        Map<String, Object> projectDetails = new HashMap<>();
-        projectDetails.put("id", project.getId());
-        projectDetails.put("name", project.getName());
-        
-        report.put("projectDetails", projectDetails);
-        
-        // Apply date filtering
-        LocalDate effectiveStartDate = startDate != null ? startDate : project.getStartDate();
-        LocalDate effectiveEndDate = endDate != null ? endDate : LocalDate.now();
-        
-        // Get meetings within date range
-        List<Meeting> meetings = meetingRepository.findByProject(project)
+        try {
+            // Get project
+            Optional<Project> projectOpt = projectRepository.findById(projectId);
+            if (projectOpt.isEmpty()) {
+                LOGGER.warning("Project not found with ID: " + projectId);
+                return report;
+            }
+            
+            Project project = projectOpt.get();
+            
+            // Apply date filtering
+            LocalDate effectiveStartDate = startDate != null ? startDate : project.getStartDate();
+            LocalDate effectiveEndDate = endDate != null ? endDate : LocalDate.now();
+            
+            // Basic report information
+            report.put("projectId", project.getId());
+            report.put("projectName", project.getName());
+            report.put("startDate", effectiveStartDate.format(DATE_FORMATTER));
+            report.put("endDate", effectiveEndDate.format(DATE_FORMATTER));
+            
+            // Get attendance metrics
+            Map<String, Object> attendanceMetrics = metricsService.calculateAttendanceMetrics(projectId, effectiveStartDate, effectiveEndDate);
+            report.put("attendanceMetrics", attendanceMetrics);
+            
+            // Get detailed meeting data
+            List<Meeting> meetings = meetingRepository.findByProject(project)
                 .stream()
                 .filter(m -> !m.getDate().isBefore(effectiveStartDate) && !m.getDate().isAfter(effectiveEndDate))
                 .collect(Collectors.toList());
-        
-        // Add meeting statistics
-        Map<String, Object> meetingStats = new HashMap<>();
-        meetingStats.put("totalMeetings", meetings.size());
-        
-        // Get all attendance records for these meetings
-        List<Attendance> allAttendances = new ArrayList<>();
-        for (Meeting meeting : meetings) {
-            allAttendances.addAll(meeting.getAttendances());
-        }
-        
-        // Calculate overall attendance rate
-        long presentCount = allAttendances.stream().filter(Attendance::isPresent).count();
-        double overallAttendanceRate = allAttendances.isEmpty() ? 0.0 :
-                100.0 * presentCount / allAttendances.size();
-        
-        meetingStats.put("totalAttendanceRecords", allAttendances.size());
-        meetingStats.put("presentCount", presentCount);
-        meetingStats.put("overallAttendanceRate", overallAttendanceRate);
-        
-        report.put("meetingStatistics", meetingStats);
-        
-        // Generate detailed meeting data
-        List<Map<String, Object>> meetingDetails = new ArrayList<>();
-        
-        for (Meeting meeting : meetings) {
-            Map<String, Object> meetingDetail = new HashMap<>();
-            meetingDetail.put("id", meeting.getId());
-            meetingDetail.put("date", meeting.getDate());
-            meetingDetail.put("startTime", meeting.getStartTime());
-            meetingDetail.put("endTime", meeting.getEndTime());
             
-            List<Attendance> attendances = meeting.getAttendances();
-            long meetingPresentCount = attendances.stream().filter(Attendance::isPresent).count();
-            double attendanceRate = attendances.isEmpty() ? 0.0 :
-                    100.0 * meetingPresentCount / attendances.size();
-            
-            meetingDetail.put("totalInvited", attendances.size());
-            meetingDetail.put("presentCount", meetingPresentCount);
-            meetingDetail.put("attendanceRate", attendanceRate);
-            
-            meetingDetails.add(meetingDetail);
-        }
-        
-        // Sort meetings by date
-        meetingDetails.sort(Comparator.comparing(m -> ((LocalDate) m.get("date"))));
-        
-        report.put("meetings", meetingDetails);
-        
-        // Generate individual member attendance data
-        List<Map<String, Object>> memberAttendance = new ArrayList<>();
-        
-        // Get all team members through attendance records
-        Set<TeamMember> teamMembers = new HashSet<>();
-        for (Attendance attendance : allAttendances) {
-            teamMembers.add(attendance.getMember());
-        }
-        
-        for (TeamMember member : teamMembers) {
-            Map<String, Object> memberDetail = new HashMap<>();
-            memberDetail.put("id", member.getId());
-            memberDetail.put("name", member.getFullName());
-            
-            // Count meetings attended
-            int meetingsInvited = 0;
-            int meetingsAttended = 0;
-            
+            List<Map<String, Object>> meetingDetails = new ArrayList<>();
             for (Meeting meeting : meetings) {
-                for (Attendance attendance : meeting.getAttendances()) {
-                    if (attendance.getMember().equals(member)) {
-                        meetingsInvited++;
-                        if (attendance.isPresent()) {
-                            meetingsAttended++;
-                        }
-                        break;
-                    }
+                Map<String, Object> meetingData = new HashMap<>();
+                meetingData.put("id", meeting.getId());
+                meetingData.put("date", meeting.getDate().format(DATE_FORMATTER));
+                meetingData.put("type", "TEAM_MEETING"); // Use default type since getType() doesn't exist
+                meetingData.put("totalInvited", meeting.getAttendances().size());
+                meetingData.put("totalPresent", meeting.getAttendances().stream().filter(Attendance::isPresent).count());
+                meetingData.put("attendancePercentage", meeting.getAttendancePercentage());
+                
+                meetingDetails.add(meetingData);
+            }
+            
+            // Sort meetings by date
+            meetingDetails.sort((a, b) -> {
+                String dateA = (String) a.get("date");
+                String dateB = (String) b.get("date");
+                return dateA.compareTo(dateB);
+            });
+            
+            report.put("meetingDetails", meetingDetails);
+            
+            // Report metadata
+            report.put("generatedDate", LocalDate.now().format(DATE_FORMATTER));
+            report.put("reportType", "ATTENDANCE");
+            
+            return report;
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error generating attendance report", e);
+            return report;
+        }
+    }
+    
+    @Override
+    public Map<String, Object> generateSubsystemProgressReport(Long projectId) {
+        LOGGER.info("Generating subsystem progress report for project ID: " + projectId);
+        
+        Map<String, Object> report = new HashMap<>();
+        
+        try {
+            // Get project
+            Optional<Project> projectOpt = projectRepository.findById(projectId);
+            if (projectOpt.isEmpty()) {
+                LOGGER.warning("Project not found with ID: " + projectId);
+                return report;
+            }
+            
+            Project project = projectOpt.get();
+            
+            // Basic report information
+            report.put("projectId", project.getId());
+            report.put("projectName", project.getName());
+            
+            // Get subsystem metrics
+            Map<String, Object> subsystemMetrics = metricsService.calculateSubsystemPerformanceMetrics(projectId);
+            report.put("subsystemMetrics", subsystemMetrics);
+            
+            // Get visualization data
+            Map<String, Double> subsystemProgress = visualizationService.getSubsystemProgress(projectId);
+            report.put("subsystemProgress", subsystemProgress);
+            
+            // Get all subsystems
+            List<Subsystem> subsystems = subsystemRepository.findAll();
+            List<Map<String, Object>> subsystemDetails = new ArrayList<>();
+            
+            for (Subsystem subsystem : subsystems) {
+                Map<String, Object> subsystemData = new HashMap<>();
+                subsystemData.put("id", subsystem.getId());
+                subsystemData.put("name", subsystem.getName());
+                subsystemData.put("description", subsystem.getDescription());
+                subsystemData.put("status", subsystem.getStatus().toString());
+                
+                if (subsystem.getResponsibleSubteam() != null) {
+                    subsystemData.put("responsibleSubteam", subsystem.getResponsibleSubteam().getName());
                 }
-            }
-            
-            memberDetail.put("meetingsInvited", meetingsInvited);
-            memberDetail.put("meetingsAttended", meetingsAttended);
-            
-            double attendanceRate = meetingsInvited > 0 ?
-                    100.0 * meetingsAttended / meetingsInvited : 0.0;
-            memberDetail.put("attendanceRate", attendanceRate);
-            
-            memberAttendance.add(memberDetail);
-        }
-        
-        // Sort by attendance rate (descending)
-        memberAttendance.sort(Comparator.comparing(m -> ((Double) ((Map<String, Object>) m).get("attendanceRate"))).reversed());
-        
-        report.put("memberAttendance", memberAttendance);
-        
-        // Generate attendance trends over time
-        Map<LocalDate, Double> attendanceTrends = new TreeMap<>(); // TreeMap for date ordering
-        
-        for (Meeting meeting : meetings) {
-            List<Attendance> attendances = meeting.getAttendances();
-            double rate = attendances.isEmpty() ? 0.0 :
-                    100.0 * attendances.stream().filter(Attendance::isPresent).count() / attendances.size();
-            
-            attendanceTrends.put(meeting.getDate(), rate);
-        }
-        
-        report.put("attendanceTrends", attendanceTrends);
-        
-        return report;
-    } catch (Exception e) {
-        LOGGER.log(Level.SEVERE, "Error generating attendance report", e);
-        return report;
-    }
-}
-
-@Override
-public Map<String, Object> generateSubsystemProgressReport(Long projectId) {
-    LOGGER.info("Generating subsystem progress report for project ID: " + projectId);
-    
-    Map<String, Object> report = new HashMap<>();
-    
-    try {
-        // Get project
-        Optional<Project> projectOpt = projectRepository.findById(projectId);
-        if (!projectOpt.isPresent()) {
-            LOGGER.warning("Project not found with ID: " + projectId);
-            return report;
-        }
-        
-        Project project = projectOpt.get();
-        
-        // Add report metadata
-        report.put("reportType", "Subsystem Progress");
-        report.put("generatedDate", LocalDate.now());
-        
-        // Add project details
-        Map<String, Object> projectDetails = new HashMap<>();
-        projectDetails.put("id", project.getId());
-        projectDetails.put("name", project.getName());
-        
-        report.put("projectDetails", projectDetails);
-        
-        // Get subsystem performance metrics
-        Map<String, Object> subsystemMetrics = metricsService.calculateSubsystemPerformanceMetrics(projectId);
-        
-        // Get subsystems involved in the project
-        List<Task> tasks = taskRepository.findByProject(project);
-        Set<Subsystem> subsystems = new HashSet<>();
-        for (Task task : tasks) {
-            subsystems.add(task.getSubsystem());
-        }
-        
-        // Add subsystem statistics
-        Map<String, Object> subsystemStats = new HashMap<>();
-        subsystemStats.put("totalSubsystems", subsystems.size());
-        
-        // Count subsystems by status
-        Map<Subsystem.Status, Long> statusCounts = subsystems.stream()
-                .collect(Collectors.groupingBy(Subsystem::getStatus, Collectors.counting()));
-        subsystemStats.put("statusCounts", statusCounts);
-        
-        // Calculate completed subsystems percentage
-        long completedSubsystems = statusCounts.getOrDefault(Subsystem.Status.COMPLETED, 0L);
-        double completionPercentage = subsystems.isEmpty() ? 0.0 :
-                100.0 * completedSubsystems / subsystems.size();
-        subsystemStats.put("completionPercentage", completionPercentage);
-        
-        report.put("subsystemStatistics", subsystemStats);
-        
-        // Generate detailed subsystem data
-        List<Map<String, Object>> subsystemDetails = new ArrayList<>();
-        
-        for (Subsystem subsystem : subsystems) {
-            Map<String, Object> subsystemDetail = new HashMap<>();
-            subsystemDetail.put("id", subsystem.getId());
-            subsystemDetail.put("name", subsystem.getName());
-            subsystemDetail.put("description", subsystem.getDescription());
-            subsystemDetail.put("status", subsystem.getStatus().getDisplayName());
-            
-            // Get the responsible subteam if exists
-            if (subsystem.getResponsibleSubteam() != null) {
-                Map<String, Object> subteamInfo = new HashMap<>();
-                subteamInfo.put("id", subsystem.getResponsibleSubteam().getId());
-                subteamInfo.put("name", subsystem.getResponsibleSubteam().getName());
-                subsystemDetail.put("responsibleSubteam", subteamInfo);
-            }
-            
-            // Get tasks for this subsystem
-            List<Task> subsystemTasks = tasks.stream()
-                    .filter(t -> t.getSubsystem().equals(subsystem))
+                
+                // Get tasks for this subsystem
+                List<Task> subsystemTasks = taskRepository.findByProject(project)
+                    .stream()
+                    .filter(t -> subsystem.equals(t.getSubsystem()))
                     .collect(Collectors.toList());
+                
+                subsystemData.put("totalTasks", subsystemTasks.size());
+                subsystemData.put("completedTasks", subsystemTasks.stream().filter(Task::isCompleted).count());
+                
+                // Calculate progress
+                double progress = subsystemProgress.getOrDefault(subsystem.getName(), 0.0);
+                subsystemData.put("progress", progress);
+                
+                subsystemDetails.add(subsystemData);
+            }
             
-            // Calculate task statistics
-            int totalTasks = subsystemTasks.size();
-            long completedTasks = subsystemTasks.stream().filter(Task::isCompleted).count();
-            long inProgressTasks = subsystemTasks.stream()
-                    .filter(t -> !t.isCompleted() && t.getProgress() > 0).count();
-            long notStartedTasks = totalTasks - completedTasks - inProgressTasks;
+            // Sort by progress (highest first)
+            subsystemDetails.sort((a, b) -> 
+                Double.compare((Double) b.get("progress"), (Double) a.get("progress")));
             
-            Map<String, Object> taskStats = new HashMap<>();
-            taskStats.put("totalTasks", totalTasks);
-            taskStats.put("completedTasks", completedTasks);
-            taskStats.put("inProgressTasks", inProgressTasks);
-            taskStats.put("notStartedTasks", notStartedTasks);
+            report.put("subsystemDetails", subsystemDetails);
             
-            // Calculate completion percentage
-            double taskCompletionPercentage = subsystemTasks.isEmpty() ? 0.0 :
-                    subsystemTasks.stream().mapToInt(Task::getProgress).sum() / (double) subsystemTasks.size();
-            taskStats.put("completionPercentage", taskCompletionPercentage);
+            // Report metadata
+            report.put("generatedDate", LocalDate.now().format(DATE_FORMATTER));
+            report.put("reportType", "SUBSYSTEM_PROGRESS");
             
-            subsystemDetail.put("taskStatistics", taskStats);
-            
-            subsystemDetails.add(subsystemDetail);
-        }
-        
-        // Sort by completion percentage (descending)
-        subsystemDetails.sort(Comparator.comparing(s -> 
-            ((Double) ((Map<String, Object>) ((Map<String, Object>) s).get("taskStatistics")).get("completionPercentage"))).reversed());
-        
-        report.put("subsystems", subsystemDetails);
-        
-        // Generate visualization data
-        Map<String, Double> subsystemCompletion = new HashMap<>();
-        
-        for (Map<String, Object> subsystemDetail : subsystemDetails) {
-            String name = (String) subsystemDetail.get("name");
-            double completion = (Double) ((Map<String, Object>) subsystemDetail.get("taskStatistics")).get("completionPercentage");
-            subsystemCompletion.put(name, completion);
-        }
-        
-        report.put("subsystemCompletion", subsystemCompletion);
-        
-        return report;
-    } catch (Exception e) {
-        LOGGER.log(Level.SEVERE, "Error generating subsystem progress report", e);
-        return report;
-    }
-}
-
-@Override
-public Map<String, Object> generateTeamMemberReport(Long teamMemberId, LocalDate startDate, LocalDate endDate) {
-    LOGGER.info("Generating team member report for member ID: " + teamMemberId);
-    
-    Map<String, Object> report = new HashMap<>();
-    
-    try {
-        // Get team member
-        Optional<TeamMember> memberOpt = teamMemberRepository.findById(teamMemberId);
-        if (!memberOpt.isPresent()) {
-            LOGGER.warning("Team member not found with ID: " + teamMemberId);
+            return report;
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error generating subsystem progress report", e);
             return report;
         }
+    }
+    
+    @Override
+    public Map<String, Object> generateTeamMemberReport(Long teamMemberId, LocalDate startDate, LocalDate endDate) {
+        LOGGER.info("Generating team member report for member ID: " + teamMemberId);
         
-        TeamMember member = memberOpt.get();
+        Map<String, Object> report = new HashMap<>();
         
-        // Add report metadata
-        report.put("reportType", "Team Member Performance");
-        report.put("generatedDate", LocalDate.now());
-        report.put("startDate", startDate);
-        report.put("endDate", endDate);
-        
-        // Add member details
-        Map<String, Object> memberDetails = new HashMap<>();
-        memberDetails.put("id", member.getId());
-        memberDetails.put("name", member.getFullName());
-        memberDetails.put("username", member.getUsername());
-        memberDetails.put("email", member.getEmail());
-        memberDetails.put("isLeader", member.isLeader());
-        
-        // Add subteam if exists
-        if (member.getSubteam() != null) {
-            Map<String, Object> subteamInfo = new HashMap<>();
-            subteamInfo.put("id", member.getSubteam().getId());
-            subteamInfo.put("name", member.getSubteam().getName());
-            memberDetails.put("subteam", subteamInfo);
-        }
-        
-        report.put("memberDetails", memberDetails);
-        
-        // Get individual performance metrics
-        Map<String, Object> performanceMetrics = metricsService.calculateIndividualPerformanceMetrics(
-                teamMemberId, startDate, endDate);
-        report.put("performanceMetrics", performanceMetrics);
-        
-        // Extract assigned tasks information
-        List<Task> assignedTasks = new ArrayList<>(member.getAssignedTasks());
-        
-        // Generate detailed task data
-        List<Map<String, Object>> taskDetails = new ArrayList<>();
-        
-        for (Task task : assignedTasks) {
-            Map<String, Object> taskDetail = new HashMap<>();
-            taskDetail.put("id", task.getId());
-            taskDetail.put("title", task.getTitle());
-            taskDetail.put("description", task.getDescription());
-            taskDetail.put("priority", task.getPriority().getDisplayName());
-            taskDetail.put("startDate", task.getStartDate());
-            taskDetail.put("endDate", task.getEndDate());
-            taskDetail.put("progress", task.getProgress());
-            taskDetail.put("isCompleted", task.isCompleted());
+        try {
+            // Get team member
+            Optional<TeamMember> memberOpt = teamMemberRepository.findById(teamMemberId);
+            if (memberOpt.isEmpty()) {
+                LOGGER.warning("Team member not found with ID: " + teamMemberId);
+                return report;
+            }
             
-            // Add subsystem info
-            Map<String, Object> subsystemInfo = new HashMap<>();
-            subsystemInfo.put("id", task.getSubsystem().getId());
-            subsystemInfo.put("name", task.getSubsystem().getName());
-            taskDetail.put("subsystem", subsystemInfo);
+            TeamMember member = memberOpt.get();
             
-            // Add project info
-            Map<String, Object> projectInfo = new HashMap<>();
-            projectInfo.put("id", task.getProject().getId());
-            projectInfo.put("name", task.getProject().getName());
-            taskDetail.put("project", projectInfo);
+            // Apply date filtering
+            LocalDate effectiveStartDate = startDate != null ? startDate : LocalDate.now().minusMonths(3);
+            LocalDate effectiveEndDate = endDate != null ? endDate : LocalDate.now();
             
-            taskDetails.add(taskDetail);
-        }
-        
-        // Sort by completion status and then by end date
-        taskDetails.sort(Comparator
-                .comparing((Map<String, Object> t) -> (Boolean) t.get("isCompleted"))
-                .thenComparing(t -> ((LocalDate) t.get("endDate")), Comparator.nullsLast(Comparator.naturalOrder())));
-        
-        report.put("assignedTasks", taskDetails);
-        
-        // Get attendance data
-        List<Attendance> attendances = attendanceRepository.findByMember(member);
-        
-        // Apply date filtering
-        LocalDate effectiveStartDate = startDate != null ? startDate : LocalDate.now().minusMonths(3);
-        LocalDate effectiveEndDate = endDate != null ? endDate : LocalDate.now();
-        
-        attendances = attendances.stream()
+            // Basic report information
+            report.put("memberId", member.getId());
+            report.put("memberName", member.getFullName());
+            report.put("startDate", effectiveStartDate.format(DATE_FORMATTER));
+            report.put("endDate", effectiveEndDate.format(DATE_FORMATTER));
+            
+            // Get individual performance metrics
+            Map<String, Object> performanceMetrics = metricsService.calculateIndividualPerformanceMetrics(
+                teamMemberId, effectiveStartDate, effectiveEndDate);
+            report.put("performanceMetrics", performanceMetrics);
+            
+            // Get assigned tasks
+            List<Task> assignedTasks = taskRepository.findByAssignedMember(member);
+            List<Map<String, Object>> taskDetails = new ArrayList<>();
+            
+            for (Task task : assignedTasks) {
+                Map<String, Object> taskData = new HashMap<>();
+                taskData.put("id", task.getId());
+                taskData.put("title", task.getTitle());
+                taskData.put("progress", task.getProgress());
+                taskData.put("completed", task.isCompleted());
+                taskData.put("priority", task.getPriority().toString());
+                
+                if (task.getStartDate() != null) {
+                    taskData.put("startDate", task.getStartDate().format(DATE_FORMATTER));
+                }
+                if (task.getEndDate() != null) {
+                    taskData.put("endDate", task.getEndDate().format(DATE_FORMATTER));
+                }
+                if (task.getSubsystem() != null) {
+                    taskData.put("subsystem", task.getSubsystem().getName());
+                }
+                
+                taskDetails.add(taskData);
+            }
+            
+            report.put("taskDetails", taskDetails);
+            
+            // Get attendance records
+            List<Attendance> attendances = attendanceRepository.findByMember(member);
+            
+            // Filter by date range
+            attendances = attendances.stream()
                 .filter(a -> {
                     LocalDate meetingDate = a.getMeeting().getDate();
                     return !meetingDate.isBefore(effectiveStartDate) && !meetingDate.isAfter(effectiveEndDate);
                 })
                 .collect(Collectors.toList());
-        
-        // Generate attendance statistics
-        Map<String, Object> attendanceStats = new HashMap<>();
-        attendanceStats.put("totalMeetings", attendances.size());
-        
-        long attendedMeetings = attendances.stream().filter(Attendance::isPresent).count();
-        attendanceStats.put("attendedMeetings", attendedMeetings);
-        
-        double attendanceRate = attendances.isEmpty() ? 0.0 :
-                100.0 * attendedMeetings / attendances.size();
-        attendanceStats.put("attendanceRate", attendanceRate);
-        
-        report.put("attendanceStatistics", attendanceStats);
-        
-        // Generate detailed attendance data
-        List<Map<String, Object>> attendanceDetails = new ArrayList<>();
-        
-        for (Attendance attendance : attendances) {
-            Meeting meeting = attendance.getMeeting();
             
-            Map<String, Object> attendanceDetail = new HashMap<>();
-            attendanceDetail.put("meetingId", meeting.getId());
-            attendanceDetail.put("date", meeting.getDate());
-            attendanceDetail.put("startTime", meeting.getStartTime());
-            attendanceDetail.put("endTime", meeting.getEndTime());
-            attendanceDetail.put("isPresent", attendance.isPresent());
-            
-            if (attendance.isPresent()) {
-                attendanceDetail.put("arrivalTime", attendance.getArrivalTime());
-                attendanceDetail.put("departureTime", attendance.getDepartureTime());
-                attendanceDetail.put("durationMinutes", attendance.getDurationMinutes());
+            List<Map<String, Object>> attendanceDetails = new ArrayList<>();
+            for (Attendance attendance : attendances) {
+                Map<String, Object> attendanceData = new HashMap<>();
+                attendanceData.put("meetingDate", attendance.getMeeting().getDate().format(DATE_FORMATTER));
+                attendanceData.put("meetingType", "TEAM_MEETING"); // Use default type since getType() doesn't exist
+                attendanceData.put("present", attendance.isPresent());
+                
+                attendanceDetails.add(attendanceData);
             }
             
-            // Add project info
-            Map<String, Object> projectInfo = new HashMap<>();
-            projectInfo.put("id", meeting.getProject().getId());
-            projectInfo.put("name", meeting.getProject().getName());
-            attendanceDetail.put("project", projectInfo);
+            report.put("attendanceDetails", attendanceDetails);
             
-            attendanceDetails.add(attendanceDetail);
-        }
-        
-        // Sort by date (descending)
-        attendanceDetails.sort(Comparator.comparing(a -> ((LocalDate) ((Map<String, Object>) a).get("date"))).reversed());
-        
-        report.put("attendanceDetails", attendanceDetails);
-        
-        return report;
-    } catch (Exception e) {
-        LOGGER.log(Level.SEVERE, "Error generating team member report", e);
-        return report;
-    }
-}
-
-@Override
-public Map<String, Object> generateProjectTimelineReport(Long projectId) {
-    LOGGER.info("Generating project timeline report for project ID: " + projectId);
-    
-    Map<String, Object> report = new HashMap<>();
-    
-    try {
-        // Get project
-        Optional<Project> projectOpt = projectRepository.findById(projectId);
-        if (!projectOpt.isPresent()) {
-            LOGGER.warning("Project not found with ID: " + projectId);
+            // Report metadata
+            report.put("generatedDate", LocalDate.now().format(DATE_FORMATTER));
+            report.put("reportType", "TEAM_MEMBER");
+            
+            return report;
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error generating team member report", e);
             return report;
         }
-        
-        Project project = projectOpt.get();
-        
-        // Add report metadata
-        report.put("reportType", "Project Timeline");
-        report.put("generatedDate", LocalDate.now());
-        
-        // Add project details
-        Map<String, Object> projectDetails = new HashMap<>();
-        projectDetails.put("id", project.getId());
-        projectDetails.put("name", project.getName());
-        projectDetails.put("startDate", project.getStartDate());
-        projectDetails.put("goalEndDate", project.getGoalEndDate());
-        projectDetails.put("hardDeadline", project.getHardDeadline());
-        
-        // Calculate date ranges
-        LocalDate today = LocalDate.now();
-        long totalDays = project.getStartDate().until(project.getGoalEndDate()).getDays();
-        long elapsedDays = project.getStartDate().until(today).getDays();
-        elapsedDays = Math.max(0, Math.min(totalDays, elapsedDays));
-        
-        projectDetails.put("totalDays", totalDays);
-        projectDetails.put("elapsedDays", elapsedDays);
-        projectDetails.put("progressPercentage", totalDays > 0 ? 100.0 * elapsedDays / totalDays : 0.0);
-        
-        report.put("projectDetails", projectDetails);
-        
-        // Get timeline deviation metrics
-        Map<String, Object> timelineMetrics = metricsService.calculateTimelineDeviationMetrics(projectId);
-        report.put("timelineMetrics", timelineMetrics);
-        
-        // Get tasks and milestones
-        List<Task> tasks = taskRepository.findByProject(project);
-        List<Milestone> milestones = milestoneRepository.findByProject(project);
-        
-        // Generate Gantt chart data
-        Map<String, Object> ganttData = ganttDataService.formatTasksForGantt(projectId, null, null);
-        report.put("ganttChartData", ganttData);
-        
-        // Generate timeline events
-        List<Map<String, Object>> timelineEvents = new ArrayList<>();
-        
-        // Add project start and end
-        Map<String, Object> startEvent = new HashMap<>();
-        startEvent.put("date", project.getStartDate());
-        startEvent.put("type", "Project Start");
-        startEvent.put("description", "Project began");
-        timelineEvents.add(startEvent);
-        
-        Map<String, Object> endEvent = new HashMap<>();
-        endEvent.put("date", project.getGoalEndDate());
-        endEvent.put("type", "Planned End");
-        endEvent.put("description", "Planned project completion");
-        timelineEvents.add(endEvent);
-        
-        Map<String, Object> hardDeadlineEvent = new HashMap<>();
-        hardDeadlineEvent.put("date", project.getHardDeadline());
-        hardDeadlineEvent.put("type", "Hard Deadline");
-        hardDeadlineEvent.put("description", "Final project deadline");
-        timelineEvents.add(hardDeadlineEvent);
-        
-        // Add milestones
-        for (Milestone milestone : milestones) {
-            Map<String, Object> milestoneEvent = new HashMap<>();
-            milestoneEvent.put("date", milestone.getDate());
-            milestoneEvent.put("type", "Milestone");
-            milestoneEvent.put("description", milestone.getName());
-            milestoneEvent.put("id", milestone.getId());
-            milestoneEvent.put("isPassed", milestone.isPassed());
-            timelineEvents.add(milestoneEvent);
-        }
-        
-        // Sort events by date
-        timelineEvents.sort(Comparator.comparing(e -> ((LocalDate) e.get("date"))));
-        
-        report.put("timelineEvents", timelineEvents);
-        
-        // Calculate critical path
-        List<Long> criticalPath = ganttDataService.calculateCriticalPath(projectId);
-        report.put("criticalPath", criticalPath);
-        
-        // Identify bottlenecks
-        List<Long> bottlenecks = ganttDataService.identifyBottlenecks(projectId);
-        report.put("bottlenecks", bottlenecks);
-        
-        return report;
-    } catch (Exception e) {
-        LOGGER.log(Level.SEVERE, "Error generating project timeline report", e);
-        return report;
     }
-}
-
-@Override
-public byte[] exportReportToPdf(Map<String, Object> reportData, String reportType) {
-    LOGGER.info("Exporting report to PDF. Type: " + reportType);
     
-    try {
-        // Placeholder implementation
-        // In a real implementation, this would use a PDF generation library like iText or Apache PDFBox
+    @Override
+    public Map<String, Object> generateProjectTimelineReport(Long projectId) {
+        LOGGER.info("Generating project timeline report for project ID: " + projectId);
         
-        // Convert report data to a byte array representing a PDF
-        String reportText = generateTextReport(reportData, reportType);
+        Map<String, Object> report = new HashMap<>();
         
-        // Ensure we always return non-empty byte array for testing purposes
-        if (reportText.isEmpty()) {
-            reportText = "Placeholder PDF content for " + reportType;
-        }
-        // Here we're just returning the bytes of the text for placeholder purposes
-        // A real implementation would create a properly formatted PDF
-        return reportText.getBytes();
-    } catch (Exception e) {
-        LOGGER.log(Level.SEVERE, "Error exporting report to PDF", e);
-        return "Error generating PDF report".getBytes();
-    }
-}
-
-@Override
-public String exportReportToCsv(Map<String, Object> reportData, String reportType) {
-    LOGGER.info("Exporting report to CSV. Type: " + reportType);
-    
-    try {
-        StringBuilder csv = new StringBuilder();
-        
-        // Create CSV based on report type
-        switch (reportType) {
-            case "Project Summary":
-                csv.append(generateProjectSummaryCsv(reportData));
-                break;
-            case "Team Performance":
-                csv.append(generateTeamPerformanceCsv(reportData));
-                break;
-            case "Milestone Status":
-                csv.append(generateMilestoneStatusCsv(reportData));
-                break;
-            case "Attendance":
-                csv.append(generateAttendanceCsv(reportData));
-                break;
-            case "Subsystem Progress":
-                csv.append(generateSubsystemProgressCsv(reportData));
-                break;
-            case "Team Member Performance":
-                csv.append(generateTeamMemberCsv(reportData));
-                break;
-            case "Project Timeline":
-                csv.append(generateProjectTimelineCsv(reportData));
-                break;
-            default:
-                csv.append("Unknown report type: ").append(reportType);
-                break;
-        }
-        
-        return csv.toString();
-    } catch (Exception e) {
-        LOGGER.log(Level.SEVERE, "Error exporting report to CSV", e);
-        return "Error generating CSV: " + e.getMessage();
-    }
-}
-
-@Override
-public Map<String, Object> generateCustomReport(Long projectId, List<String> metrics, LocalDate startDate, LocalDate endDate) {
-    LOGGER.info("Generating custom report for project ID: " + projectId);
-    
-    Map<String, Object> report = new HashMap<>();
-    
-    try {
-        // Get project
-        Optional<Project> projectOpt = projectRepository.findById(projectId);
-        if (!projectOpt.isPresent()) {
-            LOGGER.warning("Project not found with ID: " + projectId);
+        try {
+            // Get project
+            Optional<Project> projectOpt = projectRepository.findById(projectId);
+            if (projectOpt.isEmpty()) {
+                LOGGER.warning("Project not found with ID: " + projectId);
+                return report;
+            }
+            
+            Project project = projectOpt.get();
+            
+            // Basic report information
+            report.put("projectId", project.getId());
+            report.put("projectName", project.getName());
+            report.put("startDate", project.getStartDate().format(DATE_FORMATTER));
+            report.put("goalEndDate", project.getGoalEndDate().format(DATE_FORMATTER));
+            report.put("hardDeadline", project.getHardDeadline().format(DATE_FORMATTER));
+            
+            // Get timeline deviation metrics
+            Map<String, Object> timelineMetrics = metricsService.calculateTimelineDeviationMetrics(projectId);
+            report.put("timelineMetrics", timelineMetrics);
+            
+            // Get Gantt data for visualization
+            Map<String, Object> ganttData = ganttDataService.formatTasksForGantt(projectId, null, null);
+            report.put("ganttData", ganttData);
+            
+            // Critical path analysis
+            List<Long> criticalPath = ganttDataService.calculateCriticalPath(projectId);
+            report.put("criticalPath", criticalPath);
+            
+            // Task dependencies
+            Map<Long, List<Long>> dependencies = ganttDataService.getTaskDependencies(projectId);
+            report.put("taskDependencies", dependencies);
+            
+            // Bottleneck analysis
+            List<Long> bottlenecks = ganttDataService.identifyBottlenecks(projectId);
+            report.put("bottlenecks", bottlenecks);
+            
+            // Timeline visualization data
+            Map<String, Object> timelineVisualization = new HashMap<>();
+            timelineVisualization.put("startDate", project.getStartDate().format(DATE_FORMATTER));
+            timelineVisualization.put("endDate", project.getHardDeadline().format(DATE_FORMATTER));
+            timelineVisualization.put("currentDate", LocalDate.now().format(DATE_FORMATTER));
+            
+            // Calculate project phases (if applicable)
+            List<Milestone> milestones = milestoneRepository.findByProject(project);
+            milestones.sort(Comparator.comparing(Milestone::getDate));
+            
+            List<Map<String, Object>> phases = new ArrayList<>();
+            LocalDate phaseStart = project.getStartDate();
+            
+            for (int i = 0; i < milestones.size(); i++) {
+                Milestone milestone = milestones.get(i);
+                Map<String, Object> phase = new HashMap<>();
+                phase.put("name", "Phase " + (i + 1) + " - " + milestone.getName());
+                phase.put("startDate", phaseStart.format(DATE_FORMATTER));
+                phase.put("endDate", milestone.getDate().format(DATE_FORMATTER));
+                phase.put("milestone", milestone.getName());
+                phase.put("completed", milestone.isPassed());
+                
+                phases.add(phase);
+                phaseStart = milestone.getDate().plusDays(1);
+            }
+            
+            timelineVisualization.put("phases", phases);
+            report.put("timelineVisualization", timelineVisualization);
+            
+            // Report metadata
+            report.put("generatedDate", LocalDate.now().format(DATE_FORMATTER));
+            report.put("reportType", "PROJECT_TIMELINE");
+            
+            return report;
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error generating project timeline report", e);
             return report;
         }
+    }
+    
+    @Override
+    public byte[] exportReportToPdf(Map<String, Object> reportData, String reportType) {
+        LOGGER.info("Exporting report to PDF format: " + reportType);
         
-        Project project = projectOpt.get();
+        try {
+            // For now, this is a placeholder implementation
+            // In a full implementation, you would use a PDF library like iText or Apache PDFBox
+            // to generate actual PDF content from the report data
+            
+            StringBuilder pdfContent = new StringBuilder();
+            pdfContent.append("PDF Report Export\n");
+            pdfContent.append("Report Type: ").append(reportType).append("\n");
+            pdfContent.append("Generated: ").append(reportData.get("generatedDate")).append("\n\n");
+            
+            // Add basic report data
+            for (Map.Entry<String, Object> entry : reportData.entrySet()) {
+                if (!entry.getKey().equals("generatedDate") && !entry.getKey().equals("reportType")) {
+                    pdfContent.append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
+                }
+            }
+            
+            // Convert to bytes (this would be actual PDF bytes in real implementation)
+            return pdfContent.toString().getBytes();
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error exporting report to PDF", e);
+            return new byte[0];
+        }
+    }
+    
+    @Override
+    public String exportReportToCsv(Map<String, Object> reportData, String reportType) {
+        LOGGER.info("Exporting report to CSV format: " + reportType);
         
-        // Add report metadata
-        report.put("reportType", "Custom Report");
-        report.put("generatedDate", LocalDate.now());
-        report.put("startDate", startDate);
-        report.put("endDate", endDate);
-        report.put("selectedMetrics", metrics);
-        // Continuing src/main/java/org/frcpm/services/impl/ReportGenerationServiceImpl.java
-
-            // Add project details
-            Map<String, Object> projectDetails = new HashMap<>();
-            projectDetails.put("id", project.getId());
-            projectDetails.put("name", project.getName());
-            projectDetails.put("startDate", project.getStartDate());
-            projectDetails.put("goalEndDate", project.getGoalEndDate());
+        try {
+            StringBuilder csvContent = new StringBuilder();
             
-            report.put("projectDetails", projectDetails);
+            // CSV Header
+            csvContent.append("Report Type,").append(reportType).append("\n");
+            csvContent.append("Generated Date,").append(reportData.get("generatedDate")).append("\n\n");
             
-            // Add selected metrics based on the requested types
-            for (String metricType : metrics) {
-                switch (metricType) {
-                    case "projectProgress":
-                        Map<String, Object> progressMetrics = metricsService.calculateProjectProgressMetrics(projectId);
-                        report.put("projectProgressMetrics", progressMetrics);
+            // Export based on report type
+            switch (reportType.toUpperCase()) {
+                case "PROJECT_SUMMARY":
+                    exportProjectSummaryToCsv(reportData, csvContent);
+                    break;
+                case "TEAM_PERFORMANCE":
+                    exportTeamPerformanceToCsv(reportData, csvContent);
+                    break;
+                case "ATTENDANCE":
+                    exportAttendanceToCsv(reportData, csvContent);
+                    break;
+                case "MILESTONE_STATUS":
+                    exportMilestoneStatusToCsv(reportData, csvContent);
+                    break;
+                default:
+                    // Generic export for other report types
+                    exportGenericToCsv(reportData, csvContent);
+                    break;
+            }
+            
+            return csvContent.toString();
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error exporting report to CSV", e);
+            return "";
+        }
+    }
+    
+    @Override
+    public Map<String, Object> generateCustomReport(Long projectId, List<String> metrics, LocalDate startDate, LocalDate endDate) {
+        LOGGER.info("Generating custom report for project ID: " + projectId);
+        
+        Map<String, Object> report = new HashMap<>();
+        
+        try {
+            // Get project
+            Optional<Project> projectOpt = projectRepository.findById(projectId);
+            if (projectOpt.isEmpty()) {
+                LOGGER.warning("Project not found with ID: " + projectId);
+                return report;
+            }
+            
+            Project project = projectOpt.get();
+            
+            // Apply date filtering
+            LocalDate effectiveStartDate = startDate != null ? startDate : project.getStartDate();
+            LocalDate effectiveEndDate = endDate != null ? endDate : LocalDate.now();
+            
+            // Basic report information
+            report.put("projectId", project.getId());
+            report.put("projectName", project.getName());
+            report.put("startDate", effectiveStartDate.format(DATE_FORMATTER));
+            report.put("endDate", effectiveEndDate.format(DATE_FORMATTER));
+            report.put("requestedMetrics", metrics);
+            
+            // Generate requested metrics
+            Map<String, Object> customMetrics = new HashMap<>();
+            
+            for (String metric : metrics) {
+                switch (metric.toLowerCase()) {
+                    case "project_progress":
+                        customMetrics.put("projectProgress", 
+                            metricsService.calculateProjectProgressMetrics(projectId));
                         break;
-                        
-                    case "teamPerformance":
-                        Map<String, Object> teamMetrics = metricsService.calculateTeamPerformanceMetrics(projectId, startDate, endDate);
-                        report.put("teamPerformanceMetrics", teamMetrics);
+                    case "team_performance":
+                        customMetrics.put("teamPerformance", 
+                            metricsService.calculateTeamPerformanceMetrics(projectId, effectiveStartDate, effectiveEndDate));
                         break;
-                        
-                    case "taskCompletion":
-                        Map<String, Object> taskMetrics = metricsService.calculateTaskCompletionMetrics(projectId);
-                        report.put("taskCompletionMetrics", taskMetrics);
+                    case "task_completion":
+                        customMetrics.put("taskCompletion", 
+                            metricsService.calculateTaskCompletionMetrics(projectId));
                         break;
-                        
                     case "attendance":
-                        Map<String, Object> attendanceMetrics = metricsService.calculateAttendanceMetrics(projectId, startDate, endDate);
-                        report.put("attendanceMetrics", attendanceMetrics);
+                        customMetrics.put("attendance", 
+                            metricsService.calculateAttendanceMetrics(projectId, effectiveStartDate, effectiveEndDate));
                         break;
-                        
-                    case "timelineDeviation":
-                        Map<String, Object> timelineMetrics = metricsService.calculateTimelineDeviationMetrics(projectId);
-                        report.put("timelineDeviationMetrics", timelineMetrics);
+                    case "timeline_deviation":
+                        customMetrics.put("timelineDeviation", 
+                            metricsService.calculateTimelineDeviationMetrics(projectId));
                         break;
-                        
-                    case "subsystemPerformance":
-                        Map<String, Object> subsystemMetrics = metricsService.calculateSubsystemPerformanceMetrics(projectId);
-                        report.put("subsystemPerformanceMetrics", subsystemMetrics);
+                    case "subsystem_performance":
+                        customMetrics.put("subsystemPerformance", 
+                            metricsService.calculateSubsystemPerformanceMetrics(projectId));
                         break;
-                        
-                    case "projectHealth":
-                        Map<String, Object> healthDashboard = metricsService.generateProjectHealthDashboard(projectId);
-                        report.put("projectHealthMetrics", healthDashboard);
+                    case "project_health":
+                        customMetrics.put("projectHealth", 
+                            metricsService.generateProjectHealthDashboard(projectId));
                         break;
-                        
+                    case "visualization_data":
+                        Map<String, Object> vizData = new HashMap<>();
+                        vizData.put("projectCompletion", visualizationService.getProjectCompletionData(projectId));
+                        vizData.put("taskStatusSummary", visualizationService.getTaskStatusSummary(projectId));
+                        vizData.put("upcomingDeadlines", visualizationService.getUpcomingDeadlines(projectId, 14));
+                        vizData.put("subsystemProgress", visualizationService.getSubsystemProgress(projectId));
+                        vizData.put("atRiskTasks", visualizationService.getAtRiskTasks(projectId));
+                        customMetrics.put("visualizationData", vizData);
+                        break;
                     default:
-                        LOGGER.warning("Unknown metric type: " + metricType);
+                        LOGGER.warning("Unknown metric requested: " + metric);
                         break;
                 }
             }
             
-            // Add custom summary
-            report.put("summary", generateCustomReportSummary(report));
+            report.put("customMetrics", customMetrics);
+            
+            // Report metadata
+            report.put("generatedDate", LocalDate.now().format(DATE_FORMATTER));
+            report.put("reportType", "CUSTOM");
             
             return report;
         } catch (Exception e) {
@@ -1088,537 +782,143 @@ public Map<String, Object> generateCustomReport(Long projectId, List<String> met
         }
     }
     
-    // Helper methods for CSV generation
+    // Spring @Async methods for background processing
     
-    /**
-     * Generates a text-based representation of a report.
-     * 
-     * @param reportData the report data
-     * @param reportType the type of report
-     * @return a text representation of the report
-     */
-    private String generateTextReport(Map<String, Object> reportData, String reportType) {
-        StringBuilder text = new StringBuilder();
-        
-        // Add report header
-        text.append("REPORT: ").append(reportType).append("\n");
-        text.append("Generated: ").append(LocalDate.now().format(DateTimeFormatter.ISO_DATE)).append("\n\n");
-        
-        // Add project details
-        Map<String, Object> projectDetails = (Map<String, Object>) reportData.get("projectDetails");
-        if (projectDetails != null) {
-            text.append("PROJECT: ").append(projectDetails.get("name")).append("\n");
-            if (projectDetails.get("startDate") != null) {
-                text.append("Start Date: ").append(projectDetails.get("startDate")).append("\n");
-            }
-            if (projectDetails.get("goalEndDate") != null) {
-                text.append("End Date: ").append(projectDetails.get("goalEndDate")).append("\n");
-            }
-            text.append("\n");
-        }
-        
-        // Add report-specific sections
-        switch (reportType) {
-            case "Project Summary":
-                appendProjectSummaryText(text, reportData);
-                break;
-            case "Team Performance":
-                appendTeamPerformanceText(text, reportData);
-                break;
-            case "Milestone Status":
-                appendMilestoneStatusText(text, reportData);
-                break;
-            case "Attendance":
-                appendAttendanceText(text, reportData);
-                break;
-            case "Subsystem Progress":
-                appendSubsystemProgressText(text, reportData);
-                break;
-            case "Team Member Performance":
-                appendTeamMemberText(text, reportData);
-                break;
-            case "Project Timeline":
-                appendProjectTimelineText(text, reportData);
-                break;
-            default:
-                text.append("Unknown report type: ").append(reportType);
-                break;
-        }
-        
-        return text.toString();
+    @Async
+    public CompletableFuture<Map<String, Object>> generateProjectSummaryReportAsync(Long projectId) {
+        return CompletableFuture.completedFuture(generateProjectSummaryReport(projectId));
     }
     
-    /**
-     * Generates a Project Summary CSV.
-     * 
-     * @param reportData the report data
-     * @return a CSV string
-     */
-    private String generateProjectSummaryCsv(Map<String, Object> reportData) {
-        StringBuilder csv = new StringBuilder();
-        
-        // Project details
-        csv.append("Project Name,Start Date,Goal End Date,Hard Deadline\n");
-        Map<String, Object> projectDetails = (Map<String, Object>) reportData.get("projectDetails");
-        csv.append(projectDetails.get("name")).append(",");
-        csv.append(projectDetails.get("startDate")).append(",");
-        csv.append(projectDetails.get("goalEndDate")).append(",");
-        csv.append(projectDetails.get("hardDeadline")).append("\n\n");
-        
-        // Task statistics
-        csv.append("Task Statistics\n");
-        csv.append("Total Tasks,Completed Tasks,In Progress Tasks,Not Started Tasks,Completion Percentage\n");
-        Map<String, Object> taskStats = (Map<String, Object>) reportData.get("taskStatistics");
-        csv.append(taskStats.get("totalTasks")).append(",");
-        csv.append(taskStats.get("completedTasks")).append(",");
-        csv.append(taskStats.get("inProgressTasks")).append(",");
-        csv.append(taskStats.get("notStartedTasks")).append(",");
-        csv.append(taskStats.get("completionPercentage")).append("%\n\n");
-        
-        // Milestone statistics
-        csv.append("Milestone Statistics\n");
-        csv.append("Total Milestones,Passed Milestones\n");
-        Map<String, Object> milestoneStats = (Map<String, Object>) reportData.get("milestoneStatistics");
-        csv.append(milestoneStats.get("totalMilestones")).append(",");
-        csv.append(milestoneStats.get("passedMilestones")).append("\n\n");
-        
-        // Upcoming milestones
-        csv.append("Upcoming Milestones\n");
-        csv.append("Name,Date,Days Until\n");
-        List<Map<String, Object>> upcomingMilestones = (List<Map<String, Object>>) milestoneStats.get("upcomingMilestones");
-        for (Map<String, Object> milestone : upcomingMilestones) {
-            csv.append(milestone.get("name")).append(",");
-            csv.append(milestone.get("date")).append(",");
-            csv.append(milestone.get("daysUntil")).append("\n");
-        }
-        csv.append("\n");
-        
-        return csv.toString();
+    @Async
+    public CompletableFuture<Map<String, Object>> generateTeamPerformanceReportAsync(Long projectId, LocalDate startDate, LocalDate endDate) {
+        return CompletableFuture.completedFuture(generateTeamPerformanceReport(projectId, startDate, endDate));
     }
     
-    /**
-     * Generates a Team Performance CSV.
-     * 
-     * @param reportData the report data
-     * @return a CSV string
-     */
-    private String generateTeamPerformanceCsv(Map<String, Object> reportData) {
-        StringBuilder csv = new StringBuilder();
-        
-        // Team Metrics
-        csv.append("Team Metrics\n");
-        csv.append("Total Team Members,Average Attendance Percentage,Average Tasks Per Member\n");
-        Map<String, Object> teamMetrics = (Map<String, Object>) reportData.get("teamMetrics");
-        csv.append(teamMetrics.get("totalTeamMembers")).append(",");
-        csv.append(teamMetrics.get("averageAttendancePercentage")).append("%,");
-        csv.append(teamMetrics.get("averageTasksPerMember")).append("\n\n");
-        
-        // Tasks per Member
-        csv.append("Tasks Per Member\n");
-        csv.append("Member ID,Tasks Count,Completed Tasks,Completion Rate\n");
-        Map<Long, Long> tasksPerMember = (Map<Long, Long>) teamMetrics.get("tasksPerMember");
-        Map<Long, Long> completedTasksPerMember = (Map<Long, Long>) teamMetrics.get("completedTasksPerMember");
-        Map<Long, Double> completionRatePerMember = (Map<Long, Double>) teamMetrics.get("completionRatePerMember");
-        
-        for (Map.Entry<Long, Long> entry : tasksPerMember.entrySet()) {
-            Long memberId = entry.getKey();
-            Long taskCount = entry.getValue();
-            Long completedCount = completedTasksPerMember.getOrDefault(memberId, 0L);
-            Double completionRate = completionRatePerMember.getOrDefault(memberId, 0.0);
-            
-            csv.append(memberId).append(",");
-            csv.append(taskCount).append(",");
-            csv.append(completedCount).append(",");
-            csv.append(completionRate).append("%\n");
-        }
-        csv.append("\n");
-        
-        return csv.toString();
+    @Async
+    public CompletableFuture<Map<String, Object>> generateMilestoneStatusReportAsync(Long projectId) {
+        return CompletableFuture.completedFuture(generateMilestoneStatusReport(projectId));
     }
     
-    /**
-     * Generates a Milestone Status CSV.
-     * 
-     * @param reportData the report data
-     * @return a CSV string
-     */
-    private String generateMilestoneStatusCsv(Map<String, Object> reportData) {
-        StringBuilder csv = new StringBuilder();
-        
-        // Milestone statistics
-        csv.append("Milestone Statistics\n");
-        csv.append("Total Milestones,Passed Milestones,Upcoming Milestones,Milestone Completion Percentage\n");
-        Map<String, Object> milestoneStats = (Map<String, Object>) reportData.get("milestoneStatistics");
-        csv.append(milestoneStats.get("totalMilestones")).append(",");
-        csv.append(milestoneStats.get("passedMilestones")).append(",");
-        csv.append(milestoneStats.get("upcomingMilestones")).append(",");
-        csv.append(milestoneStats.get("milestoneCompletionPercentage")).append("%\n\n");
-        
-        // Detailed milestones
-        csv.append("Milestone Details\n");
-        csv.append("ID,Name,Date,Status,Days Until\n");
-        List<Map<String, Object>> milestones = (List<Map<String, Object>>) reportData.get("milestones");
-        for (Map<String, Object> milestone : milestones) {
-            csv.append(milestone.get("id")).append(",");
-            
-            // Escape commas in name
-            String name = (String) milestone.get("name");
-            if (name.contains(",")) {
-                name = "\"" + name + "\"";
-            }
-            csv.append(name).append(",");
-            
-            csv.append(milestone.get("date")).append(",");
-            csv.append(milestone.get("status")).append(",");
-            csv.append(milestone.get("daysUntil")).append("\n");
-        }
-        csv.append("\n");
-        
-        return csv.toString();
+    @Async
+    public CompletableFuture<Map<String, Object>> generateAttendanceReportAsync(Long projectId, LocalDate startDate, LocalDate endDate) {
+        return CompletableFuture.completedFuture(generateAttendanceReport(projectId, startDate, endDate));
     }
     
-    /**
-     * Generates an Attendance CSV.
-     * 
-     * @param reportData the report data
-     * @return a CSV string
-     */
-    private String generateAttendanceCsv(Map<String, Object> reportData) {
-        StringBuilder csv = new StringBuilder();
-        
-        // Meeting statistics
-        csv.append("Attendance Statistics\n");
-        csv.append("Total Meetings,Total Attendance Records,Present Count,Overall Attendance Rate\n");
-        Map<String, Object> meetingStats = (Map<String, Object>) reportData.get("meetingStatistics");
-        csv.append(meetingStats.get("totalMeetings")).append(",");
-        csv.append(meetingStats.get("totalAttendanceRecords")).append(",");
-        csv.append(meetingStats.get("presentCount")).append(",");
-        csv.append(meetingStats.get("overallAttendanceRate")).append("%\n\n");
-        
-        // Meeting details
-        csv.append("Meeting Details\n");
-        csv.append("ID,Date,Start Time,End Time,Total Invited,Present Count,Attendance Rate\n");
-        List<Map<String, Object>> meetings = (List<Map<String, Object>>) reportData.get("meetings");
-        for (Map<String, Object> meeting : meetings) {
-            csv.append(meeting.get("id")).append(",");
-            csv.append(meeting.get("date")).append(",");
-            csv.append(meeting.get("startTime")).append(",");
-            csv.append(meeting.get("endTime")).append(",");
-            csv.append(meeting.get("totalInvited")).append(",");
-            csv.append(meeting.get("presentCount")).append(",");
-            csv.append(meeting.get("attendanceRate")).append("%\n");
-        }
-        csv.append("\n");
-        
-        // Member attendance
-        csv.append("Member Attendance\n");
-        csv.append("ID,Name,Meetings Invited,Meetings Attended,Attendance Rate\n");
-        List<Map<String, Object>> memberAttendance = (List<Map<String, Object>>) reportData.get("memberAttendance");
-        for (Map<String, Object> member : memberAttendance) {
-            csv.append(member.get("id")).append(",");
-            
-            // Escape commas in name
-            String name = (String) member.get("name");
-            if (name.contains(",")) {
-                name = "\"" + name + "\"";
-            }
-            csv.append(name).append(",");
-            
-            csv.append(member.get("meetingsInvited")).append(",");
-            csv.append(member.get("meetingsAttended")).append(",");
-            csv.append(member.get("attendanceRate")).append("%\n");
-        }
-        csv.append("\n");
-        
-        return csv.toString();
+    @Async
+    public CompletableFuture<Map<String, Object>> generateSubsystemProgressReportAsync(Long projectId) {
+        return CompletableFuture.completedFuture(generateSubsystemProgressReport(projectId));
     }
     
-    /**
-     * Generates a Subsystem Progress CSV.
-     * 
-     * @param reportData the report data
-     * @return a CSV string
-     */
-    private String generateSubsystemProgressCsv(Map<String, Object> reportData) {
-        StringBuilder csv = new StringBuilder();
-        
-        // Subsystem statistics
-        csv.append("Subsystem Statistics\n");
-        csv.append("Total Subsystems,Completed Subsystems,Subsystem Completion Rate\n");
-        Map<String, Object> subsystemStats = (Map<String, Object>) reportData.get("subsystemStatistics");
-        csv.append(subsystemStats.get("totalSubsystems")).append(",");
-        csv.append(subsystemStats.get("completedSubsystems")).append(",");
-        csv.append(subsystemStats.get("subsystemCompletionRate")).append("%\n\n");
-        
-        // Status counts
-        csv.append("Status Counts\n");
-        csv.append("Status,Count\n");
-        Map<String, Long> statusCounts = (Map<String, Long>) subsystemStats.get("statusCounts");
-        for (Map.Entry<String, Long> entry : statusCounts.entrySet()) {
-            csv.append(entry.getKey()).append(",");
-            csv.append(entry.getValue()).append("\n");
-        }
-        csv.append("\n");
-        
-        // Subsystem details
-        csv.append("Subsystem Details\n");
-        csv.append("ID,Name,Status,Total Tasks,Completed Tasks,Completion Percentage\n");
-        List<Map<String, Object>> subsystems = (List<Map<String, Object>>) reportData.get("subsystems");
-        for (Map<String, Object> subsystem : subsystems) {
-            csv.append(subsystem.get("id")).append(",");
-            
-            // Escape commas in name
-            String name = (String) subsystem.get("name");
-            if (name.contains(",")) {
-                name = "\"" + name + "\"";
-            }
-            csv.append(name).append(",");
-            
-            csv.append(subsystem.get("status")).append(",");
-            
-            Map<String, Object> taskStats = (Map<String, Object>) subsystem.get("taskStatistics");
-            csv.append(taskStats.get("totalTasks")).append(",");
-            csv.append(taskStats.get("completedTasks")).append(",");
-            csv.append(taskStats.get("completionPercentage")).append("%\n");
-        }
-        csv.append("\n");
-        
-        return csv.toString();
+    @Async
+    public CompletableFuture<Map<String, Object>> generateTeamMemberReportAsync(Long teamMemberId, LocalDate startDate, LocalDate endDate) {
+        return CompletableFuture.completedFuture(generateTeamMemberReport(teamMemberId, startDate, endDate));
     }
     
-    /**
-     * Generates a Team Member CSV.
-     * 
-     * @param reportData the report data
-     * @return a CSV string
-     */
-    private String generateTeamMemberCsv(Map<String, Object> reportData) {
-        StringBuilder csv = new StringBuilder();
-        
-        // Member details
-        csv.append("Member Details\n");
-        csv.append("ID,Name,Username,Email,Is Leader\n");
-        Map<String, Object> memberDetails = (Map<String, Object>) reportData.get("memberDetails");
-        csv.append(memberDetails.get("id")).append(",");
-        
-        // Escape commas in name
-        String name = (String) memberDetails.get("name");
-        if (name.contains(",")) {
-            name = "\"" + name + "\"";
-        }
-        csv.append(name).append(",");
-        
-        csv.append(memberDetails.get("username")).append(",");
-        csv.append(memberDetails.get("email")).append(",");
-        csv.append(memberDetails.get("isLeader")).append("\n\n");
-        
-        // Performance metrics
-        csv.append("Performance Metrics\n");
-        csv.append("Total Assigned Tasks,Completed Tasks,Task Completion Rate,Average Task Progress\n");
-        Map<String, Object> metrics = (Map<String, Object>) reportData.get("performanceMetrics");
-        csv.append(metrics.get("totalAssignedTasks")).append(",");
-        csv.append(metrics.get("completedTasks")).append(",");
-        csv.append(metrics.get("taskCompletionRate")).append("%,");
-        csv.append(metrics.get("averageTaskProgress")).append("%\n\n");
-        
-        // Attendance statistics
-        csv.append("Attendance Statistics\n");
-        csv.append("Total Meetings,Attended Meetings,Attendance Rate\n");
-        csv.append(metrics.get("totalMeetings")).append(",");
-        csv.append(metrics.get("attendedMeetings")).append(",");
-        csv.append(metrics.get("attendanceRate")).append("%\n\n");
-        
-        // Task details
-        csv.append("Assigned Tasks\n");
-        csv.append("ID,Title,Progress,Priority,Start Date,End Date,Completed\n");
-        List<Map<String, Object>> tasks = (List<Map<String, Object>>) reportData.get("assignedTasks");
-        for (Map<String, Object> task : tasks) {
-            csv.append(task.get("id")).append(",");
-            
-            // Escape commas in title
-            String title = (String) task.get("title");
-            if (title.contains(",")) {
-                title = "\"" + title + "\"";
-            }
-            csv.append(title).append(",");
-            
-            csv.append(task.get("progress")).append("%,");
-            csv.append(task.get("priority")).append(",");
-            csv.append(task.get("startDate")).append(",");
-            csv.append(task.get("endDate")).append(",");
-            csv.append(task.get("isCompleted")).append("\n");
-        }
-        csv.append("\n");
-        
-        return csv.toString();
+    @Async
+    public CompletableFuture<Map<String, Object>> generateProjectTimelineReportAsync(Long projectId) {
+        return CompletableFuture.completedFuture(generateProjectTimelineReport(projectId));
     }
     
-    /**
-     * Generates a Project Timeline CSV.
-     * 
-     * @param reportData the report data
-     * @return a CSV string
-     */
-    private String generateProjectTimelineCsv(Map<String, Object> reportData) {
-        StringBuilder csv = new StringBuilder();
-        
-        // Timeline statistics
-        csv.append("Timeline Statistics\n");
-        csv.append("Projected Delay,Is On Schedule,Timeline Deviation Percentage\n");
-        Map<String, Object> timelineMetrics = (Map<String, Object>) reportData.get("timelineMetrics");
-        csv.append(timelineMetrics.get("projectedDelay")).append(" days,");
-        csv.append(timelineMetrics.get("isOnSchedule")).append(",");
-        csv.append(timelineMetrics.get("timelineDeviationPercentage")).append("%\n\n");
-        
-        // Timeline events
-        csv.append("Timeline Events\n");
-        csv.append("Date,Type,Description\n");
-        List<Map<String, Object>> events = (List<Map<String, Object>>) reportData.get("timelineEvents");
-        for (Map<String, Object> event : events) {
-            csv.append(event.get("date")).append(",");
-            csv.append(event.get("type")).append(",");
-            
-            // Escape commas in description
-            String description = (String) event.get("description");
-            if (description.contains(",")) {
-                description = "\"" + description + "\"";
-            }
-            csv.append(description).append("\n");
-        }
-        csv.append("\n");
-        
-        return csv.toString();
+    @Async
+    public CompletableFuture<byte[]> exportReportToPdfAsync(Map<String, Object> reportData, String reportType) {
+        return CompletableFuture.completedFuture(exportReportToPdf(reportData, reportType));
     }
     
-    /**
-     * Generates a summary for the custom report.
-     * 
-     * @param reportData the report data
-     * @return a summary map
-     */
-    private Map<String, Object> generateCustomReportSummary(Map<String, Object> reportData) {
-        Map<String, Object> summary = new HashMap<>();
+    @Async
+    public CompletableFuture<String> exportReportToCsvAsync(Map<String, Object> reportData, String reportType) {
+        return CompletableFuture.completedFuture(exportReportToCsv(reportData, reportType));
+    }
+    
+    @Async
+    public CompletableFuture<Map<String, Object>> generateCustomReportAsync(Long projectId, List<String> metrics, LocalDate startDate, LocalDate endDate) {
+        return CompletableFuture.completedFuture(generateCustomReport(projectId, metrics, startDate, endDate));
+    }
+    
+    // Private helper methods for CSV export
+    
+    private void exportProjectSummaryToCsv(Map<String, Object> reportData, StringBuilder csvContent) {
+        csvContent.append("Project Summary\n");
+        csvContent.append("Field,Value\n");
+        csvContent.append("Project Name,").append(reportData.get("projectName")).append("\n");
+        csvContent.append("Start Date,").append(reportData.get("startDate")).append("\n");
+        csvContent.append("Goal End Date,").append(reportData.get("goalEndDate")).append("\n");
+        csvContent.append("Hard Deadline,").append(reportData.get("hardDeadline")).append("\n");
+        csvContent.append("Total Tasks,").append(reportData.get("totalTasks")).append("\n");
+        csvContent.append("Completed Tasks,").append(reportData.get("completedTasks")).append("\n");
+        csvContent.append("Total Milestones,").append(reportData.get("totalMilestones")).append("\n");
+        csvContent.append("Passed Milestones,").append(reportData.get("passedMilestones")).append("\n");
+        csvContent.append("Team Size,").append(reportData.get("teamSize")).append("\n");
+        csvContent.append("Overdue Tasks,").append(reportData.get("overdueTasks")).append("\n");
+    }
+    
+    private void exportTeamPerformanceToCsv(Map<String, Object> reportData, StringBuilder csvContent) {
+        csvContent.append("Team Performance Summary\n");
+        csvContent.append("Member Name,Tasks Assigned,Tasks Completed,Completion Rate,Attendance Rate\n");
         
-        // Project details
-        Map<String, Object> projectDetails = (Map<String, Object>) reportData.get("projectDetails");
-        summary.put("projectName", projectDetails.get("name"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> individualSummaries = (List<Map<String, Object>>) reportData.get("individualSummaries");
         
-        // Project progress metrics
-        if (reportData.containsKey("projectProgressMetrics")) {
-            Map<String, Object> progressMetrics = (Map<String, Object>) reportData.get("projectProgressMetrics");
-            summary.put("completionPercentage", progressMetrics.get("completionPercentage"));
-            summary.put("scheduleVariance", progressMetrics.get("scheduleVariance"));
-        }
-        
-        // Timeline metrics
-        if (reportData.containsKey("timelineDeviationMetrics")) {
-            Map<String, Object> timelineMetrics = (Map<String, Object>) reportData.get("timelineDeviationMetrics");
-            summary.put("projectedDelay", timelineMetrics.get("projectedDelay"));
-            summary.put("isOnSchedule", timelineMetrics.get("isOnSchedule"));
-        }
-        
-        // Task metrics
-        if (reportData.containsKey("taskCompletionMetrics")) {
-            Map<String, Object> taskMetrics = (Map<String, Object>) reportData.get("taskCompletionMetrics");
-            if (taskMetrics.containsKey("taskCountsByStatus")) {
-                Map<String, Long> taskCountsByStatus = (Map<String, Long>) taskMetrics.get("taskCountsByStatus");
-                summary.put("completedTasks", taskCountsByStatus.getOrDefault("COMPLETED", 0L));
-                summary.put("inProgressTasks", taskCountsByStatus.getOrDefault("IN_PROGRESS", 0L));
-                summary.put("notStartedTasks", taskCountsByStatus.getOrDefault("NOT_STARTED", 0L));
+        if (individualSummaries != null) {
+            for (Map<String, Object> summary : individualSummaries) {
+                csvContent.append(summary.get("memberName")).append(",");
                 
-                long totalTasks = taskCountsByStatus.values().stream().mapToLong(Long::longValue).sum();
-                summary.put("totalTasks", totalTasks);
+                @SuppressWarnings("unchecked")
+                Map<String, Object> metrics = (Map<String, Object>) summary.get("metrics");
+                if (metrics != null) {
+                    csvContent.append(metrics.get("totalAssignedTasks")).append(",");
+                    csvContent.append(metrics.get("completedTasks")).append(",");
+                    csvContent.append(metrics.get("taskCompletionRate")).append(",");
+                    csvContent.append(metrics.get("attendanceRate"));
+                }
+                csvContent.append("\n");
             }
         }
+    }
+    
+    private void exportAttendanceToCsv(Map<String, Object> reportData, StringBuilder csvContent) {
+        csvContent.append("Attendance Report\n");
+        csvContent.append("Meeting Date,Meeting Type,Total Invited,Total Present,Attendance Percentage\n");
         
-        // Team metrics
-        if (reportData.containsKey("teamPerformanceMetrics")) {
-            Map<String, Object> teamMetrics = (Map<String, Object>) reportData.get("teamPerformanceMetrics");
-            summary.put("totalTeamMembers", teamMetrics.get("totalTeamMembers"));
-            summary.put("averageAttendancePercentage", teamMetrics.get("averageAttendancePercentage"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> meetingDetails = (List<Map<String, Object>>) reportData.get("meetingDetails");
+        
+        if (meetingDetails != null) {
+            for (Map<String, Object> meeting : meetingDetails) {
+                csvContent.append(meeting.get("date")).append(",");
+                csvContent.append("TEAM_MEETING").append(","); // Use consistent default type
+                csvContent.append(meeting.get("totalInvited")).append(",");
+                csvContent.append(meeting.get("totalPresent")).append(",");
+                csvContent.append(meeting.get("attendancePercentage")).append("\n");
+            }
         }
+    }
+    
+    private void exportMilestoneStatusToCsv(Map<String, Object> reportData, StringBuilder csvContent) {
+        csvContent.append("Milestone Status Report\n");
+        csvContent.append("Milestone Name,Date,Status,Days Difference\n");
         
-        // Attendance metrics
-        if (reportData.containsKey("attendanceMetrics")) {
-            Map<String, Object> attendanceMetrics = (Map<String, Object>) reportData.get("attendanceMetrics");
-            summary.put("overallAttendanceRate", attendanceMetrics.get("overallAttendanceRate"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> milestoneDetails = (List<Map<String, Object>>) reportData.get("milestoneDetails");
+        
+        if (milestoneDetails != null) {
+            for (Map<String, Object> milestone : milestoneDetails) {
+                csvContent.append(milestone.get("name")).append(",");
+                csvContent.append(milestone.get("date")).append(",");
+                csvContent.append(milestone.get("status")).append(",");
+                csvContent.append(milestone.get("daysDifference")).append("\n");
+            }
         }
+    }
+    
+    private void exportGenericToCsv(Map<String, Object> reportData, StringBuilder csvContent) {
+        csvContent.append("Generic Report Data\n");
+        csvContent.append("Field,Value\n");
         
-        // Project health
-        if (reportData.containsKey("projectHealthMetrics")) {
-            Map<String, Object> healthMetrics = (Map<String, Object>) reportData.get("projectHealthMetrics");
-            summary.put("healthScore", healthMetrics.get("healthScore"));
-            summary.put("healthStatus", healthMetrics.get("healthStatus"));
+        for (Map.Entry<String, Object> entry : reportData.entrySet()) {
+            if (!entry.getKey().equals("generatedDate") && !entry.getKey().equals("reportType")) {
+                csvContent.append(entry.getKey()).append(",");
+                csvContent.append(entry.getValue() != null ? entry.getValue().toString() : "").append("\n");
+            }
         }
-        
-        return summary;
-    }
-    
-    /**
-     * Appends project summary text to a StringBuilder.
-     * 
-     * @param text the StringBuilder to append to
-     * @param reportData the report data
-     */
-    private void appendProjectSummaryText(StringBuilder text, Map<String, Object> reportData) {
-        // Task statistics
-        text.append("TASK STATISTICS:\n");
-        Map<String, Object> taskStats = (Map<String, Object>) reportData.get("taskStatistics");
-        text.append("  Total Tasks: ").append(taskStats.get("totalTasks")).append("\n");
-        text.append("  Completed Tasks: ").append(taskStats.get("completedTasks")).append("\n");
-        text.append("  In Progress Tasks: ").append(taskStats.get("inProgressTasks")).append("\n");
-        text.append("  Not Started Tasks: ").append(taskStats.get("notStartedTasks")).append("\n");
-        text.append("  Completion Percentage: ").append(taskStats.get("completionPercentage")).append("%\n\n");
-        
-        // Milestone statistics
-        text.append("MILESTONE STATISTICS:\n");
-        Map<String, Object> milestoneStats = (Map<String, Object>) reportData.get("milestoneStatistics");
-        text.append("  Total Milestones: ").append(milestoneStats.get("totalMilestones")).append("\n");
-        text.append("  Passed Milestones: ").append(milestoneStats.get("passedMilestones")).append("\n\n");
-        
-        // Upcoming milestones
-        text.append("UPCOMING MILESTONES:\n");
-        List<Map<String, Object>> upcomingMilestones = (List<Map<String, Object>>) milestoneStats.get("upcomingMilestones");
-        for (Map<String, Object> milestone : upcomingMilestones) {
-            text.append("  - ").append(milestone.get("name")).append(" (");
-            text.append(milestone.get("date")).append(", ");
-            text.append(milestone.get("daysUntil")).append(" days away)\n");
-        }
-        text.append("\n");
-        
-        // Timeline statistics
-        text.append("TIMELINE STATISTICS:\n");
-        Map<String, Object> timelineStats = (Map<String, Object>) reportData.get("timelineStatistics");
-        text.append("  Total Days: ").append(timelineStats.get("totalDays")).append("\n");
-        text.append("  Elapsed Days: ").append(timelineStats.get("elapsedDays")).append("\n");
-        text.append("  Remaining Days: ").append(timelineStats.get("remainingDays")).append("\n");
-        text.append("  Time Progress: ").append(timelineStats.get("timeProgressPercentage")).append("%\n");
-        text.append("  Schedule Variance: ").append(timelineStats.get("scheduleVariance")).append("%\n");
-        text.append("  Schedule Status: ").append(timelineStats.get("scheduleStatus")).append("\n");
-    }
-    
-    // Add similar methods for the other report types
-    private void appendTeamPerformanceText(StringBuilder text, Map<String, Object> reportData) {
-        // Method implementation would be similar to the above
-    }
-    
-    private void appendMilestoneStatusText(StringBuilder text, Map<String, Object> reportData) {
-        // Method implementation would be similar to the above
-    }
-    
-    private void appendAttendanceText(StringBuilder text, Map<String, Object> reportData) {
-        // Method implementation would be similar to the above
-    }
-    
-    private void appendSubsystemProgressText(StringBuilder text, Map<String, Object> reportData) {
-        // Method implementation would be similar to the above
-    }
-    
-    private void appendTeamMemberText(StringBuilder text, Map<String, Object> reportData) {
-        // Method implementation would be similar to the above
-    }
-    
-    private void appendProjectTimelineText(StringBuilder text, Map<String, Object> reportData) {
-        // Method implementation would be similar to the above
     }
 }
