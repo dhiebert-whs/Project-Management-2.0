@@ -14,10 +14,18 @@ import java.util.Optional;
 
 /**
  * Spring Data JPA repository for Component entity.
- * Extends the existing custom ComponentRepository interface and adds Spring Data JPA methods.
+ * Provides both auto-implemented Spring Data JPA methods and custom query methods.
  */
 @Repository
-public interface ComponentRepository extends JpaRepository<Component, Long>, org.frcpm.repositories.specific.ComponentRepository {
+public interface ComponentRepository extends JpaRepository<Component, Long> {
+    
+    /**
+     * Finds a component by part number.
+     * 
+     * @param partNumber the part number to search for
+     * @return an Optional containing the found component, or empty if not found
+     */
+    Optional<Component> findByPartNumber(String partNumber);
     
     /**
      * Finds a component by part number (case-insensitive).
@@ -28,12 +36,37 @@ public interface ComponentRepository extends JpaRepository<Component, Long>, org
     Optional<Component> findByPartNumberIgnoreCase(String partNumber);
     
     /**
+     * Finds components by name.
+     * 
+     * @param name the name to search for
+     * @return a list of components with matching names
+     */
+    @Query("SELECT c FROM Component c WHERE c.name LIKE %:name%")
+    List<Component> findByName(@Param("name") String name);
+    
+    /**
      * Finds components by name containing the search term (case-insensitive).
      * 
      * @param name the name to search for
      * @return a list of components with matching names
      */
     List<Component> findByNameContainingIgnoreCase(String name);
+    
+    /**
+     * Finds components by delivery status.
+     * 
+     * @param delivered whether to find delivered or undelivered components
+     * @return a list of components with the given delivery status
+     */
+    List<Component> findByDelivered(boolean delivered);
+    
+    /**
+     * Finds components expected to be delivered after a certain date.
+     * 
+     * @param date the date to compare against
+     * @return a list of components with expected delivery after the date
+     */
+    List<Component> findByExpectedDeliveryAfter(LocalDate date);
     
     /**
      * Finds components expected to be delivered before a certain date.

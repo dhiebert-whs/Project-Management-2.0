@@ -16,10 +16,43 @@ import java.util.Optional;
 
 /**
  * Spring Data JPA repository for Attendance entity.
- * Extends the existing custom AttendanceRepository interface and adds Spring Data JPA methods.
+ * Provides both auto-implemented Spring Data JPA methods and custom query methods.
  */
 @Repository
-public interface AttendanceRepository extends JpaRepository<Attendance, Long>, org.frcpm.repositories.specific.AttendanceRepository {
+public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
+    
+    /**
+     * Finds attendance records for a specific meeting.
+     * 
+     * @param meeting the meeting to find attendance for
+     * @return a list of attendance records for the meeting
+     */
+    List<Attendance> findByMeeting(Meeting meeting);
+    
+    /**
+     * Finds attendance records for a specific team member.
+     * 
+     * @param member the team member to find attendance for
+     * @return a list of attendance records for the team member
+     */
+    List<Attendance> findByMember(TeamMember member);
+    
+    /**
+     * Finds attendance records for a specific meeting and team member.
+     * 
+     * @param meeting the meeting
+     * @param member the team member
+     * @return an Optional containing the attendance record, or empty if not found
+     */
+    Optional<Attendance> findByMeetingAndMember(Meeting meeting, TeamMember member);
+    
+    /**
+     * Finds attendance records by presence status.
+     * 
+     * @param present whether to find records for present or absent members
+     * @return a list of attendance records with the given presence status
+     */
+    List<Attendance> findByPresent(boolean present);
     
     /**
      * Finds attendance records for a specific meeting by meeting ID.

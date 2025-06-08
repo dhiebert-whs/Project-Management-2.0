@@ -16,10 +16,43 @@ import java.util.Optional;
 
 /**
  * Spring Data JPA repository for Meeting entity.
- * Extends the existing custom MeetingRepository interface and adds Spring Data JPA methods.
+ * Provides both auto-implemented Spring Data JPA methods and custom query methods.
  */
 @Repository
-public interface MeetingRepository extends JpaRepository<Meeting, Long>, org.frcpm.repositories.specific.MeetingRepository {
+public interface MeetingRepository extends JpaRepository<Meeting, Long> {
+    
+    /**
+     * Finds meetings for a specific project.
+     * 
+     * @param project the project to find meetings for
+     * @return a list of meetings for the project
+     */
+    List<Meeting> findByProject(Project project);
+    
+    /**
+     * Finds meetings on a specific date.
+     * 
+     * @param date the date to search for
+     * @return a list of meetings on the given date
+     */
+    List<Meeting> findByDate(LocalDate date);
+    
+    /**
+     * Finds meetings after a specific date.
+     * 
+     * @param date the date to compare against
+     * @return a list of meetings after the date
+     */
+    List<Meeting> findByDateAfter(LocalDate date);
+    
+    /**
+     * Finds meetings in a date range.
+     * 
+     * @param startDate the start date (inclusive)
+     * @param endDate the end date (inclusive)
+     * @return a list of meetings within the date range
+     */
+    List<Meeting> findByDateBetween(LocalDate startDate, LocalDate endDate);
     
     /**
      * Finds meetings for a specific project by project ID.
