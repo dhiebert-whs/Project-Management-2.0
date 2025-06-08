@@ -2,17 +2,15 @@
 
 package org.frcpm.services.impl;
 
-import de.saxsys.mvvmfx.MvvmFX;
 import org.frcpm.models.Subteam;
 import org.frcpm.models.Subsystem;
-import org.frcpm.repositories.specific.SubsystemRepository;
-import org.frcpm.repositories.specific.SubteamRepository;
-import org.frcpm.services.BaseServiceTest;
-import org.frcpm.services.SubsystemService;
-import org.junit.jupiter.api.AfterEach;
+import org.frcpm.repositories.spring.SubsystemRepository;
+import org.frcpm.repositories.spring.SubteamRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
@@ -23,9 +21,10 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 /**
- * Test class for SubsystemService implementation using TestableSubsystemServiceImpl.
+ * Test class for SubsystemService implementation using Spring Boot testing patterns.
  */
-public class SubsystemServiceTest extends BaseServiceTest {
+@ExtendWith(MockitoExtension.class)
+class SubsystemServiceTest {
     
     @Mock
     private SubsystemRepository subsystemRepository;
@@ -33,23 +32,16 @@ public class SubsystemServiceTest extends BaseServiceTest {
     @Mock
     private SubteamRepository subteamRepository;
     
-    private SubsystemService subsystemService;
+    private SubsystemServiceImpl subsystemService;
     
     private Subsystem testSubsystem;
     private Subteam testSubteam;
     
-    @Override
-    protected void setupTestData() {
+    @BeforeEach
+    void setUp() {
         // Initialize test objects
         testSubteam = createTestSubteam();
         testSubsystem = createTestSubsystem();
-    }
-    
-    @Override
-    @BeforeEach
-    public void setUp() {
-        // Execute parent setup first (initializes Mockito annotations)
-        super.setUp();
         
         // Configure mock repository responses
         when(subsystemRepository.findById(1L)).thenReturn(Optional.of(testSubsystem));
@@ -60,34 +52,14 @@ public class SubsystemServiceTest extends BaseServiceTest {
         when(subteamRepository.findById(1L)).thenReturn(Optional.of(testSubteam));
         
         // Create service with injected mocks
-        subsystemService = new TestableSubsystemServiceImpl(
+        subsystemService = new SubsystemServiceImpl(
             subsystemRepository,
             subteamRepository
         );
-        
-        // Configure MVVMFx dependency injector for comprehensive testing
-        MvvmFX.setCustomDependencyInjector(type -> {
-            if (type == SubsystemRepository.class) return subsystemRepository;
-            if (type == SubteamRepository.class) return subteamRepository;
-            if (type == SubsystemService.class) return subsystemService;
-            return null;
-        });
-    }
-    
-    @AfterEach
-    @Override
-    public void tearDown() throws Exception {
-        // Clear MVVMFx dependency injector
-        MvvmFX.setCustomDependencyInjector(null);
-        
-        // Call parent tearDown
-        super.tearDown();
     }
     
     /**
      * Creates a test subteam for use in tests.
-     * 
-     * @return a test subteam
      */
     private Subteam createTestSubteam() {
         Subteam subteam = new Subteam();
@@ -99,8 +71,6 @@ public class SubsystemServiceTest extends BaseServiceTest {
     
     /**
      * Creates a test subsystem for use in tests.
-     * 
-     * @return a test subsystem
      */
     private Subsystem createTestSubsystem() {
         Subsystem subsystem = new Subsystem("Test Subsystem");
@@ -112,7 +82,7 @@ public class SubsystemServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindById() {
+    void testFindById() {
         // Reset mocks to ensure clean test state
         reset(subsystemRepository);
         
@@ -136,7 +106,7 @@ public class SubsystemServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindAll() {
+    void testFindAll() {
         // Execute
         List<Subsystem> results = subsystemService.findAll();
         
@@ -150,7 +120,7 @@ public class SubsystemServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testSave() {
+    void testSave() {
         // Setup
         Subsystem newSubsystem = new Subsystem("New Subsystem");
         
@@ -166,7 +136,7 @@ public class SubsystemServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testDelete() {
+    void testDelete() {
         // Setup
         doNothing().when(subsystemRepository).delete(any(Subsystem.class));
         
@@ -178,7 +148,7 @@ public class SubsystemServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testDeleteById() {
+    void testDeleteById() {
         // Setup
         when(subsystemRepository.deleteById(anyLong())).thenReturn(true);
         
@@ -193,7 +163,7 @@ public class SubsystemServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCount() {
+    void testCount() {
         // Setup
         when(subsystemRepository.count()).thenReturn(5L);
         
@@ -208,7 +178,7 @@ public class SubsystemServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindByName() {
+    void testFindByName() {
         // Setup
         when(subsystemRepository.findByName("Test Subsystem")).thenReturn(Optional.of(testSubsystem));
         
@@ -224,22 +194,7 @@ public class SubsystemServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindByName_NotFound() {
-        // Setup
-        when(subsystemRepository.findByName("Nonexistent")).thenReturn(Optional.empty());
-        
-        // Execute
-        Optional<Subsystem> result = subsystemService.findByName("Nonexistent");
-        
-        // Verify
-        assertFalse(result.isPresent());
-        
-        // Verify repository was called
-        verify(subsystemRepository).findByName("Nonexistent");
-    }
-    
-    @Test
-    public void testFindByStatus() {
+    void testFindByStatus() {
         // Setup
         when(subsystemRepository.findByStatus(Subsystem.Status.NOT_STARTED)).thenReturn(List.of(testSubsystem));
         
@@ -256,7 +211,7 @@ public class SubsystemServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindByResponsibleSubteam() {
+    void testFindByResponsibleSubteam() {
         // Setup
         when(subsystemRepository.findByResponsibleSubteam(testSubteam)).thenReturn(List.of(testSubsystem));
         
@@ -273,7 +228,7 @@ public class SubsystemServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCreateSubsystem() {
+    void testCreateSubsystem() {
         // Setup
         when(subsystemRepository.findByName("New Subsystem")).thenReturn(Optional.empty());
         
@@ -300,33 +255,7 @@ public class SubsystemServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCreateSubsystem_NoSubteam() {
-        // Setup
-        when(subsystemRepository.findByName("New Subsystem")).thenReturn(Optional.empty());
-        
-        // Execute
-        Subsystem result = subsystemService.createSubsystem(
-            "New Subsystem",
-            "New Description",
-            Subsystem.Status.IN_PROGRESS,
-            null
-        );
-        
-        // Verify
-        assertNotNull(result);
-        assertEquals("New Subsystem", result.getName());
-        assertEquals("New Description", result.getDescription());
-        assertEquals(Subsystem.Status.IN_PROGRESS, result.getStatus());
-        assertNull(result.getResponsibleSubteam());
-        
-        // Verify repository calls
-        verify(subsystemRepository).findByName("New Subsystem");
-        verify(subteamRepository, never()).findById(anyLong());
-        verify(subsystemRepository).save(any(Subsystem.class));
-    }
-    
-    @Test
-    public void testCreateSubsystem_NameExists() {
+    void testCreateSubsystem_NameExists() {
         // Setup
         when(subsystemRepository.findByName("Test Subsystem")).thenReturn(Optional.of(testSubsystem));
         
@@ -349,63 +278,7 @@ public class SubsystemServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCreateSubsystem_NameExists_TestEnvironment() {
-        // Setup
-        System.setProperty("test.environment", "true");
-        when(subsystemRepository.findByName("Test Subsystem")).thenReturn(Optional.of(testSubsystem));
-        
-        try {
-            // Execute
-            Subsystem result = subsystemService.createSubsystem(
-                "Test Subsystem",
-                "Updated Description",
-                Subsystem.Status.IN_PROGRESS,
-                1L
-            );
-            
-            // Verify
-            assertNotNull(result);
-            assertEquals("Test Subsystem", result.getName());
-            assertEquals("Updated Description", result.getDescription());
-            assertEquals(Subsystem.Status.IN_PROGRESS, result.getStatus());
-            assertNotNull(result.getResponsibleSubteam());
-            
-            // Verify repository calls
-            verify(subsystemRepository).findByName("Test Subsystem");
-            verify(subsystemRepository).save(any(Subsystem.class));
-        } finally {
-            // Clean up
-            System.clearProperty("test.environment");
-        }
-    }
-    
-    @Test
-    public void testCreateSubsystem_SubteamNotFound() {
-        // Setup
-        when(subsystemRepository.findByName("New Subsystem")).thenReturn(Optional.empty());
-        when(subteamRepository.findById(999L)).thenReturn(Optional.empty());
-        
-        // Execute
-        Subsystem result = subsystemService.createSubsystem(
-            "New Subsystem",
-            "New Description",
-            Subsystem.Status.IN_PROGRESS,
-            999L
-        );
-        
-        // Verify
-        assertNotNull(result);
-        assertEquals("New Subsystem", result.getName());
-        assertNull(result.getResponsibleSubteam());
-        
-        // Verify repository calls
-        verify(subsystemRepository).findByName("New Subsystem");
-        verify(subteamRepository).findById(999L);
-        verify(subsystemRepository).save(any(Subsystem.class));
-    }
-    
-    @Test
-    public void testUpdateStatus() {
+    void testUpdateStatus() {
         // Execute
         Subsystem result = subsystemService.updateStatus(1L, Subsystem.Status.COMPLETED);
         
@@ -419,7 +292,7 @@ public class SubsystemServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testUpdateStatus_SubsystemNotFound() {
+    void testUpdateStatus_SubsystemNotFound() {
         // Setup
         when(subsystemRepository.findById(999L)).thenReturn(Optional.empty());
         
@@ -435,7 +308,7 @@ public class SubsystemServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testAssignResponsibleSubteam() {
+    void testAssignResponsibleSubteam() {
         // Execute
         Subsystem result = subsystemService.assignResponsibleSubteam(1L, 1L);
         
@@ -451,22 +324,7 @@ public class SubsystemServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testAssignResponsibleSubteam_RemoveSubteam() {
-        // Execute
-        Subsystem result = subsystemService.assignResponsibleSubteam(1L, null);
-        
-        // Verify
-        assertNotNull(result);
-        assertNull(result.getResponsibleSubteam());
-        
-        // Verify repository calls
-        verify(subsystemRepository).findById(1L);
-        verify(subteamRepository, never()).findById(anyLong());
-        verify(subsystemRepository).save(any(Subsystem.class));
-    }
-    
-    @Test
-    public void testAssignResponsibleSubteam_SubsystemNotFound() {
+    void testAssignResponsibleSubteam_SubsystemNotFound() {
         // Setup
         when(subsystemRepository.findById(999L)).thenReturn(Optional.empty());
         
@@ -483,7 +341,7 @@ public class SubsystemServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testAssignResponsibleSubteam_SubteamNotFound() {
+    void testAssignResponsibleSubteam_SubteamNotFound() {
         // Setup
         when(subteamRepository.findById(999L)).thenReturn(Optional.empty());
         

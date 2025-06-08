@@ -2,28 +2,29 @@
 package org.frcpm.services.impl;
 
 import org.frcpm.models.*;
-import org.frcpm.repositories.specific.*;
-import org.frcpm.services.BaseServiceTest;
-import org.frcpm.services.MetricsCalculationService;
+import org.frcpm.repositories.spring.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 /**
- * Test class for MetricsCalculationService implementation.
+ * Test class for MetricsCalculationService implementation using Spring Boot testing patterns.
  */
-public class MetricsCalculationServiceTest extends BaseServiceTest {
+@ExtendWith(MockitoExtension.class)
+class MetricsCalculationServiceTest {
     
     @Mock
     private ProjectRepository projectRepository;
@@ -46,7 +47,7 @@ public class MetricsCalculationServiceTest extends BaseServiceTest {
     @Mock
     private SubsystemRepository subsystemRepository;
     
-    private MetricsCalculationService metricsService;
+    private MetricsCalculationServiceImpl metricsService;
     
     private Project testProject;
     private Task testTask;
@@ -57,8 +58,8 @@ public class MetricsCalculationServiceTest extends BaseServiceTest {
     private Subsystem testSubsystem;
     private LocalDate now;
     
-    @Override
-    protected void setupTestData() {
+    @BeforeEach
+    void setUp() {
         // Initialize date for consistent testing
         now = LocalDate.now();
         
@@ -79,15 +80,9 @@ public class MetricsCalculationServiceTest extends BaseServiceTest {
         when(meetingRepository.findByProject(testProject)).thenReturn(List.of(testMeeting));
         when(attendanceRepository.findByMember(testMember)).thenReturn(List.of(testAttendance));
         when(subsystemRepository.findAll()).thenReturn(List.of(testSubsystem));
-    }
-    
-    @Override
-    @BeforeEach
-    public void setUp() {
-        super.setUp();
         
         // Create service with repository mocks
-        metricsService = new TestableMetricsCalculationServiceImpl(
+        metricsService = new MetricsCalculationServiceImpl(
             projectRepository,
             taskRepository,
             teamMemberRepository,
@@ -166,7 +161,117 @@ public class MetricsCalculationServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCalculateProjectProgressMetrics() {
+    void testCalculateTeamPerformanceMetrics_WithDateRange() {
+        // Execute
+        LocalDate startDate = now.minusDays(10);
+        LocalDate endDate = now.plusDays(10);
+        Map<String, Object> metrics = metricsService.calculateTeamPerformanceMetrics(1L, startDate, endDate);
+        
+        // Verify
+        assertNotNull(metrics);
+        
+        // Verify repository calls
+        verify(projectRepository).findById(1L);
+        verify(meetingRepository).findByProject(testProject);
+    }
+    
+    @Test
+    void testCalculateTaskCompletionMetrics() {
+        // Execute
+        Map<String, Object> metrics = metricsService.calculateTaskCompletionMetrics(1L);
+        
+        // Verify
+        assertNotNull(metrics);
+        assertTrue(metrics.containsKey("taskCountsByStatus"));
+        
+        // Verify repository calls
+        verify(projectRepository).findById(1L);
+        verify(taskRepository).findByProject(testProject);
+    }
+    
+    @Test
+    void testCalculateAttendanceMetrics() {
+        // Setup
+        testMeeting.addAttendance(testAttendance);
+        
+        // Execute
+        Map<String, Object> metrics = metricsService.calculateAttendanceMetrics(1L, null, null);
+        
+        // Verify
+        assertNotNull(metrics);
+        assertTrue(metrics.containsKey("totalMeetings"));
+        assertTrue(metrics.containsKey("overallAttendanceRate"));
+        
+        // Verify repository calls
+        verify(projectRepository).findById(1L);
+        verify(meetingRepository).findByProject(testProject);
+    }
+    
+    @Test
+    void testCalculateTimelineDeviationMetrics() {
+        // Execute
+        Map<String, Object> metrics = metricsService.calculateTimelineDeviationMetrics(1L);
+        
+        // Verify
+        assertNotNull(metrics);
+        assertTrue(metrics.containsKey("projectedDelay"));
+        assertTrue(metrics.containsKey("isOnSchedule"));
+        
+        // Verify repository calls
+        verify(projectRepository).findById(1L);
+        verify(taskRepository).findByProject(testProject);
+        verify(milestoneRepository).findByProject(testProject);
+    }
+    
+    @Test
+    void testCalculateIndividualPerformanceMetrics() {
+        // Setup
+        testTask.getAssignedTo().add(testMember);
+        
+        // Execute
+        Map<String, Object> metrics = metricsService.calculateIndividualPerformanceMetrics(1L, null, null);
+        
+        // Verify
+        assertNotNull(metrics);
+        assertTrue(metrics.containsKey("memberId"));
+        assertTrue(metrics.containsKey("memberName"));
+        
+        // Verify repository calls
+        verify(teamMemberRepository).findById(1L);
+        verify(attendanceRepository).findByMember(testMember);
+    }
+    
+    @Test
+    void testCalculateSubsystemPerformanceMetrics() {
+        // Setup
+        testTask.setSubsystem(testSubsystem);
+        
+        // Execute
+        Map<String, Object> metrics = metricsService.calculateSubsystemPerformanceMetrics(1L);
+        
+        // Verify
+        assertNotNull(metrics);
+        assertTrue(metrics.containsKey("totalSubsystems"));
+        
+        // Verify repository calls
+        verify(projectRepository).findById(1L);
+        verify(taskRepository).findByProject(testProject);
+    }
+    
+    @Test
+    void testGenerateProjectHealthDashboard() {
+        // Execute
+        Map<String, Object> dashboard = metricsService.generateProjectHealthDashboard(1L);
+        
+        // Verify
+        assertNotNull(dashboard);
+        assertTrue(dashboard.containsKey("healthScore"));
+        assertTrue(dashboard.containsKey("healthStatus"));
+        
+        // Verify repository calls - using atLeastOnce() instead of times(1)
+        verify(projectRepository, atLeastOnce()).findById(1L);
+    }
+    void testCalculateProjectProgressMetrics() {
         // Execute
         Map<String, Object> metrics = metricsService.calculateProjectProgressMetrics(1L);
         
@@ -183,7 +288,7 @@ public class MetricsCalculationServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCalculateProjectProgressMetrics_ProjectNotFound() {
+    void testCalculateProjectProgressMetrics_ProjectNotFound() {
         // Setup
         when(projectRepository.findById(99L)).thenReturn(Optional.empty());
         
@@ -200,7 +305,7 @@ public class MetricsCalculationServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCalculateTeamPerformanceMetrics() {
+    void testCalculateTeamPerformanceMetrics() {
         // Setup
         testTask.getAssignedTo().add(testMember);
         testMeeting.addAttendance(testAttendance);
@@ -219,115 +324,3 @@ public class MetricsCalculationServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCalculateTeamPerformanceMetrics_WithDateRange() {
-        // Execute
-        LocalDate startDate = now.minusDays(10);
-        LocalDate endDate = now.plusDays(10);
-        Map<String, Object> metrics = metricsService.calculateTeamPerformanceMetrics(1L, startDate, endDate);
-        
-        // Verify
-        assertNotNull(metrics);
-        
-        // Verify repository calls
-        verify(projectRepository).findById(1L);
-        verify(meetingRepository).findByProject(testProject);
-    }
-    
-    @Test
-    public void testCalculateTaskCompletionMetrics() {
-        // Execute
-        Map<String, Object> metrics = metricsService.calculateTaskCompletionMetrics(1L);
-        
-        // Verify
-        assertNotNull(metrics);
-        assertTrue(metrics.containsKey("taskCountsByStatus"));
-        
-        // Verify repository calls
-        verify(projectRepository).findById(1L);
-        verify(taskRepository).findByProject(testProject);
-    }
-    
-    @Test
-    public void testCalculateAttendanceMetrics() {
-        // Setup
-        testMeeting.addAttendance(testAttendance);
-        
-        // Execute
-        Map<String, Object> metrics = metricsService.calculateAttendanceMetrics(1L, null, null);
-        
-        // Verify
-        assertNotNull(metrics);
-        assertTrue(metrics.containsKey("totalMeetings"));
-        assertTrue(metrics.containsKey("overallAttendanceRate"));
-        
-        // Verify repository calls
-        verify(projectRepository).findById(1L);
-        verify(meetingRepository).findByProject(testProject);
-    }
-    
-    @Test
-    public void testCalculateTimelineDeviationMetrics() {
-        // Execute
-        Map<String, Object> metrics = metricsService.calculateTimelineDeviationMetrics(1L);
-        
-        // Verify
-        assertNotNull(metrics);
-        assertTrue(metrics.containsKey("projectedDelay"));
-        assertTrue(metrics.containsKey("isOnSchedule"));
-        
-        // Verify repository calls
-        verify(projectRepository).findById(1L);
-        verify(taskRepository).findByProject(testProject);
-        verify(milestoneRepository).findByProject(testProject);
-    }
-    
-    @Test
-    public void testCalculateIndividualPerformanceMetrics() {
-        // Setup
-        testTask.getAssignedTo().add(testMember);
-        
-        // Execute
-        Map<String, Object> metrics = metricsService.calculateIndividualPerformanceMetrics(1L, null, null);
-        
-        // Verify
-        assertNotNull(metrics);
-        assertTrue(metrics.containsKey("memberId"));
-        assertTrue(metrics.containsKey("memberName"));
-        
-        // Verify repository calls
-        verify(teamMemberRepository).findById(1L);
-        verify(attendanceRepository).findByMember(testMember);
-    }
-    
-    @Test
-    public void testCalculateSubsystemPerformanceMetrics() {
-        // Setup
-        testTask.setSubsystem(testSubsystem);
-        
-        // Execute
-        Map<String, Object> metrics = metricsService.calculateSubsystemPerformanceMetrics(1L);
-        
-        // Verify
-        assertNotNull(metrics);
-        assertTrue(metrics.containsKey("totalSubsystems"));
-        
-        // Verify repository calls
-        verify(projectRepository).findById(1L);
-        verify(taskRepository).findByProject(testProject);
-    }
-    
-
-    @Test
-    public void testGenerateProjectHealthDashboard() {
-        // Execute
-        Map<String, Object> dashboard = metricsService.generateProjectHealthDashboard(1L);
-        
-        // Verify
-        assertNotNull(dashboard);
-        assertTrue(dashboard.containsKey("healthScore"));
-        assertTrue(dashboard.containsKey("healthStatus"));
-        
-        // Verify repository calls - using atLeastOnce() instead of times(1)
-        verify(projectRepository, atLeastOnce()).findById(1L);
-    }
-}

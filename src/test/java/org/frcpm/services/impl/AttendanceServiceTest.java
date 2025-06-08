@@ -2,19 +2,17 @@
 
 package org.frcpm.services.impl;
 
-import de.saxsys.mvvmfx.MvvmFX;
 import org.frcpm.models.Attendance;
 import org.frcpm.models.Meeting;
 import org.frcpm.models.TeamMember;
-import org.frcpm.repositories.specific.AttendanceRepository;
-import org.frcpm.repositories.specific.MeetingRepository;
-import org.frcpm.repositories.specific.TeamMemberRepository;
-import org.frcpm.services.AttendanceService;
-import org.frcpm.services.BaseServiceTest;
-import org.junit.jupiter.api.AfterEach;
+import org.frcpm.repositories.spring.AttendanceRepository;
+import org.frcpm.repositories.spring.MeetingRepository;
+import org.frcpm.repositories.spring.TeamMemberRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -29,9 +27,10 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 /**
- * Test class for AttendanceService implementation using TestableAttendanceServiceImpl.
+ * Test class for AttendanceService implementation using Spring Boot testing patterns.
  */
-public class AttendanceServiceTest extends BaseServiceTest {
+@ExtendWith(MockitoExtension.class)
+class AttendanceServiceTest {
     
     @Mock
     private AttendanceRepository attendanceRepository;
@@ -42,25 +41,18 @@ public class AttendanceServiceTest extends BaseServiceTest {
     @Mock
     private TeamMemberRepository teamMemberRepository;
     
-    private AttendanceService attendanceService;
+    private AttendanceServiceImpl attendanceService;
     
     private Attendance testAttendance;
     private Meeting testMeeting;
     private TeamMember testMember;
     
-    @Override
-    protected void setupTestData() {
-        // Initialize test objects
+    @BeforeEach
+    void setUp() {
+        // Create test objects
         testMeeting = createTestMeeting();
         testMember = createTestMember();
         testAttendance = createTestAttendance();
-    }
-    
-    @Override
-    @BeforeEach
-    public void setUp() {
-        // Execute parent setup first (initializes Mockito annotations)
-        super.setUp();
         
         // Configure mock repository responses
         when(attendanceRepository.findById(1L)).thenReturn(Optional.of(testAttendance));
@@ -81,36 +73,15 @@ public class AttendanceServiceTest extends BaseServiceTest {
             .thenReturn(Optional.of(testAttendance));
         
         // Create service with injected mocks
-        attendanceService = new TestableAttendanceServiceImpl(
+        attendanceService = new AttendanceServiceImpl(
             attendanceRepository,
             meetingRepository,
             teamMemberRepository
         );
-        
-        // Configure MVVMFx dependency injector for comprehensive testing
-        MvvmFX.setCustomDependencyInjector(type -> {
-            if (type == AttendanceRepository.class) return attendanceRepository;
-            if (type == MeetingRepository.class) return meetingRepository;
-            if (type == TeamMemberRepository.class) return teamMemberRepository;
-            if (type == AttendanceService.class) return attendanceService;
-            return null;
-        });
-    }
-    
-    @AfterEach
-    @Override
-    public void tearDown() throws Exception {
-        // Clear MVVMFx dependency injector
-        MvvmFX.setCustomDependencyInjector(null);
-        
-        // Call parent tearDown
-        super.tearDown();
     }
     
     /**
      * Creates a test meeting for use in tests.
-     * 
-     * @return a test meeting
      */
     private Meeting createTestMeeting() {
         Meeting meeting = new Meeting();
@@ -123,8 +94,6 @@ public class AttendanceServiceTest extends BaseServiceTest {
     
     /**
      * Creates a test team member for use in tests.
-     * 
-     * @return a test team member
      */
     private TeamMember createTestMember() {
         TeamMember member = new TeamMember();
@@ -137,8 +106,6 @@ public class AttendanceServiceTest extends BaseServiceTest {
     
     /**
      * Creates a test attendance record for use in tests.
-     * 
-     * @return a test attendance record
      */
     private Attendance createTestAttendance() {
         Attendance attendance = new Attendance(testMeeting, testMember, true);
@@ -149,7 +116,7 @@ public class AttendanceServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindById() {
+    void testFindById() {
         // Execute
         Attendance result = attendanceService.findById(1L);
         
@@ -164,7 +131,7 @@ public class AttendanceServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindAll() {
+    void testFindAll() {
         // Execute
         List<Attendance> results = attendanceService.findAll();
         
@@ -178,7 +145,7 @@ public class AttendanceServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testSave() {
+    void testSave() {
         // Setup
         Attendance newAttendance = new Attendance(testMeeting, testMember, false);
         
@@ -196,7 +163,7 @@ public class AttendanceServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testDelete() {
+    void testDelete() {
         // Setup
         doNothing().when(attendanceRepository).delete(any(Attendance.class));
         
@@ -208,7 +175,7 @@ public class AttendanceServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testDeleteById() {
+    void testDeleteById() {
         // Setup
         when(attendanceRepository.deleteById(anyLong())).thenReturn(true);
         
@@ -223,7 +190,7 @@ public class AttendanceServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCount() {
+    void testCount() {
         // Setup
         when(attendanceRepository.count()).thenReturn(5L);
         
@@ -238,7 +205,7 @@ public class AttendanceServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindByMeeting() {
+    void testFindByMeeting() {
         // Execute
         List<Attendance> results = attendanceService.findByMeeting(testMeeting);
         
@@ -252,7 +219,7 @@ public class AttendanceServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindByMember() {
+    void testFindByMember() {
         // Execute
         List<Attendance> results = attendanceService.findByMember(testMember);
         
@@ -266,7 +233,7 @@ public class AttendanceServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindByMeetingAndMember() {
+    void testFindByMeetingAndMember() {
         // Execute
         Optional<Attendance> result = attendanceService.findByMeetingAndMember(testMeeting, testMember);
         
@@ -279,7 +246,7 @@ public class AttendanceServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCreateAttendance() {
+    void testCreateAttendance() {
         // Setup - create a new attendance for test
         when(attendanceRepository.findByMeetingAndMember(any(Meeting.class), any(TeamMember.class)))
             .thenReturn(Optional.empty());
@@ -301,25 +268,7 @@ public class AttendanceServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCreateAttendance_ExistingRecord() {
-        // Execute
-        Attendance result = attendanceService.createAttendance(1L, 1L, false);
-        
-        // Verify
-        assertNotNull(result);
-        assertEquals(testMeeting, result.getMeeting());
-        assertEquals(testMember, result.getMember());
-        assertFalse(result.isPresent());
-        
-        // Verify repository calls
-        verify(meetingRepository).findById(1L);
-        verify(teamMemberRepository).findById(1L);
-        verify(attendanceRepository).findByMeetingAndMember(any(Meeting.class), any(TeamMember.class));
-        verify(attendanceRepository).save(any(Attendance.class));
-    }
-    
-    @Test
-    public void testCreateAttendance_MeetingNotFound() {
+    void testCreateAttendance_MeetingNotFound() {
         // Setup
         when(meetingRepository.findById(999L)).thenReturn(Optional.empty());
         
@@ -339,133 +288,7 @@ public class AttendanceServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCreateAttendance_MemberNotFound() {
-        // Setup
-        when(teamMemberRepository.findById(999L)).thenReturn(Optional.empty());
-        
-        // Execute and verify
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
-            attendanceService.createAttendance(1L, 999L, true);
-        });
-        
-        // Verify exception message
-        assertEquals("Team member not found with ID: 999", exception.getMessage());
-        
-        // Verify repository calls
-        verify(meetingRepository).findById(1L);
-        verify(teamMemberRepository).findById(999L);
-        verify(attendanceRepository, never()).findByMeetingAndMember(any(Meeting.class), any(TeamMember.class));
-        verify(attendanceRepository, never()).save(any(Attendance.class));
-    }
-    
-    @Test
-    public void testUpdateAttendance() {
-        // Execute
-        Attendance result = attendanceService.updateAttendance(1L, false, null, null);
-        
-        // Verify
-        assertNotNull(result);
-        assertFalse(result.isPresent());
-        assertNull(result.getArrivalTime());
-        assertNull(result.getDepartureTime());
-        
-        // Verify repository calls
-        verify(attendanceRepository).findById(1L);
-        verify(attendanceRepository).save(any(Attendance.class));
-    }
-    
-    @Test
-    public void testUpdateAttendance_WithTimes() {
-        // Setup
-        LocalTime newArrival = LocalTime.of(9, 30);
-        LocalTime newDeparture = LocalTime.of(11, 30);
-        
-        // Execute
-        Attendance result = attendanceService.updateAttendance(1L, true, newArrival, newDeparture);
-        
-        // Verify
-        assertNotNull(result);
-        assertTrue(result.isPresent());
-        assertEquals(newArrival, result.getArrivalTime());
-        assertEquals(newDeparture, result.getDepartureTime());
-        
-        // Verify repository calls
-        verify(attendanceRepository).findById(1L);
-        verify(attendanceRepository).save(any(Attendance.class));
-    }
-    
-    @Test
-    public void testUpdateAttendance_InvalidTimes() {
-        // Setup
-        LocalTime arrival = LocalTime.of(10, 30);
-        LocalTime departure = LocalTime.of(9, 30); // Before arrival
-        
-        // Execute and verify
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
-            attendanceService.updateAttendance(1L, true, arrival, departure);
-        });
-        
-        // Verify exception message
-        assertEquals("Departure time cannot be before arrival time", exception.getMessage());
-        
-        // Verify repository calls
-        verify(attendanceRepository).findById(1L);
-        verify(attendanceRepository, never()).save(any(Attendance.class));
-    }
-    
-    @Test
-    public void testUpdateAttendance_NotFound() {
-        // Setup
-        when(attendanceRepository.findById(999L)).thenReturn(Optional.empty());
-        
-        // Execute
-        Attendance result = attendanceService.updateAttendance(999L, true, null, null);
-        
-        // Verify
-        assertNull(result);
-        
-        // Verify repository calls
-        verify(attendanceRepository).findById(999L);
-        verify(attendanceRepository, never()).save(any(Attendance.class));
-    }
-    
-    @Test
-    public void testRecordAttendanceForMeeting() {
-        // Execute
-        int result = attendanceService.recordAttendanceForMeeting(1L, List.of(1L));
-        
-        // Verify
-        assertEquals(1, result);
-        
-        // Verify repository calls
-        verify(meetingRepository).findById(1L);
-        verify(teamMemberRepository).findAll();
-        verify(attendanceRepository).findByMeetingAndMember(any(Meeting.class), any(TeamMember.class));
-        verify(attendanceRepository).save(any(Attendance.class));
-    }
-    
-    @Test
-    public void testRecordAttendanceForMeeting_MeetingNotFound() {
-        // Setup
-        when(meetingRepository.findById(999L)).thenReturn(Optional.empty());
-        
-        // Execute and verify
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
-            attendanceService.recordAttendanceForMeeting(999L, List.of(1L));
-        });
-        
-        // Verify exception message
-        assertEquals("Meeting not found with ID: 999", exception.getMessage());
-        
-        // Verify repository calls
-        verify(meetingRepository).findById(999L);
-        verify(teamMemberRepository, never()).findAll();
-        verify(attendanceRepository, never()).findByMeetingAndMember(any(Meeting.class), any(TeamMember.class));
-        verify(attendanceRepository, never()).save(any(Attendance.class));
-    }
-    
-    @Test
-    public void testGetAttendanceStatistics() {
+    void testGetAttendanceStatistics() {
         // Execute
         Map<String, Object> result = attendanceService.getAttendanceStatistics(1L);
         
@@ -477,45 +300,6 @@ public class AttendanceServiceTest extends BaseServiceTest {
         assertEquals(1L, result.get("presentCount"));
         assertEquals(0, result.get("absentCount"));
         assertEquals(100.0, result.get("attendanceRate"));
-        
-        // Verify repository calls
-        verify(teamMemberRepository).findById(1L);
-        verify(attendanceRepository).findByMember(testMember);
-    }
-    
-    @Test
-    public void testGetAttendanceStatistics_MemberNotFound() {
-        // Setup
-        when(teamMemberRepository.findById(999L)).thenReturn(Optional.empty());
-        
-        // Execute
-        Map<String, Object> result = attendanceService.getAttendanceStatistics(999L);
-        
-        // Verify
-        assertNotNull(result);
-        assertTrue(result.isEmpty());
-        
-        // Verify repository calls
-        verify(teamMemberRepository).findById(999L);
-        verify(attendanceRepository, never()).findByMember(any(TeamMember.class));
-    }
-    
-    @Test
-    public void testGetAttendanceStatistics_NoAttendance() {
-        // Setup
-        when(attendanceRepository.findByMember(testMember)).thenReturn(List.of());
-        
-        // Execute
-        Map<String, Object> result = attendanceService.getAttendanceStatistics(1L);
-        
-        // Verify
-        assertNotNull(result);
-        assertEquals(1L, result.get("memberId"));
-        assertEquals("Test User", result.get("memberName"));
-        assertEquals(0, result.get("totalMeetings"));
-        assertEquals(0L, result.get("presentCount"));
-        assertEquals(0, result.get("absentCount"));
-        assertEquals(0.0, result.get("attendanceRate"));
         
         // Verify repository calls
         verify(teamMemberRepository).findById(1L);

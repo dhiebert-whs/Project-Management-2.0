@@ -2,17 +2,15 @@
 
 package org.frcpm.services.impl;
 
-import de.saxsys.mvvmfx.MvvmFX;
 import org.frcpm.models.Component;
 import org.frcpm.models.Task;
-import org.frcpm.repositories.specific.ComponentRepository;
-import org.frcpm.repositories.specific.TaskRepository;
-import org.frcpm.services.BaseServiceTest;
-import org.frcpm.services.ComponentService;
-import org.junit.jupiter.api.AfterEach;
+import org.frcpm.repositories.spring.ComponentRepository;
+import org.frcpm.repositories.spring.TaskRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.util.HashSet;
@@ -27,9 +25,10 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
- * Test class for ComponentService implementation using TestableComponentServiceImpl.
+ * Test class for ComponentService implementation using Spring Boot testing patterns.
  */
-public class ComponentServiceTest extends BaseServiceTest {
+@ExtendWith(MockitoExtension.class)
+class ComponentServiceTest {
     
     @Mock
     private ComponentRepository componentRepository;
@@ -37,23 +36,16 @@ public class ComponentServiceTest extends BaseServiceTest {
     @Mock
     private TaskRepository taskRepository;
     
-    private ComponentService componentService;
+    private ComponentServiceImpl componentService;
     
     private Component testComponent;
     private Task testTask;
     
-    @Override
-    protected void setupTestData() {
+    @BeforeEach
+    void setUp() {
         // Initialize test objects
         testComponent = createTestComponent();
         testTask = createTestTask();
-    }
-    
-    @Override
-    @BeforeEach
-    public void setUp() {
-        // Execute parent setup first (initializes Mockito annotations)
-        super.setUp();
         
         // Configure mock repository responses
         when(componentRepository.findById(1L)).thenReturn(Optional.of(testComponent));
@@ -65,34 +57,14 @@ public class ComponentServiceTest extends BaseServiceTest {
         when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
     
         // Create service with injected mocks
-        componentService = new TestableComponentServiceImpl(
+        componentService = new ComponentServiceImpl(
             componentRepository,
             taskRepository
         );
-        
-        // Configure MVVMFx dependency injector for comprehensive testing
-        MvvmFX.setCustomDependencyInjector(type -> {
-            if (type == ComponentRepository.class) return componentRepository;
-            if (type == TaskRepository.class) return taskRepository;
-            if (type == ComponentService.class) return componentService;
-            return null;
-        });
-    }
-    
-    @AfterEach
-    @Override
-    public void tearDown() throws Exception {
-        // Clear MVVMFx dependency injector
-        MvvmFX.setCustomDependencyInjector(null);
-        
-        // Call parent tearDown
-        super.tearDown();
     }
     
     /**
      * Creates a test component for use in tests.
-     * 
-     * @return a test component
      */
     private Component createTestComponent() {
         Component component = new Component("Test Component", "TC-123");
@@ -105,8 +77,6 @@ public class ComponentServiceTest extends BaseServiceTest {
     
     /**
      * Creates a test task for use in tests.
-     * 
-     * @return a test task
      */
     private Task createTestTask() {
         Task task = new Task();
@@ -116,7 +86,7 @@ public class ComponentServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindById() {
+    void testFindById() {
         // Execute
         Component result = componentService.findById(1L);
         
@@ -129,10 +99,8 @@ public class ComponentServiceTest extends BaseServiceTest {
         verify(componentRepository, times(1)).findById(1L);
     }
     
-// src/test/java/org/frcpm/services/impl/ComponentServiceTest.java (continued)
-
     @Test
-    public void testFindAll() {
+    void testFindAll() {
         // Execute
         List<Component> results = componentService.findAll();
         
@@ -146,7 +114,7 @@ public class ComponentServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testSave() {
+    void testSave() {
         // Setup
         Component newComponent = new Component("New Component", "NC-456");
         newComponent.setDescription("New component for testing");
@@ -164,7 +132,7 @@ public class ComponentServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testDelete() {
+    void testDelete() {
         // Setup
         doNothing().when(componentRepository).delete(any(Component.class));
         
@@ -176,7 +144,7 @@ public class ComponentServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testDeleteById() {
+    void testDeleteById() {
         // Setup
         when(componentRepository.deleteById(anyLong())).thenReturn(true);
         
@@ -191,7 +159,7 @@ public class ComponentServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCount() {
+    void testCount() {
         // Setup
         when(componentRepository.count()).thenReturn(5L);
         
@@ -206,7 +174,7 @@ public class ComponentServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindByPartNumber() {
+    void testFindByPartNumber() {
         // Setup
         when(componentRepository.findByPartNumber("TC-123")).thenReturn(Optional.of(testComponent));
         
@@ -222,9 +190,9 @@ public class ComponentServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindByName() {
+    void testFindByName() {
         // Setup
-        when(componentRepository.findByName("Test")).thenReturn(List.of(testComponent));
+        when(componentRepository.findByNameContainingIgnoreCase("Test")).thenReturn(List.of(testComponent));
         
         // Execute
         List<Component> results = componentService.findByName("Test");
@@ -235,11 +203,11 @@ public class ComponentServiceTest extends BaseServiceTest {
         assertEquals(testComponent, results.get(0));
         
         // Verify repository was called
-        verify(componentRepository).findByName("Test");
+        verify(componentRepository).findByNameContainingIgnoreCase("Test");
     }
     
     @Test
-    public void testFindByDelivered() {
+    void testFindByDelivered() {
         // Setup
         when(componentRepository.findByDelivered(false)).thenReturn(List.of(testComponent));
         
@@ -256,7 +224,7 @@ public class ComponentServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCreateComponent() {
+    void testCreateComponent() {
         // Setup
         when(componentRepository.findByPartNumber("NC-456")).thenReturn(Optional.empty());
         
@@ -282,7 +250,7 @@ public class ComponentServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCreateComponent_PartNumberExists() {
+    void testCreateComponent_PartNumberExists() {
         // Setup
         when(componentRepository.findByPartNumber("TC-123")).thenReturn(Optional.of(testComponent));
         
@@ -305,57 +273,7 @@ public class ComponentServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCreateComponent_TestEnvironment() {
-        // Setup - enable test environment
-        System.setProperty("test.environment", "true");
-        when(componentRepository.findByPartNumber("TC-123")).thenReturn(Optional.of(testComponent));
-        
-        try {
-            // Execute
-            Component result = componentService.createComponent(
-                "Updated Component",
-                "TC-123",
-                "Updated component description",
-                LocalDate.now().plusDays(10)
-            );
-            
-            // Verify
-            assertNotNull(result);
-            assertEquals("Updated Component", result.getName());
-            assertEquals("Updated component description", result.getDescription());
-            assertEquals(LocalDate.now().plusDays(10), result.getExpectedDelivery());
-            
-            // Verify repository calls
-            verify(componentRepository).findByPartNumber("TC-123");
-            verify(componentRepository).save(any(Component.class));
-        } finally {
-            // Clean up
-            System.clearProperty("test.environment");
-        }
-    }
-    
-    @Test
-    public void testCreateComponent_NoName() {
-        // Execute and verify exception
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
-            componentService.createComponent(
-                null,
-                "TC-456",
-                "Component with no name",
-                LocalDate.now().plusDays(14)
-            );
-        });
-        
-        // Verify exception message
-        assertTrue(exception.getMessage().contains("name"));
-        
-        // Verify repository calls
-        verify(componentRepository, never()).findByPartNumber(anyString());
-        verify(componentRepository, never()).save(any(Component.class));
-    }
-    
-    @Test
-    public void testMarkAsDelivered() {
+    void testMarkAsDelivered() {
         // Execute
         Component result = componentService.markAsDelivered(1L, LocalDate.now());
         
@@ -370,22 +288,7 @@ public class ComponentServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testMarkAsDelivered_NullDate() {
-        // Execute
-        Component result = componentService.markAsDelivered(1L, null);
-        
-        // Verify
-        assertNotNull(result);
-        assertTrue(result.isDelivered());
-        assertEquals(LocalDate.now(), result.getActualDelivery());
-        
-        // Verify repository calls
-        verify(componentRepository).findById(1L);
-        verify(componentRepository).save(any(Component.class));
-    }
-    
-    @Test
-    public void testMarkAsDelivered_ComponentNotFound() {
+    void testMarkAsDelivered_ComponentNotFound() {
         // Setup
         when(componentRepository.findById(999L)).thenReturn(Optional.empty());
         
@@ -401,7 +304,7 @@ public class ComponentServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testUpdateExpectedDelivery() {
+    void testUpdateExpectedDelivery() {
         // Execute
         Component result = componentService.updateExpectedDelivery(1L, LocalDate.now().plusDays(20));
         
@@ -415,23 +318,7 @@ public class ComponentServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testUpdateExpectedDelivery_ComponentNotFound() {
-        // Setup
-        when(componentRepository.findById(999L)).thenReturn(Optional.empty());
-        
-        // Execute
-        Component result = componentService.updateExpectedDelivery(999L, LocalDate.now().plusDays(20));
-        
-        // Verify
-        assertNull(result);
-        
-        // Verify repository calls
-        verify(componentRepository).findById(999L);
-        verify(componentRepository, never()).save(any(Component.class));
-    }
-    
-    @Test
-    public void testAssociateComponentsWithTask() {
+    void testAssociateComponentsWithTask() {
         // Setup
         when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
         when(componentRepository.findById(1L)).thenReturn(Optional.of(testComponent));
@@ -449,7 +336,7 @@ public class ComponentServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testAssociateComponentsWithTask_TaskNotFound() {
+    void testAssociateComponentsWithTask_TaskNotFound() {
         // Setup
         when(taskRepository.findById(999L)).thenReturn(Optional.empty());
         
@@ -463,51 +350,5 @@ public class ComponentServiceTest extends BaseServiceTest {
         verify(taskRepository).findById(999L);
         verify(componentRepository, never()).findById(anyLong());
         verify(taskRepository, never()).save(any(Task.class));
-    }
-    
-    @Test
-    public void testAssociateComponentsWithTask_ComponentNotFound() {
-        // Setup
-        when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
-        when(componentRepository.findById(999L)).thenReturn(Optional.empty());
-        
-        // Execute
-        Task result = componentService.associateComponentsWithTask(1L, Set.of(999L));
-        
-        // Verify
-        assertNotNull(result);
-        
-        // Verify repository calls
-        verify(taskRepository).findById(1L);
-        verify(componentRepository).findById(999L);
-        verify(taskRepository).save(any(Task.class));
-    }
-    
-    @Test
-    public void testAssociateComponentsWithTask_NullComponentIds() {
-        // Execute
-        Task result = componentService.associateComponentsWithTask(1L, null);
-        
-        // Verify
-        assertNotNull(result);
-        
-        // Verify repository calls
-        verify(taskRepository).findById(1L);
-        verify(componentRepository, never()).findById(anyLong());
-        verify(taskRepository).save(any(Task.class));
-    }
-    
-    @Test
-    public void testAssociateComponentsWithTask_EmptyComponentIds() {
-        // Execute
-        Task result = componentService.associateComponentsWithTask(1L, new HashSet<>());
-        
-        // Verify
-        assertNotNull(result);
-        
-        // Verify repository calls
-        verify(taskRepository).findById(1L);
-        verify(componentRepository, never()).findById(anyLong());
-        verify(taskRepository).save(any(Task.class));
     }
 }

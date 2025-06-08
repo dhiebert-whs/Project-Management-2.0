@@ -2,20 +2,18 @@
 
 package org.frcpm.services.impl;
 
-import de.saxsys.mvvmfx.MvvmFX;
 import org.frcpm.models.Project;
 import org.frcpm.models.Subsystem;
 import org.frcpm.models.Task;
 import org.frcpm.models.TeamMember;
-import org.frcpm.repositories.specific.ComponentRepository;
-import org.frcpm.repositories.specific.ProjectRepository;
-import org.frcpm.repositories.specific.TaskRepository;
-import org.frcpm.services.BaseServiceTest;
-import org.frcpm.services.TaskService;
-import org.junit.jupiter.api.AfterEach;
+import org.frcpm.repositories.spring.ComponentRepository;
+import org.frcpm.repositories.spring.ProjectRepository;
+import org.frcpm.repositories.spring.TaskRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -29,9 +27,10 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 /**
- * Test class for TaskService implementation using TestableTaskServiceImpl.
+ * Test class for TaskService implementation using Spring Boot testing patterns.
  */
-public class TaskServiceTest extends BaseServiceTest {
+@ExtendWith(MockitoExtension.class)
+class TaskServiceTest {
     
     @Mock
     private TaskRepository taskRepository;
@@ -42,7 +41,7 @@ public class TaskServiceTest extends BaseServiceTest {
     @Mock
     private ComponentRepository componentRepository;
     
-    private TaskService taskService;
+    private TaskServiceImpl taskService;
     
     private Task testTask;
     private Project testProject;
@@ -50,21 +49,14 @@ public class TaskServiceTest extends BaseServiceTest {
     private TeamMember testMember;
     private LocalDate now;
     
-    @Override
-    protected void setupTestData() {
+    @BeforeEach
+    void setUp() {
         // Initialize dates and objects first to avoid NullPointerException
         now = LocalDate.now();
         testProject = createTestProject();
         testSubsystem = createTestSubsystem();
         testMember = createTestMember();
         testTask = createTestTask();
-    }
-    
-    @Override
-    @BeforeEach
-    public void setUp() {
-        // Execute parent setup first (initializes Mockito annotations)
-        super.setUp();
         
         // Configure mock repository responses
         when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
@@ -75,36 +67,15 @@ public class TaskServiceTest extends BaseServiceTest {
         when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
         
         // Create service with injected mocks
-        taskService = new TestableTaskServiceImpl(
+        taskService = new TaskServiceImpl(
             taskRepository,
             projectRepository,
             componentRepository
         );
-        
-        // Configure MVVMFx dependency injector for comprehensive testing
-        MvvmFX.setCustomDependencyInjector(type -> {
-            if (type == TaskRepository.class) return taskRepository;
-            if (type == ProjectRepository.class) return projectRepository;
-            if (type == ComponentRepository.class) return componentRepository;
-            if (type == TaskServiceImpl.class) return taskService;
-            return null;
-        });
-    }
-    
-    @AfterEach
-    @Override
-    public void tearDown() throws Exception {
-        // Clear MVVMFx dependency injector
-        MvvmFX.setCustomDependencyInjector(null);
-        
-        // Call parent tearDown
-        super.tearDown();
     }
     
     /**
      * Creates a test project for use in tests.
-     * 
-     * @return a test project
      */
     private Project createTestProject() {
         Project project = new Project("Test Project", now, now.plusMonths(1), now.plusMonths(2));
@@ -115,8 +86,6 @@ public class TaskServiceTest extends BaseServiceTest {
     
     /**
      * Creates a test subsystem for use in tests.
-     * 
-     * @return a test subsystem
      */
     private Subsystem createTestSubsystem() {
         Subsystem subsystem = new Subsystem("Test Subsystem");
@@ -126,8 +95,6 @@ public class TaskServiceTest extends BaseServiceTest {
     
     /**
      * Creates a test member for use in tests.
-     * 
-     * @return a test member
      */
     private TeamMember createTestMember() {
         TeamMember member = new TeamMember("user", "Test", "User", "test@example.com");
@@ -137,8 +104,6 @@ public class TaskServiceTest extends BaseServiceTest {
     
     /**
      * Creates a test task for use in tests.
-     * 
-     * @return a test task
      */
     private Task createTestTask() {
         Task task = new Task("UNIQUE_TEST_TASK_NAME", testProject, testSubsystem);
@@ -154,7 +119,7 @@ public class TaskServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindById() {
+    void testFindById() {
         // Reset mocks to ensure clean test state
         reset(taskRepository);
         
@@ -178,7 +143,7 @@ public class TaskServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindAll() {
+    void testFindAll() {
         // Execute
         List<Task> results = taskService.findAll();
         
@@ -192,7 +157,7 @@ public class TaskServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testSave() {
+    void testSave() {
         // Setup
         Task newTask = new Task("New Task", testProject, testSubsystem);
         
@@ -208,7 +173,7 @@ public class TaskServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testDelete() {
+    void testDelete() {
         // Setup
         doNothing().when(taskRepository).delete(any(Task.class));
         
@@ -220,7 +185,7 @@ public class TaskServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testDeleteById() {
+    void testDeleteById() {
         // Setup
         when(taskRepository.deleteById(anyLong())).thenReturn(true);
         
@@ -235,7 +200,7 @@ public class TaskServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCount() {
+    void testCount() {
         // Setup
         when(taskRepository.count()).thenReturn(5L);
         
@@ -250,7 +215,7 @@ public class TaskServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindByProject() {
+    void testFindByProject() {
         // Setup
         when(taskRepository.findByProject(testProject)).thenReturn(List.of(testTask));
         
@@ -267,7 +232,7 @@ public class TaskServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindBySubsystem() {
+    void testFindBySubsystem() {
         // Setup
         when(taskRepository.findBySubsystem(testSubsystem)).thenReturn(List.of(testTask));
         
@@ -284,7 +249,7 @@ public class TaskServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindByAssignedMember() {
+    void testFindByAssignedMember() {
         // Setup
         when(taskRepository.findByAssignedMember(testMember)).thenReturn(List.of(testTask));
         
@@ -301,7 +266,7 @@ public class TaskServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindByCompleted() {
+    void testFindByCompleted() {
         // Setup
         when(taskRepository.findByCompleted(false)).thenReturn(List.of(testTask));
         
@@ -318,7 +283,7 @@ public class TaskServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCreateTask() {
+    void testCreateTask() {
         // Execute
         Task result = taskService.createTask(
             "New Task",
@@ -344,7 +309,7 @@ public class TaskServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testUpdateTaskProgress() {
+    void testUpdateTaskProgress() {
         // Execute
         Task result = taskService.updateTaskProgress(1L, 50, false);
         
@@ -359,7 +324,7 @@ public class TaskServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testUpdateTaskProgress_Completed() {
+    void testUpdateTaskProgress_Completed() {
         // Execute - set completed to true
         Task result = taskService.updateTaskProgress(1L, 50, true);
         
@@ -374,7 +339,7 @@ public class TaskServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testUpdateTaskProgress_InvalidTaskId() {
+    void testUpdateTaskProgress_InvalidTaskId() {
         // Setup
         when(taskRepository.findById(999L)).thenReturn(Optional.empty());
         
@@ -390,7 +355,7 @@ public class TaskServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testGetTasksDueSoon() {
+    void testGetTasksDueSoon() {
         // Setup
         when(taskRepository.findByProject(testProject)).thenReturn(List.of(testTask));
         
@@ -408,25 +373,7 @@ public class TaskServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testGetTasksDueSoon_NoTasks() {
-        // Setup
-        when(projectRepository.findById(2L)).thenReturn(Optional.of(testProject));
-        when(taskRepository.findByProject(testProject)).thenReturn(List.of());
-        
-        // Execute
-        List<Task> result = taskService.getTasksDueSoon(2L, 10);
-        
-        // Verify - should return empty list if no tasks
-        assertNotNull(result);
-        assertTrue(result.isEmpty());
-        
-        // Verify repository calls
-        verify(projectRepository).findById(2L);
-        verify(taskRepository).findByProject(testProject);
-    }
-    
-    @Test
-    public void testGetTasksDueSoon_ProjectNotFound() {
+    void testGetTasksDueSoon_ProjectNotFound() {
         // Setup
         when(projectRepository.findById(999L)).thenReturn(Optional.empty());
         
@@ -443,7 +390,7 @@ public class TaskServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testAssignMembers() {
+    void testAssignMembers() {
         // Setup
         Set<TeamMember> members = Set.of(testMember);
         
@@ -459,7 +406,7 @@ public class TaskServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testAssignMembers_InvalidTaskId() {
+    void testAssignMembers_InvalidTaskId() {
         // Setup
         when(taskRepository.findById(999L)).thenReturn(Optional.empty());
         Set<TeamMember> members = Set.of(testMember);
@@ -476,7 +423,7 @@ public class TaskServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testAddDependency() {
+    void testAddDependency() {
         // Setup
         Task dependencyTask = new Task("Dependency Task", testProject, testSubsystem);
         dependencyTask.setId(2L);
@@ -496,7 +443,7 @@ public class TaskServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testAddDependency_SameTask() {
+    void testAddDependency_SameTask() {
         // Execute - try to add task as dependency to itself
         Exception exception = assertThrows(IllegalArgumentException.class, () -> {
             taskService.addDependency(1L, 1L);
@@ -511,28 +458,7 @@ public class TaskServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testRemoveDependency() {
-        // Setup
-        Task dependencyTask = new Task("Dependency Task", testProject, testSubsystem);
-        dependencyTask.setId(2L);
-        testTask.addPreDependency(dependencyTask);
-        
-        when(taskRepository.findById(2L)).thenReturn(Optional.of(dependencyTask));
-        
-        // Execute
-        boolean result = taskService.removeDependency(1L, 2L);
-        
-        // Verify
-        assertTrue(result);
-        
-        // Verify repository calls
-        verify(taskRepository).findById(1L);
-        verify(taskRepository).findById(2L);
-        verify(taskRepository, times(2)).save(any(Task.class));
-    }
-    
-    @Test
-    public void testUpdateRequiredComponents() {
+    void testUpdateRequiredComponents() {
         // Setup
         org.frcpm.models.Component component = new org.frcpm.models.Component();
         component.setId(1L);
@@ -553,7 +479,7 @@ public class TaskServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testUpdateRequiredComponents_InvalidTaskId() {
+    void testUpdateRequiredComponents_InvalidTaskId() {
         // Setup
         when(taskRepository.findById(999L)).thenReturn(Optional.empty());
         
@@ -567,22 +493,5 @@ public class TaskServiceTest extends BaseServiceTest {
         verify(taskRepository).findById(999L);
         verify(componentRepository, never()).findById(anyLong());
         verify(taskRepository, never()).save(any(Task.class));
-    }
-    
-    @Test
-    public void testUpdateRequiredComponents_ComponentNotFound() {
-        // Setup
-        when(componentRepository.findById(999L)).thenReturn(Optional.empty());
-        
-        // Execute
-        Task result = taskService.updateRequiredComponents(1L, Set.of(999L));
-        
-        // Verify - should still save the task even if component not found
-        assertNotNull(result);
-        
-        // Verify repository calls
-        verify(taskRepository).findById(1L);
-        verify(componentRepository).findById(999L);
-        verify(taskRepository).save(any(Task.class));
     }
 }

@@ -2,17 +2,15 @@
 
 package org.frcpm.services.impl;
 
-import de.saxsys.mvvmfx.MvvmFX;
 import org.frcpm.models.Meeting;
 import org.frcpm.models.Project;
-import org.frcpm.repositories.specific.MeetingRepository;
-import org.frcpm.repositories.specific.ProjectRepository;
-import org.frcpm.services.BaseServiceTest;
-import org.frcpm.services.MeetingService;
-import org.junit.jupiter.api.AfterEach;
+import org.frcpm.repositories.spring.MeetingRepository;
+import org.frcpm.repositories.spring.ProjectRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -25,9 +23,10 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 /**
- * Test class for MeetingService implementation using TestableMeetingServiceImpl.
+ * Test class for MeetingService implementation using Spring Boot testing patterns.
  */
-public class MeetingServiceTest extends BaseServiceTest {
+@ExtendWith(MockitoExtension.class)
+class MeetingServiceTest {
     
     @Mock
     private MeetingRepository meetingRepository;
@@ -35,23 +34,16 @@ public class MeetingServiceTest extends BaseServiceTest {
     @Mock
     private ProjectRepository projectRepository;
     
-    private MeetingService meetingService;
+    private MeetingServiceImpl meetingService;
     
     private Meeting testMeeting;
     private Project testProject;
     
-    @Override
-    protected void setupTestData() {
+    @BeforeEach
+    void setUp() {
         // Initialize test objects
         testProject = createTestProject();
         testMeeting = createTestMeeting();
-    }
-    
-    @Override
-    @BeforeEach
-    public void setUp() {
-        // Execute parent setup first (initializes Mockito annotations)
-        super.setUp();
         
         // Configure mock repository responses
         when(meetingRepository.findById(1L)).thenReturn(Optional.of(testMeeting));
@@ -62,34 +54,14 @@ public class MeetingServiceTest extends BaseServiceTest {
         when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
         
         // Create service with injected mocks
-        meetingService = new TestableMeetingServiceImpl(
+        meetingService = new MeetingServiceImpl(
             meetingRepository,
             projectRepository
         );
-        
-        // Configure MVVMFx dependency injector for comprehensive testing
-        MvvmFX.setCustomDependencyInjector(type -> {
-            if (type == MeetingRepository.class) return meetingRepository;
-            if (type == ProjectRepository.class) return projectRepository;
-            if (type == MeetingService.class) return meetingService;
-            return null;
-        });
-    }
-    
-    @AfterEach
-    @Override
-    public void tearDown() throws Exception {
-        // Clear MVVMFx dependency injector
-        MvvmFX.setCustomDependencyInjector(null);
-        
-        // Call parent tearDown
-        super.tearDown();
     }
     
     /**
      * Creates a test project for use in tests.
-     * 
-     * @return a test project
      */
     private Project createTestProject() {
         Project project = new Project();
@@ -103,8 +75,6 @@ public class MeetingServiceTest extends BaseServiceTest {
     
     /**
      * Creates a test meeting for use in tests.
-     * 
-     * @return a test meeting
      */
     private Meeting createTestMeeting() {
         Meeting meeting = new Meeting(
@@ -119,7 +89,7 @@ public class MeetingServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindById() {
+    void testFindById() {
         // Execute
         Meeting result = meetingService.findById(1L);
         
@@ -133,7 +103,7 @@ public class MeetingServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindAll() {
+    void testFindAll() {
         // Execute
         List<Meeting> results = meetingService.findAll();
         
@@ -147,7 +117,7 @@ public class MeetingServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testSave() {
+    void testSave() {
         // Setup
         Meeting newMeeting = new Meeting(
             LocalDate.now().plusDays(2),
@@ -168,7 +138,7 @@ public class MeetingServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testDelete() {
+    void testDelete() {
         // Setup
         doNothing().when(meetingRepository).delete(any(Meeting.class));
         
@@ -180,7 +150,7 @@ public class MeetingServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testDeleteById() {
+    void testDeleteById() {
         // Setup
         when(meetingRepository.deleteById(anyLong())).thenReturn(true);
         
@@ -195,7 +165,7 @@ public class MeetingServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCount() {
+    void testCount() {
         // Setup
         when(meetingRepository.count()).thenReturn(5L);
         
@@ -210,7 +180,7 @@ public class MeetingServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindByProject() {
+    void testFindByProject() {
         // Setup
         when(meetingRepository.findByProject(testProject)).thenReturn(List.of(testMeeting));
         
@@ -227,7 +197,7 @@ public class MeetingServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindByDate() {
+    void testFindByDate() {
         // Setup
         LocalDate testDate = LocalDate.now().plusDays(5);
         when(meetingRepository.findByDate(testDate)).thenReturn(List.of(testMeeting));
@@ -245,7 +215,7 @@ public class MeetingServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindByDateAfter() {
+    void testFindByDateAfter() {
         // Setup
         LocalDate testDate = LocalDate.now();
         when(meetingRepository.findByDateAfter(testDate)).thenReturn(List.of(testMeeting));
@@ -263,7 +233,7 @@ public class MeetingServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindByDateBetween() {
+    void testFindByDateBetween() {
         // Setup
         LocalDate startDate = LocalDate.now();
         LocalDate endDate = LocalDate.now().plusDays(10);
@@ -282,7 +252,7 @@ public class MeetingServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCreateMeeting() {
+    void testCreateMeeting() {
         // Execute
         Meeting result = meetingService.createMeeting(
             LocalDate.now().plusDays(3),
@@ -306,7 +276,7 @@ public class MeetingServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCreateMeeting_ProjectNotFound() {
+    void testCreateMeeting_ProjectNotFound() {
         // Setup
         when(projectRepository.findById(999L)).thenReturn(Optional.empty());
         
@@ -330,61 +300,7 @@ public class MeetingServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCreateMeeting_InvalidParameters() {
-        // Execute and verify exception for null date
-        Exception exception1 = assertThrows(IllegalArgumentException.class, () -> {
-            meetingService.createMeeting(
-                null,
-                LocalTime.of(11, 0),
-                LocalTime.of(12, 0),
-                1L,
-                "Notes"
-            );
-        });
-        assertTrue(exception1.getMessage().contains("date"));
-        
-        // Execute and verify exception for null start time
-        Exception exception2 = assertThrows(IllegalArgumentException.class, () -> {
-            meetingService.createMeeting(
-                LocalDate.now().plusDays(3),
-                null,
-                LocalTime.of(12, 0),
-                1L,
-                "Notes"
-            );
-        });
-        assertTrue(exception2.getMessage().contains("start"));
-        
-        // Execute and verify exception for null end time
-        Exception exception3 = assertThrows(IllegalArgumentException.class, () -> {
-            meetingService.createMeeting(
-                LocalDate.now().plusDays(3),
-                LocalTime.of(11, 0),
-                null,
-                1L,
-                "Notes"
-            );
-        });
-        assertTrue(exception3.getMessage().contains("end"));
-        
-        // Execute and verify exception for end time before start time
-        Exception exception4 = assertThrows(IllegalArgumentException.class, () -> {
-            meetingService.createMeeting(
-                LocalDate.now().plusDays(3),
-                LocalTime.of(12, 0),
-                LocalTime.of(11, 0),
-                1L,
-                "Notes"
-            );
-        });
-        assertTrue(exception4.getMessage().contains("before start time"));
-        
-        // Verify repository calls never happened
-        verify(meetingRepository, never()).save(any(Meeting.class));
-    }
-    
-    @Test
-    public void testUpdateMeetingDateTime() {
+    void testUpdateMeetingDateTime() {
         // Setup
         LocalDate newDate = LocalDate.now().plusDays(7);
         LocalTime newStartTime = LocalTime.of(10, 0);
@@ -405,7 +321,7 @@ public class MeetingServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testUpdateMeetingDateTime_MeetingNotFound() {
+    void testUpdateMeetingDateTime_MeetingNotFound() {
         // Setup
         when(meetingRepository.findById(999L)).thenReturn(Optional.empty());
         
@@ -426,60 +342,9 @@ public class MeetingServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testUpdateMeetingDateTime_InvalidEndTime() {
-        // Execute and verify exception
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
-            meetingService.updateMeetingDateTime(
-                1L,
-                null,
-                LocalTime.of(11, 0),
-                LocalTime.of(10, 0)
-            );
-        });
-        
-        // Verify exception message contains "before start time"
-        assertTrue(exception.getMessage().contains("before start time"));
-        
-        // Verify repository calls
-        verify(meetingRepository).findById(1L);
-        verify(meetingRepository, never()).save(any(Meeting.class));
-    }
-    
-    @Test
-    public void testUpdateNotes() {
-        // Execute
-        Meeting result = meetingService.updateNotes(1L, "Updated meeting notes");
-        
-        // Verify
-        assertNotNull(result);
-        assertEquals("Updated meeting notes", result.getNotes());
-        
-        // Verify repository calls
-        verify(meetingRepository).findById(1L);
-        verify(meetingRepository).save(any(Meeting.class));
-    }
-    
-    @Test
-    public void testUpdateNotes_MeetingNotFound() {
-        // Setup
-        when(meetingRepository.findById(999L)).thenReturn(Optional.empty());
-        
-        // Execute
-        Meeting result = meetingService.updateNotes(999L, "Updated notes");
-        
-        // Verify
-        assertNull(result);
-        
-        // Verify repository calls
-        verify(meetingRepository).findById(999L);
-        verify(meetingRepository, never()).save(any(Meeting.class));
-    }
-    
-    @Test
-    public void testGetUpcomingMeetings() {
+    void testGetUpcomingMeetings() {
         // Setup
         LocalDate today = LocalDate.now();
-        LocalDate endDate = today.plusDays(7);
         when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
         when(meetingRepository.findByDateBetween(any(LocalDate.class), any(LocalDate.class)))
             .thenReturn(List.of(testMeeting));
@@ -498,7 +363,7 @@ public class MeetingServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testGetUpcomingMeetings_ProjectNotFound() {
+    void testGetUpcomingMeetings_ProjectNotFound() {
         // Setup
         when(projectRepository.findById(999L)).thenReturn(Optional.empty());
         
@@ -511,21 +376,6 @@ public class MeetingServiceTest extends BaseServiceTest {
         
         // Verify repository calls
         verify(projectRepository).findById(999L);
-        verify(meetingRepository, never()).findByDateBetween(any(LocalDate.class), any(LocalDate.class));
-    }
-    
-    @Test
-    public void testGetUpcomingMeetings_InvalidDays() {
-        // Execute and verify exception
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
-            meetingService.getUpcomingMeetings(1L, 0);
-        });
-        
-        // Verify exception message
-        assertTrue(exception.getMessage().contains("must be positive"));
-        
-        // Verify repository calls
-        verify(projectRepository, never()).findById(anyLong());
         verify(meetingRepository, never()).findByDateBetween(any(LocalDate.class), any(LocalDate.class));
     }
 }

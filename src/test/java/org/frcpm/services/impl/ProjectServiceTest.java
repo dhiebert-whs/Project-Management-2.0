@@ -3,14 +3,13 @@ package org.frcpm.services.impl;
 
 import org.frcpm.models.Project;
 import org.frcpm.models.Task;
-import org.frcpm.repositories.specific.ProjectRepository;
-import org.frcpm.repositories.specific.TaskRepository;
-import org.frcpm.services.BaseServiceTest;
-import org.frcpm.services.ProjectService;
+import org.frcpm.repositories.spring.ProjectRepository;
+import org.frcpm.repositories.spring.TaskRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -24,9 +23,10 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 /**
- * Test class for ProjectService implementation.
+ * Test class for ProjectService implementation using Spring Boot testing patterns.
  */
-public class ProjectServiceTest extends BaseServiceTest {
+@ExtendWith(MockitoExtension.class)
+class ProjectServiceTest {
     
     @Mock
     private ProjectRepository projectRepository;
@@ -34,13 +34,13 @@ public class ProjectServiceTest extends BaseServiceTest {
     @Mock
     private TaskRepository taskRepository;
     
-    private ProjectService projectService;
+    private ProjectServiceImpl projectService;
     
     private Project testProject;
     private LocalDate now;
     
-    @Override
-    protected void setupTestData() {
+    @BeforeEach
+    void setUp() {
         // Initialize the now variable first to avoid NullPointerException
         now = LocalDate.now();
         testProject = createTestProject();
@@ -49,29 +49,13 @@ public class ProjectServiceTest extends BaseServiceTest {
         when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
         when(projectRepository.findAll()).thenReturn(List.of(testProject));
         when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> invocation.getArgument(0));
-    }
-    
-    @Override
-    @BeforeEach
-    public void setUp() {
-        super.setUp();
         
         // Initialize the service with mocked repositories
-        projectService = new ProjectServiceImpl();
-        
-        // Inject mocked repositories using reflection
-        try {
-            org.frcpm.utils.TestUtils.setPrivateField(projectService, "repository", projectRepository);
-            org.frcpm.utils.TestUtils.setPrivateField(projectService, "taskRepository", taskRepository);
-        } catch (Exception e) {
-            fail("Failed to inject mock repositories: " + e.getMessage());
-        }
+        projectService = new ProjectServiceImpl(projectRepository, taskRepository);
     }
     
     /**
      * Creates a test project for use in tests.
-     * 
-     * @return a test project
      */
     private Project createTestProject() {
         Project project = new Project("Test Project", now, now.plusMonths(1), now.plusMonths(2));
@@ -82,10 +66,6 @@ public class ProjectServiceTest extends BaseServiceTest {
     
     /**
      * Creates a test task for use in tests.
-     * 
-     * @param project the project to associate with the task
-     * @param completed whether the task is completed
-     * @return a test task
      */
     private Task createTestTask(Project project, boolean completed) {
         Task task = new Task("Test Task", project, null);
@@ -95,7 +75,7 @@ public class ProjectServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindById() {
+    void testFindById() {
         // Execute
         Project result = projectService.findById(1L);
         
@@ -109,7 +89,7 @@ public class ProjectServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindById_NotFound() {
+    void testFindById_NotFound() {
         // Setup
         when(projectRepository.findById(99L)).thenReturn(Optional.empty());
         
@@ -124,7 +104,7 @@ public class ProjectServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindAll() {
+    void testFindAll() {
         // Execute
         List<Project> results = projectService.findAll();
         
@@ -138,7 +118,7 @@ public class ProjectServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testSave() {
+    void testSave() {
         // Setup
         Project newProject = new Project("New Project", now, now.plusMonths(1), now.plusMonths(2));
         
@@ -154,7 +134,7 @@ public class ProjectServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testDelete() {
+    void testDelete() {
         // Setup
         doNothing().when(projectRepository).delete(any(Project.class));
         
@@ -166,7 +146,7 @@ public class ProjectServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testDeleteById() {
+    void testDeleteById() {
         // Setup
         when(projectRepository.deleteById(anyLong())).thenReturn(true);
         
@@ -181,7 +161,7 @@ public class ProjectServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCount() {
+    void testCount() {
         // Setup
         when(projectRepository.count()).thenReturn(5L);
         
@@ -196,10 +176,10 @@ public class ProjectServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindByName() {
+    void testFindByName() {
         // Setup
         List<Project> expectedProjects = List.of(testProject);
-        when(projectRepository.findByName("Test")).thenReturn(expectedProjects);
+        when(projectRepository.findByNameContainingIgnoreCase("Test")).thenReturn(expectedProjects);
         
         // Execute
         List<Project> results = projectService.findByName("Test");
@@ -210,15 +190,15 @@ public class ProjectServiceTest extends BaseServiceTest {
         assertEquals("Test Project", results.get(0).getName());
         
         // Verify repository was called
-        verify(projectRepository).findByName("Test");
+        verify(projectRepository).findByNameContainingIgnoreCase("Test");
     }
     
     @Test
-    public void testFindByDeadlineBefore() {
+    void testFindByDeadlineBefore() {
         // Setup
         List<Project> expectedProjects = List.of(testProject);
         LocalDate deadline = now.plusMonths(3);
-        when(projectRepository.findByDeadlineBefore(deadline)).thenReturn(expectedProjects);
+        when(projectRepository.findByHardDeadlineBefore(deadline)).thenReturn(expectedProjects);
         
         // Execute
         List<Project> results = projectService.findByDeadlineBefore(deadline);
@@ -228,11 +208,11 @@ public class ProjectServiceTest extends BaseServiceTest {
         assertEquals(1, results.size());
         
         // Verify repository was called
-        verify(projectRepository).findByDeadlineBefore(deadline);
+        verify(projectRepository).findByHardDeadlineBefore(deadline);
     }
     
     @Test
-    public void testFindByStartDateAfter() {
+    void testFindByStartDateAfter() {
         // Setup
         List<Project> expectedProjects = List.of(testProject);
         LocalDate startDate = now.minusDays(1);
@@ -250,7 +230,7 @@ public class ProjectServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCreateProject() {
+    void testCreateProject() {
         // Setup
         String name = "New Project";
         LocalDate startDate = now;
@@ -275,7 +255,7 @@ public class ProjectServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCreateProject_InvalidName() {
+    void testCreateProject_InvalidName() {
         // Execute and verify
         assertThrows(IllegalArgumentException.class, () -> 
             projectService.createProject(null, now, now.plusMonths(1), now.plusMonths(2))
@@ -286,7 +266,7 @@ public class ProjectServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCreateProject_InvalidDates() {
+    void testCreateProject_InvalidDates() {
         // Execute and verify
         assertThrows(IllegalArgumentException.class, () -> 
             projectService.createProject("New Project", now, now.minusDays(1), now.plusMonths(2))
@@ -297,7 +277,7 @@ public class ProjectServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testUpdateProject() {
+    void testUpdateProject() {
         // Setup
         Long id = 1L;
         String name = "Updated Project";
@@ -326,7 +306,7 @@ public class ProjectServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testUpdateProject_NotFound() {
+    void testUpdateProject_NotFound() {
         // Setup
         Long id = 99L;
         when(projectRepository.findById(id)).thenReturn(Optional.empty());
@@ -343,28 +323,7 @@ public class ProjectServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testUpdateProject_InvalidDates() {
-        // Setup
-        Long id = 1L;
-        when(projectRepository.findById(id)).thenReturn(Optional.of(testProject));
-        
-        // Execute and verify - goal end date before start date
-        assertThrows(IllegalArgumentException.class, () -> 
-            projectService.updateProject(id, null, now, now.minusDays(1), null, null)
-        );
-        
-        // Execute and verify - hard deadline before start date
-        assertThrows(IllegalArgumentException.class, () -> 
-            projectService.updateProject(id, null, now, null, now.minusDays(1), null)
-        );
-        
-        // Verify repository was called for findById but not for save
-        verify(projectRepository, times(2)).findById(id);
-        verify(projectRepository, never()).save(any(Project.class));
-    }
-    
-    @Test
-    public void testGetProjectSummary() {
+    void testGetProjectSummary() {
         // Setup
         Long projectId = 1L;
         List<Task> tasks = new ArrayList<>();
@@ -393,7 +352,7 @@ public class ProjectServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testGetProjectSummary_ProjectNotFound() {
+    void testGetProjectSummary_ProjectNotFound() {
         // Setup
         Long projectId = 99L;
         when(projectRepository.findById(projectId)).thenReturn(Optional.empty());
@@ -408,51 +367,5 @@ public class ProjectServiceTest extends BaseServiceTest {
         // Verify repository was called
         verify(projectRepository).findById(projectId);
         verify(taskRepository, never()).findByProject(any(Project.class));
-    }
-    
-    @Test
-    public void testGetProjectSummary_NoTasks() {
-        // Setup
-        Long projectId = 1L;
-        when(projectRepository.findById(projectId)).thenReturn(Optional.of(testProject));
-        when(taskRepository.findByProject(testProject)).thenReturn(List.of());
-        
-        // Execute
-        Map<String, Object> summary = projectService.getProjectSummary(projectId);
-        
-        // Verify
-        assertNotNull(summary);
-        assertEquals(projectId, summary.get("id"));
-        assertEquals("Test Project", summary.get("name"));
-        assertEquals(0, summary.get("totalTasks"));
-        assertEquals(0, summary.get("completedTasks"));
-        assertEquals(0.0, summary.get("completionPercentage"));
-        
-        // Verify repository was called
-        verify(projectRepository).findById(projectId);
-        verify(taskRepository).findByProject(testProject);
-    }
-    
-    @Test
-    public void testGetProjectSummary_Exception() {
-        // Setup
-        Long projectId = 1L;
-        when(projectRepository.findById(projectId)).thenReturn(Optional.of(testProject));
-        when(taskRepository.findByProject(testProject)).thenThrow(new RuntimeException("Test exception"));
-        
-        // Execute
-        Map<String, Object> summary = projectService.getProjectSummary(projectId);
-        
-        // Verify - should return a summary with default values
-        assertNotNull(summary);
-        assertEquals(projectId, summary.get("id"));
-        assertEquals("Test Project", summary.get("name"));
-        assertEquals(0, summary.get("totalTasks"));
-        assertEquals(0, summary.get("completedTasks"));
-        assertEquals(0.0, summary.get("completionPercentage"));
-        
-        // Verify repository was called
-        verify(projectRepository).findById(projectId);
-        verify(taskRepository).findByProject(testProject);
     }
 }

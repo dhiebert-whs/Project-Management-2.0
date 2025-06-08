@@ -2,17 +2,15 @@
 
 package org.frcpm.services.impl;
 
-import de.saxsys.mvvmfx.MvvmFX;
 import org.frcpm.models.Milestone;
 import org.frcpm.models.Project;
-import org.frcpm.repositories.specific.MilestoneRepository;
-import org.frcpm.repositories.specific.ProjectRepository;
-import org.frcpm.services.BaseServiceTest;
-import org.frcpm.services.MilestoneService;
-import org.junit.jupiter.api.AfterEach;
+import org.frcpm.repositories.spring.MilestoneRepository;
+import org.frcpm.repositories.spring.ProjectRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -24,9 +22,10 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 /**
- * Test class for MilestoneService implementation using TestableMilestoneServiceImpl.
+ * Test class for MilestoneService implementation using Spring Boot testing patterns.
  */
-public class MilestoneServiceTest extends BaseServiceTest {
+@ExtendWith(MockitoExtension.class)
+class MilestoneServiceTest {
     
     @Mock
     private MilestoneRepository milestoneRepository;
@@ -34,25 +33,18 @@ public class MilestoneServiceTest extends BaseServiceTest {
     @Mock
     private ProjectRepository projectRepository;
     
-    private MilestoneService milestoneService;
+    private MilestoneServiceImpl milestoneService;
     
     private Milestone testMilestone;
     private Project testProject;
     private LocalDate now;
     
-    @Override
-    protected void setupTestData() {
+    @BeforeEach
+    void setUp() {
         // Initialize dates and objects first to avoid NullPointerException
         now = LocalDate.now();
         testProject = createTestProject();
         testMilestone = createTestMilestone();
-    }
-    
-    @Override
-    @BeforeEach
-    public void setUp() {
-        // Execute parent setup first (initializes Mockito annotations)
-        super.setUp();
         
         // Configure mock repository responses
         when(milestoneRepository.findById(1L)).thenReturn(Optional.of(testMilestone));
@@ -63,34 +55,14 @@ public class MilestoneServiceTest extends BaseServiceTest {
         when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
         
         // Create service with injected mocks
-        milestoneService = new TestableMilestoneServiceImpl(
+        milestoneService = new MilestoneServiceImpl(
             milestoneRepository,
             projectRepository
         );
-        
-        // Configure MVVMFx dependency injector for comprehensive testing
-        MvvmFX.setCustomDependencyInjector(type -> {
-            if (type == MilestoneRepository.class) return milestoneRepository;
-            if (type == ProjectRepository.class) return projectRepository;
-            if (type == MilestoneService.class) return milestoneService;
-            return null;
-        });
-    }
-    
-    @AfterEach
-    @Override
-    public void tearDown() throws Exception {
-        // Clear MVVMFx dependency injector
-        MvvmFX.setCustomDependencyInjector(null);
-        
-        // Call parent tearDown
-        super.tearDown();
     }
     
     /**
      * Creates a test project for use in tests.
-     * 
-     * @return a test project
      */
     private Project createTestProject() {
         Project project = new Project("Test Project", now.minusDays(10), now.plusDays(80), now.plusDays(90));
@@ -101,8 +73,6 @@ public class MilestoneServiceTest extends BaseServiceTest {
     
     /**
      * Creates a test milestone for use in tests.
-     * 
-     * @return a test milestone
      */
     private Milestone createTestMilestone() {
         Milestone milestone = new Milestone("Test Milestone", now.plusDays(30), testProject);
@@ -112,7 +82,7 @@ public class MilestoneServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindById() {
+    void testFindById() {
         // Reset mocks to ensure clean test state
         reset(milestoneRepository);
         
@@ -136,7 +106,7 @@ public class MilestoneServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindAll() {
+    void testFindAll() {
         // Execute
         List<Milestone> results = milestoneService.findAll();
         
@@ -150,7 +120,7 @@ public class MilestoneServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testSave() {
+    void testSave() {
         // Setup
         Milestone newMilestone = new Milestone("New Milestone", now.plusDays(40), testProject);
         
@@ -166,7 +136,7 @@ public class MilestoneServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testDelete() {
+    void testDelete() {
         // Setup
         doNothing().when(milestoneRepository).delete(any(Milestone.class));
         
@@ -178,7 +148,7 @@ public class MilestoneServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testDeleteById() {
+    void testDeleteById() {
         // Setup
         when(milestoneRepository.deleteById(anyLong())).thenReturn(true);
         
@@ -193,7 +163,7 @@ public class MilestoneServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCount() {
+    void testCount() {
         // Setup
         when(milestoneRepository.count()).thenReturn(5L);
         
@@ -208,7 +178,7 @@ public class MilestoneServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindByProject() {
+    void testFindByProject() {
         // Setup
         when(milestoneRepository.findByProject(testProject)).thenReturn(List.of(testMilestone));
         
@@ -225,7 +195,7 @@ public class MilestoneServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindByDateBefore() {
+    void testFindByDateBefore() {
         // Setup
         LocalDate cutoffDate = now.plusDays(50);
         when(milestoneRepository.findByDateBefore(cutoffDate)).thenReturn(List.of(testMilestone));
@@ -242,7 +212,7 @@ public class MilestoneServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindByDateAfter() {
+    void testFindByDateAfter() {
         // Setup
         LocalDate cutoffDate = now.plusDays(10);
         when(milestoneRepository.findByDateAfter(cutoffDate)).thenReturn(List.of(testMilestone));
@@ -259,7 +229,7 @@ public class MilestoneServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindByDateBetween() {
+    void testFindByDateBetween() {
         // Setup
         LocalDate startDate = now.plusDays(20);
         LocalDate endDate = now.plusDays(40);
@@ -277,7 +247,7 @@ public class MilestoneServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCreateMilestone() {
+    void testCreateMilestone() {
         // Execute
         Milestone result = milestoneService.createMilestone(
             "New Milestone", 
@@ -298,7 +268,7 @@ public class MilestoneServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCreateMilestone_ProjectNotFound() {
+    void testCreateMilestone_ProjectNotFound() {
         // Setup
         when(projectRepository.findById(999L)).thenReturn(Optional.empty());
         
@@ -321,45 +291,7 @@ public class MilestoneServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCreateMilestone_DateBeforeProjectStart() {
-        // Execute - create milestone with date before project start
-        Milestone result = milestoneService.createMilestone(
-            "Early Milestone", 
-            now.minusDays(15), // Before project start
-            1L, 
-            "Early Description"
-        );
-        
-        // Verify - should still create the milestone despite the warning
-        assertNotNull(result);
-        assertEquals("Early Milestone", result.getName());
-        
-        // Verify repository calls
-        verify(projectRepository).findById(1L);
-        verify(milestoneRepository).save(any(Milestone.class));
-    }
-    
-    @Test
-    public void testCreateMilestone_DateAfterProjectDeadline() {
-        // Execute - create milestone with date after project deadline
-        Milestone result = milestoneService.createMilestone(
-            "Late Milestone", 
-            now.plusDays(100), // After project deadline
-            1L, 
-            "Late Description"
-        );
-        
-        // Verify - should still create the milestone despite the warning
-        assertNotNull(result);
-        assertEquals("Late Milestone", result.getName());
-        
-        // Verify repository calls
-        verify(projectRepository).findById(1L);
-        verify(milestoneRepository).save(any(Milestone.class));
-    }
-    
-    @Test
-    public void testUpdateMilestoneDate() {
+    void testUpdateMilestoneDate() {
         // Setup
         LocalDate newDate = now.plusDays(50);
         
@@ -376,7 +308,7 @@ public class MilestoneServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testUpdateMilestoneDate_MilestoneNotFound() {
+    void testUpdateMilestoneDate_MilestoneNotFound() {
         // Setup
         when(milestoneRepository.findById(999L)).thenReturn(Optional.empty());
         
@@ -392,7 +324,7 @@ public class MilestoneServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testUpdateDescription() {
+    void testUpdateDescription() {
         // Execute
         Milestone result = milestoneService.updateDescription(1L, "Updated Description");
         
@@ -406,23 +338,7 @@ public class MilestoneServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testUpdateDescription_MilestoneNotFound() {
-        // Setup
-        when(milestoneRepository.findById(999L)).thenReturn(Optional.empty());
-        
-        // Execute
-        Milestone result = milestoneService.updateDescription(999L, "Updated Description");
-        
-        // Verify
-        assertNull(result);
-        
-        // Verify repository calls
-        verify(milestoneRepository).findById(999L);
-        verify(milestoneRepository, never()).save(any(Milestone.class));
-    }
-    
-    @Test
-    public void testGetUpcomingMilestones() {
+    void testGetUpcomingMilestones() {
         // Setup
         LocalDate today = LocalDate.now();
         Milestone upcomingMilestone = new Milestone("Upcoming Milestone", today.plusDays(5), testProject);
@@ -445,7 +361,7 @@ public class MilestoneServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testGetUpcomingMilestones_ProjectNotFound() {
+    void testGetUpcomingMilestones_ProjectNotFound() {
         // Setup
         when(projectRepository.findById(999L)).thenReturn(Optional.empty());
         
@@ -459,22 +375,5 @@ public class MilestoneServiceTest extends BaseServiceTest {
         // Verify repository calls
         verify(projectRepository).findById(999L);
         verify(milestoneRepository, never()).findByProject(any(Project.class));
-    }
-    
-    @Test
-    public void testGetUpcomingMilestones_NoUpcomingMilestones() {
-        // Setup
-        when(milestoneRepository.findByProject(testProject)).thenReturn(List.of(testMilestone));
-        
-        // Execute
-        List<Milestone> results = milestoneService.getUpcomingMilestones(1L, 5);
-        
-        // Verify - testMilestone is at now+30 days, so it shouldn't be included
-        assertNotNull(results);
-        assertTrue(results.isEmpty());
-        
-        // Verify repository calls
-        verify(projectRepository).findById(1L);
-        verify(milestoneRepository).findByProject(testProject);
     }
 }

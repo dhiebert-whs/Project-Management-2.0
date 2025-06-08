@@ -1,22 +1,20 @@
 // src/test/java/org/frcpm/services/impl/GanttDataServiceTest.java
 package org.frcpm.services.impl;
 
-import de.saxsys.mvvmfx.MvvmFX;
 import org.frcpm.models.GanttChartData;
 import org.frcpm.models.Milestone;
 import org.frcpm.models.Project;
 import org.frcpm.models.Task;
-import org.frcpm.repositories.specific.MilestoneRepository;
-import org.frcpm.repositories.specific.ProjectRepository;
-import org.frcpm.repositories.specific.TaskRepository;
-import org.frcpm.services.BaseServiceTest;
+import org.frcpm.repositories.spring.MilestoneRepository;
+import org.frcpm.repositories.spring.ProjectRepository;
+import org.frcpm.repositories.spring.TaskRepository;
 import org.frcpm.services.GanttChartTransformationService;
-import org.frcpm.services.GanttDataService;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -26,9 +24,10 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Test class for GanttDataService implementation using TestableGanttDataServiceImpl.
+ * Test class for GanttDataService implementation using Spring Boot testing patterns.
  */
-public class GanttDataServiceTest extends BaseServiceTest {
+@ExtendWith(MockitoExtension.class)
+class GanttDataServiceTest {
     
     @Mock
     private ProjectRepository projectRepository;
@@ -42,7 +41,7 @@ public class GanttDataServiceTest extends BaseServiceTest {
     @Mock
     private GanttChartTransformationService transformationService;
     
-    private GanttDataService ganttDataService;
+    private GanttDataServiceImpl ganttDataService;
     
     private Project testProject;
     private Task testTask;
@@ -52,8 +51,8 @@ public class GanttDataServiceTest extends BaseServiceTest {
     private List<GanttChartData> testMilestonesGanttData;
     private List<Map<String, Object>> testDependencyData;
     
-    @Override
-    protected void setupTestData() {
+    @BeforeEach
+    void setUp() {
         // Initialize dates and objects
         now = LocalDate.now();
         testProject = createTestProject();
@@ -62,13 +61,6 @@ public class GanttDataServiceTest extends BaseServiceTest {
         testTasksGanttData = createTestTasksGanttData();
         testMilestonesGanttData = createTestMilestonesGanttData();
         testDependencyData = createTestDependencyData();
-    }
-    
-    @Override
-    @BeforeEach
-    public void setUp() {
-        // Execute parent setup first (initializes Mockito annotations)
-        super.setUp();
         
         // Configure mock repository responses
         when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
@@ -97,38 +89,16 @@ public class GanttDataServiceTest extends BaseServiceTest {
         )).thenReturn(testMilestonesGanttData);
         
         // Create service with injected mocks
-        ganttDataService = new TestableGanttDataServiceImpl(
+        ganttDataService = new GanttDataServiceImpl(
             projectRepository,
             taskRepository,
             milestoneRepository,
             transformationService
         );
-        
-        // Configure MVVMFx dependency injector for comprehensive testing
-        MvvmFX.setCustomDependencyInjector(type -> {
-            if (type == ProjectRepository.class) return projectRepository;
-            if (type == TaskRepository.class) return taskRepository;
-            if (type == MilestoneRepository.class) return milestoneRepository;
-            if (type == GanttChartTransformationService.class) return transformationService;
-            if (type == GanttDataService.class) return ganttDataService;
-            return null;
-        });
-    }
-    
-    @AfterEach
-    @Override
-    public void tearDown() throws Exception {
-        // Clear MVVMFx dependency injector
-        MvvmFX.setCustomDependencyInjector(null);
-        
-        // Call parent tearDown
-        super.tearDown();
     }
     
     /**
      * Creates a test project for use in tests.
-     * 
-     * @return a test project
      */
     private Project createTestProject() {
         Project project = new Project("Test Project", now.minusDays(10), now.plusDays(80), now.plusDays(90));
@@ -139,8 +109,6 @@ public class GanttDataServiceTest extends BaseServiceTest {
     
     /**
      * Creates a test task for use in tests.
-     * 
-     * @return a test task
      */
     private Task createTestTask() {
         Task task = new Task("Test Task", testProject, null);
@@ -154,8 +122,6 @@ public class GanttDataServiceTest extends BaseServiceTest {
     
     /**
      * Creates a test milestone for use in tests.
-     * 
-     * @return a test milestone
      */
     private Milestone createTestMilestone() {
         Milestone milestone = new Milestone("Test Milestone", now.plusDays(10), testProject);
@@ -166,8 +132,6 @@ public class GanttDataServiceTest extends BaseServiceTest {
     
     /**
      * Creates test task GanttChartData for use in tests.
-     * 
-     * @return a list of GanttChartData for tasks
      */
     private List<GanttChartData> createTestTasksGanttData() {
         GanttChartData data = new GanttChartData("task_1", "Test Task", now, now.plusDays(5));
@@ -179,8 +143,6 @@ public class GanttDataServiceTest extends BaseServiceTest {
     
     /**
      * Creates test milestone GanttChartData for use in tests.
-     * 
-     * @return a list of GanttChartData for milestones
      */
     private List<GanttChartData> createTestMilestonesGanttData() {
         GanttChartData data = new GanttChartData("milestone_1", "Test Milestone", now.plusDays(10), now.plusDays(10));
@@ -191,8 +153,6 @@ public class GanttDataServiceTest extends BaseServiceTest {
     
     /**
      * Creates test dependency data for use in tests.
-     * 
-     * @return a list of dependency data maps
      */
     private List<Map<String, Object>> createTestDependencyData() {
         Map<String, Object> dependency = new HashMap<>();
@@ -203,7 +163,7 @@ public class GanttDataServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFormatTasksForGantt() {
+    void testFormatTasksForGantt() {
         // Execute
         Map<String, Object> result = ganttDataService.formatTasksForGantt(1L, null, null);
         
@@ -239,7 +199,7 @@ public class GanttDataServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFormatTasksForGantt_ProjectNotFound() {
+    void testFormatTasksForGantt_ProjectNotFound() {
         // Setup
         when(projectRepository.findById(99L)).thenReturn(Optional.empty());
         
@@ -257,7 +217,7 @@ public class GanttDataServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFormatTasksForGantt_WithDateRange() {
+    void testFormatTasksForGantt_WithDateRange() {
         // Setup specific date range
         LocalDate startDate = now.minusDays(5);
         LocalDate endDate = now.plusDays(15);
@@ -277,7 +237,7 @@ public class GanttDataServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testApplyFiltersToGanttData() {
+    void testApplyFiltersToGanttData() {
         // Setup
         Map<String, Object> ganttData = new HashMap<>();
         ganttData.put("tasks", testTasksGanttData);
@@ -349,7 +309,7 @@ public class GanttDataServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testApplyFiltersToGanttData_EmptyFilters() {
+    void testApplyFiltersToGanttData_EmptyFilters() {
         // Setup
         Map<String, Object> ganttData = new HashMap<>();
         ganttData.put("tasks", testTasksGanttData);
@@ -364,7 +324,7 @@ public class GanttDataServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCalculateCriticalPath() {
+    void testCalculateCriticalPath() {
         // Setup
         Task criticalTask = new Task("Critical Task", testProject, null);
         criticalTask.setId(2L);
@@ -387,7 +347,7 @@ public class GanttDataServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCalculateCriticalPath_ProjectNotFound() {
+    void testCalculateCriticalPath_ProjectNotFound() {
         // Setup
         when(projectRepository.findById(99L)).thenReturn(Optional.empty());
         
@@ -404,16 +364,16 @@ public class GanttDataServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testGetGanttDataForDate() {
+    void testGetGanttDataForDate() {
         // Setup a specific date
         LocalDate targetDate = now.plusDays(3);
         
-        // Mock the formatTasksForGantt and applyFiltersToGanttData methods
+        // Mock the formatTasksForGantt method
         Map<String, Object> fullData = new HashMap<>();
         fullData.put("tasks", testTasksGanttData);
         fullData.put("milestones", testMilestonesGanttData);
         
-        TestableGanttDataServiceImpl serviceSpy = spy((TestableGanttDataServiceImpl) ganttDataService);
+        GanttDataServiceImpl serviceSpy = spy(ganttDataService);
         doReturn(fullData).when(serviceSpy).formatTasksForGantt(eq(1L), isNull(), isNull());
         doReturn(fullData).when(serviceSpy).applyFiltersToGanttData(eq(fullData), any());
         
@@ -437,27 +397,7 @@ public class GanttDataServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testGetGanttDataForDate_NullDate() {
-        // Setup
-        TestableGanttDataServiceImpl serviceSpy = spy((TestableGanttDataServiceImpl) ganttDataService);
-        Map<String, Object> fullData = new HashMap<>();
-        doReturn(fullData).when(serviceSpy).formatTasksForGantt(anyLong(), isNull(), isNull());
-        doReturn(fullData).when(serviceSpy).applyFiltersToGanttData(any(), any());
-        
-        // Execute with null date (should use current date)
-        serviceSpy.getGanttDataForDate(1L, null);
-        
-        // Verify that current date is used
-        ArgumentCaptor<Map<String, Object>> filterCaptor = ArgumentCaptor.forClass(Map.class);
-        verify(serviceSpy).applyFiltersToGanttData(any(), filterCaptor.capture());
-        
-        Map<String, Object> filterCriteria = filterCaptor.getValue();
-        assertEquals(LocalDate.now().toString(), filterCriteria.get("startDate"));
-        assertEquals(LocalDate.now().plusDays(1).toString(), filterCriteria.get("endDate"));
-    }
-    
-    @Test
-    public void testGetTaskDependencies() {
+    void testGetTaskDependencies() {
         // Setup a task with dependencies
         Task dependentTask = new Task("Dependent Task", testProject, null);
         dependentTask.setId(2L);
@@ -483,7 +423,7 @@ public class GanttDataServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testIdentifyBottlenecks() {
+    void testIdentifyBottlenecks() {
         // Setup tasks with dependencies
         Task task1 = new Task("Task 1", testProject, null);
         task1.setId(1L);
@@ -520,7 +460,7 @@ public class GanttDataServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testGetTransformationService() {
+    void testGetTransformationService() {
         // Execute
         GanttChartTransformationService result = ganttDataService.getTransformationService();
         

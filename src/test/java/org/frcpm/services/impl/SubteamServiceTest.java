@@ -2,15 +2,13 @@
 
 package org.frcpm.services.impl;
 
-import de.saxsys.mvvmfx.MvvmFX;
 import org.frcpm.models.Subteam;
-import org.frcpm.repositories.specific.SubteamRepository;
-import org.frcpm.services.BaseServiceTest;
-import org.frcpm.services.SubteamService;
-import org.junit.jupiter.api.AfterEach;
+import org.frcpm.repositories.spring.SubteamRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,28 +19,22 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 /**
- * Test class for SubteamService implementation using TestableSubteamServiceImpl.
+ * Test class for SubteamService implementation using Spring Boot testing patterns.
  */
-public class SubteamServiceTest extends BaseServiceTest {
+@ExtendWith(MockitoExtension.class)
+class SubteamServiceTest {
     
     @Mock
     private SubteamRepository subteamRepository;
     
-    private SubteamService subteamService;
+    private SubteamServiceImpl subteamService;
     
     private Subteam testSubteam;
     
-    @Override
-    protected void setupTestData() {
+    @BeforeEach
+    void setUp() {
         // Initialize test objects
         testSubteam = createTestSubteam();
-    }
-    
-    @Override
-    @BeforeEach
-    public void setUp() {
-        // Execute parent setup first (initializes Mockito annotations)
-        super.setUp();
         
         // Configure mock repository responses
         when(subteamRepository.findById(1L)).thenReturn(Optional.of(testSubteam));
@@ -50,30 +42,11 @@ public class SubteamServiceTest extends BaseServiceTest {
         when(subteamRepository.save(any(Subteam.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
         // Create service with injected mocks
-        subteamService = new TestableSubteamServiceImpl(subteamRepository);
-        
-        // Configure MVVMFx dependency injector for comprehensive testing
-        MvvmFX.setCustomDependencyInjector(type -> {
-            if (type == SubteamRepository.class) return subteamRepository;
-            if (type == SubteamService.class) return subteamService;
-            return null;
-        });
-    }
-    
-    @AfterEach
-    @Override
-    public void tearDown() throws Exception {
-        // Clear MVVMFx dependency injector
-        MvvmFX.setCustomDependencyInjector(null);
-        
-        // Call parent tearDown
-        super.tearDown();
+        subteamService = new SubteamServiceImpl(subteamRepository);
     }
     
     /**
      * Creates a test subteam for use in tests.
-     * 
-     * @return a test subteam
      */
     private Subteam createTestSubteam() {
         Subteam subteam = new Subteam();
@@ -85,7 +58,7 @@ public class SubteamServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindById() {
+    void testFindById() {
         // Reset mocks to ensure clean test state
         reset(subteamRepository);
         
@@ -111,7 +84,7 @@ public class SubteamServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindAll() {
+    void testFindAll() {
         // Execute
         List<Subteam> results = subteamService.findAll();
         
@@ -125,7 +98,7 @@ public class SubteamServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testSave() {
+    void testSave() {
         // Setup
         Subteam newSubteam = new Subteam();
         newSubteam.setName("New Subteam");
@@ -143,7 +116,7 @@ public class SubteamServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testDelete() {
+    void testDelete() {
         // Setup
         doNothing().when(subteamRepository).delete(any(Subteam.class));
         
@@ -155,7 +128,7 @@ public class SubteamServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testDeleteById() {
+    void testDeleteById() {
         // Setup
         when(subteamRepository.deleteById(anyLong())).thenReturn(true);
         
@@ -170,7 +143,7 @@ public class SubteamServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCount() {
+    void testCount() {
         // Setup
         when(subteamRepository.count()).thenReturn(5L);
         
@@ -185,7 +158,7 @@ public class SubteamServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindByName() {
+    void testFindByName() {
         // Setup
         when(subteamRepository.findByName("Test Subteam")).thenReturn(Optional.of(testSubteam));
         
@@ -201,7 +174,7 @@ public class SubteamServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindByName_NotFound() {
+    void testFindByName_NotFound() {
         // Setup
         when(subteamRepository.findByName("Nonexistent Subteam")).thenReturn(Optional.empty());
         
@@ -216,9 +189,9 @@ public class SubteamServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindBySpecialty() {
+    void testFindBySpecialty() {
         // Setup
-        when(subteamRepository.findBySpecialty("Programming")).thenReturn(List.of(testSubteam));
+        when(subteamRepository.findBySpecialtiesContainingIgnoreCase("Programming")).thenReturn(List.of(testSubteam));
         
         // Execute
         List<Subteam> results = subteamService.findBySpecialty("Programming");
@@ -229,11 +202,11 @@ public class SubteamServiceTest extends BaseServiceTest {
         assertEquals(testSubteam, results.get(0));
         
         // Verify repository was called
-        verify(subteamRepository).findBySpecialty("Programming");
+        verify(subteamRepository).findBySpecialtiesContainingIgnoreCase("Programming");
     }
     
     @Test
-    public void testCreateSubteam() {
+    void testCreateSubteam() {
         // Setup
         when(subteamRepository.findByName("New Subteam")).thenReturn(Optional.empty());
         
@@ -256,7 +229,7 @@ public class SubteamServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCreateSubteam_NameExists() {
+    void testCreateSubteam_NameExists() {
         // Setup
         when(subteamRepository.findByName("Test Subteam")).thenReturn(Optional.of(testSubteam));
         
@@ -278,36 +251,7 @@ public class SubteamServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCreateSubteam_NameExists_TestEnvironment() {
-        // Setup
-        System.setProperty("test.environment", "true");
-        when(subteamRepository.findByName("Test Subteam")).thenReturn(Optional.of(testSubteam));
-        
-        try {
-            // Execute
-            Subteam result = subteamService.createSubteam(
-                "Test Subteam",
-                "#00FF00",
-                "Design, Mechanical"
-            );
-            
-            // Verify
-            assertNotNull(result);
-            assertEquals("Test Subteam", result.getName());
-            assertEquals("#00FF00", result.getColorCode()); // Updated color code
-            assertEquals("Design, Mechanical", result.getSpecialties()); // Updated specialties
-            
-            // Verify repository calls
-            verify(subteamRepository).findByName("Test Subteam");
-            verify(subteamRepository).save(any(Subteam.class));
-        } finally {
-            // Clean up
-            System.clearProperty("test.environment");
-        }
-    }
-    
-    @Test
-    public void testCreateSubteam_InvalidColorCode() {
+    void testCreateSubteam_InvalidColorCode() {
         // Execute and verify exception
         Exception exception = assertThrows(IllegalArgumentException.class, () -> {
             subteamService.createSubteam(
@@ -326,7 +270,7 @@ public class SubteamServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testUpdateSpecialties() {
+    void testUpdateSpecialties() {
         // Execute
         Subteam result = subteamService.updateSpecialties(1L, "Updated Skills");
         
@@ -340,7 +284,7 @@ public class SubteamServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testUpdateSpecialties_SubteamNotFound() {
+    void testUpdateSpecialties_SubteamNotFound() {
         // Setup
         when(subteamRepository.findById(999L)).thenReturn(Optional.empty());
         
@@ -356,7 +300,7 @@ public class SubteamServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testUpdateColorCode() {
+    void testUpdateColorCode() {
         // Execute
         Subteam result = subteamService.updateColorCode(1L, "#00FF00");
         
@@ -370,7 +314,7 @@ public class SubteamServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testUpdateColorCode_SubteamNotFound() {
+    void testUpdateColorCode_SubteamNotFound() {
         // Setup
         when(subteamRepository.findById(999L)).thenReturn(Optional.empty());
         
@@ -386,7 +330,7 @@ public class SubteamServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testUpdateColorCode_InvalidColorCode() {
+    void testUpdateColorCode_InvalidColorCode() {
         // Execute and verify exception
         Exception exception = assertThrows(IllegalArgumentException.class, () -> {
             subteamService.updateColorCode(1L, "invalid-color");

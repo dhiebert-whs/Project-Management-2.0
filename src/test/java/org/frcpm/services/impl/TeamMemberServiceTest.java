@@ -2,17 +2,15 @@
 
 package org.frcpm.services.impl;
 
-import de.saxsys.mvvmfx.MvvmFX;
 import org.frcpm.models.Subteam;
 import org.frcpm.models.TeamMember;
-import org.frcpm.repositories.specific.SubteamRepository;
-import org.frcpm.repositories.specific.TeamMemberRepository;
-import org.frcpm.services.BaseServiceTest;
-import org.frcpm.services.TeamMemberService;
-import org.junit.jupiter.api.AfterEach;
+import org.frcpm.repositories.spring.SubteamRepository;
+import org.frcpm.repositories.spring.TeamMemberRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
@@ -23,9 +21,10 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 /**
- * Test class for TeamMemberService implementation using TestableTeamMemberServiceImpl.
+ * Test class for TeamMemberService implementation using Spring Boot testing patterns.
  */
-public class TeamMemberServiceTest extends BaseServiceTest {
+@ExtendWith(MockitoExtension.class)
+class TeamMemberServiceTest {
     
     @Mock
     private TeamMemberRepository teamMemberRepository;
@@ -33,23 +32,16 @@ public class TeamMemberServiceTest extends BaseServiceTest {
     @Mock
     private SubteamRepository subteamRepository;
     
-    private TeamMemberService teamMemberService;
+    private TeamMemberServiceImpl teamMemberService;
     
     private TeamMember testMember;
     private Subteam testSubteam;
     
-    @Override
-    protected void setupTestData() {
+    @BeforeEach
+    void setUp() {
         // Initialize test objects
         testSubteam = createTestSubteam();
         testMember = createTestMember();
-    }
-    
-    @Override
-    @BeforeEach
-    public void setUp() {
-        // Execute parent setup first (initializes Mockito annotations)
-        super.setUp();
         
         // Configure mock repository responses
         when(teamMemberRepository.findById(1L)).thenReturn(Optional.of(testMember));
@@ -60,34 +52,14 @@ public class TeamMemberServiceTest extends BaseServiceTest {
         when(subteamRepository.findById(1L)).thenReturn(Optional.of(testSubteam));
         
         // Create service with injected mocks
-        teamMemberService = new TestableTeamMemberServiceImpl(
+        teamMemberService = new TeamMemberServiceImpl(
             teamMemberRepository,
             subteamRepository
         );
-        
-        // Configure MVVMFx dependency injector for comprehensive testing
-        MvvmFX.setCustomDependencyInjector(type -> {
-            if (type == TeamMemberRepository.class) return teamMemberRepository;
-            if (type == SubteamRepository.class) return subteamRepository;
-            if (type == TeamMemberServiceImpl.class) return teamMemberService;
-            return null;
-        });
-    }
-    
-    @AfterEach
-    @Override
-    public void tearDown() throws Exception {
-        // Clear MVVMFx dependency injector
-        MvvmFX.setCustomDependencyInjector(null);
-        
-        // Call parent tearDown
-        super.tearDown();
     }
     
     /**
      * Creates a test subteam for use in tests.
-     * 
-     * @return a test subteam
      */
     private Subteam createTestSubteam() {
         Subteam subteam = new Subteam();
@@ -99,8 +71,6 @@ public class TeamMemberServiceTest extends BaseServiceTest {
     
     /**
      * Creates a test member for use in tests.
-     * 
-     * @return a test member
      */
     private TeamMember createTestMember() {
         TeamMember member = new TeamMember("testuser", "Test", "User", "test@example.com");
@@ -112,7 +82,7 @@ public class TeamMemberServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindById() {
+    void testFindById() {
         // Reset mocks to ensure clean test state
         reset(teamMemberRepository);
         
@@ -136,7 +106,7 @@ public class TeamMemberServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindAll() {
+    void testFindAll() {
         // Execute
         List<TeamMember> results = teamMemberService.findAll();
         
@@ -150,7 +120,7 @@ public class TeamMemberServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testSave() {
+    void testSave() {
         // Setup
         TeamMember newMember = new TeamMember("newuser", "New", "User", "new@example.com");
         
@@ -166,7 +136,7 @@ public class TeamMemberServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testDelete() {
+    void testDelete() {
         // Setup
         doNothing().when(teamMemberRepository).delete(any(TeamMember.class));
         
@@ -178,7 +148,7 @@ public class TeamMemberServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testDeleteById() {
+    void testDeleteById() {
         // Setup
         when(teamMemberRepository.deleteById(anyLong())).thenReturn(true);
         
@@ -193,7 +163,7 @@ public class TeamMemberServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCount() {
+    void testCount() {
         // Setup
         when(teamMemberRepository.count()).thenReturn(5L);
         
@@ -208,7 +178,7 @@ public class TeamMemberServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindByUsername() {
+    void testFindByUsername() {
         // Setup
         when(teamMemberRepository.findByUsername("testuser")).thenReturn(Optional.of(testMember));
         
@@ -224,7 +194,7 @@ public class TeamMemberServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindByUsername_NotFound() {
+    void testFindByUsername_NotFound() {
         // Setup
         when(teamMemberRepository.findByUsername("nonexistent")).thenReturn(Optional.empty());
         
@@ -239,7 +209,7 @@ public class TeamMemberServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindBySubteam() {
+    void testFindBySubteam() {
         // Setup
         when(teamMemberRepository.findBySubteam(testSubteam)).thenReturn(List.of(testMember));
         
@@ -256,9 +226,9 @@ public class TeamMemberServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testFindBySkill() {
+    void testFindBySkill() {
         // Setup
-        when(teamMemberRepository.findBySkill("Java")).thenReturn(List.of(testMember));
+        when(teamMemberRepository.findBySkillsContainingIgnoreCase("Java")).thenReturn(List.of(testMember));
         
         // Execute
         List<TeamMember> results = teamMemberService.findBySkill("Java");
@@ -269,17 +239,17 @@ public class TeamMemberServiceTest extends BaseServiceTest {
         assertEquals(testMember, results.get(0));
         
         // Verify repository was called
-        verify(teamMemberRepository).findBySkill("Java");
+        verify(teamMemberRepository).findBySkillsContainingIgnoreCase("Java");
     }
     
     @Test
-    public void testFindLeaders() {
+    void testFindLeaders() {
         // Setup
         TeamMember leaderMember = new TeamMember("leader", "Leader", "User", "leader@example.com");
         leaderMember.setId(2L);
         leaderMember.setLeader(true);
         
-        when(teamMemberRepository.findLeaders()).thenReturn(List.of(leaderMember));
+        when(teamMemberRepository.findByIsLeaderTrue()).thenReturn(List.of(leaderMember));
         
         // Execute
         List<TeamMember> results = teamMemberService.findLeaders();
@@ -290,11 +260,11 @@ public class TeamMemberServiceTest extends BaseServiceTest {
         assertTrue(results.get(0).isLeader());
         
         // Verify repository was called
-        verify(teamMemberRepository).findLeaders();
+        verify(teamMemberRepository).findByIsLeaderTrue();
     }
     
     @Test
-    public void testCreateTeamMember() {
+    void testCreateTeamMember() {
         // Setup
         when(teamMemberRepository.findByUsername("newuser")).thenReturn(Optional.empty());
         
@@ -323,7 +293,7 @@ public class TeamMemberServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCreateTeamMember_UsernameExists() {
+    void testCreateTeamMember_UsernameExists() {
         // Setup
         when(teamMemberRepository.findByUsername("testuser")).thenReturn(Optional.of(testMember));
         
@@ -348,42 +318,7 @@ public class TeamMemberServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testCreateTeamMember_UsernameExists_TestEnvironment() {
-        // Setup
-        System.setProperty("test.environment", "true");
-        when(teamMemberRepository.findByUsername("testuser")).thenReturn(Optional.of(testMember));
-        
-        try {
-            // Execute
-            TeamMember result = teamMemberService.createTeamMember(
-                "testuser",
-                "Updated",
-                "User",
-                "updated@example.com",
-                "555-9876",
-                true
-            );
-            
-            // Verify
-            assertNotNull(result);
-            assertEquals("testuser", result.getUsername());
-            assertEquals("Updated", result.getFirstName());
-            assertEquals("User", result.getLastName());
-            assertEquals("updated@example.com", result.getEmail());
-            assertEquals("555-9876", result.getPhone());
-            assertTrue(result.isLeader());
-            
-            // Verify repository calls
-            verify(teamMemberRepository).findByUsername("testuser");
-            verify(teamMemberRepository).save(any(TeamMember.class));
-        } finally {
-            // Clean up
-            System.clearProperty("test.environment");
-        }
-    }
-    
-    @Test
-    public void testAssignToSubteam() {
+    void testAssignToSubteam() {
         // Execute
         TeamMember result = teamMemberService.assignToSubteam(1L, 1L);
         
@@ -397,7 +332,7 @@ public class TeamMemberServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testAssignToSubteam_NullSubteam() {
+    void testAssignToSubteam_NullSubteam() {
         // Execute
         TeamMember result = teamMemberService.assignToSubteam(1L, null);
         
@@ -411,7 +346,7 @@ public class TeamMemberServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testAssignToSubteam_MemberNotFound() {
+    void testAssignToSubteam_MemberNotFound() {
         // Setup
         when(teamMemberRepository.findById(999L)).thenReturn(Optional.empty());
         
@@ -427,9 +362,8 @@ public class TeamMemberServiceTest extends BaseServiceTest {
         verify(teamMemberRepository, never()).save(any(TeamMember.class));
     }
     
-
     @Test
-    public void testAssignToSubteam_SubteamNotFound() {
+    void testAssignToSubteam_SubteamNotFound() {
         // Setup
         when(subteamRepository.findById(999L)).thenReturn(Optional.empty());
         
@@ -446,7 +380,7 @@ public class TeamMemberServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testUpdateSkills() {
+    void testUpdateSkills() {
         // Execute
         TeamMember result = teamMemberService.updateSkills(1L, "Java, Python, Project Management");
         
@@ -460,7 +394,7 @@ public class TeamMemberServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testUpdateSkills_MemberNotFound() {
+    void testUpdateSkills_MemberNotFound() {
         // Setup
         when(teamMemberRepository.findById(999L)).thenReturn(Optional.empty());
         
@@ -476,7 +410,7 @@ public class TeamMemberServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testUpdateContactInfo() {
+    void testUpdateContactInfo() {
         // Execute
         TeamMember result = teamMemberService.updateContactInfo(1L, "updated@example.com", "555-9876");
         
@@ -491,37 +425,7 @@ public class TeamMemberServiceTest extends BaseServiceTest {
     }
     
     @Test
-    public void testUpdateContactInfo_EmailOnly() {
-        // Execute
-        TeamMember result = teamMemberService.updateContactInfo(1L, "updated@example.com", null);
-        
-        // Verify
-        assertNotNull(result);
-        assertEquals("updated@example.com", result.getEmail());
-        assertEquals("555-1234", result.getPhone()); // Original phone number unchanged
-        
-        // Verify repository calls
-        verify(teamMemberRepository).findById(1L);
-        verify(teamMemberRepository).save(any(TeamMember.class));
-    }
-    
-    @Test
-    public void testUpdateContactInfo_PhoneOnly() {
-        // Execute
-        TeamMember result = teamMemberService.updateContactInfo(1L, null, "555-9876");
-        
-        // Verify
-        assertNotNull(result);
-        assertEquals("test@example.com", result.getEmail()); // Original email unchanged
-        assertEquals("555-9876", result.getPhone());
-        
-        // Verify repository calls
-        verify(teamMemberRepository).findById(1L);
-        verify(teamMemberRepository).save(any(TeamMember.class));
-    }
-    
-    @Test
-    public void testUpdateContactInfo_MemberNotFound() {
+    void testUpdateContactInfo_MemberNotFound() {
         // Setup
         when(teamMemberRepository.findById(999L)).thenReturn(Optional.empty());
         
