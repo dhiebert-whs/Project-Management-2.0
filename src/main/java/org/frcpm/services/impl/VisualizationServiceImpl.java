@@ -8,15 +8,12 @@ import org.frcpm.models.Subsystem;
 import org.frcpm.models.Task;
 import org.frcpm.repositories.spring.MilestoneRepository;
 import org.frcpm.repositories.spring.ProjectRepository;
-import org.frcpm.repositories.spring.SubsystemRepository;
 import org.frcpm.repositories.spring.TaskRepository;
 import org.frcpm.services.GanttDataService;
 import org.frcpm.services.VisualizationService;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import javafx.scene.layout.Pane;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
