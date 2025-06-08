@@ -1,5 +1,4 @@
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\models\Attendance.java
-C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\AsyncServiceFactory.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\ComponentService.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\DialogService.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\FrcProjectManagementApplication.java
@@ -28,7 +27,6 @@ C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\fr
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\models\Subteam.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\repositories\spring\AttendanceRepository.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\models\Meeting.java
-C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\impl\AbstractService.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\config\WebConfig.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\impl\TeamMemberServiceImpl.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\async\TaskFactory.java
@@ -37,7 +35,6 @@ C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\fr
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\MilestoneService.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\impl\ReportGenerationServiceImpl.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\impl\MetricsCalculationServiceImpl.java
-C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\ServiceFactory.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\repositories\spring\MeetingRepository.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\ReportGenerationService.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\TeamMemberService.java
@@ -49,12 +46,10 @@ C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\fr
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\models\TeamMember.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\impl\GanttChartTransformationServiceImpl.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\impl\MeetingServiceImpl.java
-C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\config\RepositoryConfiguration.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\config\DatabaseConfig.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\repositories\spring\ProjectRepository.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\models\Milestone.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\repositories\spring\SubteamRepository.java
-C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\utils\DatabaseMigrationUtil.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\repositories\spring\TaskRepository.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\GanttDataService.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\TaskService.java
