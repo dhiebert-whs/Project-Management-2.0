@@ -6,6 +6,7 @@ import org.frcpm.models.Component;
 import org.frcpm.models.Task;
 import org.frcpm.repositories.spring.ComponentRepository;
 import org.frcpm.repositories.spring.TaskRepository;
+import org.frcpm.services.ComponentService; // Import the interface, not impl
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,7 +37,7 @@ class ComponentServiceTest {
     @Mock
     private TaskRepository taskRepository;
     
-    private ComponentServiceImpl componentService;
+    private ComponentService componentService; // Use interface type
     
     private Component testComponent;
     private Task testTask;
@@ -56,12 +57,15 @@ class ComponentServiceTest {
         when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
         when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
     
-        // Create service with injected mocks
+        // Create service with injected mocks - USE CORRECT CLASS NAME
         componentService = new ComponentServiceImpl(
             componentRepository,
             taskRepository
         );
     }
+    
+    // Rest of the test methods remain the same...
+    // (keeping all existing test methods unchanged)
     
     /**
      * Creates a test component for use in tests.
@@ -145,11 +149,14 @@ class ComponentServiceTest {
     
     @Test
     void testDeleteById() {
-        // Setup - Use doNothing() for void methods instead of when().thenReturn()
+        // Setup - Use doNothing() for void repository methods
         doNothing().when(componentRepository).deleteById(anyLong());
         
-        // Execute - deleteById returns void, so don't capture return value
-        componentService.deleteById(1L);
+        // Execute - Service deleteById may return boolean indicating success
+        boolean result = componentService.deleteById(1L);
+        
+        // Verify - Service should return true when repository operation succeeds
+        assertTrue(result);
         
         // Verify repository was called
         verify(componentRepository).deleteById(1L);
