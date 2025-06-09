@@ -149,14 +149,11 @@ class MilestoneServiceTest {
     
     @Test
     void testDeleteById() {
-        // Setup
-        when(milestoneRepository.deleteById(anyLong())).thenReturn(true);
+        // Setup - Use doNothing() for void methods
+        doNothing().when(milestoneRepository).deleteById(anyLong());
         
         // Execute
-        boolean result = milestoneService.deleteById(1L);
-        
-        // Verify
-        assertTrue(result);
+        milestoneService.deleteById(1L);
         
         // Verify repository was called
         verify(milestoneRepository).deleteById(1L);
