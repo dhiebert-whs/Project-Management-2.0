@@ -229,8 +229,6 @@
                             <exclude>**/utils/DatabaseTestUtil.java</exclude>
                             <exclude>**/utils/TestDatabaseCleaner.java</exclude>
                             <!-- Exclude old service implementations that conflict -->
-                            <exclude>**/services/impl/ComponentServiceImpl.java</exclude>
-                            <exclude>**/services/impl/MilestoneServiceImpl.java</exclude>
                             <exclude>**/services/impl/AbstractAsyncService.java</exclude>
                             <!-- Exclude repository implementation that uses old DatabaseConfig -->
                             <exclude>**/repositories/impl/JpaRepositoryImpl.java</exclude>
