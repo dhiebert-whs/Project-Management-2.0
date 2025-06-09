@@ -1,7 +1,8 @@
 {
     "java.configuration.updateBuildConfiguration": "interactive",
     "maven.view": "hierarchical",
-    "java.jdt.ls.vmargs": "-Xms512m -Xmx2G -XX:+UseG1GC -XX:+UseStringDeduplication -Dsun.zip.disableMemoryMapping=true"
+    "java.jdt.ls.vmargs": "-Xms512m -Xmx2G -XX:+UseG1GC -XX:+UseStringDeduplication -Dsun.zip.disableMemoryMapping=true",
+    "java.compile.nullAnalysis.mode": "automatic"
 
 
 }

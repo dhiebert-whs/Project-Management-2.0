@@ -1,5 +1,3 @@
-// src/main/java/org/frcpm/services/impl/ComponentServiceImpl.java
-
 package org.frcpm.services.impl;
 
 import org.frcpm.models.Component;

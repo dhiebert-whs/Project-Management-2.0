@@ -478,7 +478,7 @@ public class MetricsCalculationServiceImpl implements MetricsCalculationService 
             metrics.put("tasksAtRiskIds", tasksAtRiskIds);
             
             // Calculate milestone deviations
-            List<Milestone> milestones = milestoneRepository.findByProject(project);
+            //List<Milestone> milestones = milestoneRepository.findByProject(project);
             
             // Count milestones that passed but have incomplete dependencies
             int milestonesWithIncompleteDependencies = 0;
