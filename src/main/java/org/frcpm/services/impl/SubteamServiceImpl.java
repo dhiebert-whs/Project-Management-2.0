@@ -1,3 +1,5 @@
+// src/main/java/org/frcpm/services/impl/SubteamServiceImpl.java
+
 package org.frcpm.services.impl;
 
 import org.frcpm.models.Subteam;
@@ -51,7 +53,8 @@ public class SubteamServiceImpl extends AbstractSpringService<Subteam, Long, Sub
         if (specialty == null || specialty.trim().isEmpty()) {
             throw new IllegalArgumentException("Specialty cannot be empty");
         }
-        return repository.findBySpecialty(specialty);
+        // Use the correct method name that matches the repository
+        return repository.findBySpecialtiesContainingIgnoreCase(specialty);
     }
     
     @Override
@@ -67,19 +70,13 @@ public class SubteamServiceImpl extends AbstractSpringService<Subteam, Long, Sub
         // Check if already exists
         Optional<Subteam> existing = repository.findByName(name);
         if (existing.isPresent()) {
-            // In test environment, update the existing entity instead
-            if (System.getProperty("test.environment") != null) {
-                Subteam existingSubteam = existing.get();
-                existingSubteam.setColorCode(colorCode);
-                existingSubteam.setSpecialties(specialties);
-                return save(existingSubteam);
-            } else {
-                throw new IllegalArgumentException("Subteam with name '" + name + "' already exists");
-            }
+            throw new IllegalArgumentException("Subteam with name '" + name + "' already exists");
         }
         
         // Create new subteam
-        Subteam subteam = new Subteam(name, colorCode);
+        Subteam subteam = new Subteam();
+        subteam.setName(name);
+        subteam.setColorCode(colorCode);
         subteam.setSpecialties(specialties);
         
         return save(subteam);

@@ -54,11 +54,29 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
     List<TeamMember> findBySkill(@Param("skill") String skill);
     
     /**
+     * Finds team members with skills containing the given text (case insensitive).
+     * This method is used by the service layer for skill searches.
+     * 
+     * @param skill the skill to search for
+     * @return a list of team members with matching skills
+     */
+    @Query("SELECT tm FROM TeamMember tm WHERE LOWER(tm.skills) LIKE LOWER(CONCAT('%', :skill, '%'))")
+    List<TeamMember> findBySkillsContainingIgnoreCase(@Param("skill") String skill);
+    
+    /**
      * Finds team members who are leaders.
      * 
      * @return a list of team members who are leaders
      */
     List<TeamMember> findByLeaderTrue();
+    
+    /**
+     * Alternative method name for finding team members who are leaders.
+     * Provides compatibility with different naming conventions.
+     * 
+     * @return a list of team members who are leaders
+     */
+    List<TeamMember> findByIsLeaderTrue();
     
     /**
      * Finds team members by name (first name or last name).

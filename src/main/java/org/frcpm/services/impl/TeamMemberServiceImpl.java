@@ -67,12 +67,14 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
         if (skill == null || skill.trim().isEmpty()) {
             throw new IllegalArgumentException("Skill cannot be empty");
         }
-        return repository.findBySkill(skill);
+        // Use the correct method name that matches the repository
+        return repository.findBySkillsContainingIgnoreCase(skill);
     }
     
     @Override
     public List<TeamMember> findLeaders() {
-        return repository.findLeaders();
+        // Use the correct method name that matches the repository
+        return repository.findByIsLeaderTrue();
     }
     
     @Override
@@ -85,18 +87,7 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
         // Check if username already exists
         Optional<TeamMember> existing = repository.findByUsername(username);
         if (existing.isPresent()) {
-            // In test environment, update the existing entity instead
-            if (System.getProperty("test.environment") != null) {
-                TeamMember existingMember = existing.get();
-                existingMember.setFirstName(firstName);
-                existingMember.setLastName(lastName);
-                existingMember.setEmail(email);
-                existingMember.setPhone(phone);
-                existingMember.setLeader(isLeader);
-                return save(existingMember);
-            } else {
-                throw new IllegalArgumentException("Username already exists");
-            }
+            throw new IllegalArgumentException("Username already exists");
         }
         
         // Create new team member

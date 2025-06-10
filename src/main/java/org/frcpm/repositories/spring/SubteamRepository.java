@@ -1,3 +1,5 @@
+// src/main/java/org/frcpm/repositories/spring/SubteamRepository.java
+
 package org.frcpm.repositories.spring;
 
 import org.frcpm.models.Subteam;
@@ -57,6 +59,16 @@ public interface SubteamRepository extends JpaRepository<Subteam, Long> {
      */
     @Query("SELECT s FROM Subteam s WHERE LOWER(s.specialties) LIKE LOWER(CONCAT('%', :specialty, '%'))")
     List<Subteam> findBySpecialtyIgnoreCase(@Param("specialty") String specialty);
+    
+    /**
+     * Finds subteams with specialties containing the given text (case insensitive).
+     * This method is used by the service layer for specialty searches.
+     * 
+     * @param specialty the specialty to search for
+     * @return a list of subteams with matching specialties
+     */
+    @Query("SELECT s FROM Subteam s WHERE LOWER(s.specialties) LIKE LOWER(CONCAT('%', :specialty, '%'))")
+    List<Subteam> findBySpecialtiesContainingIgnoreCase(@Param("specialty") String specialty);
     
     /**
      * Finds all subteams ordered by name.
