@@ -12,62 +12,80 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
- * Spring Boot implementation of ComponentService.
- * CORRECTED: Uses the actual AbstractSpringService signature from ProjectServiceImpl.
- * 
- * ARCHITECTURE PATTERN (CORRECTED):
- * - Extends AbstractSpringService<Component, Long, ComponentRepository> (MATCHES ProjectServiceImpl)
- * - Constructor passes ComponentRepository to super() for basic CRUD
- * - Additional repositories injected via constructor for business logic
+ * Spring Boot implementation of ComponentService using composition-based pattern.
+ * NO INHERITANCE - Direct implementation of all interface methods.
  */
-@Service("componentServiceImpl")
+@Service
 @Transactional
-public class ComponentServiceImpl extends AbstractSpringService<Component, Long, ComponentRepository> 
-        implements ComponentService {
+public class ComponentServiceImpl implements ComponentService {
     
-    private static final Logger LOGGER = Logger.getLogger(ComponentServiceImpl.class.getName());
-    
-    // Additional dependencies injected via constructor
+    private final ComponentRepository componentRepository;
     private final TaskRepository taskRepository;
     
     /**
-     * Constructor using CORRECTED pattern matching ProjectServiceImpl exactly.
-     * 
-     * @param componentRepository the component repository (passed to super())
-     * @param taskRepository the task repository for business logic
+     * Constructor injection - no inheritance, pure composition
      */
-    public ComponentServiceImpl(
-            ComponentRepository componentRepository,
-            TaskRepository taskRepository) {
-        // CORRECTED: Match ProjectServiceImpl constructor pattern exactly
-        super(componentRepository);
+    public ComponentServiceImpl(ComponentRepository componentRepository,
+                               TaskRepository taskRepository) {
+        this.componentRepository = componentRepository;
         this.taskRepository = taskRepository;
     }
-
+    
+    // ========================================
+    // Basic CRUD Operations (from Service<T, ID> interface)
+    // ========================================
+    
     @Override
-    protected String getEntityName() {
-        return "component";
+    public Component findById(Long id) {
+        return componentRepository.findById(id).orElse(null);
     }
     
-    // Component-specific business methods using repository from AbstractSpringService
+    @Override
+    public List<Component> findAll() {
+        return componentRepository.findAll();
+    }
+    
+    @Override
+    public Component save(Component entity) {
+        return componentRepository.save(entity);
+    }
+    
+    @Override
+    public void delete(Component entity) {
+        componentRepository.delete(entity);
+    }
+    
+    @Override
+    public boolean deleteById(Long id) {
+        if (componentRepository.existsById(id)) {
+            componentRepository.deleteById(id);
+            return true;
+        }
+        return false;
+    }
+    
+    @Override
+    public long count() {
+        return componentRepository.count();
+    }
+    
+    // ========================================
+    // Business Operations (ComponentService specific)
+    // ========================================
     
     @Override
     public Optional<Component> findByPartNumber(String partNumber) {
         if (partNumber == null || partNumber.trim().isEmpty()) {
             return Optional.empty();
         }
-        // Use repository from AbstractSpringService (componentRepository is accessible via 'repository')
-        return repository.findByPartNumber(partNumber);
+        return componentRepository.findByPartNumber(partNumber);
     }
     
     @Override
@@ -75,12 +93,12 @@ public class ComponentServiceImpl extends AbstractSpringService<Component, Long,
         if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("Name cannot be empty");
         }
-        return repository.findByNameContainingIgnoreCase(name);
+        return componentRepository.findByNameContainingIgnoreCase(name);
     }
     
     @Override
     public List<Component> findByDelivered(boolean delivered) {
-        return repository.findByDelivered(delivered);
+        return componentRepository.findByDelivered(delivered);
     }
     
     @Override
@@ -92,22 +110,13 @@ public class ComponentServiceImpl extends AbstractSpringService<Component, Long,
         
         // Check if part number already exists
         if (partNumber != null && !partNumber.trim().isEmpty()) {
-            Optional<Component> existing = repository.findByPartNumber(partNumber);
+            Optional<Component> existing = componentRepository.findByPartNumber(partNumber);
             if (existing.isPresent()) {
-                // In test environment, update the existing entity instead
-                if (System.getProperty("test.environment") != null) {
-                    Component existingComponent = existing.get();
-                    existingComponent.setName(name);
-                    existingComponent.setDescription(description);
-                    existingComponent.setExpectedDelivery(expectedDelivery);
-                    return save(existingComponent); // Uses AbstractSpringService.save()
-                } else {
-                    throw new IllegalArgumentException("Component with part number '" + partNumber + "' already exists");
-                }
+                throw new IllegalArgumentException("Component with part number '" + partNumber + "' already exists");
             }
         }
         
-        // Create new component
+        // Create new component using proper constructor
         Component component;
         if (partNumber != null && !partNumber.trim().isEmpty()) {
             component = new Component(name, partNumber);
@@ -118,7 +127,7 @@ public class ComponentServiceImpl extends AbstractSpringService<Component, Long,
         component.setDescription(description);
         component.setExpectedDelivery(expectedDelivery);
         
-        return save(component); // Uses AbstractSpringService.save()
+        return componentRepository.save(component);
     }
     
     @Override
@@ -127,21 +136,15 @@ public class ComponentServiceImpl extends AbstractSpringService<Component, Long,
             throw new IllegalArgumentException("Component ID cannot be null");
         }
         
-        Component component = findById(componentId); // Uses AbstractSpringService.findById()
+        Component component = componentRepository.findById(componentId).orElse(null);
         if (component == null) {
-            LOGGER.log(Level.WARNING, "Component not found with ID: {0}", componentId);
             return null;
         }
         
         component.setDelivered(true);
+        component.setActualDelivery(deliveryDate != null ? deliveryDate : LocalDate.now());
         
-        if (deliveryDate != null) {
-            component.setActualDelivery(deliveryDate);
-        } else {
-            component.setActualDelivery(LocalDate.now());
-        }
-        
-        return save(component); // Uses AbstractSpringService.save()
+        return componentRepository.save(component);
     }
     
     @Override
@@ -150,15 +153,14 @@ public class ComponentServiceImpl extends AbstractSpringService<Component, Long,
             throw new IllegalArgumentException("Component ID cannot be null");
         }
         
-        Component component = findById(componentId); // Uses AbstractSpringService.findById()
+        Component component = componentRepository.findById(componentId).orElse(null);
         if (component == null) {
-            LOGGER.log(Level.WARNING, "Component not found with ID: {0}", componentId);
             return null;
         }
         
         component.setExpectedDelivery(expectedDelivery);
         
-        return save(component); // Uses AbstractSpringService.save()
+        return componentRepository.save(component);
     }
     
     @Override
@@ -169,171 +171,88 @@ public class ComponentServiceImpl extends AbstractSpringService<Component, Long,
         
         Task task = taskRepository.findById(taskId).orElse(null);
         if (task == null) {
-            LOGGER.log(Level.WARNING, "Task not found with ID: {0}", taskId);
             return null;
         }
         
-        // Clear existing components but maintain managed references
-        // Get a copy first to avoid concurrent modification
-        Set<Component> currentComponents = new HashSet<>(task.getRequiredComponents());
-        for (Component component : currentComponents) {
-            task.getRequiredComponents().remove(component);
-            component.getRequiredForTasks().remove(task);
-        }
+        // Clear existing components
+        task.getRequiredComponents().clear();
         
         // Add new components
         if (componentIds != null && !componentIds.isEmpty()) {
             for (Long componentId : componentIds) {
-                Component component = repository.findById(componentId).orElse(null);
+                Component component = componentRepository.findById(componentId).orElse(null);
                 if (component != null) {
-                    // Add bidirectional relationship
-                    task.getRequiredComponents().add(component);
-                    component.getRequiredForTasks().add(task);
-                } else {
-                    LOGGER.log(Level.WARNING, "Component not found with ID: {0}", componentId);
+                    task.addRequiredComponent(component);
                 }
             }
         }
         
         return taskRepository.save(task);
     }
-
-    // Spring Boot Async Methods
+    
+    // ========================================
+    // Async Operations (Spring Boot style)
+    // ========================================
     
     @Async
     public CompletableFuture<List<Component>> findAllAsync() {
-        try {
-            List<Component> result = findAll(); // Uses AbstractSpringService.findAll()
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<List<Component>> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
+        return CompletableFuture.completedFuture(findAll());
     }
     
     @Async
     public CompletableFuture<Component> findByIdAsync(Long id) {
-        try {
-            Component result = findById(id); // Uses AbstractSpringService.findById()
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<Component> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
+        return CompletableFuture.completedFuture(findById(id));
     }
     
     @Async
     public CompletableFuture<Component> saveAsync(Component entity) {
-        try {
-            Component result = save(entity); // Uses AbstractSpringService.save()
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<Component> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
+        return CompletableFuture.completedFuture(save(entity));
     }
     
     @Async
     public CompletableFuture<Boolean> deleteByIdAsync(Long id) {
-        try {
-            boolean result = deleteById(id); // Uses AbstractSpringService.deleteById()
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<Boolean> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
+        return CompletableFuture.completedFuture(deleteById(id));
     }
     
     @Async
     public CompletableFuture<Optional<Component>> findByPartNumberAsync(String partNumber) {
-        try {
-            Optional<Component> result = findByPartNumber(partNumber);
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<Optional<Component>> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
+        return CompletableFuture.completedFuture(findByPartNumber(partNumber));
     }
     
     @Async
     public CompletableFuture<List<Component>> findByNameAsync(String name) {
-        try {
-            List<Component> result = findByName(name);
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<List<Component>> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
+        return CompletableFuture.completedFuture(findByName(name));
     }
     
     @Async
     public CompletableFuture<List<Component>> findByDeliveredAsync(boolean delivered) {
-        try {
-            List<Component> result = findByDelivered(delivered);
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<List<Component>> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
+        return CompletableFuture.completedFuture(findByDelivered(delivered));
     }
     
     @Async
     public CompletableFuture<Component> createComponentAsync(String name, String partNumber, 
                                                            String description, LocalDate expectedDelivery) {
-        try {
-            Component result = createComponent(name, partNumber, description, expectedDelivery);
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<Component> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
+        return CompletableFuture.completedFuture(createComponent(name, partNumber, description, expectedDelivery));
     }
     
     @Async
     public CompletableFuture<Component> markAsDeliveredAsync(Long componentId, LocalDate deliveryDate) {
-        try {
-            Component result = markAsDelivered(componentId, deliveryDate);
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<Component> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
+        return CompletableFuture.completedFuture(markAsDelivered(componentId, deliveryDate));
     }
     
     @Async
     public CompletableFuture<Component> updateExpectedDeliveryAsync(Long componentId, LocalDate expectedDelivery) {
-        try {
-            Component result = updateExpectedDelivery(componentId, expectedDelivery);
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<Component> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
+        return CompletableFuture.completedFuture(updateExpectedDelivery(componentId, expectedDelivery));
     }
     
     @Async
     public CompletableFuture<Task> associateComponentsWithTaskAsync(Long taskId, Set<Long> componentIds) {
-        try {
-            Task result = associateComponentsWithTask(taskId, componentIds);
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<Task> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
+        return CompletableFuture.completedFuture(associateComponentsWithTask(taskId, componentIds));
     }
     
-    // Interface async method implementations with callbacks (following ComponentService interface)
+    // ========================================
+    // Interface Async Methods with Callbacks (ComponentService interface compatibility)
+    // ========================================
     
     @Override
     public CompletableFuture<Component> findByIdAsync(Long id, Consumer<Component> onSuccess, Consumer<Throwable> onFailure) {

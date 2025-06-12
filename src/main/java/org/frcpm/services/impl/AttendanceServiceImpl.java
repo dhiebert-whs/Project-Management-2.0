@@ -19,60 +19,78 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
- * Spring Boot implementation of AttendanceService.
- * CORRECTED: Uses the actual AbstractSpringService signature from ProjectServiceImpl.
- * 
- * ARCHITECTURE PATTERN (CORRECTED):
- * - Extends AbstractSpringService<Attendance, Long, AttendanceRepository> (MATCHES ProjectServiceImpl)
- * - Constructor passes AttendanceRepository to super() for basic CRUD
- * - Additional repositories injected via constructor for business logic
+ * Spring Boot implementation of AttendanceService using composition-based pattern.
+ * NO INHERITANCE - Direct implementation of all interface methods.
  */
-@Service("attendanceServiceImpl")
+@Service
 @Transactional
-public class AttendanceServiceImpl extends AbstractSpringService<Attendance, Long, AttendanceRepository> 
-        implements AttendanceService {
+public class AttendanceServiceImpl implements AttendanceService {
     
-    private static final Logger LOGGER = Logger.getLogger(AttendanceServiceImpl.class.getName());
-    
-    // Additional dependencies injected via constructor
+    private final AttendanceRepository attendanceRepository;
     private final MeetingRepository meetingRepository;
     private final TeamMemberRepository teamMemberRepository;
     
     /**
-     * Constructor using CORRECTED pattern matching ProjectServiceImpl exactly.
-     * 
-     * @param attendanceRepository the attendance repository (passed to super())
-     * @param meetingRepository the meeting repository for business logic
-     * @param teamMemberRepository the team member repository for business logic
+     * Constructor injection - no inheritance, pure composition
      */
-    public AttendanceServiceImpl(
-            AttendanceRepository attendanceRepository,
-            MeetingRepository meetingRepository,
-            TeamMemberRepository teamMemberRepository) {
-        // CORRECTED: Match ProjectServiceImpl constructor pattern exactly
-        super(attendanceRepository);
+    public AttendanceServiceImpl(AttendanceRepository attendanceRepository,
+                                MeetingRepository meetingRepository,
+                                TeamMemberRepository teamMemberRepository) {
+        this.attendanceRepository = attendanceRepository;
         this.meetingRepository = meetingRepository;
         this.teamMemberRepository = teamMemberRepository;
     }
-
+    
+    // ========================================
+    // Basic CRUD Operations (from Service<T, ID> interface)
+    // ========================================
+    
     @Override
-    protected String getEntityName() {
-        return "attendance";
+    public Attendance findById(Long id) {
+        return attendanceRepository.findById(id).orElse(null);
     }
     
-    // Attendance-specific business methods using repository from AbstractSpringService
+    @Override
+    public List<Attendance> findAll() {
+        return attendanceRepository.findAll();
+    }
+    
+    @Override
+    public Attendance save(Attendance entity) {
+        return attendanceRepository.save(entity);
+    }
+    
+    @Override
+    public void delete(Attendance entity) {
+        attendanceRepository.delete(entity);
+    }
+    
+    @Override
+    public boolean deleteById(Long id) {
+        if (attendanceRepository.existsById(id)) {
+            attendanceRepository.deleteById(id);
+            return true;
+        }
+        return false;
+    }
+    
+    @Override
+    public long count() {
+        return attendanceRepository.count();
+    }
+    
+    // ========================================
+    // Business Operations (AttendanceService specific)
+    // ========================================
     
     @Override
     public List<Attendance> findByMeeting(Meeting meeting) {
         if (meeting == null) {
             throw new IllegalArgumentException("Meeting cannot be null");
         }
-        // Use repository from AbstractSpringService (attendanceRepository is accessible via 'repository')
-        return repository.findByMeeting(meeting);
+        return attendanceRepository.findByMeeting(meeting);
     }
     
     @Override
@@ -80,7 +98,7 @@ public class AttendanceServiceImpl extends AbstractSpringService<Attendance, Lon
         if (member == null) {
             throw new IllegalArgumentException("Team member cannot be null");
         }
-        return repository.findByMember(member);
+        return attendanceRepository.findByMember(member);
     }
     
     @Override
@@ -88,7 +106,7 @@ public class AttendanceServiceImpl extends AbstractSpringService<Attendance, Lon
         if (meeting == null || member == null) {
             throw new IllegalArgumentException("Meeting and member cannot be null");
         }
-        return repository.findByMeetingAndMember(meeting, member);
+        return attendanceRepository.findByMeetingAndMember(meeting, member);
     }
     
     @Override
@@ -96,44 +114,39 @@ public class AttendanceServiceImpl extends AbstractSpringService<Attendance, Lon
         if (meetingId == null) {
             throw new IllegalArgumentException("Meeting ID cannot be null");
         }
-        
         if (memberId == null) {
             throw new IllegalArgumentException("Member ID cannot be null");
         }
         
-        Optional<Meeting> meetingOpt = meetingRepository.findById(meetingId);
-        if (meetingOpt.isEmpty()) {
-            LOGGER.log(Level.WARNING, "Meeting not found with ID: {0}", meetingId);
-            throw new IllegalArgumentException("Meeting not found with ID: " + meetingId);
-        }
+        Meeting meeting = meetingRepository.findById(meetingId)
+            .orElseThrow(() -> new IllegalArgumentException("Meeting not found with ID: " + meetingId));
         
-        Optional<TeamMember> memberOpt = teamMemberRepository.findById(memberId);
-        if (memberOpt.isEmpty()) {
-            LOGGER.log(Level.WARNING, "Team member not found with ID: {0}", memberId);
-            throw new IllegalArgumentException("Team member not found with ID: " + memberId);
-        }
+        TeamMember member = teamMemberRepository.findById(memberId)
+            .orElseThrow(() -> new IllegalArgumentException("Team member not found with ID: " + memberId));
         
-        Meeting meeting = meetingOpt.get();
-        TeamMember member = memberOpt.get();
-        
-        // Check if attendance record already exists
-        Optional<Attendance> existingAttendance = repository.findByMeetingAndMember(meeting, member);
-        if (existingAttendance.isPresent()) {
-            Attendance attendance = existingAttendance.get();
+        // Check if attendance already exists
+        Optional<Attendance> existing = attendanceRepository.findByMeetingAndMember(meeting, member);
+        if (existing.isPresent()) {
+            Attendance attendance = existing.get();
             attendance.setPresent(present);
-            return save(attendance); // Uses AbstractSpringService.save()
+            if (present) {
+                attendance.setArrivalTime(meeting.getStartTime());
+                attendance.setDepartureTime(meeting.getEndTime());
+            } else {
+                attendance.setArrivalTime(null);
+                attendance.setDepartureTime(null);
+            }
+            return attendanceRepository.save(attendance);
         }
         
-        // Create new attendance record
+        // Create new attendance
         Attendance attendance = new Attendance(meeting, member, present);
-        
-        // If present, set default arrival time to meeting start time
         if (present) {
             attendance.setArrivalTime(meeting.getStartTime());
             attendance.setDepartureTime(meeting.getEndTime());
         }
         
-        return save(attendance); // Uses AbstractSpringService.save()
+        return attendanceRepository.save(attendance);
     }
     
     @Override
@@ -143,9 +156,8 @@ public class AttendanceServiceImpl extends AbstractSpringService<Attendance, Lon
             throw new IllegalArgumentException("Attendance ID cannot be null");
         }
         
-        Attendance attendance = findById(attendanceId); // Uses AbstractSpringService.findById()
+        Attendance attendance = attendanceRepository.findById(attendanceId).orElse(null);
         if (attendance == null) {
-            LOGGER.log(Level.WARNING, "Attendance not found with ID: {0}", attendanceId);
             return null;
         }
         
@@ -155,7 +167,6 @@ public class AttendanceServiceImpl extends AbstractSpringService<Attendance, Lon
             if (arrivalTime != null) {
                 attendance.setArrivalTime(arrivalTime);
             }
-            
             if (departureTime != null) {
                 if (attendance.getArrivalTime() != null && 
                     departureTime.isBefore(attendance.getArrivalTime())) {
@@ -164,12 +175,11 @@ public class AttendanceServiceImpl extends AbstractSpringService<Attendance, Lon
                 attendance.setDepartureTime(departureTime);
             }
         } else {
-            // If not present, clear times
             attendance.setArrivalTime(null);
             attendance.setDepartureTime(null);
         }
         
-        return save(attendance); // Uses AbstractSpringService.save()
+        return attendanceRepository.save(attendance);
     }
     
     @Override
@@ -178,39 +188,34 @@ public class AttendanceServiceImpl extends AbstractSpringService<Attendance, Lon
             throw new IllegalArgumentException("Meeting ID cannot be null");
         }
         
-        Optional<Meeting> meetingOpt = meetingRepository.findById(meetingId);
-        if (meetingOpt.isEmpty()) {
-            LOGGER.log(Level.WARNING, "Meeting not found with ID: {0}", meetingId);
-            throw new IllegalArgumentException("Meeting not found with ID: " + meetingId);
-        }
+        Meeting meeting = meetingRepository.findById(meetingId)
+            .orElseThrow(() -> new IllegalArgumentException("Meeting not found with ID: " + meetingId));
         
-        Meeting meeting = meetingOpt.get();
-        
-        // Get all team members
         List<TeamMember> allMembers = teamMemberRepository.findAll();
-        
         int count = 0;
+        
         for (TeamMember member : allMembers) {
             boolean present = presentMemberIds != null && presentMemberIds.contains(member.getId());
             
-            // Check if attendance record already exists
-            Optional<Attendance> existingAttendance = repository.findByMeetingAndMember(meeting, member);
+            Optional<Attendance> existing = attendanceRepository.findByMeetingAndMember(meeting, member);
             Attendance attendance;
             
-            if (existingAttendance.isPresent()) {
-                attendance = existingAttendance.get();
+            if (existing.isPresent()) {
+                attendance = existing.get();
                 attendance.setPresent(present);
             } else {
                 attendance = new Attendance(meeting, member, present);
-                
-                // If present, set default arrival time to meeting start time
-                if (present) {
-                    attendance.setArrivalTime(meeting.getStartTime());
-                    attendance.setDepartureTime(meeting.getEndTime());
-                }
             }
             
-            save(attendance); // Uses AbstractSpringService.save()
+            if (present) {
+                attendance.setArrivalTime(meeting.getStartTime());
+                attendance.setDepartureTime(meeting.getEndTime());
+            } else {
+                attendance.setArrivalTime(null);
+                attendance.setDepartureTime(null);
+            }
+            
+            attendanceRepository.save(attendance);
             count++;
         }
         
@@ -219,111 +224,57 @@ public class AttendanceServiceImpl extends AbstractSpringService<Attendance, Lon
     
     @Override
     public Map<String, Object> getAttendanceStatistics(Long memberId) {
-        Map<String, Object> statistics = new HashMap<>();
-        
         if (memberId == null) {
             throw new IllegalArgumentException("Member ID cannot be null");
         }
         
-        Optional<TeamMember> memberOpt = teamMemberRepository.findById(memberId);
-        if (memberOpt.isEmpty()) {
-            LOGGER.log(Level.WARNING, "Team member not found with ID: {0}", memberId);
-            return statistics;
-        }
+        TeamMember member = teamMemberRepository.findById(memberId)
+            .orElseThrow(() -> new IllegalArgumentException("Team member not found with ID: " + memberId));
         
-        TeamMember member = memberOpt.get();
-        List<Attendance> attendanceRecords = repository.findByMember(member);
+        List<Attendance> attendanceRecords = attendanceRepository.findByMember(member);
         
         int totalMeetings = attendanceRecords.size();
         long presentCount = attendanceRecords.stream().filter(Attendance::isPresent).count();
+        double attendanceRate = totalMeetings > 0 ? 
+            Math.round(((double) presentCount / totalMeetings * 100) * 100) / 100.0 : 0.0;
         
-        // Calculate attendance rate and round to 2 decimal places
-        double attendanceRate = 0.0;
-        if (totalMeetings > 0) {
-            attendanceRate = Math.round(((double) presentCount / totalMeetings * 100) * 100) / 100.0;
-        }
-        
+        Map<String, Object> statistics = new HashMap<>();
         statistics.put("memberId", memberId);
         statistics.put("memberName", member.getFullName());
         statistics.put("totalMeetings", totalMeetings);
         statistics.put("presentCount", presentCount);
-        statistics.put("absentCount", Integer.valueOf(totalMeetings - (int) presentCount));
+        statistics.put("absentCount", totalMeetings - (int) presentCount);
         statistics.put("attendanceRate", attendanceRate);
         
         return statistics;
     }
-
-    // Spring Boot Async Methods
+    
+    // ========================================
+    // Async Operations (Spring Boot style)
+    // ========================================
     
     @Async
     public CompletableFuture<List<Attendance>> findAllAsync() {
-        try {
-            List<Attendance> result = findAll(); // Uses AbstractSpringService.findAll()
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<List<Attendance>> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
+        return CompletableFuture.completedFuture(findAll());
+    }
+    
+    @Async
+    public CompletableFuture<Attendance> findByIdAsync(Long id) {
+        return CompletableFuture.completedFuture(findById(id));
     }
     
     @Async
     public CompletableFuture<Attendance> saveAsync(Attendance entity) {
-        try {
-            Attendance result = save(entity); // Uses AbstractSpringService.save()
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<Attendance> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
+        return CompletableFuture.completedFuture(save(entity));
+    }
+    
+    @Async
+    public CompletableFuture<Boolean> deleteByIdAsync(Long id) {
+        return CompletableFuture.completedFuture(deleteById(id));
     }
     
     @Async
     public CompletableFuture<Map<String, Object>> getAttendanceStatisticsAsync(Long memberId) {
-        try {
-            Map<String, Object> result = getAttendanceStatistics(memberId);
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<Map<String, Object>> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
-    }
-
-    @Override
-    public Attendance findById(Long id) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'findById'");
-    }
-
-    @Override
-    public List<Attendance> findAll() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'findAll'");
-    }
-
-    @Override
-    public Attendance save(Attendance entity) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'save'");
-    }
-
-    @Override
-    public void delete(Attendance entity) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'delete'");
-    }
-
-    @Override
-    public boolean deleteById(Long id) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'deleteById'");
-    }
-
-    @Override
-    public long count() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'count'");
+        return CompletableFuture.completedFuture(getAttendanceStatistics(memberId));
     }
 }
