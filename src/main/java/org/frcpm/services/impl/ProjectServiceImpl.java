@@ -21,20 +21,23 @@ import java.util.logging.Logger;
 
 /**
  * Spring Boot implementation of ProjectService.
- * Updated to extend AbstractSpringService for consistent CRUD operations.
+ * FIXED: Updated to extend fixed AbstractSpringService without generic R parameter.
  */
 @Service("projectServiceImpl")
 @Transactional
-public class ProjectServiceImpl extends AbstractSpringService<Project, Long, ProjectRepository> 
+public class ProjectServiceImpl extends AbstractSpringService<Project, Long> 
         implements ProjectService {
     
     private static final Logger LOGGER = Logger.getLogger(ProjectServiceImpl.class.getName());
     
     // Additional dependencies injected via constructor
     private final TaskRepository taskRepository;
+    // Keep typed reference for specific ProjectRepository methods
+    private final ProjectRepository projectRepository;
     
     public ProjectServiceImpl(ProjectRepository projectRepository, TaskRepository taskRepository) {
-        super(projectRepository);
+        super(projectRepository);  // FIXED: Now works with corrected AbstractSpringService
+        this.projectRepository = projectRepository;
         this.taskRepository = taskRepository;
     }
 
@@ -50,7 +53,7 @@ public class ProjectServiceImpl extends AbstractSpringService<Project, Long, Pro
         if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("Name cannot be empty");
         }
-        return repository.findByNameContainingIgnoreCase(name);
+        return projectRepository.findByNameContainingIgnoreCase(name);
     }
     
     @Override
@@ -58,7 +61,7 @@ public class ProjectServiceImpl extends AbstractSpringService<Project, Long, Pro
         if (date == null) {
             throw new IllegalArgumentException("Date cannot be null");
         }
-        return repository.findByHardDeadlineBefore(date);
+        return projectRepository.findByHardDeadlineBefore(date);
     }
     
     @Override
@@ -66,7 +69,7 @@ public class ProjectServiceImpl extends AbstractSpringService<Project, Long, Pro
         if (date == null) {
             throw new IllegalArgumentException("Date cannot be null");
         }
-        return repository.findByStartDateAfter(date);
+        return projectRepository.findByStartDateAfter(date);
     }
     
     @Override

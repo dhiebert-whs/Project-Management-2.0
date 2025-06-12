@@ -1,3 +1,5 @@
+// src/main/java/org/frcpm/services/impl/AbstractSpringService.java
+
 package org.frcpm.services.impl;
 
 import org.frcpm.services.Service;
@@ -11,17 +13,21 @@ import java.util.logging.Logger;
  * Abstract base class for Spring Boot service implementations.
  * Provides common CRUD operations using Spring Data JPA repositories.
  * 
+ * FIXED: Removed generic R parameter that was incompatible with Spring DI.
+ * Now uses JpaRepository<T, ID> directly which Spring can inject properly.
+ * 
  * @param <T> the entity type
  * @param <ID> the entity's ID type
- * @param <R> the repository type (must extend JpaRepository)
  */
-public abstract class AbstractSpringService<T, ID, R extends JpaRepository<T, ID>> implements Service<T, ID> {
+public abstract class AbstractSpringService<T, ID> implements Service<T, ID> {
     
     private static final Logger LOGGER = Logger.getLogger(AbstractSpringService.class.getName());
     
-    protected final R repository;
+    // FIXED: Direct interface type instead of generic R parameter
+    protected final JpaRepository<T, ID> repository;
     
-    public AbstractSpringService(R repository) {
+    // FIXED: Constructor accepts JpaRepository<T, ID> which Spring can inject
+    public AbstractSpringService(JpaRepository<T, ID> repository) {
         this.repository = repository;
     }
     

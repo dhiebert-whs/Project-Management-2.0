@@ -25,25 +25,26 @@ import java.util.logging.Logger;
 
 /**
  * Spring Boot implementation of TaskService.
- * Updated to extend AbstractSpringService for consistent CRUD operations.
+ * CORRECTED: Uses typed repository reference for custom methods.
  */
 @Service("taskServiceImpl")
 @Transactional
-public class TaskServiceImpl extends AbstractSpringService<Task, Long, TaskRepository> 
+public class TaskServiceImpl extends AbstractSpringService<Task, Long> 
         implements TaskService {
     
     private static final Logger LOGGER = Logger.getLogger(TaskServiceImpl.class.getName());
     
-    // Additional dependencies injected via constructor
+    // SOLUTION: Keep typed repository references for custom methods
+    private final TaskRepository taskRepository;
     private final ProjectRepository projectRepository;
     private final ComponentRepository componentRepository;
-    
     
     public TaskServiceImpl(
             TaskRepository taskRepository,
             ProjectRepository projectRepository,
             ComponentRepository componentRepository) {
-        super(taskRepository);
+        super(taskRepository);  // Pass to AbstractSpringService for basic CRUD
+        this.taskRepository = taskRepository;       // Keep typed reference for custom methods
         this.projectRepository = projectRepository;
         this.componentRepository = componentRepository;
     }
@@ -53,14 +54,15 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long, TaskRepos
         return "task";
     }
     
-    // Task-specific business methods
+    // Task-specific business methods - USE TYPED REPOSITORY
     
     @Override
     public List<Task> findByProject(Project project) {
         if (project == null) {
             throw new IllegalArgumentException("Project cannot be null");
         }
-        return repository.findByProject(project);
+        // FIXED: Use typed repository for custom method
+        return taskRepository.findByProject(project);
     }
     
     @Override
@@ -68,7 +70,8 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long, TaskRepos
         if (subsystem == null) {
             throw new IllegalArgumentException("Subsystem cannot be null");
         }
-        return repository.findBySubsystem(subsystem);
+        // FIXED: Use typed repository for custom method
+        return taskRepository.findBySubsystem(subsystem);
     }
     
     @Override
@@ -76,12 +79,14 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long, TaskRepos
         if (member == null) {
             throw new IllegalArgumentException("Member cannot be null");
         }
-        return repository.findByAssignedMember(member);
+        // FIXED: Use typed repository for custom method
+        return taskRepository.findByAssignedMember(member);
     }
     
     @Override
     public List<Task> findByCompleted(boolean completed) {
-        return repository.findByCompleted(completed);
+        // FIXED: Use typed repository for custom method
+        return taskRepository.findByCompleted(completed);
     }
     
     @Override
@@ -122,6 +127,7 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long, TaskRepos
             task.setEndDate(endDate);
         }
 
+        // Use inherited save() method from AbstractSpringService
         return save(task);
     }
     
@@ -131,6 +137,7 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long, TaskRepos
             throw new IllegalArgumentException("Task ID cannot be null");
         }
 
+        // Use inherited findById() method from AbstractSpringService
         Task task = findById(taskId);
         if (task == null) {
             LOGGER.log(Level.WARNING, "Task not found with ID: {0}", taskId);
@@ -148,6 +155,7 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long, TaskRepos
 
         task.setCompleted(completed || progress == 100);
 
+        // Use inherited save() method from AbstractSpringService
         return save(task);
     }
     
@@ -157,6 +165,7 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long, TaskRepos
             throw new IllegalArgumentException("Task ID cannot be null");
         }
 
+        // Use inherited findById() method from AbstractSpringService
         Task task = findById(taskId);
         if (task == null) {
             LOGGER.log(Level.WARNING, "Task not found with ID: {0}", taskId);
@@ -175,6 +184,7 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long, TaskRepos
             }
         }
 
+        // Use inherited save() method from AbstractSpringService
         return save(task);
     }
     
@@ -189,7 +199,7 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long, TaskRepos
         }
 
         try {
-            // Get task and dependency objects
+            // Use inherited findById() method from AbstractSpringService
             Task task = findById(taskId);
             Task dependency = findById(dependencyId);
 
@@ -200,7 +210,7 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long, TaskRepos
             // Add the dependency relationship
             task.addPreDependency(dependency);
 
-            // Save the changes
+            // Use inherited save() method from AbstractSpringService
             save(task);
             save(dependency);
 
@@ -218,7 +228,7 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long, TaskRepos
         }
 
         try {
-            // Get task and dependency objects
+            // Use inherited findById() method from AbstractSpringService
             Task task = findById(taskId);
             Task dependency = findById(dependencyId);
 
@@ -229,7 +239,7 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long, TaskRepos
             // Remove the dependency relationship
             task.removePreDependency(dependency);
 
-            // Save the changes
+            // Use inherited save() method from AbstractSpringService
             save(task);
             save(dependency);
 
@@ -250,7 +260,7 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long, TaskRepos
             throw new IllegalArgumentException("Days must be positive");
         }
 
-        // Use Spring Data JPA repository
+        // Use typed ProjectRepository for custom method
         Project project = projectRepository.findById(projectId).orElse(null);
         if (project == null) {
             LOGGER.log(Level.WARNING, "Project not found with ID: {0}", projectId);
@@ -260,7 +270,8 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long, TaskRepos
         LocalDate today = LocalDate.now();
         LocalDate dueBefore = today.plusDays(days);
 
-        List<Task> allTasks = repository.findByProject(project);
+        // FIXED: Use typed repository for custom method
+        List<Task> allTasks = taskRepository.findByProject(project);
         List<Task> dueSoonTasks = new ArrayList<>();
 
         for (Task task : allTasks) {
@@ -279,6 +290,7 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long, TaskRepos
             throw new IllegalArgumentException("Task ID cannot be null");
         }
 
+        // Use inherited findById() method from AbstractSpringService
         Task task = findById(taskId);
         if (task == null) {
             LOGGER.log(Level.WARNING, "Task not found with ID: {0}", taskId);
@@ -300,15 +312,16 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long, TaskRepos
             }
         }
 
-        // Save the updated task
+        // Use inherited save() method from AbstractSpringService
         return save(task);
     }
 
-    // Spring Boot Async Methods
+    // Spring Boot Async Methods - Use appropriate method sources
     
     @Async
     public CompletableFuture<List<Task>> findAllAsync() {
         try {
+            // Use inherited findAll() method from AbstractSpringService
             List<Task> result = findAll();
             return CompletableFuture.completedFuture(result);
         } catch (Exception e) {
@@ -321,6 +334,7 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long, TaskRepos
     @Async
     public CompletableFuture<Task> findByIdAsync(Long id) {
         try {
+            // Use inherited findById() method from AbstractSpringService
             Task result = findById(id);
             return CompletableFuture.completedFuture(result);
         } catch (Exception e) {
@@ -333,6 +347,7 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long, TaskRepos
     @Async
     public CompletableFuture<Task> saveAsync(Task entity) {
         try {
+            // Use inherited save() method from AbstractSpringService
             Task result = save(entity);
             return CompletableFuture.completedFuture(result);
         } catch (Exception e) {
@@ -345,6 +360,7 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long, TaskRepos
     @Async
     public CompletableFuture<Boolean> deleteByIdAsync(Long id) {
         try {
+            // Use inherited deleteById() method from AbstractSpringService
             boolean result = deleteById(id);
             return CompletableFuture.completedFuture(result);
         } catch (Exception e) {

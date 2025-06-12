@@ -19,23 +19,25 @@ import java.util.logging.Logger;
 
 /**
  * Spring Boot implementation of TeamMemberService.
- * Updated to extend AbstractSpringService for consistent CRUD operations.
+ * CORRECTED: Uses dual repository pattern - typed repository for custom methods,
+ * inherited methods for basic CRUD operations.
  */
 @Service("teamMemberServiceImpl")
 @Transactional
-public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Long, TeamMemberRepository> 
+public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Long> 
         implements TeamMemberService {
     
     private static final Logger LOGGER = Logger.getLogger(TeamMemberServiceImpl.class.getName());
     
-    // Additional dependencies injected via constructor
+    // SOLUTION: Keep typed repository references for custom methods
+    private final TeamMemberRepository teamMemberRepository;
     private final SubteamRepository subteamRepository;
-    
     
     public TeamMemberServiceImpl(
             TeamMemberRepository teamMemberRepository,
             SubteamRepository subteamRepository) {
-        super(teamMemberRepository);
+        super(teamMemberRepository);  // Pass to AbstractSpringService for basic CRUD
+        this.teamMemberRepository = teamMemberRepository;  // Keep for custom methods
         this.subteamRepository = subteamRepository;
     }
 
@@ -44,14 +46,15 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
         return "team member";
     }
     
-    // TeamMember-specific business methods
+    // TeamMember-specific business methods - USE TYPED REPOSITORY
     
     @Override
     public Optional<TeamMember> findByUsername(String username) {
         if (username == null || username.trim().isEmpty()) {
             return Optional.empty();
         }
-        return repository.findByUsername(username);
+        // FIXED: Use typed repository for custom method
+        return teamMemberRepository.findByUsername(username);
     }
     
     @Override
@@ -59,7 +62,8 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
         if (subteam == null) {
             throw new IllegalArgumentException("Subteam cannot be null");
         }
-        return repository.findBySubteam(subteam);
+        // FIXED: Use typed repository for custom method
+        return teamMemberRepository.findBySubteam(subteam);
     }
     
     @Override
@@ -67,14 +71,14 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
         if (skill == null || skill.trim().isEmpty()) {
             throw new IllegalArgumentException("Skill cannot be empty");
         }
-        // Use the correct method name that matches the repository
-        return repository.findBySkillsContainingIgnoreCase(skill);
+        // FIXED: Use typed repository for custom method
+        return teamMemberRepository.findBySkillsContainingIgnoreCase(skill);
     }
     
     @Override
     public List<TeamMember> findLeaders() {
-        // Use the correct method name that matches the repository
-        return repository.findByIsLeaderTrue();
+        // FIXED: Use typed repository for custom method
+        return teamMemberRepository.findByIsLeaderTrue();
     }
     
     @Override
@@ -84,8 +88,8 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
             throw new IllegalArgumentException("Username cannot be empty");
         }
         
-        // Check if username already exists
-        Optional<TeamMember> existing = repository.findByUsername(username);
+        // Check if username already exists using typed repository
+        Optional<TeamMember> existing = teamMemberRepository.findByUsername(username);
         if (existing.isPresent()) {
             throw new IllegalArgumentException("Username already exists");
         }
@@ -95,6 +99,7 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
         member.setPhone(phone);
         member.setLeader(isLeader);
         
+        // Use inherited save() method from AbstractSpringService
         return save(member);
     }
     
@@ -104,6 +109,7 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
             throw new IllegalArgumentException("Team member ID cannot be null");
         }
         
+        // Use inherited findById() method from AbstractSpringService
         TeamMember member = findById(memberId);
         if (member == null) {
             LOGGER.log(Level.WARNING, "Team member not found with ID: {0}", memberId);
@@ -131,6 +137,7 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
             member.setSubteam(subteam);
         }
         
+        // Use inherited save() method from AbstractSpringService
         return save(member);
     }
     
@@ -140,6 +147,7 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
             throw new IllegalArgumentException("Member ID cannot be null");
         }
         
+        // Use inherited findById() method from AbstractSpringService
         TeamMember member = findById(memberId);
         if (member == null) {
             LOGGER.log(Level.WARNING, "Team member not found with ID: {0}", memberId);
@@ -147,6 +155,8 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
         }
         
         member.setSkills(skills);
+        
+        // Use inherited save() method from AbstractSpringService
         return save(member);
     }
     
@@ -156,6 +166,7 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
             throw new IllegalArgumentException("Member ID cannot be null");
         }
         
+        // Use inherited findById() method from AbstractSpringService
         TeamMember member = findById(memberId);
         if (member == null) {
             LOGGER.log(Level.WARNING, "Team member not found with ID: {0}", memberId);
@@ -170,14 +181,16 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
             member.setPhone(phone);
         }
         
+        // Use inherited save() method from AbstractSpringService
         return save(member);
     }
 
-    // Spring Boot Async Methods
+    // Spring Boot Async Methods - Use appropriate method sources
     
     @Async
     public CompletableFuture<List<TeamMember>> findAllAsync() {
         try {
+            // Use inherited findAll() method from AbstractSpringService
             List<TeamMember> result = findAll();
             return CompletableFuture.completedFuture(result);
         } catch (Exception e) {
@@ -190,6 +203,7 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
     @Async
     public CompletableFuture<TeamMember> findByIdAsync(Long id) {
         try {
+            // Use inherited findById() method from AbstractSpringService
             TeamMember result = findById(id);
             return CompletableFuture.completedFuture(result);
         } catch (Exception e) {
@@ -202,6 +216,7 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
     @Async
     public CompletableFuture<TeamMember> saveAsync(TeamMember entity) {
         try {
+            // Use inherited save() method from AbstractSpringService
             TeamMember result = save(entity);
             return CompletableFuture.completedFuture(result);
         } catch (Exception e) {
@@ -214,6 +229,7 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
     @Async
     public CompletableFuture<Boolean> deleteByIdAsync(Long id) {
         try {
+            // Use inherited deleteById() method from AbstractSpringService
             boolean result = deleteById(id);
             return CompletableFuture.completedFuture(result);
         } catch (Exception e) {
@@ -276,6 +292,30 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
     public CompletableFuture<TeamMember> assignToSubteamAsync(Long memberId, Long subteamId) {
         try {
             TeamMember result = assignToSubteam(memberId, subteamId);
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<TeamMember> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
+        }
+    }
+    
+    @Async
+    public CompletableFuture<TeamMember> updateSkillsAsync(Long memberId, String skills) {
+        try {
+            TeamMember result = updateSkills(memberId, skills);
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<TeamMember> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
+        }
+    }
+    
+    @Async
+    public CompletableFuture<TeamMember> updateContactInfoAsync(Long memberId, String email, String phone) {
+        try {
+            TeamMember result = updateContactInfo(memberId, email, phone);
             return CompletableFuture.completedFuture(result);
         } catch (Exception e) {
             CompletableFuture<TeamMember> future = new CompletableFuture<>();

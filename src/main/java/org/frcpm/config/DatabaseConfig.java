@@ -2,9 +2,6 @@
 
 package org.frcpm.config;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityManagerFactory;
-import jakarta.persistence.Persistence;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,14 +13,15 @@ import javax.sql.DataSource;
 
 /**
  * Database configuration for FRC Project Management System.
- * Configures data sources for different profiles and provides entity manager access.
+ * Configures data sources for different profiles.
+ * 
+ * FIXED: Removed manual EntityManager management that conflicted with Spring Boot.
+ * Spring Boot will automatically manage EntityManager instances.
  */
 @Configuration
 @EnableJpaRepositories(basePackages = "org.frcpm.repositories.spring")
 @EnableJpaAuditing
 public class DatabaseConfig {
-    
-    private static EntityManagerFactory entityManagerFactory;
     
     /**
      * H2 DataSource for development environment.
@@ -51,26 +49,15 @@ public class DatabaseConfig {
             .build();
     }
     
-    /**
-     * Gets an EntityManager instance for direct JPA operations.
-     * This method provides compatibility for services that need direct EntityManager access.
+    /* 
+     * REMOVED: Manual EntityManager management that conflicts with Spring Boot
      * 
-     * @return a new EntityManager instance
+     * Spring Boot automatically provides EntityManager through:
+     * - @PersistenceContext EntityManager injection
+     * - JpaRepository auto-implementation 
+     * - @Transactional transaction management
+     * 
+     * If services need direct EntityManager access, inject it via:
+     * @PersistenceContext private EntityManager entityManager;
      */
-    public static EntityManager getEntityManager() {
-        if (entityManagerFactory == null) {
-            // Initialize the EntityManagerFactory if not already done
-            entityManagerFactory = Persistence.createEntityManagerFactory("frc-project-pu");
-        }
-        return entityManagerFactory.createEntityManager();
-    }
-    
-    /**
-     * Closes the EntityManagerFactory when the application shuts down.
-     */
-    public static void closeEntityManagerFactory() {
-        if (entityManagerFactory != null && entityManagerFactory.isOpen()) {
-            entityManagerFactory.close();
-        }
-    }
 }
