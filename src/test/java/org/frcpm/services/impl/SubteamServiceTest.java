@@ -4,6 +4,7 @@ package org.frcpm.services.impl;
 
 import org.frcpm.models.Subteam;
 import org.frcpm.repositories.spring.SubteamRepository;
+import org.frcpm.repositories.spring.TeamMemberRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,6 +28,8 @@ class SubteamServiceTest {
     
     @Mock
     private SubteamRepository subteamRepository;
+    @Mock
+    private TeamMemberRepository teamMemberRepository;
     
     private SubteamServiceImpl subteamService;
     
@@ -43,7 +46,7 @@ class SubteamServiceTest {
         when(subteamRepository.save(any(Subteam.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
         // Create service with injected mocks
-        subteamService = new SubteamServiceImpl(subteamRepository);
+        subteamService = new SubteamServiceImpl(subteamRepository, teamMemberRepository); // ✅ FIXED
     }
     
     /**
