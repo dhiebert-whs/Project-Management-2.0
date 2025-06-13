@@ -4,6 +4,7 @@ package org.frcpm.services.impl;
 
 import org.frcpm.models.Subteam;
 import org.frcpm.repositories.spring.SubteamRepository;
+import org.frcpm.repositories.spring.TeamMemberRepository;
 import org.frcpm.services.SubteamService;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -12,74 +13,116 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.function.Consumer;
 
 /**
- * Spring Boot implementation of SubteamService.
- * Converted from JavaFX/MVVMFx to Spring Boot with dependency injection.
+ * Spring Boot implementation of SubteamService using composition pattern.
+ * Eliminates AbstractSpringService inheritance to resolve compilation errors.
  */
-@Service("subteamServiceImpl")
+@Service
 @Transactional
-public class SubteamServiceImpl extends AbstractSpringService<Subteam, Long, SubteamRepository> 
-        implements SubteamService {
+public class SubteamServiceImpl implements SubteamService {
     
-    private static final Logger LOGGER = Logger.getLogger(SubteamServiceImpl.class.getName());
+    private final SubteamRepository subteamRepository;
+    private final TeamMemberRepository teamMemberRepository;
     
-    
-    public SubteamServiceImpl(SubteamRepository subteamRepository) {
-        super(subteamRepository);
+    /**
+     * Constructor injection for repositories.
+     * No @Autowired needed with single constructor.
+     */
+    public SubteamServiceImpl(SubteamRepository subteamRepository,
+                             TeamMemberRepository teamMemberRepository) {
+        this.subteamRepository = subteamRepository;
+        this.teamMemberRepository = teamMemberRepository;
     }
-
+    
+    // =========================================================================
+    // BASIC CRUD OPERATIONS - Implementing Service<Subteam, Long> interface
+    // =========================================================================
+    
     @Override
-    protected String getEntityName() {
-        return "subteam";
+    public Subteam findById(Long id) {
+        if (id == null) {
+            return null;
+        }
+        return subteamRepository.findById(id).orElse(null);
     }
-
-    // Basic CRUD operations inherited from AbstractSpringService
-
-    // Subteam-specific operations
+    
+    @Override
+    public List<Subteam> findAll() {
+        return subteamRepository.findAll();
+    }
+    
+    @Override
+    public Subteam save(Subteam entity) {
+        if (entity == null) {
+            throw new IllegalArgumentException("Subteam cannot be null");
+        }
+        return subteamRepository.save(entity);
+    }
+    
+    @Override
+    public void delete(Subteam entity) {
+        if (entity != null) {
+            subteamRepository.delete(entity);
+        }
+    }
+    
+    @Override
+    public boolean deleteById(Long id) {
+        if (id != null && subteamRepository.existsById(id)) {
+            subteamRepository.deleteById(id);
+            return true;
+        }
+        return false;
+    }
+    
+    @Override
+    public long count() {
+        return subteamRepository.count();
+    }
+    
+    // =========================================================================
+    // BUSINESS LOGIC METHODS - SubteamService specific methods
+    // =========================================================================
     
     @Override
     public Optional<Subteam> findByName(String name) {
         if (name == null || name.trim().isEmpty()) {
             return Optional.empty();
         }
-        return repository.findByName(name);
+        return subteamRepository.findByNameIgnoreCase(name.trim());
     }
     
     @Override
     public List<Subteam> findBySpecialty(String specialty) {
         if (specialty == null || specialty.trim().isEmpty()) {
-            throw new IllegalArgumentException("Specialty cannot be empty");
+            return List.of();
         }
-        // Use the correct method name that matches the repository
-        return repository.findBySpecialtiesContainingIgnoreCase(specialty);
+        return subteamRepository.findBySpecialtiesContainingIgnoreCase(specialty.trim());
     }
     
     @Override
     public Subteam createSubteam(String name, String colorCode, String specialties) {
         if (name == null || name.trim().isEmpty()) {
-            throw new IllegalArgumentException("Subteam name cannot be empty");
+            throw new IllegalArgumentException("Subteam name cannot be null or empty");
+        }
+        if (colorCode == null || colorCode.trim().isEmpty()) {
+            throw new IllegalArgumentException("Color code cannot be null or empty");
         }
         
-        if (colorCode == null || !colorCode.matches("^#[0-9A-Fa-f]{6}$")) {
-            throw new IllegalArgumentException("Color code must be a valid hex color code");
+        // Check if subteam with this name already exists
+        if (subteamRepository.existsByNameIgnoreCase(name.trim())) {
+            throw new IllegalArgumentException("Subteam with name '" + name.trim() + "' already exists");
         }
         
-        // Check if already exists
-        Optional<Subteam> existing = repository.findByName(name);
-        if (existing.isPresent()) {
-            throw new IllegalArgumentException("Subteam with name '" + name + "' already exists");
-        }
-        
-        // Create new subteam
+        // Create the subteam
         Subteam subteam = new Subteam();
-        subteam.setName(name);
-        subteam.setColorCode(colorCode);
-        subteam.setSpecialties(specialties);
+        subteam.setName(name.trim());
+        subteam.setColorCode(colorCode.trim());
+        subteam.setSpecialties(specialties != null ? specialties.trim() : null);
         
-        return save(subteam);
+        return subteamRepository.save(subteam);
     }
     
     @Override
@@ -88,14 +131,13 @@ public class SubteamServiceImpl extends AbstractSpringService<Subteam, Long, Sub
             throw new IllegalArgumentException("Subteam ID cannot be null");
         }
         
-        Subteam subteam = findById(subteamId);
+        Subteam subteam = subteamRepository.findById(subteamId).orElse(null);
         if (subteam == null) {
-            LOGGER.log(Level.WARNING, "Subteam not found with ID: {0}", subteamId);
             return null;
         }
         
-        subteam.setSpecialties(specialties);
-        return save(subteam);
+        subteam.setSpecialties(specialties != null ? specialties.trim() : null);
+        return subteamRepository.save(subteam);
     }
     
     @Override
@@ -103,60 +145,150 @@ public class SubteamServiceImpl extends AbstractSpringService<Subteam, Long, Sub
         if (subteamId == null) {
             throw new IllegalArgumentException("Subteam ID cannot be null");
         }
-        
-        if (colorCode == null || !colorCode.matches("^#[0-9A-Fa-f]{6}$")) {
-            throw new IllegalArgumentException("Color code must be a valid hex color code");
+        if (colorCode == null || colorCode.trim().isEmpty()) {
+            throw new IllegalArgumentException("Color code cannot be null or empty");
         }
         
-        Subteam subteam = findById(subteamId);
+        Subteam subteam = subteamRepository.findById(subteamId).orElse(null);
         if (subteam == null) {
-            LOGGER.log(Level.WARNING, "Subteam not found with ID: {0}", subteamId);
             return null;
         }
         
-        subteam.setColorCode(colorCode);
-        return save(subteam);
+        subteam.setColorCode(colorCode.trim());
+        return subteamRepository.save(subteam);
     }
-
-    // Spring @Async methods for background processing
-
+    
+    // =========================================================================
+    // ASYNC METHODS - Using @Async annotation with CompletableFuture
+    // Following the exact pattern from SubteamService interface
+    // =========================================================================
+    
     @Async
-    public CompletableFuture<List<Subteam>> findAllAsync() {
-        return CompletableFuture.completedFuture(findAll());
+    @Override
+    public CompletableFuture<Subteam> findByIdAsync(
+            Long id, 
+            Consumer<Subteam> onSuccess, 
+            Consumer<Throwable> onFailure) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                Subteam result = findById(id);
+                if (onSuccess != null) onSuccess.accept(result);
+                return result;
+            } catch (Exception e) {
+                if (onFailure != null) onFailure.accept(e);
+                throw new RuntimeException(e);
+            }
+        });
     }
-
+    
     @Async
-    public CompletableFuture<Subteam> findByIdAsync(Long id) {
-        return CompletableFuture.completedFuture(findById(id));
+    @Override
+    public CompletableFuture<List<Subteam>> findAllAsync(
+            Consumer<List<Subteam>> onSuccess, 
+            Consumer<Throwable> onFailure) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                List<Subteam> result = findAll();
+                if (onSuccess != null) onSuccess.accept(result);
+                return result;
+            } catch (Exception e) {
+                if (onFailure != null) onFailure.accept(e);
+                throw new RuntimeException(e);
+            }
+        });
     }
-
+    
     @Async
-    public CompletableFuture<Optional<Subteam>> findByNameAsync(String name) {
-        return CompletableFuture.completedFuture(findByName(name));
+    @Override
+    public CompletableFuture<Subteam> saveAsync(
+            Subteam entity, 
+            Consumer<Subteam> onSuccess, 
+            Consumer<Throwable> onFailure) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                Subteam result = save(entity);
+                if (onSuccess != null) onSuccess.accept(result);
+                return result;
+            } catch (Exception e) {
+                if (onFailure != null) onFailure.accept(e);
+                throw new RuntimeException(e);
+            }
+        });
     }
-
+    
     @Async
-    public CompletableFuture<List<Subteam>> findBySpecialtyAsync(String specialty) {
-        return CompletableFuture.completedFuture(findBySpecialty(specialty));
+    @Override
+    public CompletableFuture<Boolean> deleteByIdAsync(
+            Long id, 
+            Consumer<Boolean> onSuccess, 
+            Consumer<Throwable> onFailure) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                Boolean result = deleteById(id);
+                if (onSuccess != null) onSuccess.accept(result);
+                return result;
+            } catch (Exception e) {
+                if (onFailure != null) onFailure.accept(e);
+                throw new RuntimeException(e);
+            }
+        });
     }
-
+    
     @Async
-    public CompletableFuture<Subteam> saveAsync(Subteam subteam) {
-        return CompletableFuture.completedFuture(save(subteam));
+    @Override
+    public CompletableFuture<Subteam> createSubteamAsync(
+            String name, 
+            String colorCode, 
+            String specialties, 
+            Consumer<Subteam> onSuccess, 
+            Consumer<Throwable> onFailure) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                Subteam result = createSubteam(name, colorCode, specialties);
+                if (onSuccess != null) onSuccess.accept(result);
+                return result;
+            } catch (Exception e) {
+                if (onFailure != null) onFailure.accept(e);
+                throw new RuntimeException(e);
+            }
+        });
     }
-
+    
     @Async
-    public CompletableFuture<Subteam> createSubteamAsync(String name, String colorCode, String specialties) {
-        return CompletableFuture.completedFuture(createSubteam(name, colorCode, specialties));
+    @Override
+    public CompletableFuture<Subteam> updateSpecialtiesAsync(
+            Long subteamId, 
+            String specialties, 
+            Consumer<Subteam> onSuccess, 
+            Consumer<Throwable> onFailure) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                Subteam result = updateSpecialties(subteamId, specialties);
+                if (onSuccess != null) onSuccess.accept(result);
+                return result;
+            } catch (Exception e) {
+                if (onFailure != null) onFailure.accept(e);
+                throw new RuntimeException(e);
+            }
+        });
     }
-
+    
     @Async
-    public CompletableFuture<Subteam> updateSpecialtiesAsync(Long subteamId, String specialties) {
-        return CompletableFuture.completedFuture(updateSpecialties(subteamId, specialties));
-    }
-
-    @Async
-    public CompletableFuture<Subteam> updateColorCodeAsync(Long subteamId, String colorCode) {
-        return CompletableFuture.completedFuture(updateColorCode(subteamId, colorCode));
+    @Override
+    public CompletableFuture<Subteam> updateColorCodeAsync(
+            Long subteamId, 
+            String colorCode, 
+            Consumer<Subteam> onSuccess, 
+            Consumer<Throwable> onFailure) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                Subteam result = updateColorCode(subteamId, colorCode);
+                if (onSuccess != null) onSuccess.accept(result);
+                return result;
+            } catch (Exception e) {
+                if (onFailure != null) onFailure.accept(e);
+                throw new RuntimeException(e);
+            }
+        });
     }
 }

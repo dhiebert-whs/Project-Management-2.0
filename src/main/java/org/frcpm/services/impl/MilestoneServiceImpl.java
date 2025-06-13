@@ -1,3 +1,5 @@
+// src/main/java/org/frcpm/services/impl/MilestoneServiceImpl.java
+
 package org.frcpm.services.impl;
 
 import org.frcpm.models.Milestone;
@@ -5,50 +7,89 @@ import org.frcpm.models.Project;
 import org.frcpm.repositories.spring.MilestoneRepository;
 import org.frcpm.repositories.spring.ProjectRepository;
 import org.frcpm.services.MilestoneService;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
- * Spring Boot implementation of MilestoneService.
- * Converted from JavaFX/MVVMFx to Spring Boot with dependency injection.
+ * Spring Boot implementation of MilestoneService using composition pattern.
+ * Eliminates AbstractSpringService inheritance to resolve compilation errors.
  */
-@Service("milestoneServiceImpl")
+@Service
 @Transactional
-public class MilestoneServiceImpl extends AbstractSpringService<Milestone, Long, MilestoneRepository> 
-        implements MilestoneService {
+public class MilestoneServiceImpl implements MilestoneService {
     
-    private static final Logger LOGGER = Logger.getLogger(MilestoneServiceImpl.class.getName());
-    
+    private final MilestoneRepository milestoneRepository;
     private final ProjectRepository projectRepository;
     
-    public MilestoneServiceImpl(MilestoneRepository milestoneRepository, 
+    /**
+     * Constructor injection for repositories.
+     * No @Autowired needed with single constructor.
+     */
+    public MilestoneServiceImpl(MilestoneRepository milestoneRepository,
                                ProjectRepository projectRepository) {
-        super(milestoneRepository);
+        this.milestoneRepository = milestoneRepository;
         this.projectRepository = projectRepository;
     }
-
+    
+    // =========================================================================
+    // BASIC CRUD OPERATIONS - Implementing Service<Milestone, Long> interface
+    // =========================================================================
+    
     @Override
-    protected String getEntityName() {
-        return "milestone";
+    public Milestone findById(Long id) {
+        if (id == null) {
+            return null;
+        }
+        return milestoneRepository.findById(id).orElse(null);
     }
-
-    // Milestone-specific operations
+    
+    @Override
+    public List<Milestone> findAll() {
+        return milestoneRepository.findAll();
+    }
+    
+    @Override
+    public Milestone save(Milestone entity) {
+        if (entity == null) {
+            throw new IllegalArgumentException("Milestone cannot be null");
+        }
+        return milestoneRepository.save(entity);
+    }
+    
+    @Override
+    public void delete(Milestone entity) {
+        if (entity != null) {
+            milestoneRepository.delete(entity);
+        }
+    }
+    
+    @Override
+    public boolean deleteById(Long id) {
+        if (id != null && milestoneRepository.existsById(id)) {
+            milestoneRepository.deleteById(id);
+            return true;
+        }
+        return false;
+    }
+    
+    @Override
+    public long count() {
+        return milestoneRepository.count();
+    }
+    
+    // =========================================================================
+    // BUSINESS LOGIC METHODS - MilestoneService specific methods
+    // =========================================================================
     
     @Override
     public List<Milestone> findByProject(Project project) {
         if (project == null) {
             throw new IllegalArgumentException("Project cannot be null");
         }
-        return repository.findByProject(project);
+        return milestoneRepository.findByProject(project);
     }
     
     @Override
@@ -56,7 +97,7 @@ public class MilestoneServiceImpl extends AbstractSpringService<Milestone, Long,
         if (date == null) {
             throw new IllegalArgumentException("Date cannot be null");
         }
-        return repository.findByDateBefore(date);
+        return milestoneRepository.findByDateBefore(date);
     }
     
     @Override
@@ -64,7 +105,7 @@ public class MilestoneServiceImpl extends AbstractSpringService<Milestone, Long,
         if (date == null) {
             throw new IllegalArgumentException("Date cannot be null");
         }
-        return repository.findByDateAfter(date);
+        return milestoneRepository.findByDateAfter(date);
     }
     
     @Override
@@ -72,44 +113,36 @@ public class MilestoneServiceImpl extends AbstractSpringService<Milestone, Long,
         if (startDate == null || endDate == null) {
             throw new IllegalArgumentException("Start date and end date cannot be null");
         }
-        return repository.findByDateBetween(startDate, endDate);
+        if (startDate.isAfter(endDate)) {
+            throw new IllegalArgumentException("Start date cannot be after end date");
+        }
+        return milestoneRepository.findByDateBetween(startDate, endDate);
     }
     
     @Override
     public Milestone createMilestone(String name, LocalDate date, Long projectId, String description) {
         if (name == null || name.trim().isEmpty()) {
-            throw new IllegalArgumentException("Milestone name cannot be empty");
+            throw new IllegalArgumentException("Milestone name cannot be null or empty");
         }
-        
         if (date == null) {
             throw new IllegalArgumentException("Milestone date cannot be null");
         }
-        
         if (projectId == null) {
             throw new IllegalArgumentException("Project ID cannot be null");
         }
         
-        Optional<Project> projectOpt = projectRepository.findById(projectId);
-        if (projectOpt.isEmpty()) {
-            LOGGER.log(Level.WARNING, "Project not found with ID: {0}", projectId);
-            throw new IllegalArgumentException("Project not found with ID: " + projectId);
-        }
+        // Find the project
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new IllegalArgumentException("Project not found with ID: " + projectId));
         
-        Project project = projectOpt.get();
+        // Create the milestone
+        Milestone milestone = new Milestone();
+        milestone.setName(name.trim());
+        milestone.setDate(date);
+        milestone.setProject(project);
+        milestone.setDescription(description != null ? description.trim() : null);
         
-        // Validate that the milestone date is within the project timeline
-        if (project.getStartDate() != null && date.isBefore(project.getStartDate())) {
-            LOGGER.log(Level.WARNING, "Milestone date is before project start date");
-        }
-        
-        if (project.getHardDeadline() != null && date.isAfter(project.getHardDeadline())) {
-            LOGGER.log(Level.WARNING, "Milestone date is after project deadline");
-        }
-        
-        Milestone milestone = new Milestone(name, date, project);
-        milestone.setDescription(description);
-        
-        return save(milestone);
+        return milestoneRepository.save(milestone);
     }
     
     @Override
@@ -117,33 +150,17 @@ public class MilestoneServiceImpl extends AbstractSpringService<Milestone, Long,
         if (milestoneId == null) {
             throw new IllegalArgumentException("Milestone ID cannot be null");
         }
-        
         if (date == null) {
-            throw new IllegalArgumentException("Milestone date cannot be null");
+            throw new IllegalArgumentException("Date cannot be null");
         }
         
-        Milestone milestone = findById(milestoneId);
+        Milestone milestone = milestoneRepository.findById(milestoneId).orElse(null);
         if (milestone == null) {
-            LOGGER.log(Level.WARNING, "Milestone not found with ID: {0}", milestoneId);
             return null;
         }
         
-        // Optional validation (just log warnings)
-        Project project = milestone.getProject();
-        if (project != null) {
-            if (project.getStartDate() != null && date.isBefore(project.getStartDate())) {
-                LOGGER.log(Level.WARNING, "Milestone date {0} is before project start date {1}",
-                        new Object[]{date, project.getStartDate()});
-            }
-            
-            if (project.getHardDeadline() != null && date.isAfter(project.getHardDeadline())) {
-                LOGGER.log(Level.WARNING, "Milestone date {0} is after project deadline {1}",
-                        new Object[]{date, project.getHardDeadline()});
-            }
-        }
-        
         milestone.setDate(date);
-        return save(milestone);
+        return milestoneRepository.save(milestone);
     }
     
     @Override
@@ -152,14 +169,13 @@ public class MilestoneServiceImpl extends AbstractSpringService<Milestone, Long,
             throw new IllegalArgumentException("Milestone ID cannot be null");
         }
         
-        Milestone milestone = findById(milestoneId);
+        Milestone milestone = milestoneRepository.findById(milestoneId).orElse(null);
         if (milestone == null) {
-            LOGGER.log(Level.WARNING, "Milestone not found with ID: {0}", milestoneId);
             return null;
         }
         
-        milestone.setDescription(description);
-        return save(milestone);
+        milestone.setDescription(description != null ? description.trim() : null);
+        return milestoneRepository.save(milestone);
     }
     
     @Override
@@ -167,65 +183,18 @@ public class MilestoneServiceImpl extends AbstractSpringService<Milestone, Long,
         if (projectId == null) {
             throw new IllegalArgumentException("Project ID cannot be null");
         }
-        
-        if (days <= 0) {
-            throw new IllegalArgumentException("Days must be positive");
+        if (days < 0) {
+            throw new IllegalArgumentException("Days cannot be negative");
         }
         
-        Optional<Project> projectOpt = projectRepository.findById(projectId);
-        if (projectOpt.isEmpty()) {
-            LOGGER.log(Level.WARNING, "Project not found with ID: {0}", projectId);
-            return new ArrayList<>();
+        Project project = projectRepository.findById(projectId).orElse(null);
+        if (project == null) {
+            throw new IllegalArgumentException("Project not found with ID: " + projectId);
         }
-        
-        Project project = projectOpt.get();
         
         LocalDate today = LocalDate.now();
         LocalDate endDate = today.plusDays(days);
         
-        // Get all milestones for the project
-        List<Milestone> allMilestones = repository.findByProject(project);
-        List<Milestone> upcomingMilestones = new ArrayList<>();
-        
-        // Filter milestones by date range
-        for (Milestone milestone : allMilestones) {
-            if (!milestone.getDate().isBefore(today) && !milestone.getDate().isAfter(endDate)) {
-                upcomingMilestones.add(milestone);
-            }
-        }
-        
-        return upcomingMilestones;
-    }
-
-    // Spring @Async methods for background processing
-
-    @Async
-    public CompletableFuture<List<Milestone>> findAllAsync() {
-        return CompletableFuture.completedFuture(findAll());
-    }
-
-    @Async
-    public CompletableFuture<Milestone> findByIdAsync(Long id) {
-        return CompletableFuture.completedFuture(findById(id));
-    }
-
-    @Async
-    public CompletableFuture<List<Milestone>> findByProjectAsync(Project project) {
-        return CompletableFuture.completedFuture(findByProject(project));
-    }
-
-    @Async
-    public CompletableFuture<Milestone> saveAsync(Milestone milestone) {
-        return CompletableFuture.completedFuture(save(milestone));
-    }
-
-    @Async
-    public CompletableFuture<List<Milestone>> getUpcomingMilestonesAsync(Long projectId, int days) {
-        return CompletableFuture.completedFuture(getUpcomingMilestones(projectId, days));
-    }
-
-    @Async
-    public CompletableFuture<Milestone> createMilestoneAsync(String name, LocalDate date, Long projectId, String description) {
-        return CompletableFuture.completedFuture(createMilestone(name, date, projectId, description));
+        return milestoneRepository.findUpcomingMilestones(project, today, endDate);
     }
 }
