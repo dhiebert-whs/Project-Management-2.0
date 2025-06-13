@@ -16,7 +16,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-//import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -27,7 +26,8 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 /**
- * Test class for AttendanceService implementation using Spring Boot testing patterns.
+ * Fixed test class for AttendanceService implementation using Spring Boot testing patterns.
+ * FIXED: Removed unnecessary stubbing and corrected deleteById test logic.
  */
 @ExtendWith(MockitoExtension.class)
 class AttendanceServiceTest {
@@ -53,24 +53,6 @@ class AttendanceServiceTest {
         testMeeting = createTestMeeting();
         testMember = createTestMember();
         testAttendance = createTestAttendance();
-        
-        // Configure mock repository responses
-        when(attendanceRepository.findById(1L)).thenReturn(Optional.of(testAttendance));
-        when(attendanceRepository.findAll()).thenReturn(List.of(testAttendance));
-        when(attendanceRepository.save(any(Attendance.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        
-        // Configure meeting repository
-        when(meetingRepository.findById(1L)).thenReturn(Optional.of(testMeeting));
-        
-        // Configure team member repository
-        when(teamMemberRepository.findById(1L)).thenReturn(Optional.of(testMember));
-        when(teamMemberRepository.findAll()).thenReturn(List.of(testMember));
-        
-        // Configure attendance repository specialized methods
-        when(attendanceRepository.findByMeeting(testMeeting)).thenReturn(List.of(testAttendance));
-        when(attendanceRepository.findByMember(testMember)).thenReturn(List.of(testAttendance));
-        when(attendanceRepository.findByMeetingAndMember(any(Meeting.class), any(TeamMember.class)))
-            .thenReturn(Optional.of(testAttendance));
         
         // Create service with injected mocks
         attendanceService = new AttendanceServiceImpl(
@@ -117,6 +99,9 @@ class AttendanceServiceTest {
     
     @Test
     void testFindById() {
+        // Setup - Only stub what this test needs
+        when(attendanceRepository.findById(1L)).thenReturn(Optional.of(testAttendance));
+        
         // Execute
         Attendance result = attendanceService.findById(1L);
         
@@ -132,6 +117,9 @@ class AttendanceServiceTest {
     
     @Test
     void testFindAll() {
+        // Setup - Only stub what this test needs
+        when(attendanceRepository.findAll()).thenReturn(List.of(testAttendance));
+        
         // Execute
         List<Attendance> results = attendanceService.findAll();
         
@@ -146,6 +134,9 @@ class AttendanceServiceTest {
     
     @Test
     void testSave() {
+        // Setup - Only stub what this test needs
+        when(attendanceRepository.save(any(Attendance.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        
         // Setup
         Attendance newAttendance = new Attendance(testMeeting, testMember, false);
         
@@ -176,19 +167,40 @@ class AttendanceServiceTest {
     
     @Test
     void testDeleteById() {
-        // Setup - Use doNothing() for void methods instead of when().thenReturn()
+        // Setup - Mock both existsById and deleteById as the service calls both
+        when(attendanceRepository.existsById(1L)).thenReturn(true);
         doNothing().when(attendanceRepository).deleteById(anyLong());
         
-        // Execute - deleteById returns void, so don't capture return value
-        attendanceService.deleteById(1L);
+        // Execute
+        boolean result = attendanceService.deleteById(1L);
         
-        // Verify repository was called
+        // Verify result
+        assertTrue(result);
+        
+        // Verify repository was called in correct order
+        verify(attendanceRepository).existsById(1L);
         verify(attendanceRepository).deleteById(1L);
     }
     
     @Test
+    void testDeleteById_NotExists() {
+        // Setup - Attendance doesn't exist
+        when(attendanceRepository.existsById(999L)).thenReturn(false);
+        
+        // Execute
+        boolean result = attendanceService.deleteById(999L);
+        
+        // Verify result
+        assertFalse(result);
+        
+        // Verify repository calls
+        verify(attendanceRepository).existsById(999L);
+        verify(attendanceRepository, never()).deleteById(anyLong());
+    }
+    
+    @Test
     void testCount() {
-        // Setup
+        // Setup - Only stub what this test needs
         when(attendanceRepository.count()).thenReturn(5L);
         
         // Execute
@@ -203,6 +215,9 @@ class AttendanceServiceTest {
     
     @Test
     void testFindByMeeting() {
+        // Setup - Only stub what this test needs
+        when(attendanceRepository.findByMeeting(testMeeting)).thenReturn(List.of(testAttendance));
+        
         // Execute
         List<Attendance> results = attendanceService.findByMeeting(testMeeting);
         
@@ -217,6 +232,9 @@ class AttendanceServiceTest {
     
     @Test
     void testFindByMember() {
+        // Setup - Only stub what this test needs
+        when(attendanceRepository.findByMember(testMember)).thenReturn(List.of(testAttendance));
+        
         // Execute
         List<Attendance> results = attendanceService.findByMember(testMember);
         
@@ -231,6 +249,10 @@ class AttendanceServiceTest {
     
     @Test
     void testFindByMeetingAndMember() {
+        // Setup - Only stub what this test needs
+        when(attendanceRepository.findByMeetingAndMember(any(Meeting.class), any(TeamMember.class)))
+            .thenReturn(Optional.of(testAttendance));
+        
         // Execute
         Optional<Attendance> result = attendanceService.findByMeetingAndMember(testMeeting, testMember);
         
@@ -244,9 +266,12 @@ class AttendanceServiceTest {
     
     @Test
     void testCreateAttendance() {
-        // Setup - create a new attendance for test
+        // Setup - Only stub what this test needs
+        when(meetingRepository.findById(1L)).thenReturn(Optional.of(testMeeting));
+        when(teamMemberRepository.findById(1L)).thenReturn(Optional.of(testMember));
         when(attendanceRepository.findByMeetingAndMember(any(Meeting.class), any(TeamMember.class)))
             .thenReturn(Optional.empty());
+        when(attendanceRepository.save(any(Attendance.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
         // Execute
         Attendance result = attendanceService.createAttendance(1L, 1L, true);
@@ -266,7 +291,7 @@ class AttendanceServiceTest {
     
     @Test
     void testCreateAttendance_MeetingNotFound() {
-        // Setup
+        // Setup - Only stub what this test needs
         when(meetingRepository.findById(999L)).thenReturn(Optional.empty());
         
         // Execute and verify
@@ -286,6 +311,10 @@ class AttendanceServiceTest {
     
     @Test
     void testGetAttendanceStatistics() {
+        // Setup - Only stub what this test needs
+        when(teamMemberRepository.findById(1L)).thenReturn(Optional.of(testMember));
+        when(attendanceRepository.findByMember(testMember)).thenReturn(List.of(testAttendance));
+        
         // Execute
         Map<String, Object> result = attendanceService.getAttendanceStatistics(1L);
         

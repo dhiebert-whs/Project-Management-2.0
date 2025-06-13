@@ -1,0 +1,246 @@
+-------------------------------------------------------------------------------
+Test set: org.frcpm.services.impl.ComponentServiceTest
+-------------------------------------------------------------------------------
+Tests run: 16, Failures: 1, Errors: 15, Skipped: 0, Time elapsed: 1.587 s <<< FAILURE! -- in org.frcpm.services.impl.ComponentServiceTest
+org.frcpm.services.impl.ComponentServiceTest.testFindAll -- Time elapsed: 1.461 s <<< ERROR!
+org.mockito.exceptions.misusing.UnnecessaryStubbingException: 
+
+Unnecessary stubbings detected.
+Clean & maintainable test code requires zero unnecessary code.
+Following stubbings are unnecessary (click to navigate to relevant line of code):
+  1. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:52)
+  2. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:54)
+  3. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:57)
+  4. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:58)
+Please remove unnecessary stubbings or use 'lenient' strictness. More info: javadoc for UnnecessaryStubbingException class.
+	at org.mockito.junit.jupiter.MockitoExtension.afterEach(MockitoExtension.java:192)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.impl.ComponentServiceTest.testCount -- Time elapsed: 0.005 s <<< ERROR!
+org.mockito.exceptions.misusing.UnnecessaryStubbingException: 
+
+Unnecessary stubbings detected.
+Clean & maintainable test code requires zero unnecessary code.
+Following stubbings are unnecessary (click to navigate to relevant line of code):
+  1. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:52)
+  2. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:53)
+  3. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:54)
+  4. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:57)
+  5. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:58)
+Please remove unnecessary stubbings or use 'lenient' strictness. More info: javadoc for UnnecessaryStubbingException class.
+	at org.mockito.junit.jupiter.MockitoExtension.afterEach(MockitoExtension.java:192)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.impl.ComponentServiceTest.testSave -- Time elapsed: 0.006 s <<< ERROR!
+org.mockito.exceptions.misusing.UnnecessaryStubbingException: 
+
+Unnecessary stubbings detected.
+Clean & maintainable test code requires zero unnecessary code.
+Following stubbings are unnecessary (click to navigate to relevant line of code):
+  1. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:52)
+  2. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:53)
+  3. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:57)
+  4. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:58)
+Please remove unnecessary stubbings or use 'lenient' strictness. More info: javadoc for UnnecessaryStubbingException class.
+	at org.mockito.junit.jupiter.MockitoExtension.afterEach(MockitoExtension.java:192)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.impl.ComponentServiceTest.testFindByName -- Time elapsed: 0.006 s <<< ERROR!
+org.mockito.exceptions.misusing.UnnecessaryStubbingException: 
+
+Unnecessary stubbings detected.
+Clean & maintainable test code requires zero unnecessary code.
+Following stubbings are unnecessary (click to navigate to relevant line of code):
+  1. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:52)
+  2. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:53)
+  3. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:54)
+  4. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:57)
+  5. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:58)
+Please remove unnecessary stubbings or use 'lenient' strictness. More info: javadoc for UnnecessaryStubbingException class.
+	at org.mockito.junit.jupiter.MockitoExtension.afterEach(MockitoExtension.java:192)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.impl.ComponentServiceTest.testCreateComponent_PartNumberExists -- Time elapsed: 0.009 s <<< ERROR!
+org.mockito.exceptions.misusing.UnnecessaryStubbingException: 
+
+Unnecessary stubbings detected.
+Clean & maintainable test code requires zero unnecessary code.
+Following stubbings are unnecessary (click to navigate to relevant line of code):
+  1. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:52)
+  2. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:53)
+  3. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:54)
+  4. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:57)
+  5. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:58)
+Please remove unnecessary stubbings or use 'lenient' strictness. More info: javadoc for UnnecessaryStubbingException class.
+	at org.mockito.junit.jupiter.MockitoExtension.afterEach(MockitoExtension.java:192)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.impl.ComponentServiceTest.testAssociateComponentsWithTask_TaskNotFound -- Time elapsed: 0.006 s <<< ERROR!
+org.mockito.exceptions.misusing.UnnecessaryStubbingException: 
+
+Unnecessary stubbings detected.
+Clean & maintainable test code requires zero unnecessary code.
+Following stubbings are unnecessary (click to navigate to relevant line of code):
+  1. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:52)
+  2. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:53)
+  3. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:54)
+  4. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:57)
+  5. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:58)
+Please remove unnecessary stubbings or use 'lenient' strictness. More info: javadoc for UnnecessaryStubbingException class.
+	at org.mockito.junit.jupiter.MockitoExtension.afterEach(MockitoExtension.java:192)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.impl.ComponentServiceTest.testMarkAsDelivered_ComponentNotFound -- Time elapsed: 0.003 s <<< ERROR!
+org.mockito.exceptions.misusing.UnnecessaryStubbingException: 
+
+Unnecessary stubbings detected.
+Clean & maintainable test code requires zero unnecessary code.
+Following stubbings are unnecessary (click to navigate to relevant line of code):
+  1. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:52)
+  2. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:53)
+  3. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:54)
+  4. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:57)
+  5. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:58)
+Please remove unnecessary stubbings or use 'lenient' strictness. More info: javadoc for UnnecessaryStubbingException class.
+	at org.mockito.junit.jupiter.MockitoExtension.afterEach(MockitoExtension.java:192)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.impl.ComponentServiceTest.testFindById -- Time elapsed: 0.003 s <<< ERROR!
+org.mockito.exceptions.misusing.UnnecessaryStubbingException: 
+
+Unnecessary stubbings detected.
+Clean & maintainable test code requires zero unnecessary code.
+Following stubbings are unnecessary (click to navigate to relevant line of code):
+  1. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:53)
+  2. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:54)
+  3. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:57)
+  4. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:58)
+Please remove unnecessary stubbings or use 'lenient' strictness. More info: javadoc for UnnecessaryStubbingException class.
+	at org.mockito.junit.jupiter.MockitoExtension.afterEach(MockitoExtension.java:192)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.impl.ComponentServiceTest.testUpdateExpectedDelivery -- Time elapsed: 0.002 s <<< ERROR!
+org.mockito.exceptions.misusing.UnnecessaryStubbingException: 
+
+Unnecessary stubbings detected.
+Clean & maintainable test code requires zero unnecessary code.
+Following stubbings are unnecessary (click to navigate to relevant line of code):
+  1. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:53)
+  2. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:57)
+  3. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:58)
+Please remove unnecessary stubbings or use 'lenient' strictness. More info: javadoc for UnnecessaryStubbingException class.
+	at org.mockito.junit.jupiter.MockitoExtension.afterEach(MockitoExtension.java:192)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.impl.ComponentServiceTest.testFindByDelivered -- Time elapsed: 0.003 s <<< ERROR!
+org.mockito.exceptions.misusing.UnnecessaryStubbingException: 
+
+Unnecessary stubbings detected.
+Clean & maintainable test code requires zero unnecessary code.
+Following stubbings are unnecessary (click to navigate to relevant line of code):
+  1. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:52)
+  2. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:53)
+  3. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:54)
+  4. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:57)
+  5. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:58)
+Please remove unnecessary stubbings or use 'lenient' strictness. More info: javadoc for UnnecessaryStubbingException class.
+	at org.mockito.junit.jupiter.MockitoExtension.afterEach(MockitoExtension.java:192)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.impl.ComponentServiceTest.testMarkAsDelivered -- Time elapsed: 0.002 s <<< ERROR!
+org.mockito.exceptions.misusing.UnnecessaryStubbingException: 
+
+Unnecessary stubbings detected.
+Clean & maintainable test code requires zero unnecessary code.
+Following stubbings are unnecessary (click to navigate to relevant line of code):
+  1. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:53)
+  2. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:57)
+  3. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:58)
+Please remove unnecessary stubbings or use 'lenient' strictness. More info: javadoc for UnnecessaryStubbingException class.
+	at org.mockito.junit.jupiter.MockitoExtension.afterEach(MockitoExtension.java:192)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.impl.ComponentServiceTest.testDeleteById -- Time elapsed: 0.009 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: expected: <true> but was: <false>
+	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+	at org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+	at org.junit.jupiter.api.AssertTrue.failNotTrue(AssertTrue.java:63)
+	at org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:36)
+	at org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:31)
+	at org.junit.jupiter.api.Assertions.assertTrue(Assertions.java:183)
+	at org.frcpm.services.impl.ComponentServiceTest.testDeleteById(ComponentServiceTest.java:159)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.impl.ComponentServiceTest.testCreateComponent -- Time elapsed: 0.004 s <<< ERROR!
+org.mockito.exceptions.misusing.UnnecessaryStubbingException: 
+
+Unnecessary stubbings detected.
+Clean & maintainable test code requires zero unnecessary code.
+Following stubbings are unnecessary (click to navigate to relevant line of code):
+  1. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:52)
+  2. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:53)
+  3. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:57)
+  4. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:58)
+Please remove unnecessary stubbings or use 'lenient' strictness. More info: javadoc for UnnecessaryStubbingException class.
+	at org.mockito.junit.jupiter.MockitoExtension.afterEach(MockitoExtension.java:192)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.impl.ComponentServiceTest.testDelete -- Time elapsed: 0.003 s <<< ERROR!
+org.mockito.exceptions.misusing.UnnecessaryStubbingException: 
+
+Unnecessary stubbings detected.
+Clean & maintainable test code requires zero unnecessary code.
+Following stubbings are unnecessary (click to navigate to relevant line of code):
+  1. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:52)
+  2. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:53)
+  3. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:54)
+  4. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:57)
+  5. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:58)
+Please remove unnecessary stubbings or use 'lenient' strictness. More info: javadoc for UnnecessaryStubbingException class.
+	at org.mockito.junit.jupiter.MockitoExtension.afterEach(MockitoExtension.java:192)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.impl.ComponentServiceTest.testFindByPartNumber -- Time elapsed: 0.004 s <<< ERROR!
+org.mockito.exceptions.misusing.UnnecessaryStubbingException: 
+
+Unnecessary stubbings detected.
+Clean & maintainable test code requires zero unnecessary code.
+Following stubbings are unnecessary (click to navigate to relevant line of code):
+  1. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:52)
+  2. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:53)
+  3. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:54)
+  4. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:57)
+  5. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:58)
+Please remove unnecessary stubbings or use 'lenient' strictness. More info: javadoc for UnnecessaryStubbingException class.
+	at org.mockito.junit.jupiter.MockitoExtension.afterEach(MockitoExtension.java:192)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+org.frcpm.services.impl.ComponentServiceTest.testAssociateComponentsWithTask -- Time elapsed: 0.003 s <<< ERROR!
+org.mockito.exceptions.misusing.UnnecessaryStubbingException: 
+
+Unnecessary stubbings detected.
+Clean & maintainable test code requires zero unnecessary code.
+Following stubbings are unnecessary (click to navigate to relevant line of code):
+  1. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:53)
+  2. -> at org.frcpm.services.impl.ComponentServiceTest.setUp(ComponentServiceTest.java:54)
+Please remove unnecessary stubbings or use 'lenient' strictness. More info: javadoc for UnnecessaryStubbingException class.
+	at org.mockito.junit.jupiter.MockitoExtension.afterEach(MockitoExtension.java:192)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
