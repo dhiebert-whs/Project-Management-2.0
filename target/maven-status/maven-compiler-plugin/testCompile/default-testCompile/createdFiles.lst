@@ -1,0 +1,9 @@
+org\frcpm\services\impl\VisualizationServiceTest.class
+org\frcpm\services\impl\AttendanceServiceTest.class
+org\frcpm\services\impl\MeetingServiceTest.class
+org\frcpm\services\impl\GanttDataServiceTest.class
+org\frcpm\services\impl\SubsystemServiceTest.class
+org\frcpm\services\impl\ComponentServiceTest.class
+org\frcpm\services\impl\MetricsCalculationServiceTest.class
+org\frcpm\services\impl\MilestoneServiceTest.class
+org\frcpm\services\impl\TaskServiceTest.class

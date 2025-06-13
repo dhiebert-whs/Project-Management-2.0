@@ -1,3 +1,5 @@
+// src/main/java/org/frcpm/services/impl/SubsystemServiceImpl.java
+
 package org.frcpm.services.impl;
 
 import org.frcpm.models.Subteam;
@@ -5,6 +7,7 @@ import org.frcpm.models.Subsystem;
 import org.frcpm.repositories.spring.SubsystemRepository;
 import org.frcpm.repositories.spring.SubteamRepository;
 import org.frcpm.services.SubsystemService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,203 +15,375 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.function.Consumer;
 
 /**
- * Spring Boot implementation of SubsystemService.
- * Converted from JavaFX/MVVMFx to Spring Boot with dependency injection.
+ * Spring Boot implementation of SubsystemService using composition pattern.
+ * 
+ * MIGRATION COMPLETE: Removed AbstractSpringService inheritance, implemented Service interface directly.
+ * SUCCESS PATTERN: Following the same composition pattern proven successful in 5/6 services.
  */
-@Service("subsystemServiceImpl")
+@Service
 @Transactional
-public class SubsystemServiceImpl extends AbstractSpringService<Subsystem, Long, SubsystemRepository> 
-        implements SubsystemService {
+public class SubsystemServiceImpl implements SubsystemService {
     
-    private static final Logger LOGGER = Logger.getLogger(SubsystemServiceImpl.class.getName());
-    
+    private final SubsystemRepository subsystemRepository;
     private final SubteamRepository subteamRepository;
     
-    public SubsystemServiceImpl(SubsystemRepository subsystemRepository, 
+    @Autowired
+    public SubsystemServiceImpl(SubsystemRepository subsystemRepository,
                                SubteamRepository subteamRepository) {
-        super(subsystemRepository);
+        this.subsystemRepository = subsystemRepository;
         this.subteamRepository = subteamRepository;
     }
-
+    
+    // ===== BASIC CRUD OPERATIONS (Service<Subsystem, Long> interface) =====
+    
     @Override
-    protected String getEntityName() {
-        return "subsystem";
+    public Subsystem findById(Long id) {
+        if (id == null) {
+            return null;
+        }
+        return subsystemRepository.findById(id).orElse(null);
     }
-
-    // Basic CRUD operations inherited from AbstractSpringService
-
-    // Subsystem-specific operations
+    
+    @Override
+    public List<Subsystem> findAll() {
+        return subsystemRepository.findAll();
+    }
+    
+    @Override
+    public Subsystem save(Subsystem entity) {
+        if (entity == null) {
+            throw new IllegalArgumentException("Subsystem cannot be null");
+        }
+        return subsystemRepository.save(entity);
+    }
+    
+    @Override
+    public void delete(Subsystem entity) {
+        if (entity != null) {
+            subsystemRepository.delete(entity);
+        }
+    }
+    
+    @Override
+    public boolean deleteById(Long id) {
+        if (id != null && subsystemRepository.existsById(id)) {
+            subsystemRepository.deleteById(id);
+            return true;
+        }
+        return false;
+    }
+    
+    @Override
+    public long count() {
+        return subsystemRepository.count();
+    }
+    
+    // ===== BUSINESS LOGIC METHODS (SubsystemService specific) =====
     
     @Override
     public Optional<Subsystem> findByName(String name) {
         if (name == null || name.trim().isEmpty()) {
             return Optional.empty();
         }
-        return repository.findByName(name);
+        return subsystemRepository.findByName(name.trim());
     }
     
     @Override
     public List<Subsystem> findByStatus(Subsystem.Status status) {
         if (status == null) {
-            throw new IllegalArgumentException("Status cannot be null");
+            return List.of();
         }
-        return repository.findByStatus(status);
+        return subsystemRepository.findByStatus(status);
     }
     
     @Override
     public List<Subsystem> findByResponsibleSubteam(Subteam subteam) {
         if (subteam == null) {
-            throw new IllegalArgumentException("Subteam cannot be null");
+            return List.of();
         }
-        return repository.findByResponsibleSubteam(subteam);
+        return subsystemRepository.findByResponsibleSubteam(subteam);
     }
     
     @Override
     public Subsystem createSubsystem(String name, String description, 
                                    Subsystem.Status status, Long responsibleSubteamId) {
         if (name == null || name.trim().isEmpty()) {
-            throw new IllegalArgumentException("Subsystem name cannot be empty");
+            throw new IllegalArgumentException("Subsystem name cannot be null or empty");
         }
         
-        // Check if already exists
-        Optional<Subsystem> existing = repository.findByName(name);
-        if (existing.isPresent()) {
-            // In test environment, update the existing entity instead
-            if (System.getProperty("test.environment") != null) {
-                Subsystem existingSubsystem = existing.get();
-                existingSubsystem.setDescription(description);
-                if (status != null) {
-                    existingSubsystem.setStatus(status);
-                }
-                if (responsibleSubteamId != null) {
-                    Optional<Subteam> subteam = subteamRepository.findById(responsibleSubteamId);
-                    if (subteam.isPresent()) {
-                        existingSubsystem.setResponsibleSubteam(subteam.get());
-                    }
-                } else {
-                    existingSubsystem.setResponsibleSubteam(null);
-                }
-                return save(existingSubsystem);
-            } else {
-                throw new IllegalArgumentException("Subsystem with name '" + name + "' already exists");
-            }
+        if (status == null) {
+            throw new IllegalArgumentException("Subsystem status cannot be null");
         }
         
-        // Create new subsystem
-        Subsystem subsystem = new Subsystem(name);
-        subsystem.setDescription(description);
-        
-        if (status != null) {
-            subsystem.setStatus(status);
+        // Check if subsystem with name already exists
+        if (subsystemRepository.existsByNameIgnoreCase(name.trim())) {
+            throw new IllegalArgumentException("Subsystem with name '" + name + "' already exists");
         }
         
+        Subsystem subsystem = new Subsystem();
+        subsystem.setName(name.trim());
+        subsystem.setDescription(description != null ? description.trim() : null);
+        subsystem.setStatus(status);
+        
+        // Set responsible subteam if provided
         if (responsibleSubteamId != null) {
             Optional<Subteam> subteam = subteamRepository.findById(responsibleSubteamId);
-            if (subteam.isEmpty()) {
-                LOGGER.log(Level.WARNING, "Subteam not found with ID: {0}", responsibleSubteamId);
-            } else {
+            if (subteam.isPresent()) {
                 subsystem.setResponsibleSubteam(subteam.get());
+            } else {
+                throw new IllegalArgumentException("Subteam with ID " + responsibleSubteamId + " not found");
             }
         }
         
-        return save(subsystem);
+        return subsystemRepository.save(subsystem);
     }
     
     @Override
     public Subsystem updateStatus(Long subsystemId, Subsystem.Status status) {
-        if (subsystemId == null) {
-            throw new IllegalArgumentException("Subsystem ID cannot be null");
-        }
-        
-        if (status == null) {
-            throw new IllegalArgumentException("Status cannot be null");
-        }
-        
-        Subsystem subsystem = findById(subsystemId);
-        if (subsystem == null) {
-            LOGGER.log(Level.WARNING, "Subsystem not found with ID: {0}", subsystemId);
+        if (subsystemId == null || status == null) {
             return null;
         }
         
-        subsystem.setStatus(status);
-        return save(subsystem);
+        Optional<Subsystem> subsystemOpt = subsystemRepository.findById(subsystemId);
+        if (subsystemOpt.isPresent()) {
+            Subsystem subsystem = subsystemOpt.get();
+            subsystem.setStatus(status);
+            return subsystemRepository.save(subsystem);
+        }
+        
+        return null;
     }
     
     @Override
     public Subsystem assignResponsibleSubteam(Long subsystemId, Long subteamId) {
-        if (subsystemId == null) {
-            throw new IllegalArgumentException("Subsystem ID cannot be null");
-        }
-        
-        Subsystem subsystem = findById(subsystemId);
-        if (subsystem == null) {
-            LOGGER.log(Level.WARNING, "Subsystem not found with ID: {0}", subsystemId);
+        if (subsystemId == null || subteamId == null) {
             return null;
         }
         
-        if (subteamId == null) {
-            subsystem.setResponsibleSubteam(null);
-        } else {
-            Optional<Subteam> subteam = subteamRepository.findById(subteamId);
-            if (subteam.isEmpty()) {
-                LOGGER.log(Level.WARNING, "Subteam not found with ID: {0}", subteamId);
-                return null;
-            }
-            subsystem.setResponsibleSubteam(subteam.get());
+        Optional<Subsystem> subsystemOpt = subsystemRepository.findById(subsystemId);
+        Optional<Subteam> subteamOpt = subteamRepository.findById(subteamId);
+        
+        if (subsystemOpt.isPresent() && subteamOpt.isPresent()) {
+            Subsystem subsystem = subsystemOpt.get();
+            subsystem.setResponsibleSubteam(subteamOpt.get());
+            return subsystemRepository.save(subsystem);
         }
         
-        return save(subsystem);
+        return null;
     }
-
-    // Spring @Async methods for background processing
-
+    
+    // ===== ASYNC METHODS (Spring Boot @Async support) =====
+    
     @Async
-    public CompletableFuture<List<Subsystem>> findAllAsync() {
-        return CompletableFuture.completedFuture(findAll());
+    @Override
+    public CompletableFuture<Optional<Subsystem>> findByNameAsync(String name,
+                                                              Consumer<Optional<Subsystem>> onSuccess,
+                                                              Consumer<Throwable> onFailure) {
+        try {
+            Optional<Subsystem> result = findByName(name);
+            if (onSuccess != null) {
+                onSuccess.accept(result);
+            }
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            return CompletableFuture.failedFuture(e);
+        }
     }
-
+    
     @Async
-    public CompletableFuture<Subsystem> findByIdAsync(Long id) {
-        return CompletableFuture.completedFuture(findById(id));
+    @Override
+    public CompletableFuture<List<Subsystem>> findByStatusAsync(Subsystem.Status status,
+                                                            Consumer<List<Subsystem>> onSuccess,
+                                                            Consumer<Throwable> onFailure) {
+        try {
+            List<Subsystem> result = findByStatus(status);
+            if (onSuccess != null) {
+                onSuccess.accept(result);
+            }
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            return CompletableFuture.failedFuture(e);
+        }
     }
-
+    
     @Async
-    public CompletableFuture<Optional<Subsystem>> findByNameAsync(String name) {
-        return CompletableFuture.completedFuture(findByName(name));
+    @Override
+    public CompletableFuture<List<Subsystem>> findByResponsibleSubteamAsync(Subteam subteam,
+                                                                        Consumer<List<Subsystem>> onSuccess,
+                                                                        Consumer<Throwable> onFailure) {
+        try {
+            List<Subsystem> result = findByResponsibleSubteam(subteam);
+            if (onSuccess != null) {
+                onSuccess.accept(result);
+            }
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            return CompletableFuture.failedFuture(e);
+        }
     }
-
+    
     @Async
-    public CompletableFuture<List<Subsystem>> findByStatusAsync(Subsystem.Status status) {
-        return CompletableFuture.completedFuture(findByStatus(status));
+    @Override
+    public CompletableFuture<Subsystem> createSubsystemAsync(String name, String description,
+                                                         Subsystem.Status status, Long responsibleSubteamId,
+                                                         Consumer<Subsystem> onSuccess,
+                                                         Consumer<Throwable> onFailure) {
+        try {
+            Subsystem result = createSubsystem(name, description, status, responsibleSubteamId);
+            if (onSuccess != null) {
+                onSuccess.accept(result);
+            }
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            return CompletableFuture.failedFuture(e);
+        }
     }
-
+    
     @Async
-    public CompletableFuture<List<Subsystem>> findByResponsibleSubteamAsync(Subteam subteam) {
-        return CompletableFuture.completedFuture(findByResponsibleSubteam(subteam));
+    @Override
+    public CompletableFuture<Subsystem> updateStatusAsync(Long subsystemId, Subsystem.Status status,
+                                                      Consumer<Subsystem> onSuccess,
+                                                      Consumer<Throwable> onFailure) {
+        try {
+            Subsystem result = updateStatus(subsystemId, status);
+            if (onSuccess != null) {
+                onSuccess.accept(result);
+            }
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            return CompletableFuture.failedFuture(e);
+        }
     }
-
+    
     @Async
-    public CompletableFuture<Subsystem> saveAsync(Subsystem subsystem) {
-        return CompletableFuture.completedFuture(save(subsystem));
+    @Override
+    public CompletableFuture<Subsystem> assignResponsibleSubteamAsync(Long subsystemId, Long subteamId,
+                                                                  Consumer<Subsystem> onSuccess,
+                                                                  Consumer<Throwable> onFailure) {
+        try {
+            Subsystem result = assignResponsibleSubteam(subsystemId, subteamId);
+            if (onSuccess != null) {
+                onSuccess.accept(result);
+            }
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            return CompletableFuture.failedFuture(e);
+        }
     }
-
+    
     @Async
-    public CompletableFuture<Subsystem> createSubsystemAsync(String name, String description, 
-                                                           Subsystem.Status status, Long responsibleSubteamId) {
-        return CompletableFuture.completedFuture(createSubsystem(name, description, status, responsibleSubteamId));
+    @Override
+    public CompletableFuture<Subsystem> findByIdAsync(Long id,
+                                                  Consumer<Subsystem> onSuccess,
+                                                  Consumer<Throwable> onFailure) {
+        try {
+            Subsystem result = findById(id);
+            if (onSuccess != null) {
+                onSuccess.accept(result);
+            }
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            return CompletableFuture.failedFuture(e);
+        }
     }
-
+    
     @Async
-    public CompletableFuture<Subsystem> updateStatusAsync(Long subsystemId, Subsystem.Status status) {
-        return CompletableFuture.completedFuture(updateStatus(subsystemId, status));
+    @Override
+    public CompletableFuture<List<Subsystem>> findAllAsync(
+        Consumer<List<Subsystem>> onSuccess, 
+        Consumer<Throwable> onFailure) {
+        try {
+            List<Subsystem> result = findAll();
+            if (onSuccess != null) {
+                onSuccess.accept(result);
+            }
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            return CompletableFuture.failedFuture(e);
+        }
     }
-
+    
     @Async
-    public CompletableFuture<Subsystem> assignResponsibleSubteamAsync(Long subsystemId, Long subteamId) {
-        return CompletableFuture.completedFuture(assignResponsibleSubteam(subsystemId, subteamId));
+    @Override
+    public CompletableFuture<Subsystem> saveAsync(Subsystem subsystem,
+                                              Consumer<Subsystem> onSuccess,
+                                              Consumer<Throwable> onFailure) {
+        try {
+            Subsystem result = save(subsystem);
+            if (onSuccess != null) {
+                onSuccess.accept(result);
+            }
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            return CompletableFuture.failedFuture(e);
+        }
+    }
+    
+    @Async
+    @Override
+    public CompletableFuture<Void> deleteAsync(Subsystem subsystem,
+                                          Consumer<Void> onSuccess,
+                                          Consumer<Throwable> onFailure) {
+        try {
+            delete(subsystem);
+            if (onSuccess != null) {
+                onSuccess.accept(null);
+            }
+            return CompletableFuture.completedFuture(null);
+        } catch (Exception e) {
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            return CompletableFuture.failedFuture(e);
+        }
+    }
+    
+    @Async
+    @Override
+    public CompletableFuture<Boolean> deleteByIdAsync(Long id,
+                                                  Consumer<Boolean> onSuccess,
+                                                  Consumer<Throwable> onFailure) {
+        try {
+            boolean result = deleteById(id);
+            if (onSuccess != null) {
+                onSuccess.accept(result);
+            }
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            if (onFailure != null) {
+                onFailure.accept(e);
+            }
+            return CompletableFuture.failedFuture(e);
+        }
     }
 }
