@@ -20,48 +20,107 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Spring Boot implementation of TaskService.
- * CORRECTED: Uses typed repository reference for custom methods.
+ * Spring Boot implementation of TaskService using composition pattern.
+ * Converted from inheritance to composition for architectural consistency.
+ * This is the most complex service with task management, dependencies, and component associations.
  */
 @Service("taskServiceImpl")
 @Transactional
-public class TaskServiceImpl extends AbstractSpringService<Task, Long> 
-        implements TaskService {
+public class TaskServiceImpl implements TaskService {
     
     private static final Logger LOGGER = Logger.getLogger(TaskServiceImpl.class.getName());
     
-    // SOLUTION: Keep typed repository references for custom methods
     private final TaskRepository taskRepository;
     private final ProjectRepository projectRepository;
     private final ComponentRepository componentRepository;
     
-    public TaskServiceImpl(
-            TaskRepository taskRepository,
-            ProjectRepository projectRepository,
-            ComponentRepository componentRepository) {
-        super(taskRepository);  // Pass to AbstractSpringService for basic CRUD
-        this.taskRepository = taskRepository;       // Keep typed reference for custom methods
+    /**
+     * Constructor injection for repositories.
+     * No @Autowired needed with single constructor.
+     */
+    public TaskServiceImpl(TaskRepository taskRepository,
+                          ProjectRepository projectRepository,
+                          ComponentRepository componentRepository) {
+        this.taskRepository = taskRepository;
         this.projectRepository = projectRepository;
         this.componentRepository = componentRepository;
     }
-
+    
+    // =========================================================================
+    // BASIC CRUD OPERATIONS - Implementing Service<Task, Long> interface
+    // =========================================================================
+    
     @Override
-    protected String getEntityName() {
-        return "task";
+    public Task findById(Long id) {
+        if (id == null) {
+            return null;
+        }
+        return taskRepository.findById(id).orElse(null);
     }
     
-    // Task-specific business methods - USE TYPED REPOSITORY
+    @Override
+    public List<Task> findAll() {
+        return taskRepository.findAll();
+    }
+    
+    @Override
+    public Task save(Task entity) {
+        if (entity == null) {
+            throw new IllegalArgumentException("Task cannot be null");
+        }
+        try {
+            return taskRepository.save(entity);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error saving task", e);
+            throw new RuntimeException("Failed to save task", e);
+        }
+    }
+    
+    @Override
+    public void delete(Task entity) {
+        if (entity != null) {
+            try {
+                taskRepository.delete(entity);
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error deleting task", e);
+                throw new RuntimeException("Failed to delete task", e);
+            }
+        }
+    }
+    
+    @Override
+    public boolean deleteById(Long id) {
+        if (id != null && taskRepository.existsById(id)) {
+            try {
+                taskRepository.deleteById(id);
+                return true;
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error deleting task by ID", e);
+                throw new RuntimeException("Failed to delete task by ID", e);
+            }
+        }
+        return false;
+    }
+    
+    @Override
+    public long count() {
+        return taskRepository.count();
+    }
+    
+    // =========================================================================
+    // BUSINESS LOGIC METHODS - TaskService specific methods
+    // =========================================================================
     
     @Override
     public List<Task> findByProject(Project project) {
         if (project == null) {
             throw new IllegalArgumentException("Project cannot be null");
         }
-        // FIXED: Use typed repository for custom method
         return taskRepository.findByProject(project);
     }
     
@@ -70,7 +129,6 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long>
         if (subsystem == null) {
             throw new IllegalArgumentException("Subsystem cannot be null");
         }
-        // FIXED: Use typed repository for custom method
         return taskRepository.findBySubsystem(subsystem);
     }
     
@@ -79,20 +137,18 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long>
         if (member == null) {
             throw new IllegalArgumentException("Member cannot be null");
         }
-        // FIXED: Use typed repository for custom method
         return taskRepository.findByAssignedMember(member);
     }
     
     @Override
     public List<Task> findByCompleted(boolean completed) {
-        // FIXED: Use typed repository for custom method
         return taskRepository.findByCompleted(completed);
     }
     
     @Override
     public Task createTask(String title, Project project, Subsystem subsystem,
-            double estimatedHours, Task.Priority priority, 
-            LocalDate startDate, LocalDate endDate) {
+                          double estimatedHours, Task.Priority priority, 
+                          LocalDate startDate, LocalDate endDate) {
         if (title == null || title.trim().isEmpty()) {
             throw new IllegalArgumentException("Task title cannot be empty");
         }
@@ -127,7 +183,6 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long>
             task.setEndDate(endDate);
         }
 
-        // Use inherited save() method from AbstractSpringService
         return save(task);
     }
     
@@ -137,7 +192,6 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long>
             throw new IllegalArgumentException("Task ID cannot be null");
         }
 
-        // Use inherited findById() method from AbstractSpringService
         Task task = findById(taskId);
         if (task == null) {
             LOGGER.log(Level.WARNING, "Task not found with ID: {0}", taskId);
@@ -155,7 +209,6 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long>
 
         task.setCompleted(completed || progress == 100);
 
-        // Use inherited save() method from AbstractSpringService
         return save(task);
     }
     
@@ -165,7 +218,6 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long>
             throw new IllegalArgumentException("Task ID cannot be null");
         }
 
-        // Use inherited findById() method from AbstractSpringService
         Task task = findById(taskId);
         if (task == null) {
             LOGGER.log(Level.WARNING, "Task not found with ID: {0}", taskId);
@@ -184,7 +236,6 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long>
             }
         }
 
-        // Use inherited save() method from AbstractSpringService
         return save(task);
     }
     
@@ -199,7 +250,6 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long>
         }
 
         try {
-            // Use inherited findById() method from AbstractSpringService
             Task task = findById(taskId);
             Task dependency = findById(dependencyId);
 
@@ -210,7 +260,7 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long>
             // Add the dependency relationship
             task.addPreDependency(dependency);
 
-            // Use inherited save() method from AbstractSpringService
+            // Save both tasks to persist the bidirectional relationship
             save(task);
             save(dependency);
 
@@ -228,7 +278,6 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long>
         }
 
         try {
-            // Use inherited findById() method from AbstractSpringService
             Task task = findById(taskId);
             Task dependency = findById(dependencyId);
 
@@ -239,7 +288,7 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long>
             // Remove the dependency relationship
             task.removePreDependency(dependency);
 
-            // Use inherited save() method from AbstractSpringService
+            // Save both tasks to persist the bidirectional relationship
             save(task);
             save(dependency);
 
@@ -260,7 +309,6 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long>
             throw new IllegalArgumentException("Days must be positive");
         }
 
-        // Use typed ProjectRepository for custom method
         Project project = projectRepository.findById(projectId).orElse(null);
         if (project == null) {
             LOGGER.log(Level.WARNING, "Project not found with ID: {0}", projectId);
@@ -270,7 +318,6 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long>
         LocalDate today = LocalDate.now();
         LocalDate dueBefore = today.plusDays(days);
 
-        // FIXED: Use typed repository for custom method
         List<Task> allTasks = taskRepository.findByProject(project);
         List<Task> dueSoonTasks = new ArrayList<>();
 
@@ -290,7 +337,6 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long>
             throw new IllegalArgumentException("Task ID cannot be null");
         }
 
-        // Use inherited findById() method from AbstractSpringService
         Task task = findById(taskId);
         if (task == null) {
             LOGGER.log(Level.WARNING, "Task not found with ID: {0}", taskId);
@@ -312,16 +358,140 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long>
             }
         }
 
-        // Use inherited save() method from AbstractSpringService
         return save(task);
     }
 
-    // Spring Boot Async Methods - Use appropriate method sources
+    // =========================================================================
+    // ASYNC METHODS - Using @Async annotation with CompletableFuture
+    // Following the exact pattern from TaskService interface
+    // =========================================================================
+    
+    @Async
+    @Override
+    public CompletableFuture<Task> associateComponentsWithTaskAsync(
+            Long taskId, Set<Long> componentIds,
+            Consumer<Task> onSuccess, Consumer<Throwable> onFailure) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                Task result = updateRequiredComponents(taskId, componentIds);
+                if (onSuccess != null) onSuccess.accept(result);
+                return result;
+            } catch (Exception e) {
+                if (onFailure != null) onFailure.accept(e);
+                throw new RuntimeException(e);
+            }
+        });
+    }
+    
+    @Async
+    @Override
+    public CompletableFuture<List<Task>> findByProjectAsync(
+            Project project,
+            Consumer<List<Task>> onSuccess,
+            Consumer<Throwable> onFailure) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                List<Task> result = findByProject(project);
+                if (onSuccess != null) onSuccess.accept(result);
+                return result;
+            } catch (Exception e) {
+                if (onFailure != null) onFailure.accept(e);
+                throw new RuntimeException(e);
+            }
+        });
+    }
+    
+    @Async
+    @Override
+    public CompletableFuture<Task> createTaskAsync(
+            String title, Project project, Subsystem subsystem,
+            double estimatedHours, Task.Priority priority,
+            LocalDate startDate, LocalDate endDate,
+            Consumer<Task> onSuccess, Consumer<Throwable> onFailure) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                Task result = createTask(title, project, subsystem, estimatedHours, priority, startDate, endDate);
+                if (onSuccess != null) onSuccess.accept(result);
+                return result;
+            } catch (Exception e) {
+                if (onFailure != null) onFailure.accept(e);
+                throw new RuntimeException(e);
+            }
+        });
+    }
+    
+    @Async
+    @Override
+    public CompletableFuture<Boolean> deleteByIdAsync(
+            Long id, Consumer<Boolean> onSuccess, Consumer<Throwable> onFailure) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                Boolean result = deleteById(id);
+                if (onSuccess != null) onSuccess.accept(result);
+                return result;
+            } catch (Exception e) {
+                if (onFailure != null) onFailure.accept(e);
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    @Async
+    @Override
+    public CompletableFuture<Task> updateTaskProgressAsync(
+            Long taskId, int progress, boolean completed,
+            Consumer<Task> onSuccess, Consumer<Throwable> onFailure) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                Task result = updateTaskProgress(taskId, progress, completed);
+                if (onSuccess != null) onSuccess.accept(result);
+                return result;
+            } catch (Exception e) {
+                if (onFailure != null) onFailure.accept(e);
+                throw new RuntimeException(e);
+            }
+        });
+    }
+    
+    @Async
+    @Override
+    public CompletableFuture<Task> assignMembersAsync(
+            Long taskId, Set<TeamMember> members,
+            Consumer<Task> onSuccess, Consumer<Throwable> onFailure) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                Task result = assignMembers(taskId, members);
+                if (onSuccess != null) onSuccess.accept(result);
+                return result;
+            } catch (Exception e) {
+                if (onFailure != null) onFailure.accept(e);
+                throw new RuntimeException(e);
+            }
+        });
+    }
+    
+    @Async
+    @Override
+    public CompletableFuture<List<Task>> getTasksDueSoonAsync(
+            Long projectId, int days,
+            Consumer<List<Task>> onSuccess, Consumer<Throwable> onFailure) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                List<Task> result = getTasksDueSoon(projectId, days);
+                if (onSuccess != null) onSuccess.accept(result);
+                return result;
+            } catch (Exception e) {
+                if (onFailure != null) onFailure.accept(e);
+                throw new RuntimeException(e);
+            }
+        });
+    }
+    
+    // Additional async methods for complete functionality
     
     @Async
     public CompletableFuture<List<Task>> findAllAsync() {
         try {
-            // Use inherited findAll() method from AbstractSpringService
             List<Task> result = findAll();
             return CompletableFuture.completedFuture(result);
         } catch (Exception e) {
@@ -334,7 +504,6 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long>
     @Async
     public CompletableFuture<Task> findByIdAsync(Long id) {
         try {
-            // Use inherited findById() method from AbstractSpringService
             Task result = findById(id);
             return CompletableFuture.completedFuture(result);
         } catch (Exception e) {
@@ -347,7 +516,6 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long>
     @Async
     public CompletableFuture<Task> saveAsync(Task entity) {
         try {
-            // Use inherited save() method from AbstractSpringService
             Task result = save(entity);
             return CompletableFuture.completedFuture(result);
         } catch (Exception e) {
@@ -358,10 +526,33 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long>
     }
     
     @Async
-    public CompletableFuture<Boolean> deleteByIdAsync(Long id) {
+    public CompletableFuture<List<Task>> findBySubsystemAsync(Subsystem subsystem) {
         try {
-            // Use inherited deleteById() method from AbstractSpringService
-            boolean result = deleteById(id);
+            List<Task> result = findBySubsystem(subsystem);
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<List<Task>> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
+        }
+    }
+    
+    @Async
+    public CompletableFuture<List<Task>> findByAssignedMemberAsync(TeamMember member) {
+        try {
+            List<Task> result = findByAssignedMember(member);
+            return CompletableFuture.completedFuture(result);
+        } catch (Exception e) {
+            CompletableFuture<List<Task>> future = new CompletableFuture<>();
+            future.completeExceptionally(e);
+            return future;
+        }
+    }
+    
+    @Async
+    public CompletableFuture<Boolean> addDependencyAsync(Long taskId, Long dependencyId) {
+        try {
+            boolean result = addDependency(taskId, dependencyId);
             return CompletableFuture.completedFuture(result);
         } catch (Exception e) {
             CompletableFuture<Boolean> future = new CompletableFuture<>();
@@ -371,62 +562,12 @@ public class TaskServiceImpl extends AbstractSpringService<Task, Long>
     }
     
     @Async
-    public CompletableFuture<List<Task>> findByProjectAsync(Project project) {
+    public CompletableFuture<Boolean> removeDependencyAsync(Long taskId, Long dependencyId) {
         try {
-            List<Task> result = findByProject(project);
+            boolean result = removeDependency(taskId, dependencyId);
             return CompletableFuture.completedFuture(result);
         } catch (Exception e) {
-            CompletableFuture<List<Task>> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
-    }
-    
-    @Async
-    public CompletableFuture<Task> createTaskAsync(String title, Project project, Subsystem subsystem,
-                                                  double estimatedHours, Task.Priority priority,
-                                                  LocalDate startDate, LocalDate endDate) {
-        try {
-            Task result = createTask(title, project, subsystem, estimatedHours, priority, startDate, endDate);
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<Task> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
-    }
-    
-    @Async
-    public CompletableFuture<Task> updateTaskProgressAsync(Long taskId, int progress, boolean completed) {
-        try {
-            Task result = updateTaskProgress(taskId, progress, completed);
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<Task> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
-    }
-    
-    @Async
-    public CompletableFuture<Task> assignMembersAsync(Long taskId, Set<TeamMember> members) {
-        try {
-            Task result = assignMembers(taskId, members);
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<Task> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
-    }
-    
-    @Async
-    public CompletableFuture<List<Task>> getTasksDueSoonAsync(Long projectId, int days) {
-        try {
-            List<Task> result = getTasksDueSoon(projectId, days);
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<List<Task>> future = new CompletableFuture<>();
+            CompletableFuture<Boolean> future = new CompletableFuture<>();
             future.completeExceptionally(e);
             return future;
         }
