@@ -20,33 +20,91 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Spring Boot implementation of ProjectService.
- * FIXED: Updated to extend fixed AbstractSpringService without generic R parameter.
+ * Spring Boot implementation of ProjectService using composition pattern.
+ * Converted from inheritance to composition for architectural consistency.
  */
 @Service("projectServiceImpl")
 @Transactional
-public class ProjectServiceImpl extends AbstractSpringService<Project, Long> 
-        implements ProjectService {
+public class ProjectServiceImpl implements ProjectService {
     
     private static final Logger LOGGER = Logger.getLogger(ProjectServiceImpl.class.getName());
     
-    // Additional dependencies injected via constructor
-    private final TaskRepository taskRepository;
-    // Keep typed reference for specific ProjectRepository methods
     private final ProjectRepository projectRepository;
+    private final TaskRepository taskRepository;
     
+    /**
+     * Constructor injection for repositories.
+     * No @Autowired needed with single constructor.
+     */
     public ProjectServiceImpl(ProjectRepository projectRepository, TaskRepository taskRepository) {
-        super(projectRepository);  // FIXED: Now works with corrected AbstractSpringService
         this.projectRepository = projectRepository;
         this.taskRepository = taskRepository;
     }
-
+    
+    // =========================================================================
+    // BASIC CRUD OPERATIONS - Implementing Service<Project, Long> interface
+    // =========================================================================
+    
     @Override
-    protected String getEntityName() {
-        return "project";
+    public Project findById(Long id) {
+        if (id == null) {
+            return null;
+        }
+        return projectRepository.findById(id).orElse(null);
     }
     
-    // Project-specific business methods
+    @Override
+    public List<Project> findAll() {
+        return projectRepository.findAll();
+    }
+    
+    @Override
+    public Project save(Project entity) {
+        if (entity == null) {
+            throw new IllegalArgumentException("Project cannot be null");
+        }
+        try {
+            return projectRepository.save(entity);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error saving project", e);
+            throw new RuntimeException("Failed to save project", e);
+        }
+    }
+    
+    @Override
+    public void delete(Project entity) {
+        if (entity != null) {
+            try {
+                projectRepository.delete(entity);
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error deleting project", e);
+                throw new RuntimeException("Failed to delete project", e);
+            }
+        }
+    }
+    
+    @Override
+    public boolean deleteById(Long id) {
+        if (id != null && projectRepository.existsById(id)) {
+            try {
+                projectRepository.deleteById(id);
+                return true;
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error deleting project by ID", e);
+                throw new RuntimeException("Failed to delete project by ID", e);
+            }
+        }
+        return false;
+    }
+    
+    @Override
+    public long count() {
+        return projectRepository.count();
+    }
+    
+    // =========================================================================
+    // BUSINESS LOGIC METHODS - ProjectService specific methods
+    // =========================================================================
     
     @Override
     public List<Project> findByName(String name) {
@@ -159,7 +217,7 @@ public class ProjectServiceImpl extends AbstractSpringService<Project, Long>
             summary.put("goalEndDate", project.getGoalEndDate());
             summary.put("hardDeadline", project.getHardDeadline());
             
-            // Get task statistics using Spring Data JPA
+            // Get task statistics using TaskRepository
             List<Task> tasks = taskRepository.findByProject(project);
             int totalTasks = tasks != null ? tasks.size() : 0;
             long completedTasks = tasks != null ? 
@@ -201,7 +259,9 @@ public class ProjectServiceImpl extends AbstractSpringService<Project, Long>
         }
     }
 
-    // Spring Boot Async Methods
+    // =========================================================================
+    // ASYNC METHODS - Using @Async annotation with CompletableFuture
+    // =========================================================================
     
     @Async
     public CompletableFuture<List<Project>> findAllAsync() {

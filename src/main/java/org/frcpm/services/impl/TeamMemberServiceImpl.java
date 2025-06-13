@@ -14,46 +14,103 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Spring Boot implementation of TeamMemberService.
- * CORRECTED: Uses dual repository pattern - typed repository for custom methods,
- * inherited methods for basic CRUD operations.
+ * Spring Boot implementation of TeamMemberService using composition pattern.
+ * Converted from inheritance to composition for architectural consistency.
  */
 @Service("teamMemberServiceImpl")
 @Transactional
-public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Long> 
-        implements TeamMemberService {
+public class TeamMemberServiceImpl implements TeamMemberService {
     
     private static final Logger LOGGER = Logger.getLogger(TeamMemberServiceImpl.class.getName());
     
-    // SOLUTION: Keep typed repository references for custom methods
     private final TeamMemberRepository teamMemberRepository;
     private final SubteamRepository subteamRepository;
     
-    public TeamMemberServiceImpl(
-            TeamMemberRepository teamMemberRepository,
-            SubteamRepository subteamRepository) {
-        super(teamMemberRepository);  // Pass to AbstractSpringService for basic CRUD
-        this.teamMemberRepository = teamMemberRepository;  // Keep for custom methods
+    /**
+     * Constructor injection for repositories.
+     * No @Autowired needed with single constructor.
+     */
+    public TeamMemberServiceImpl(TeamMemberRepository teamMemberRepository,
+                                SubteamRepository subteamRepository) {
+        this.teamMemberRepository = teamMemberRepository;
         this.subteamRepository = subteamRepository;
     }
-
+    
+    // =========================================================================
+    // BASIC CRUD OPERATIONS - Implementing Service<TeamMember, Long> interface
+    // =========================================================================
+    
     @Override
-    protected String getEntityName() {
-        return "team member";
+    public TeamMember findById(Long id) {
+        if (id == null) {
+            return null;
+        }
+        return teamMemberRepository.findById(id).orElse(null);
     }
     
-    // TeamMember-specific business methods - USE TYPED REPOSITORY
+    @Override
+    public List<TeamMember> findAll() {
+        return teamMemberRepository.findAll();
+    }
+    
+    @Override
+    public TeamMember save(TeamMember entity) {
+        if (entity == null) {
+            throw new IllegalArgumentException("TeamMember cannot be null");
+        }
+        try {
+            return teamMemberRepository.save(entity);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error saving team member", e);
+            throw new RuntimeException("Failed to save team member", e);
+        }
+    }
+    
+    @Override
+    public void delete(TeamMember entity) {
+        if (entity != null) {
+            try {
+                teamMemberRepository.delete(entity);
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error deleting team member", e);
+                throw new RuntimeException("Failed to delete team member", e);
+            }
+        }
+    }
+    
+    @Override
+    public boolean deleteById(Long id) {
+        if (id != null && teamMemberRepository.existsById(id)) {
+            try {
+                teamMemberRepository.deleteById(id);
+                return true;
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error deleting team member by ID", e);
+                throw new RuntimeException("Failed to delete team member by ID", e);
+            }
+        }
+        return false;
+    }
+    
+    @Override
+    public long count() {
+        return teamMemberRepository.count();
+    }
+    
+    // =========================================================================
+    // BUSINESS LOGIC METHODS - TeamMemberService specific methods
+    // =========================================================================
     
     @Override
     public Optional<TeamMember> findByUsername(String username) {
         if (username == null || username.trim().isEmpty()) {
             return Optional.empty();
         }
-        // FIXED: Use typed repository for custom method
         return teamMemberRepository.findByUsername(username);
     }
     
@@ -62,7 +119,6 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
         if (subteam == null) {
             throw new IllegalArgumentException("Subteam cannot be null");
         }
-        // FIXED: Use typed repository for custom method
         return teamMemberRepository.findBySubteam(subteam);
     }
     
@@ -71,13 +127,11 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
         if (skill == null || skill.trim().isEmpty()) {
             throw new IllegalArgumentException("Skill cannot be empty");
         }
-        // FIXED: Use typed repository for custom method
         return teamMemberRepository.findBySkillsContainingIgnoreCase(skill);
     }
     
     @Override
     public List<TeamMember> findLeaders() {
-        // FIXED: Use typed repository for custom method
         return teamMemberRepository.findByIsLeaderTrue();
     }
     
@@ -88,7 +142,7 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
             throw new IllegalArgumentException("Username cannot be empty");
         }
         
-        // Check if username already exists using typed repository
+        // Check if username already exists
         Optional<TeamMember> existing = teamMemberRepository.findByUsername(username);
         if (existing.isPresent()) {
             throw new IllegalArgumentException("Username already exists");
@@ -99,7 +153,6 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
         member.setPhone(phone);
         member.setLeader(isLeader);
         
-        // Use inherited save() method from AbstractSpringService
         return save(member);
     }
     
@@ -109,7 +162,6 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
             throw new IllegalArgumentException("Team member ID cannot be null");
         }
         
-        // Use inherited findById() method from AbstractSpringService
         TeamMember member = findById(memberId);
         if (member == null) {
             LOGGER.log(Level.WARNING, "Team member not found with ID: {0}", memberId);
@@ -137,7 +189,6 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
             member.setSubteam(subteam);
         }
         
-        // Use inherited save() method from AbstractSpringService
         return save(member);
     }
     
@@ -147,7 +198,6 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
             throw new IllegalArgumentException("Member ID cannot be null");
         }
         
-        // Use inherited findById() method from AbstractSpringService
         TeamMember member = findById(memberId);
         if (member == null) {
             LOGGER.log(Level.WARNING, "Team member not found with ID: {0}", memberId);
@@ -155,8 +205,6 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
         }
         
         member.setSkills(skills);
-        
-        // Use inherited save() method from AbstractSpringService
         return save(member);
     }
     
@@ -166,7 +214,6 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
             throw new IllegalArgumentException("Member ID cannot be null");
         }
         
-        // Use inherited findById() method from AbstractSpringService
         TeamMember member = findById(memberId);
         if (member == null) {
             LOGGER.log(Level.WARNING, "Team member not found with ID: {0}", memberId);
@@ -181,103 +228,197 @@ public class TeamMemberServiceImpl extends AbstractSpringService<TeamMember, Lon
             member.setPhone(phone);
         }
         
-        // Use inherited save() method from AbstractSpringService
         return save(member);
     }
 
-    // Spring Boot Async Methods - Use appropriate method sources
+    // =========================================================================
+    // ASYNC METHODS - Using @Async annotation with CompletableFuture
+    // Following the exact pattern from TeamMemberService interface
+    // =========================================================================
     
     @Async
-    public CompletableFuture<List<TeamMember>> findAllAsync() {
-        try {
-            // Use inherited findAll() method from AbstractSpringService
-            List<TeamMember> result = findAll();
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<List<TeamMember>> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
+    @Override
+    public CompletableFuture<List<TeamMember>> findAllAsync(
+            Consumer<List<TeamMember>> onSuccess, 
+            Consumer<Throwable> onFailure) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                List<TeamMember> result = findAll();
+                if (onSuccess != null) onSuccess.accept(result);
+                return result;
+            } catch (Exception e) {
+                if (onFailure != null) onFailure.accept(e);
+                throw new RuntimeException(e);
+            }
+        });
     }
     
     @Async
-    public CompletableFuture<TeamMember> findByIdAsync(Long id) {
-        try {
-            // Use inherited findById() method from AbstractSpringService
-            TeamMember result = findById(id);
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<TeamMember> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
+    @Override
+    public CompletableFuture<TeamMember> findByIdAsync(
+            Long id, 
+            Consumer<TeamMember> onSuccess, 
+            Consumer<Throwable> onFailure) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                TeamMember result = findById(id);
+                if (onSuccess != null) onSuccess.accept(result);
+                return result;
+            } catch (Exception e) {
+                if (onFailure != null) onFailure.accept(e);
+                throw new RuntimeException(e);
+            }
+        });
     }
     
     @Async
-    public CompletableFuture<TeamMember> saveAsync(TeamMember entity) {
-        try {
-            // Use inherited save() method from AbstractSpringService
-            TeamMember result = save(entity);
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<TeamMember> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
+    @Override
+    public CompletableFuture<TeamMember> saveAsync(
+            TeamMember entity, 
+            Consumer<TeamMember> onSuccess, 
+            Consumer<Throwable> onFailure) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                TeamMember result = save(entity);
+                if (onSuccess != null) onSuccess.accept(result);
+                return result;
+            } catch (Exception e) {
+                if (onFailure != null) onFailure.accept(e);
+                throw new RuntimeException(e);
+            }
+        });
     }
     
     @Async
-    public CompletableFuture<Boolean> deleteByIdAsync(Long id) {
-        try {
-            // Use inherited deleteById() method from AbstractSpringService
-            boolean result = deleteById(id);
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<Boolean> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
+    @Override
+    public CompletableFuture<Boolean> deleteByIdAsync(
+            Long id, 
+            Consumer<Boolean> onSuccess, 
+            Consumer<Throwable> onFailure) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                Boolean result = deleteById(id);
+                if (onSuccess != null) onSuccess.accept(result);
+                return result;
+            } catch (Exception e) {
+                if (onFailure != null) onFailure.accept(e);
+                throw new RuntimeException(e);
+            }
+        });
     }
     
     @Async
-    public CompletableFuture<Optional<TeamMember>> findByUsernameAsync(String username) {
-        try {
-            Optional<TeamMember> result = findByUsername(username);
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<Optional<TeamMember>> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
+    @Override
+    public CompletableFuture<Void> deleteAsync(
+            TeamMember entity, 
+            Consumer<Void> onSuccess, 
+            Consumer<Throwable> onFailure) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                delete(entity);
+                if (onSuccess != null) onSuccess.accept(null);
+                return null;
+            } catch (Exception e) {
+                if (onFailure != null) onFailure.accept(e);
+                throw new RuntimeException(e);
+            }
+        });
     }
     
     @Async
-    public CompletableFuture<List<TeamMember>> findBySubteamAsync(Subteam subteam) {
-        try {
-            List<TeamMember> result = findBySubteam(subteam);
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<List<TeamMember>> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
+    @Override
+    public CompletableFuture<Long> countAsync(
+            Consumer<Long> onSuccess, 
+            Consumer<Throwable> onFailure) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                Long result = count();
+                if (onSuccess != null) onSuccess.accept(result);
+                return result;
+            } catch (Exception e) {
+                if (onFailure != null) onFailure.accept(e);
+                throw new RuntimeException(e);
+            }
+        });
     }
     
     @Async
-    public CompletableFuture<List<TeamMember>> findLeadersAsync() {
-        try {
-            List<TeamMember> result = findLeaders();
-            return CompletableFuture.completedFuture(result);
-        } catch (Exception e) {
-            CompletableFuture<List<TeamMember>> future = new CompletableFuture<>();
-            future.completeExceptionally(e);
-            return future;
-        }
+    @Override
+    public CompletableFuture<Optional<TeamMember>> findByUsernameAsync(
+            String username, 
+            Consumer<Optional<TeamMember>> onSuccess, 
+            Consumer<Throwable> onFailure) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                Optional<TeamMember> result = findByUsername(username);
+                if (onSuccess != null) onSuccess.accept(result);
+                return result;
+            } catch (Exception e) {
+                if (onFailure != null) onFailure.accept(e);
+                throw new RuntimeException(e);
+            }
+        });
     }
     
     @Async
-    public CompletableFuture<TeamMember> createTeamMemberAsync(String username, String firstName, String lastName, 
-                                                              String email, String phone, boolean isLeader) {
+    @Override
+    public CompletableFuture<List<TeamMember>> findBySubteamAsync(
+            Subteam subteam, 
+            Consumer<List<TeamMember>> onSuccess, 
+            Consumer<Throwable> onFailure) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                List<TeamMember> result = findBySubteam(subteam);
+                if (onSuccess != null) onSuccess.accept(result);
+                return result;
+            } catch (Exception e) {
+                if (onFailure != null) onFailure.accept(e);
+                throw new RuntimeException(e);
+            }
+        });
+    }
+    
+    @Async
+    @Override
+    public CompletableFuture<List<TeamMember>> findBySkillAsync(
+            String skill, 
+            Consumer<List<TeamMember>> onSuccess, 
+            Consumer<Throwable> onFailure) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                List<TeamMember> result = findBySkill(skill);
+                if (onSuccess != null) onSuccess.accept(result);
+                return result;
+            } catch (Exception e) {
+                if (onFailure != null) onFailure.accept(e);
+                throw new RuntimeException(e);
+            }
+        });
+    }
+    
+    @Async
+    @Override
+    public CompletableFuture<List<TeamMember>> findLeadersAsync(
+            Consumer<List<TeamMember>> onSuccess, 
+            Consumer<Throwable> onFailure) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                List<TeamMember> result = findLeaders();
+                if (onSuccess != null) onSuccess.accept(result);
+                return result;
+            } catch (Exception e) {
+                if (onFailure != null) onFailure.accept(e);
+                throw new RuntimeException(e);
+            }
+        });
+    }
+    
+    // Additional async methods for business operations
+    
+    @Async
+    public CompletableFuture<TeamMember> createTeamMemberAsync(
+            String username, String firstName, String lastName, 
+            String email, String phone, boolean isLeader) {
         try {
             TeamMember result = createTeamMember(username, firstName, lastName, email, phone, isLeader);
             return CompletableFuture.completedFuture(result);
