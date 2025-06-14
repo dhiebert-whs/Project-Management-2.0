@@ -7,10 +7,8 @@ import org.frcpm.models.Milestone;
 import org.frcpm.models.Project;
 import org.frcpm.models.Subsystem;
 import org.frcpm.models.Task;
-//import org.frcpm.models.TeamMember;
 import org.frcpm.repositories.spring.MilestoneRepository;
 import org.frcpm.repositories.spring.ProjectRepository;
-import org.frcpm.repositories.spring.SubsystemRepository;
 import org.frcpm.repositories.spring.TaskRepository;
 import org.frcpm.services.GanttDataService;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,8 +25,8 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Test class for VisualizationService implementation using Spring Boot testing patterns.
- * Converted from JavaFX to Spring Boot, removing JavaFX dependencies.
+ * Test class for VisualizationService implementation using proven AttendanceServiceTest pattern.
+ * Fixed to follow the systematic pattern that has been successful across 11 other service tests.
  */
 @ExtendWith(MockitoExtension.class)
 class VisualizationServiceTest {
@@ -43,46 +41,32 @@ class VisualizationServiceTest {
     private MilestoneRepository milestoneRepository;
     
     @Mock
-    private SubsystemRepository subsystemRepository;
-    
-    @Mock
     private GanttDataService ganttDataService;
     
     private VisualizationServiceImpl visualizationService;
     
     private Project testProject;
     private Task testTask;
+    private Task testCompletedTask;
+    private Task testOverdueTask;
     private Milestone testMilestone;
     private Subsystem testSubsystem;
-    // Removed unused testMember field
     private LocalDate now;
     private Map<String, Object> testGanttData;
-    private List<GanttChartData> testTasksGanttData;
-    private List<GanttChartData> testMilestonesGanttData;
     
     @BeforeEach
     void setUp() {
-        // Initialize dates and objects
+        // Create test objects ONLY - no mock stubbing here
         now = LocalDate.now();
         testProject = createTestProject();
         testSubsystem = createTestSubsystem();
         testTask = createTestTask();
+        testCompletedTask = createTestCompletedTask();
+        testOverdueTask = createTestOverdueTask();
         testMilestone = createTestMilestone();
-        // Removed unused testMember initialization
-        testTasksGanttData = createTestTasksGanttData();
-        testMilestonesGanttData = createTestMilestonesGanttData();
         testGanttData = createTestGanttData();
         
-        // Configure mock repository responses
-        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
-        when(taskRepository.findByProject(testProject)).thenReturn(List.of(testTask));
-        when(milestoneRepository.findByProject(testProject)).thenReturn(List.of(testMilestone));
-        
-        // Configure GanttDataService mocks
-        when(ganttDataService.formatTasksForGantt(eq(1L), any(), any())).thenReturn(testGanttData);
-        when(ganttDataService.getGanttDataForDate(eq(1L), any())).thenReturn(testGanttData);
-        
-        // Create service with injected mocks - using correct constructor based on actual service
+        // Create service with injected mocks
         visualizationService = new VisualizationServiceImpl(
             projectRepository, taskRepository, milestoneRepository, ganttDataService
         );
@@ -122,37 +106,43 @@ class VisualizationServiceTest {
     }
     
     /**
+     * Creates a completed test task for use in tests.
+     */
+    private Task createTestCompletedTask() {
+        Task task = new Task("Completed Task", testProject, testSubsystem);
+        task.setId(2L);
+        task.setDescription("Completed Description");
+        task.setStartDate(now.minusDays(5));
+        task.setEndDate(now.minusDays(1));
+        task.setPriority(Task.Priority.HIGH);
+        task.setProgress(100);
+        return task;
+    }
+    
+    /**
+     * Creates an overdue test task for use in tests.
+     */
+    private Task createTestOverdueTask() {
+        Task task = new Task("Overdue Task", testProject, testSubsystem);
+        task.setId(3L);
+        task.setDescription("Overdue Description");
+        task.setStartDate(now.minusDays(10));
+        task.setEndDate(now.minusDays(2));
+        task.setPriority(Task.Priority.HIGH);
+        task.setProgress(30);
+        return task;
+    }
+    
+    /**
      * Creates a test milestone for use in tests.
      */
     private Milestone createTestMilestone() {
         Milestone milestone = new Milestone("Test Milestone", now.plusDays(10), testProject);
         milestone.setId(1L);
         milestone.setDescription("Test Description");
+        // Milestone.isPassed() is automatically calculated based on date vs LocalDate.now()
+        // Since we set the date to now.plusDays(10), isPassed() will return false
         return milestone;
-    }
-    
-    // Removed unused createTestMember method
-    
-    /**
-     * Creates test task GanttChartData for use in tests.
-     */
-    private List<GanttChartData> createTestTasksGanttData() {
-        GanttChartData data = new GanttChartData("task_1", "Test Task", now, now.plusDays(5));
-        data.setType("task");
-        data.setProgress(50);
-        data.setColor("#4285f4");
-        data.setSubsystem("Test Subsystem");
-        return List.of(data);
-    }
-    
-    /**
-     * Creates test milestone GanttChartData for use in tests.
-     */
-    private List<GanttChartData> createTestMilestonesGanttData() {
-        GanttChartData data = new GanttChartData("milestone_1", "Test Milestone", now.plusDays(10), now.plusDays(10));
-        data.setType("milestone");
-        data.setColor("#6f42c1");
-        return List.of(data);
     }
     
     /**
@@ -160,25 +150,42 @@ class VisualizationServiceTest {
      */
     private Map<String, Object> createTestGanttData() {
         Map<String, Object> data = new HashMap<>();
-        data.put("tasks", testTasksGanttData);
-        data.put("milestones", testMilestonesGanttData);
+        
+        List<GanttChartData> tasks = new ArrayList<>();
+        GanttChartData taskData = new GanttChartData("task_1", "Test Task", now, now.plusDays(5));
+        taskData.setType("task");
+        taskData.setProgress(50);
+        taskData.setColor("#4285f4");
+        tasks.add(taskData);
+        
+        List<GanttChartData> milestones = new ArrayList<>();
+        GanttChartData milestoneData = new GanttChartData("milestone_1", "Test Milestone", now.plusDays(10), now.plusDays(10));
+        milestoneData.setType("milestone");
+        milestoneData.setColor("#6f42c1");
+        milestones.add(milestoneData);
+        
+        data.put("tasks", tasks);
+        data.put("milestones", milestones);
         data.put("dependencies", new ArrayList<>());
         data.put("startDate", now.toString());
         data.put("endDate", now.plusDays(90).toString());
         data.put("projectName", "Test Project");
+        
         return data;
     }
     
     @Test
     void testCreateGanttChartPane() {
+        // Setup - Only stub what THIS test needs
+        when(ganttDataService.formatTasksForGantt(eq(1L), any(LocalDate.class), any(LocalDate.class)))
+            .thenReturn(testGanttData);
+        
+        LocalDate startDate = now;
+        LocalDate endDate = now.plusDays(30);
+        
         // Execute
         Map<String, Object> result = visualizationService.createGanttChartPane(
-            1L, 
-            now, 
-            now.plusDays(30),
-            "WEEK",
-            true,
-            true
+            1L, startDate, endDate, "WEEK", true, true
         );
         
         // Verify
@@ -186,69 +193,69 @@ class VisualizationServiceTest {
         assertTrue(result.containsKey("viewMode"));
         assertEquals("WEEK", result.get("viewMode"));
         assertTrue(result.containsKey("showMilestones"));
+        assertTrue((Boolean) result.get("showMilestones"));
         assertTrue(result.containsKey("showDependencies"));
+        assertTrue((Boolean) result.get("showDependencies"));
         assertEquals("gantt", result.get("chartType"));
         
+        // Verify underlying data is included
+        assertTrue(result.containsKey("tasks"));
+        assertTrue(result.containsKey("milestones"));
+        
         // Verify service calls
-        verify(ganttDataService).formatTasksForGantt(1L, now, now.plusDays(30));
+        verify(ganttDataService).formatTasksForGantt(1L, startDate, endDate);
     }
     
     @Test
-    void testCreateGanttChartPane_NoData() {
+    void testCreateGanttChartPane_EmptyData() {
         // Setup - GanttDataService returns empty map
-        when(ganttDataService.formatTasksForGantt(anyLong(), any(), any())).thenReturn(Collections.emptyMap());
+        when(ganttDataService.formatTasksForGantt(anyLong(), any(LocalDate.class), any(LocalDate.class)))
+            .thenReturn(Collections.emptyMap());
         
         // Execute
-        Map<String, Object> result = visualizationService.createGanttChartPane(1L, now, now.plusDays(30), "WEEK", true, true);
+        Map<String, Object> result = visualizationService.createGanttChartPane(
+            1L, now, now.plusDays(30), "WEEK", true, true
+        );
         
         // Verify
         assertNotNull(result);
         assertTrue(result.isEmpty());
         
         // Verify service calls
-        verify(ganttDataService).formatTasksForGantt(1L, now, now.plusDays(30));
+        verify(ganttDataService).formatTasksForGantt(eq(1L), any(LocalDate.class), any(LocalDate.class));
     }
     
     @Test
-    void testCreateGanttChartPane_NullDates() {
-        // Execute with null dates - should use defaults
-        Map<String, Object> result = visualizationService.createGanttChartPane(1L, null, null, "MONTH", true, true);
+    void testCreateGanttChartPane_NullData() {
+        // Setup - GanttDataService returns null
+        when(ganttDataService.formatTasksForGantt(anyLong(), any(LocalDate.class), any(LocalDate.class)))
+            .thenReturn(null);
+        
+        // Execute
+        Map<String, Object> result = visualizationService.createGanttChartPane(
+            1L, now, now.plusDays(30), "MONTH", false, false
+        );
         
         // Verify
         assertNotNull(result);
-        assertTrue(result.containsKey("viewMode"));
-        assertEquals("MONTH", result.get("viewMode"));
-        assertEquals("gantt", result.get("chartType"));
+        assertTrue(result.isEmpty());
         
         // Verify service calls
-        verify(ganttDataService).formatTasksForGantt(1L, null, null);
+        verify(ganttDataService).formatTasksForGantt(eq(1L), any(LocalDate.class), any(LocalDate.class));
     }
     
     @Test
     void testCreateDailyChartPane() {
+        // Setup - Only stub what THIS test needs
+        when(ganttDataService.getGanttDataForDate(eq(1L), eq(now)))
+            .thenReturn(testGanttData);
+        
         // Execute
         Map<String, Object> result = visualizationService.createDailyChartPane(1L, now);
         
         // Verify
         assertNotNull(result);
         assertTrue(result.containsKey("date"));
-        assertEquals(now.toString(), result.get("date"));
-        assertEquals("daily", result.get("chartType"));
-        
-        // Verify service calls
-        verify(ganttDataService).getGanttDataForDate(1L, now);
-    }
-    
-    @Test
-    void testCreateDailyChartPane_NoData() {
-        // Setup - GanttDataService returns empty map
-        when(ganttDataService.getGanttDataForDate(anyLong(), any())).thenReturn(Collections.emptyMap());
-        
-        // Execute
-        Map<String, Object> result = visualizationService.createDailyChartPane(1L, now);
-        
-        // Verify
-        assertNotNull(result);
         assertEquals(now.toString(), result.get("date"));
         assertEquals("daily", result.get("chartType"));
         assertTrue(result.containsKey("tasks"));
@@ -260,7 +267,11 @@ class VisualizationServiceTest {
     
     @Test
     void testCreateDailyChartPane_NullDate() {
-        // Execute with null date - should use today's date
+        // Setup - Should use current date when null
+        when(ganttDataService.getGanttDataForDate(eq(1L), any(LocalDate.class)))
+            .thenReturn(testGanttData);
+        
+        // Execute
         Map<String, Object> result = visualizationService.createDailyChartPane(1L, null);
         
         // Verify
@@ -273,240 +284,308 @@ class VisualizationServiceTest {
     }
     
     @Test
-    void testGetProjectCompletionData() {
-        // Setup - Create test data
-        Map<String, Object> mockData = new HashMap<>();
-        mockData.put("overall", 75);
-        Map<String, Integer> subsystemCompletion = new HashMap<>();
-        subsystemCompletion.put("Test Subsystem", 75);
-        mockData.put("bySubsystem", subsystemCompletion);
+    void testCreateDailyChartPane_EmptyData() {
+        // Setup - GanttDataService returns empty map
+        when(ganttDataService.getGanttDataForDate(anyLong(), any(LocalDate.class)))
+            .thenReturn(Collections.emptyMap());
         
-        // Execute - this method doesn't exist in actual service, testing gantt data instead
-        Map<String, Object> result = visualizationService.createGanttChartPane(1L, now, now.plusDays(30), "WEEK", true, true);
+        // Execute
+        Map<String, Object> result = visualizationService.createDailyChartPane(1L, now);
         
         // Verify
         assertNotNull(result);
-        assertTrue(result.containsKey("viewMode"));
-        assertEquals("WEEK", result.get("viewMode"));
+        assertEquals(now.toString(), result.get("date"));
+        assertEquals("daily", result.get("chartType"));
+        assertTrue(result.containsKey("tasks"));
+        assertTrue(result.containsKey("milestones"));
+        
+        // Should have empty lists for tasks and milestones
+        @SuppressWarnings("unchecked")
+        List<Object> tasks = (List<Object>) result.get("tasks");
+        assertTrue(tasks.isEmpty());
+        
+        @SuppressWarnings("unchecked")
+        List<Object> milestones = (List<Object>) result.get("milestones");
+        assertTrue(milestones.isEmpty());
+        
+        // Verify service calls
+        verify(ganttDataService).getGanttDataForDate(eq(1L), eq(now));
+    }
+    
+    @Test
+    void testGetProjectCompletionData() {
+        // Setup - Only stub what THIS test needs
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
+        when(taskRepository.findByProject(testProject)).thenReturn(List.of(testTask, testCompletedTask));
+        
+        // Execute
+        Map<String, Object> result = visualizationService.getProjectCompletionData(1L);
+        
+        // Verify
+        assertNotNull(result);
+        assertTrue(result.containsKey("overall"));
+        assertTrue(result.containsKey("bySubsystem"));
+        assertTrue(result.containsKey("timeElapsed"));
+        
+        // Should have 50% completion (1 completed out of 2 tasks)
+        assertEquals(50, result.get("overall"));
+        
+        // Verify subsystem completion
+        @SuppressWarnings("unchecked")
+        Map<String, Integer> subsystemCompletion = (Map<String, Integer>) result.get("bySubsystem");
+        assertNotNull(subsystemCompletion);
+        assertTrue(subsystemCompletion.containsKey("Test Subsystem"));
+        
+        // Verify repository calls
+        verify(projectRepository).findById(1L);
+        verify(taskRepository).findByProject(testProject);
     }
     
     @Test
     void testGetProjectCompletionData_ProjectNotFound() {
-        // Setup - testing with invalid project ID
-        when(ganttDataService.formatTasksForGantt(anyLong(), any(), any())).thenReturn(Collections.emptyMap());
+        // Setup - Project not found
+        when(projectRepository.findById(999L)).thenReturn(Optional.empty());
         
         // Execute
-        Map<String, Object> result = visualizationService.createGanttChartPane(99L, now, now.plusDays(30), "WEEK", true, true);
+        Map<String, Object> result = visualizationService.getProjectCompletionData(999L);
         
         // Verify
         assertNotNull(result);
         assertTrue(result.isEmpty());
         
-        // Verify service calls
-        verify(ganttDataService).formatTasksForGantt(99L, now, now.plusDays(30));
+        // Verify repository calls
+        verify(projectRepository).findById(999L);
+        verify(taskRepository, never()).findByProject(any());
     }
     
     @Test
     void testGetTaskStatusSummary() {
-        // Setup - Create test gantt data with status information
-        Map<String, Object> mockDataWithStatus = new HashMap<>(testGanttData);
-        Map<String, Integer> statusSummary = new HashMap<>();
-        statusSummary.put("notStarted", 1);
-        statusSummary.put("inProgress", 1);
-        statusSummary.put("completed", 1);
-        mockDataWithStatus.put("statusSummary", statusSummary);
-        
-        when(ganttDataService.formatTasksForGantt(anyLong(), any(), any())).thenReturn(mockDataWithStatus);
+        // Setup - Only stub what THIS test needs
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
+        when(taskRepository.findByProject(testProject)).thenReturn(List.of(testTask, testCompletedTask, testOverdueTask));
         
         // Execute
-        Map<String, Object> result = visualizationService.createGanttChartPane(1L, now, now.plusDays(30), "WEEK", true, true);
+        Map<String, Integer> result = visualizationService.getTaskStatusSummary(1L);
         
         // Verify
         assertNotNull(result);
-        assertTrue(result.containsKey("statusSummary"));
+        assertTrue(result.containsKey("notStarted"));
+        assertTrue(result.containsKey("inProgress"));
+        assertTrue(result.containsKey("completed"));
         
-        @SuppressWarnings("unchecked")
-        Map<String, Integer> resultStatus = (Map<String, Integer>) result.get("statusSummary");
-        assertEquals(3, resultStatus.size());
-        assertEquals(1, resultStatus.get("notStarted"));
-        assertEquals(1, resultStatus.get("inProgress"));
-        assertEquals(1, resultStatus.get("completed"));
+        // Should have 0 not started, 2 in progress (50% and 30%), 1 completed (100%)
+        assertEquals(0, result.get("notStarted"));
+        assertEquals(2, result.get("inProgress"));
+        assertEquals(1, result.get("completed"));
+        
+        // Verify repository calls
+        verify(projectRepository).findById(1L);
+        verify(taskRepository).findByProject(testProject);
     }
     
     @Test
     void testGetTaskStatusSummary_ProjectNotFound() {
-        // Setup - empty gantt data response
-        when(ganttDataService.formatTasksForGantt(anyLong(), any(), any())).thenReturn(Collections.emptyMap());
+        // Setup - Project not found
+        when(projectRepository.findById(999L)).thenReturn(Optional.empty());
         
         // Execute
-        Map<String, Object> result = visualizationService.createGanttChartPane(99L, now, now.plusDays(30), "WEEK", true, true);
+        Map<String, Integer> result = visualizationService.getTaskStatusSummary(999L);
         
         // Verify
         assertNotNull(result);
         assertTrue(result.isEmpty());
         
-        // Verify service calls
-        verify(ganttDataService).formatTasksForGantt(99L, now, now.plusDays(30));
+        // Verify repository calls
+        verify(projectRepository).findById(999L);
+        verify(taskRepository, never()).findByProject(any());
     }
     
     @Test
     void testGetUpcomingDeadlines() {
-        // Setup - Create gantt data with upcoming deadlines
-        Map<String, Object> mockDataWithDeadlines = new HashMap<>(testGanttData);
-        List<Map<String, Object>> upcomingDeadlines = new ArrayList<>();
-        
-        Map<String, Object> taskDeadline = new HashMap<>();
-        taskDeadline.put("type", "task");
-        taskDeadline.put("title", "Upcoming Task");
-        taskDeadline.put("date", now.plusDays(3));
-        upcomingDeadlines.add(taskDeadline);
-        
-        Map<String, Object> milestoneDeadline = new HashMap<>();
-        milestoneDeadline.put("type", "milestone");
-        milestoneDeadline.put("title", "Upcoming Milestone");
-        milestoneDeadline.put("date", now.plusDays(5));
-        upcomingDeadlines.add(milestoneDeadline);
-        
-        mockDataWithDeadlines.put("upcomingDeadlines", upcomingDeadlines);
-        when(ganttDataService.formatTasksForGantt(anyLong(), any(), any())).thenReturn(mockDataWithDeadlines);
+        // Setup - Only stub what THIS test needs  
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
+        when(taskRepository.findByProject(testProject)).thenReturn(List.of(testTask, testCompletedTask));
+        when(milestoneRepository.findByProject(testProject)).thenReturn(List.of(testMilestone));
         
         // Execute
-        Map<String, Object> result = visualizationService.createGanttChartPane(1L, now, now.plusDays(7), "WEEK", true, true);
+        List<Map<String, Object>> result = visualizationService.getUpcomingDeadlines(1L, 14);
         
         // Verify
         assertNotNull(result);
-        assertTrue(result.containsKey("upcomingDeadlines"));
         
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> resultDeadlines = (List<Map<String, Object>>) result.get("upcomingDeadlines");
-        assertEquals(2, resultDeadlines.size());
+        // Should include the upcoming task (testTask ends in 5 days, within 14 day window)
+        // Should include the upcoming milestone (testMilestone is in 10 days, within 14 day window)
+        // testCompletedTask is completed so should be filtered out
         
-        // First item should be the task (earlier deadline)
-        assertEquals("task", resultDeadlines.get(0).get("type"));
-        assertEquals("Upcoming Task", resultDeadlines.get(0).get("title"));
-        assertEquals(now.plusDays(3), resultDeadlines.get(0).get("date"));
+        boolean hasTask = result.stream().anyMatch(item -> 
+            "task".equals(item.get("type")) && "Test Task".equals(item.get("title"))
+        );
+        boolean hasMilestone = result.stream().anyMatch(item -> 
+            "milestone".equals(item.get("type")) && "Test Milestone".equals(item.get("title"))
+        );
         
-        // Second item should be the milestone
-        assertEquals("milestone", resultDeadlines.get(1).get("type"));
-        assertEquals("Upcoming Milestone", resultDeadlines.get(1).get("title"));
-        assertEquals(now.plusDays(5), resultDeadlines.get(1).get("date"));
+        assertTrue(hasTask, "Should include upcoming test task");
+        assertTrue(hasMilestone, "Should include upcoming test milestone");
+        
+        // Verify repository calls were made correctly
+        verify(projectRepository).findById(1L);
+        verify(taskRepository).findByProject(testProject);
+        verify(milestoneRepository).findByProject(testProject);
+        
+        // Check result structure
+        for (Map<String, Object> item : result) {
+            assertTrue(item.containsKey("type"));
+            assertTrue(item.containsKey("title"));
+            assertTrue(item.containsKey("date"));
+            
+            String type = (String) item.get("type");
+            assertTrue("task".equals(type) || "milestone".equals(type));
+        }
     }
     
     @Test
-    void testGetUpcomingDeadlines_NoDeadlines() {
-        // Setup - gantt data with no upcoming deadlines
-        Map<String, Object> mockDataNoDeadlines = new HashMap<>(testGanttData);
-        mockDataNoDeadlines.put("upcomingDeadlines", Collections.emptyList());
-        when(ganttDataService.formatTasksForGantt(anyLong(), any(), any())).thenReturn(mockDataNoDeadlines);
+    void testGetUpcomingDeadlines_ProjectNotFound() {
+        // Setup - Project not found
+        when(projectRepository.findById(999L)).thenReturn(Optional.empty());
         
         // Execute
-        Map<String, Object> result = visualizationService.createGanttChartPane(1L, now, now.plusDays(7), "WEEK", true, true);
+        List<Map<String, Object>> result = visualizationService.getUpcomingDeadlines(999L, 7);
         
         // Verify
         assertNotNull(result);
-        assertTrue(result.containsKey("upcomingDeadlines"));
+        assertTrue(result.isEmpty());
         
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> resultDeadlines = (List<Map<String, Object>>) result.get("upcomingDeadlines");
-        assertTrue(resultDeadlines.isEmpty());
+        // Verify repository calls
+        verify(projectRepository).findById(999L);
+        verify(taskRepository, never()).findByProject(any());
+        verify(milestoneRepository, never()).findByProject(any());
     }
     
     @Test
     void testGetSubsystemProgress() {
-        // Setup - Create gantt data with subsystem progress
-        Map<String, Object> mockDataWithProgress = new HashMap<>(testGanttData);
-        Map<String, Double> subsystemProgress = new HashMap<>();
-        subsystemProgress.put("Subsystem 1", 50.0);
-        subsystemProgress.put("Subsystem 2", 100.0);
-        mockDataWithProgress.put("subsystemProgress", subsystemProgress);
-        
-        when(ganttDataService.formatTasksForGantt(anyLong(), any(), any())).thenReturn(mockDataWithProgress);
+        // Setup - Only stub what THIS test needs
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
+        when(taskRepository.findByProject(testProject)).thenReturn(List.of(testTask, testCompletedTask));
         
         // Execute
-        Map<String, Object> result = visualizationService.createGanttChartPane(1L, now, now.plusDays(30), "WEEK", true, true);
+        Map<String, Double> result = visualizationService.getSubsystemProgress(1L);
         
         // Verify
         assertNotNull(result);
-        assertTrue(result.containsKey("subsystemProgress"));
+        assertTrue(result.containsKey("Test Subsystem"));
         
-        @SuppressWarnings("unchecked")
-        Map<String, Double> resultProgress = (Map<String, Double>) result.get("subsystemProgress");
-        assertEquals(2, resultProgress.size());
-        assertEquals(50.0, resultProgress.get("Subsystem 1"));
-        assertEquals(100.0, resultProgress.get("Subsystem 2"));
+        // Should have average progress of 75.0 (50 + 100) / 2
+        assertEquals(75.0, result.get("Test Subsystem"));
+        
+        // Verify repository calls
+        verify(projectRepository).findById(1L);
+        verify(taskRepository).findByProject(testProject);
+    }
+    
+    @Test
+    void testGetSubsystemProgress_ProjectNotFound() {
+        // Setup - Project not found
+        when(projectRepository.findById(999L)).thenReturn(Optional.empty());
+        
+        // Execute
+        Map<String, Double> result = visualizationService.getSubsystemProgress(999L);
+        
+        // Verify
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+        
+        // Verify repository calls
+        verify(projectRepository).findById(999L);
+        verify(taskRepository, never()).findByProject(any());
     }
     
     @Test
     void testGetAtRiskTasks() {
-        // Setup - Create gantt data with at-risk tasks
-        Map<String, Object> mockDataWithRisks = new HashMap<>(testGanttData);
-        List<Map<String, Object>> atRiskTasks = new ArrayList<>();
-        
-        Map<String, Object> overdueTask = new HashMap<>();
-        overdueTask.put("title", "Overdue Task");
-        overdueTask.put("reason", "Past due date");
-        overdueTask.put("progress", 50);
-        overdueTask.put("endDate", now.minusDays(2).toString());
-        atRiskTasks.add(overdueTask);
-        
-        Map<String, Object> behindScheduleTask = new HashMap<>();
-        behindScheduleTask.put("title", "Behind Schedule Task");
-        behindScheduleTask.put("reason", "Behind schedule");
-        behindScheduleTask.put("progress", 20);
-        behindScheduleTask.put("endDate", now.plusDays(10).toString());
-        atRiskTasks.add(behindScheduleTask);
-        
-        mockDataWithRisks.put("atRiskTasks", atRiskTasks);
-        when(ganttDataService.formatTasksForGantt(anyLong(), any(), any())).thenReturn(mockDataWithRisks);
+        // Setup - Only stub what THIS test needs
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
+        when(taskRepository.findByProject(testProject)).thenReturn(List.of(testTask, testOverdueTask));
         
         // Execute
-        Map<String, Object> result = visualizationService.createGanttChartPane(1L, now, now.plusDays(30), "WEEK", true, true);
+        List<Map<String, Object>> result = visualizationService.getAtRiskTasks(1L);
         
         // Verify
         assertNotNull(result);
-        assertTrue(result.containsKey("atRiskTasks"));
+        assertFalse(result.isEmpty());
         
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> resultRisks = (List<Map<String, Object>>) result.get("atRiskTasks");
-        assertEquals(2, resultRisks.size());
+        // Should include the overdue task
+        boolean hasOverdueTask = result.stream()
+            .anyMatch(item -> "Overdue Task".equals(item.get("title")));
+        assertTrue(hasOverdueTask);
         
-        // First item should be the overdue task
-        Map<String, Object> overdueResult = resultRisks.stream()
-            .filter(m -> "Overdue Task".equals(m.get("title")))
+        // Find the overdue task and verify its properties
+        Map<String, Object> overdueTask = result.stream()
+            .filter(item -> "Overdue Task".equals(item.get("title")))
             .findFirst()
             .orElse(null);
-        assertNotNull(overdueResult);
-        assertEquals("Past due date", overdueResult.get("reason"));
         
-        // Second item should be the behind schedule task
-        Map<String, Object> behindScheduleResult = resultRisks.stream()
-            .filter(m -> "Behind Schedule Task".equals(m.get("title")))
-            .findFirst()
-            .orElse(null);
-        assertNotNull(behindScheduleResult);
-        assertEquals("Behind schedule", behindScheduleResult.get("reason"));
+        assertNotNull(overdueTask);
+        assertTrue(overdueTask.containsKey("reason"));
+        assertTrue(overdueTask.containsKey("progress"));
+        assertEquals(30, overdueTask.get("progress"));
+        
+        // Verify repository calls
+        verify(projectRepository).findById(1L);
+        verify(taskRepository).findByProject(testProject);
     }
     
     @Test
-    void testGenerateChartExport() {
+    void testGetAtRiskTasks_ProjectNotFound() {
+        // Setup - Project not found
+        when(projectRepository.findById(999L)).thenReturn(Optional.empty());
+        
+        // Execute
+        List<Map<String, Object>> result = visualizationService.getAtRiskTasks(999L);
+        
+        // Verify
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+        
+        // Verify repository calls
+        verify(projectRepository).findById(999L);
+        verify(taskRepository, never()).findByProject(any());
+    }
+    
+    @Test
+    void testGenerateSvgExport() {
         // Execute
         String result = visualizationService.generateSvgExport(testGanttData, "gantt");
         
         // Verify
         assertNotNull(result);
+        assertFalse(result.isEmpty());
         assertTrue(result.startsWith("<?xml"));
         assertTrue(result.contains("<svg"));
         assertTrue(result.contains("Chart Export - gantt"));
+        assertTrue(result.contains("</svg>"));
         
         // Should contain basic SVG structure
         assertTrue(result.contains("<rect"));
         assertTrue(result.contains("<text"));
-        assertTrue(result.contains("</svg>"));
     }
     
     @Test
-    void testGenerateReportData() {
-        // Execute - testing the actual method that exists
+    void testGenerateSvgExport_EmptyData() {
+        // Execute with empty data
+        String result = visualizationService.generateSvgExport(Collections.emptyMap(), "daily");
+        
+        // Verify
+        assertNotNull(result);
+        assertFalse(result.isEmpty());
+        assertTrue(result.startsWith("<?xml"));
+        assertTrue(result.contains("Chart Export - daily"));
+    }
+    
+    @Test
+    void testGeneratePdfReport() {
+        // Setup - Only stub what THIS test needs
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
+        
+        // Execute
         byte[] result = visualizationService.generatePdfReport(1L, "gantt");
         
         // Verify
@@ -514,6 +593,41 @@ class VisualizationServiceTest {
         // Current implementation returns empty byte array
         assertEquals(0, result.length);
         
-        // No repository calls to verify since service only depends on GanttDataService
+        // Verify repository calls
+        verify(projectRepository).findById(1L);
+    }
+    
+    @Test
+    void testGeneratePdfReport_ProjectNotFound() {
+        // Setup - Project not found
+        when(projectRepository.findById(999L)).thenReturn(Optional.empty());
+        
+        // Execute
+        byte[] result = visualizationService.generatePdfReport(999L, "daily");
+        
+        // Verify
+        assertNotNull(result);
+        assertEquals(0, result.length);
+        
+        // Verify repository calls
+        verify(projectRepository).findById(999L);
+    }
+    
+    @Test
+    void testServiceConstructorDependencies() {
+        // Verify service was constructed correctly with all dependencies
+        assertNotNull(visualizationService);
+        
+        // Test that service handles edge cases gracefully
+        when(ganttDataService.formatTasksForGantt(anyLong(), any(), any()))
+            .thenThrow(new RuntimeException("Test exception"));
+        
+        // Should not throw exception, should return empty map
+        Map<String, Object> result = visualizationService.createGanttChartPane(
+            1L, now, now.plusDays(30), "WEEK", true, true
+        );
+        
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
     }
 }

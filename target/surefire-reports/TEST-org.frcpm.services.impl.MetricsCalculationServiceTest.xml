@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="org.frcpm.services.impl.MetricsCalculationServiceTest" time="1.49" tests="23" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.245" tests="23" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="21"/>
     <property name="sun.cpu.isalist" value="amd64"/>
@@ -16,9 +16,9 @@
     <property name="sun.java.launcher" value="SUN_STANDARD"/>
     <property name="user.country" value="US"/>
     <property name="sun.boot.library.path" value="C:\Program Files\Eclipse Adoptium\jdk-21.0.7.6-hotspot\bin"/>
-    <property name="sun.java.command" value="C:\Users\dhiebert\AppData\Local\Temp\surefire8225552958813660305\surefirebooter-20250614080830757_3.jar C:\Users\dhiebert\AppData\Local\Temp\surefire8225552958813660305 2025-06-14T08-08-30_591-jvmRun1 surefire-20250614080830757_1tmp surefire_0-20250614080830757_2tmp"/>
+    <property name="sun.java.command" value="C:\Users\dhiebert\AppData\Local\Temp\surefire2887851795486255243\surefirebooter-20250614162950331_3.jar C:\Users\dhiebert\AppData\Local\Temp\surefire2887851795486255243 2025-06-14T16-29-50_170-jvmRun1 surefire-20250614162950331_1tmp surefire_0-20250614162950331_2tmp"/>
     <property name="jdk.debug" value="release"/>
-    <property name="test" value="MetricsCalculationServiceTest"/>
+    <property name="test" value="*ServiceTest"/>
     <property name="surefire.test.class.path" value="C:\Users\dhiebert\Local Repositories\Project Management 2.0\target\test-classes;C:\Users\dhiebert\Local Repositories\Project Management 2.0\target\classes;C:\Users\dhiebert\.m2\repository\org\springframework\boot\spring-boot-starter-web\3.2.0\spring-boot-starter-web-3.2.0.jar;C:\Users\dhiebert\.m2\repository\org\springframework\boot\spring-boot-starter\3.2.0\spring-boot-starter-3.2.0.jar;C:\Users\dhiebert\.m2\repository\org\springframework\boot\spring-boot\3.2.0\spring-boot-3.2.0.jar;C:\Users\dhiebert\.m2\repository\org\springframework\boot\spring-boot-autoconfigure\3.2.0\spring-boot-autoconfigure-3.2.0.jar;C:\Users\dhiebert\.m2\repository\org\springframework\boot\spring-boot-starter-logging\3.2.0\spring-boot-starter-logging-3.2.0.jar;C:\Users\dhiebert\.m2\repository\ch\qos\logback\logback-classic\1.4.11\logback-classic-1.4.11.jar;C:\Users\dhiebert\.m2\repository\ch\qos\logback\logback-core\1.4.11\logback-core-1.4.11.jar;C:\Users\dhiebert\.m2\repository\org\apache\logging\log4j\log4j-to-slf4j\2.21.1\log4j-to-slf4j-2.21.1.jar;C:\Users\dhiebert\.m2\repository\org\apache\logging\log4j\log4j-api\2.21.1\log4j-api-2.21.1.jar;C:\Users\dhiebert\.m2\repository\org\slf4j\jul-to-slf4j\2.0.9\jul-to-slf4j-2.0.9.jar;C:\Users\dhiebert\.m2\repository\jakarta\annotation\jakarta.annotation-api\2.1.1\jakarta.annotation-api-2.1.1.jar;C:\Users\dhiebert\.m2\repository\org\yaml\snakeyaml\2.2\snakeyaml-2.2.jar;C:\Users\dhiebert\.m2\repository\org\springframework\boot\spring-boot-starter-json\3.2.0\spring-boot-starter-json-3.2.0.jar;C:\Users\dhiebert\.m2\repository\com\fasterxml\jackson\datatype\jackson-datatype-jdk8\2.15.3\jackson-datatype-jdk8-2.15.3.jar;C:\Users\dhiebert\.m2\repository\com\fasterxml\jackson\datatype\jackson-datatype-jsr310\2.15.3\jackson-datatype-jsr310-2.15.3.jar;C:\Users\dhiebert\.m2\repository\com\fasterxml\jackson\module\jackson-module-parameter-names\2.15.3\jackson-module-parameter-names-2.15.3.jar;C:\Users\dhiebert\.m2\repository\org\springframework\boot\spring-boot-starter-tomcat\3.2.0\spring-boot-starter-tomcat-3.2.0.jar;C:\Users\dhiebert\.m2\repository\org\apache\tomcat\embed\tomcat-embed-core\10.1.16\tomcat-embed-core-10.1.16.jar;C:\Users\dhiebert\.m2\repository\org\apache\tomcat\embed\tomcat-embed-websocket\10.1.16\tomcat-embed-websocket-10.1.16.jar;C:\Users\dhiebert\.m2\repository\org\springframework\spring-web\6.1.1\spring-web-6.1.1.jar;C:\Users\dhiebert\.m2\repository\org\springframework\spring-beans\6.1.1\spring-beans-6.1.1.jar;C:\Users\dhiebert\.m2\repository\io\micrometer\micrometer-observation\1.12.0\micrometer-observation-1.12.0.jar;C:\Users\dhiebert\.m2\repository\io\micrometer\micrometer-commons\1.12.0\micrometer-commons-1.12.0.jar;C:\Users\dhiebert\.m2\repository\org\springframework\spring-webmvc\6.1.1\spring-webmvc-6.1.1.jar;C:\Users\dhiebert\.m2\repository\org\springframework\spring-context\6.1.1\spring-context-6.1.1.jar;C:\Users\dhiebert\.m2\repository\org\springframework\spring-expression\6.1.1\spring-expression-6.1.1.jar;C:\Users\dhiebert\.m2\repository\org\springframework\boot\spring-boot-starter-data-jpa\3.2.0\spring-boot-starter-data-jpa-3.2.0.jar;C:\Users\dhiebert\.m2\repository\org\springframework\boot\spring-boot-starter-aop\3.2.0\spring-boot-starter-aop-3.2.0.jar;C:\Users\dhiebert\.m2\repository\org\aspectj\aspectjweaver\1.9.20.1\aspectjweaver-1.9.20.1.jar;C:\Users\dhiebert\.m2\repository\org\springframework\boot\spring-boot-starter-jdbc\3.2.0\spring-boot-starter-jdbc-3.2.0.jar;C:\Users\dhiebert\.m2\repository\org\springframework\spring-jdbc\6.1.1\spring-jdbc-6.1.1.jar;C:\Users\dhiebert\.m2\repository\org\hibernate\orm\hibernate-core\6.3.1.Final\hibernate-core-6.3.1.Final.jar;C:\Users\dhiebert\.m2\repository\jakarta\persistence\jakarta.persistence-api\3.1.0\jakarta.persistence-api-3.1.0.jar;C:\Users\dhiebert\.m2\repository\jakarta\transaction\jakarta.transaction-api\2.0.1\jakarta.transaction-api-2.0.1.jar;C:\Users\dhiebert\.m2\repository\org\hibernate\common\hibernate-commons-annotations\6.0.6.Final\hibernate-commons-annotations-6.0.6.Final.jar;C:\Users\dhiebert\.m2\repository\io\smallrye\jandex\3.1.2\jandex-3.1.2.jar;C:\Users\dhiebert\.m2\repository\org\glassfish\jaxb\jaxb-runtime\4.0.4\jaxb-runtime-4.0.4.jar;C:\Users\dhiebert\.m2\repository\org\glassfish\jaxb\jaxb-core\4.0.4\jaxb-core-4.0.4.jar;C:\Users\dhiebert\.m2\repository\org\eclipse\angus\angus-activation\2.0.1\angus-activation-2.0.1.jar;C:\Users\dhiebert\.m2\repository\org\glassfish\jaxb\txw2\4.0.4\txw2-4.0.4.jar;C:\Users\dhiebert\.m2\repository\com\sun\istack\istack-commons-runtime\4.1.2\istack-commons-runtime-4.1.2.jar;C:\Users\dhiebert\.m2\repository\jakarta\inject\jakarta.inject-api\2.0.1\jakarta.inject-api-2.0.1.jar;C:\Users\dhiebert\.m2\repository\org\antlr\antlr4-runtime\4.10.1\antlr4-runtime-4.10.1.jar;C:\Users\dhiebert\.m2\repository\org\springframework\data\spring-data-jpa\3.2.0\spring-data-jpa-3.2.0.jar;C:\Users\dhiebert\.m2\repository\org\springframework\data\spring-data-commons\3.2.0\spring-data-commons-3.2.0.jar;C:\Users\dhiebert\.m2\repository\org\springframework\spring-orm\6.1.1\spring-orm-6.1.1.jar;C:\Users\dhiebert\.m2\repository\org\springframework\spring-tx\6.1.1\spring-tx-6.1.1.jar;C:\Users\dhiebert\.m2\repository\org\springframework\spring-aspects\6.1.1\spring-aspects-6.1.1.jar;C:\Users\dhiebert\.m2\repository\org\springframework\boot\spring-boot-starter-thymeleaf\3.2.0\spring-boot-starter-thymeleaf-3.2.0.jar;C:\Users\dhiebert\.m2\repository\org\thymeleaf\thymeleaf-spring6\3.1.2.RELEASE\thymeleaf-spring6-3.1.2.RELEASE.jar;C:\Users\dhiebert\.m2\repository\org\thymeleaf\thymeleaf\3.1.2.RELEASE\thymeleaf-3.1.2.RELEASE.jar;C:\Users\dhiebert\.m2\repository\org\attoparser\attoparser\2.0.7.RELEASE\attoparser-2.0.7.RELEASE.jar;C:\Users\dhiebert\.m2\repository\org\unbescape\unbescape\1.1.6.RELEASE\unbescape-1.1.6.RELEASE.jar;C:\Users\dhiebert\.m2\repository\org\springframework\boot\spring-boot-starter-security\3.2.0\spring-boot-starter-security-3.2.0.jar;C:\Users\dhiebert\.m2\repository\org\springframework\spring-aop\6.1.1\spring-aop-6.1.1.jar;C:\Users\dhiebert\.m2\repository\org\springframework\security\spring-security-config\6.2.0\spring-security-config-6.2.0.jar;C:\Users\dhiebert\.m2\repository\org\springframework\security\spring-security-core\6.2.0\spring-security-core-6.2.0.jar;C:\Users\dhiebert\.m2\repository\org\springframework\security\spring-security-crypto\6.2.0\spring-security-crypto-6.2.0.jar;C:\Users\dhiebert\.m2\repository\org\springframework\security\spring-security-web\6.2.0\spring-security-web-6.2.0.jar;C:\Users\dhiebert\.m2\repository\org\springframework\boot\spring-boot-starter-validation\3.2.0\spring-boot-starter-validation-3.2.0.jar;C:\Users\dhiebert\.m2\repository\org\apache\tomcat\embed\tomcat-embed-el\10.1.16\tomcat-embed-el-10.1.16.jar;C:\Users\dhiebert\.m2\repository\org\springframework\boot\spring-boot-starter-websocket\3.2.0\spring-boot-starter-websocket-3.2.0.jar;C:\Users\dhiebert\.m2\repository\org\springframework\spring-messaging\6.1.1\spring-messaging-6.1.1.jar;C:\Users\dhiebert\.m2\repository\org\springframework\spring-websocket\6.1.1\spring-websocket-6.1.1.jar;C:\Users\dhiebert\.m2\repository\com\h2database\h2\2.2.224\h2-2.2.224.jar;C:\Users\dhiebert\.m2\repository\org\xerial\sqlite-jdbc\3.44.1.0\sqlite-jdbc-3.44.1.0.jar;C:\Users\dhiebert\.m2\repository\org\slf4j\slf4j-api\2.0.9\slf4j-api-2.0.9.jar;C:\Users\dhiebert\.m2\repository\com\zaxxer\HikariCP\5.0.1\HikariCP-5.0.1.jar;C:\Users\dhiebert\.m2\repository\org\hibernate\validator\hibernate-validator\8.0.1.Final\hibernate-validator-8.0.1.Final.jar;C:\Users\dhiebert\.m2\repository\jakarta\validation\jakarta.validation-api\3.0.2\jakarta.validation-api-3.0.2.jar;C:\Users\dhiebert\.m2\repository\org\jboss\logging\jboss-logging\3.5.3.Final\jboss-logging-3.5.3.Final.jar;C:\Users\dhiebert\.m2\repository\com\fasterxml\classmate\1.6.0\classmate-1.6.0.jar;C:\Users\dhiebert\.m2\repository\org\springframework\boot\spring-boot-starter-test\3.2.0\spring-boot-starter-test-3.2.0.jar;C:\Users\dhiebert\.m2\repository\org\springframework\boot\spring-boot-test\3.2.0\spring-boot-test-3.2.0.jar;C:\Users\dhiebert\.m2\repository\org\springframework\boot\spring-boot-test-autoconfigure\3.2.0\spring-boot-test-autoconfigure-3.2.0.jar;C:\Users\dhiebert\.m2\repository\com\jayway\jsonpath\json-path\2.8.0\json-path-2.8.0.jar;C:\Users\dhiebert\.m2\repository\jakarta\xml\bind\jakarta.xml.bind-api\4.0.1\jakarta.xml.bind-api-4.0.1.jar;C:\Users\dhiebert\.m2\repository\jakarta\activation\jakarta.activation-api\2.1.2\jakarta.activation-api-2.1.2.jar;C:\Users\dhiebert\.m2\repository\net\minidev\json-smart\2.5.0\json-smart-2.5.0.jar;C:\Users\dhiebert\.m2\repository\net\minidev\accessors-smart\2.5.0\accessors-smart-2.5.0.jar;C:\Users\dhiebert\.m2\repository\org\ow2\asm\asm\9.3\asm-9.3.jar;C:\Users\dhiebert\.m2\repository\org\assertj\assertj-core\3.24.2\assertj-core-3.24.2.jar;C:\Users\dhiebert\.m2\repository\org\awaitility\awaitility\4.2.0\awaitility-4.2.0.jar;C:\Users\dhiebert\.m2\repository\org\hamcrest\hamcrest\2.2\hamcrest-2.2.jar;C:\Users\dhiebert\.m2\repository\org\mockito\mockito-junit-jupiter\5.7.0\mockito-junit-jupiter-5.7.0.jar;C:\Users\dhiebert\.m2\repository\org\skyscreamer\jsonassert\1.5.1\jsonassert-1.5.1.jar;C:\Users\dhiebert\.m2\repository\com\vaadin\external\google\android-json\0.0.20131108.vaadin1\android-json-0.0.20131108.vaadin1.jar;C:\Users\dhiebert\.m2\repository\org\springframework\spring-core\6.1.1\spring-core-6.1.1.jar;C:\Users\dhiebert\.m2\repository\org\springframework\spring-jcl\6.1.1\spring-jcl-6.1.1.jar;C:\Users\dhiebert\.m2\repository\org\springframework\spring-test\6.1.1\spring-test-6.1.1.jar;C:\Users\dhiebert\.m2\repository\org\xmlunit\xmlunit-core\2.9.1\xmlunit-core-2.9.1.jar;C:\Users\dhiebert\.m2\repository\org\junit\jupiter\junit-jupiter\5.10.1\junit-jupiter-5.10.1.jar;C:\Users\dhiebert\.m2\repository\org\junit\jupiter\junit-jupiter-api\5.10.1\junit-jupiter-api-5.10.1.jar;C:\Users\dhiebert\.m2\repository\org\opentest4j\opentest4j\1.3.0\opentest4j-1.3.0.jar;C:\Users\dhiebert\.m2\repository\org\junit\platform\junit-platform-commons\1.10.1\junit-platform-commons-1.10.1.jar;C:\Users\dhiebert\.m2\repository\org\apiguardian\apiguardian-api\1.1.2\apiguardian-api-1.1.2.jar;C:\Users\dhiebert\.m2\repository\org\junit\jupiter\junit-jupiter-params\5.10.1\junit-jupiter-params-5.10.1.jar;C:\Users\dhiebert\.m2\repository\org\junit\jupiter\junit-jupiter-engine\5.10.1\junit-jupiter-engine-5.10.1.jar;C:\Users\dhiebert\.m2\repository\org\junit\platform\junit-platform-engine\1.10.1\junit-platform-engine-1.10.1.jar;C:\Users\dhiebert\.m2\repository\org\mockito\mockito-core\5.7.0\mockito-core-5.7.0.jar;C:\Users\dhiebert\.m2\repository\net\bytebuddy\byte-buddy\1.14.10\byte-buddy-1.14.10.jar;C:\Users\dhiebert\.m2\repository\net\bytebuddy\byte-buddy-agent\1.14.10\byte-buddy-agent-1.14.10.jar;C:\Users\dhiebert\.m2\repository\org\objenesis\objenesis\3.3\objenesis-3.3.jar;C:\Users\dhiebert\.m2\repository\org\apache\pdfbox\pdfbox\2.0.27\pdfbox-2.0.27.jar;C:\Users\dhiebert\.m2\repository\org\apache\pdfbox\fontbox\2.0.27\fontbox-2.0.27.jar;C:\Users\dhiebert\.m2\repository\commons-logging\commons-logging\1.2\commons-logging-1.2.jar;C:\Users\dhiebert\.m2\repository\com\fasterxml\jackson\core\jackson-databind\2.15.3\jackson-databind-2.15.3.jar;C:\Users\dhiebert\.m2\repository\com\fasterxml\jackson\core\jackson-annotations\2.15.3\jackson-annotations-2.15.3.jar;C:\Users\dhiebert\.m2\repository\com\fasterxml\jackson\core\jackson-core\2.15.3\jackson-core-2.15.3.jar;C:\Users\dhiebert\.m2\repository\org\apache\xmlgraphics\batik-all\1.16\batik-all-1.16.jar;C:\Users\dhiebert\.m2\repository\xml-apis\xml-apis\1.4.01\xml-apis-1.4.01.jar;C:\Users\dhiebert\.m2\repository\xml-apis\xml-apis-ext\1.3.04\xml-apis-ext-1.3.04.jar;C:\Users\dhiebert\.m2\repository\org\apache\xmlgraphics\xmlgraphics-commons\2.7\xmlgraphics-commons-2.7.jar;C:\Users\dhiebert\.m2\repository\commons-io\commons-io\1.3.1\commons-io-1.3.1.jar;C:\Users\dhiebert\.m2\repository\org\jgrapht\jgrapht-core\1.5.2\jgrapht-core-1.5.2.jar;C:\Users\dhiebert\.m2\repository\org\jheaps\jheaps\0.14\jheaps-0.14.jar;C:\Users\dhiebert\.m2\repository\org\apfloat\apfloat\1.10.1\apfloat-1.10.1.jar;C:\Users\dhiebert\.m2\repository\de\gsi\chart\chartfx-chart\11.2.7\chartfx-chart-11.2.7.jar;C:\Users\dhiebert\.m2\repository\org\openjfx\javafx-base\13.0.1\javafx-base-13.0.1.jar;C:\Users\dhiebert\.m2\repository\org\openjfx\javafx-base\13.0.1\javafx-base-13.0.1-win.jar;C:\Users\dhiebert\.m2\repository\org\openjfx\javafx-controls\13.0.1\javafx-controls-13.0.1.jar;C:\Users\dhiebert\.m2\repository\org\openjfx\javafx-controls\13.0.1\javafx-controls-13.0.1-win.jar;C:\Users\dhiebert\.m2\repository\org\openjfx\javafx-graphics\13.0.1\javafx-graphics-13.0.1.jar;C:\Users\dhiebert\.m2\repository\org\openjfx\javafx-graphics\13.0.1\javafx-graphics-13.0.1-win.jar;C:\Users\dhiebert\.m2\repository\org\kordamp\ikonli\ikonli-javafx\11.5.0\ikonli-javafx-11.5.0.jar;C:\Users\dhiebert\.m2\repository\org\kordamp\ikonli\ikonli-core\11.5.0\ikonli-core-11.5.0.jar;C:\Users\dhiebert\.m2\repository\org\kordamp\ikonli\ikonli-fontawesome-pack\11.5.0\ikonli-fontawesome-pack-11.5.0.jar;C:\Users\dhiebert\.m2\repository\org\kordamp\ikonli\ikonli-fontawesome5-pack\11.5.0\ikonli-fontawesome5-pack-11.5.0.jar;C:\Users\dhiebert\.m2\repository\de\gsi\dataset\chartfx-dataset\11.2.7\chartfx-dataset-11.2.7.jar;C:\Users\dhiebert\.m2\repository\it\unimi\dsi\fastutil\8.3.1\fastutil-8.3.1.jar;C:\Users\dhiebert\.m2\repository\de\gsi\math\chartfx-math\11.2.7\chartfx-math-11.2.7.jar;C:\Users\dhiebert\.m2\repository\com\github\wendykierp\JTransforms\3.1\JTransforms-3.1.jar;C:\Users\dhiebert\.m2\repository\pl\edu\icm\JLargeArrays\1.5\JLargeArrays-1.5.jar;C:\Users\dhiebert\.m2\repository\org\apache\commons\commons-math3\3.6.1\commons-math3-3.6.1.jar;C:\Users\dhiebert\.m2\repository\org\controlsfx\controlsfx\11.0.0\controlsfx-11.0.0.jar;C:\Users\dhiebert\.m2\repository\org\openjfx\javafx-media\11\javafx-media-11.jar;C:\Users\dhiebert\.m2\repository\org\openjfx\javafx-media\11\javafx-media-11-win.jar;C:\Users\dhiebert\.m2\repository\com\ibm\icu\icu4j\65.1\icu4j-65.1.jar;C:\Users\dhiebert\.m2\repository\ar\com\hjg\pngj\2.1.0\pngj-2.1.0.jar;C:\Users\dhiebert\.m2\repository\org\apache\commons\commons-lang3\3.13.0\commons-lang3-3.13.0.jar;C:\Users\dhiebert\.m2\repository\org\jetbrains\annotations\21.0.1\annotations-21.0.1.jar;C:\Users\dhiebert\.m2\repository\javax\annotation\javax.annotation-api\1.3.2\javax.annotation-api-1.3.2.jar;"/>
     <property name="sun.cpu.endian" value="little"/>
     <property name="user.home" value="C:\Users\dhiebert"/>
@@ -35,7 +35,7 @@
     <property name="java.specification.name" value="Java Platform API Specification"/>
     <property name="testfx.robot" value="glass"/>
     <property name="java.awt.headless" value="true"/>
-    <property name="surefire.real.class.path" value="C:\Users\dhiebert\AppData\Local\Temp\surefire8225552958813660305\surefirebooter-20250614080830757_3.jar"/>
+    <property name="surefire.real.class.path" value="C:\Users\dhiebert\AppData\Local\Temp\surefire2887851795486255243\surefirebooter-20250614162950331_3.jar"/>
     <property name="user.script" value=""/>
     <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
     <property name="java.runtime.version" value="21.0.7+6-LTS"/>
@@ -65,135 +65,131 @@
     <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
     <property name="java.class.version" value="65.0"/>
   </properties>
-  <testcase name="testCalculateTaskCompletionMetrics_ProjectNotFound" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="1.193">
-    <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (C:\Users\dhiebert\.m2\repository\net\bytebuddy\byte-buddy-agent\1.14.10\byte-buddy-agent-1.14.10.jar)
-WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
-WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
-WARNING: Dynamic loading of agents will be disallowed by default in a future release
-Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTaskCompletionMetrics
+  <testcase name="testCalculateTaskCompletionMetrics_ProjectNotFound" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.011">
+    <system-err><![CDATA[Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTaskCompletionMetrics
 INFO: Calculating task completion metrics for project ID: 999
-Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTaskCompletionMetrics
+Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTaskCompletionMetrics
 WARNING: Project not found with ID: 999
 ]]></system-err>
   </testcase>
-  <testcase name="testCalculateTimelineDeviationMetrics" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.019">
-    <system-err><![CDATA[Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTimelineDeviationMetrics
+  <testcase name="testCalculateTimelineDeviationMetrics" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.026">
+    <system-err><![CDATA[Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTimelineDeviationMetrics
 INFO: Calculating timeline deviation metrics for project ID: 1
 ]]></system-err>
   </testcase>
-  <testcase name="testCalculateTeamPerformanceMetrics_ProjectNotFound" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.007">
-    <system-err><![CDATA[Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTeamPerformanceMetrics
+  <testcase name="testCalculateTeamPerformanceMetrics_ProjectNotFound" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.005">
+    <system-err><![CDATA[Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTeamPerformanceMetrics
 INFO: Calculating team performance metrics for project ID: 999
-Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTeamPerformanceMetrics
+Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTeamPerformanceMetrics
 WARNING: Project not found with ID: 999
 ]]></system-err>
   </testcase>
-  <testcase name="testCalculateTaskCompletionMetrics" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.024">
-    <system-err><![CDATA[Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTaskCompletionMetrics
+  <testcase name="testCalculateTaskCompletionMetrics" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.017">
+    <system-err><![CDATA[Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTaskCompletionMetrics
 INFO: Calculating task completion metrics for project ID: 1
 ]]></system-err>
   </testcase>
-  <testcase name="testCalculateIndividualPerformanceMetrics_WithDateRange" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.015">
-    <system-err><![CDATA[Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateIndividualPerformanceMetrics
+  <testcase name="testCalculateIndividualPerformanceMetrics_WithDateRange" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.013">
+    <system-err><![CDATA[Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateIndividualPerformanceMetrics
 INFO: Calculating individual performance metrics for team member ID: 1
 ]]></system-err>
   </testcase>
-  <testcase name="testCalculateProjectProgressMetrics" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.01">
-    <system-err><![CDATA[Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateProjectProgressMetrics
+  <testcase name="testCalculateProjectProgressMetrics" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.007">
+    <system-err><![CDATA[Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateProjectProgressMetrics
 INFO: Calculating project progress metrics for project ID: 1
 ]]></system-err>
   </testcase>
-  <testcase name="testCalculateProjectProgressMetrics_NullProjectId" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.006"/>
-  <testcase name="testCalculateSubsystemPerformanceMetrics_ProjectNotFound" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.008">
-    <system-err><![CDATA[Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateSubsystemPerformanceMetrics
+  <testcase name="testCalculateProjectProgressMetrics_NullProjectId" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.005"/>
+  <testcase name="testCalculateSubsystemPerformanceMetrics_ProjectNotFound" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.006">
+    <system-err><![CDATA[Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateSubsystemPerformanceMetrics
 INFO: Calculating subsystem performance metrics for project ID: 999
-Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateSubsystemPerformanceMetrics
+Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateSubsystemPerformanceMetrics
 WARNING: Project not found with ID: 999
 ]]></system-err>
   </testcase>
-  <testcase name="testCalculateTimelineDeviationMetrics_ProjectNotFound" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.005">
-    <system-err><![CDATA[Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTimelineDeviationMetrics
+  <testcase name="testCalculateTimelineDeviationMetrics_ProjectNotFound" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.004">
+    <system-err><![CDATA[Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTimelineDeviationMetrics
 INFO: Calculating timeline deviation metrics for project ID: 999
-Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTimelineDeviationMetrics
+Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTimelineDeviationMetrics
 WARNING: Project not found with ID: 999
 ]]></system-err>
   </testcase>
-  <testcase name="testGenerateProjectHealthDashboard_ProjectNotFound" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.008">
-    <system-err><![CDATA[Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl generateProjectHealthDashboard
+  <testcase name="testGenerateProjectHealthDashboard_ProjectNotFound" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.005">
+    <system-err><![CDATA[Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl generateProjectHealthDashboard
 INFO: Generating project health dashboard for project ID: 999
-Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl generateProjectHealthDashboard
+Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl generateProjectHealthDashboard
 WARNING: Project not found with ID: 999
 ]]></system-err>
   </testcase>
-  <testcase name="testCalculateSubsystemPerformanceMetrics" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.02">
-    <system-err><![CDATA[Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateSubsystemPerformanceMetrics
+  <testcase name="testCalculateSubsystemPerformanceMetrics" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.014">
+    <system-err><![CDATA[Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateSubsystemPerformanceMetrics
 INFO: Calculating subsystem performance metrics for project ID: 1
 ]]></system-err>
   </testcase>
-  <testcase name="testCalculateAttendanceMetrics" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.009">
-    <system-err><![CDATA[Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateAttendanceMetrics
+  <testcase name="testCalculateAttendanceMetrics" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.008">
+    <system-err><![CDATA[Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateAttendanceMetrics
 INFO: Calculating attendance metrics for project ID: 1
 ]]></system-err>
   </testcase>
-  <testcase name="testCalculateTeamPerformanceMetrics_WithDateRange" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.017">
-    <system-err><![CDATA[Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTeamPerformanceMetrics
+  <testcase name="testCalculateTeamPerformanceMetrics_WithDateRange" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.011">
+    <system-err><![CDATA[Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTeamPerformanceMetrics
 INFO: Calculating team performance metrics for project ID: 1
 ]]></system-err>
   </testcase>
-  <testcase name="testAsyncMethods" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.011">
-    <system-err><![CDATA[Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateProjectProgressMetrics
+  <testcase name="testAsyncMethods" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.022">
+    <system-err><![CDATA[Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateProjectProgressMetrics
 INFO: Calculating project progress metrics for project ID: 1
-Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTeamPerformanceMetrics
+Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTeamPerformanceMetrics
 INFO: Calculating team performance metrics for project ID: 1
-Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTaskCompletionMetrics
+Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTaskCompletionMetrics
 INFO: Calculating task completion metrics for project ID: 1
-Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateAttendanceMetrics
+Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateAttendanceMetrics
 INFO: Calculating attendance metrics for project ID: 1
-Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTimelineDeviationMetrics
+Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTimelineDeviationMetrics
 INFO: Calculating timeline deviation metrics for project ID: 1
-Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateIndividualPerformanceMetrics
+Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateIndividualPerformanceMetrics
 INFO: Calculating individual performance metrics for team member ID: 1
-Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateSubsystemPerformanceMetrics
+Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateSubsystemPerformanceMetrics
 INFO: Calculating subsystem performance metrics for project ID: 1
-Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl generateProjectHealthDashboard
+Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl generateProjectHealthDashboard
 INFO: Generating project health dashboard for project ID: 1
-Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateProjectProgressMetrics
+Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateProjectProgressMetrics
 INFO: Calculating project progress metrics for project ID: 1
-Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTaskCompletionMetrics
+Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTaskCompletionMetrics
 INFO: Calculating task completion metrics for project ID: 1
-Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTimelineDeviationMetrics
+Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTimelineDeviationMetrics
 INFO: Calculating timeline deviation metrics for project ID: 1
-Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTeamPerformanceMetrics
+Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTeamPerformanceMetrics
 INFO: Calculating team performance metrics for project ID: 1
 ]]></system-err>
   </testcase>
-  <testcase name="testGenerateProjectHealthDashboard" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.017">
-    <system-err><![CDATA[Jun 14, 2025 8:08:32 AM org.frcpm.services.impl.MetricsCalculationServiceImpl generateProjectHealthDashboard
+  <testcase name="testGenerateProjectHealthDashboard" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.016">
+    <system-err><![CDATA[Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl generateProjectHealthDashboard
 INFO: Generating project health dashboard for project ID: 1
-Jun 14, 2025 8:08:33 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateProjectProgressMetrics
+Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateProjectProgressMetrics
 INFO: Calculating project progress metrics for project ID: 1
-Jun 14, 2025 8:08:33 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTaskCompletionMetrics
+Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTaskCompletionMetrics
 INFO: Calculating task completion metrics for project ID: 1
-Jun 14, 2025 8:08:33 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTimelineDeviationMetrics
+Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTimelineDeviationMetrics
 INFO: Calculating timeline deviation metrics for project ID: 1
-Jun 14, 2025 8:08:33 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTeamPerformanceMetrics
+Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTeamPerformanceMetrics
 INFO: Calculating team performance metrics for project ID: 1
 ]]></system-err>
   </testcase>
-  <testcase name="testCalculateIndividualPerformanceMetrics" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.005">
-    <system-err><![CDATA[Jun 14, 2025 8:08:33 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateIndividualPerformanceMetrics
+  <testcase name="testCalculateIndividualPerformanceMetrics" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.007">
+    <system-err><![CDATA[Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateIndividualPerformanceMetrics
 INFO: Calculating individual performance metrics for team member ID: 1
 ]]></system-err>
   </testcase>
-  <testcase name="testMetricsWithEmptyData" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.005">
-    <system-err><![CDATA[Jun 14, 2025 8:08:33 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateProjectProgressMetrics
+  <testcase name="testMetricsWithEmptyData" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.009">
+    <system-err><![CDATA[Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateProjectProgressMetrics
 INFO: Calculating project progress metrics for project ID: 1
 ]]></system-err>
   </testcase>
-  <testcase name="testErrorHandling" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.011">
-    <system-err><![CDATA[Jun 14, 2025 8:08:33 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateProjectProgressMetrics
+  <testcase name="testErrorHandling" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.013">
+    <system-err><![CDATA[Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateProjectProgressMetrics
 INFO: Calculating project progress metrics for project ID: 1
-Jun 14, 2025 8:08:33 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateProjectProgressMetrics
+Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateProjectProgressMetrics
 SEVERE: Error calculating project progress metrics
 java.lang.RuntimeException: Database error
 	at org.frcpm.services.impl.MetricsCalculationServiceImpl.calculateProjectProgressMetrics(MetricsCalculationServiceImpl.java:73)
@@ -270,28 +266,28 @@ java.lang.RuntimeException: Database error
 
 ]]></system-err>
   </testcase>
-  <testcase name="testCalculateProjectProgressMetrics_ProjectNotFound" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.007">
-    <system-err><![CDATA[Jun 14, 2025 8:08:33 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateProjectProgressMetrics
+  <testcase name="testCalculateProjectProgressMetrics_ProjectNotFound" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.006">
+    <system-err><![CDATA[Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateProjectProgressMetrics
 INFO: Calculating project progress metrics for project ID: 999
-Jun 14, 2025 8:08:33 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateProjectProgressMetrics
+Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateProjectProgressMetrics
 WARNING: Project not found with ID: 999
 ]]></system-err>
   </testcase>
-  <testcase name="testCalculateAttendanceMetrics_WithDateRange" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.004">
-    <system-err><![CDATA[Jun 14, 2025 8:08:33 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateAttendanceMetrics
+  <testcase name="testCalculateAttendanceMetrics_WithDateRange" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.005">
+    <system-err><![CDATA[Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateAttendanceMetrics
 INFO: Calculating attendance metrics for project ID: 1
 ]]></system-err>
   </testcase>
-  <testcase name="testCalculateTeamPerformanceMetrics" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.007">
-    <system-err><![CDATA[Jun 14, 2025 8:08:33 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTeamPerformanceMetrics
+  <testcase name="testCalculateTeamPerformanceMetrics" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.005">
+    <system-err><![CDATA[Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateTeamPerformanceMetrics
 INFO: Calculating team performance metrics for project ID: 1
 ]]></system-err>
   </testcase>
-  <testcase name="testNullInputValidation" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.008"/>
-  <testcase name="testCalculateIndividualPerformanceMetrics_MemberNotFound" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.004">
-    <system-err><![CDATA[Jun 14, 2025 8:08:33 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateIndividualPerformanceMetrics
+  <testcase name="testNullInputValidation" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.004"/>
+  <testcase name="testCalculateIndividualPerformanceMetrics_MemberNotFound" classname="org.frcpm.services.impl.MetricsCalculationServiceTest" time="0.002">
+    <system-err><![CDATA[Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateIndividualPerformanceMetrics
 INFO: Calculating individual performance metrics for team member ID: 999
-Jun 14, 2025 8:08:33 AM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateIndividualPerformanceMetrics
+Jun 14, 2025 4:29:54 PM org.frcpm.services.impl.MetricsCalculationServiceImpl calculateIndividualPerformanceMetrics
 WARNING: Team member not found with ID: 999
 ]]></system-err>
   </testcase>
