@@ -1,4 +1,5 @@
 // src/test/java/org/frcpm/services/impl/MetricsCalculationServiceTest.java
+
 package org.frcpm.services.impl;
 
 import org.frcpm.models.*;
@@ -20,8 +21,7 @@ import static org.mockito.Mockito.*;
 
 /**
  * Spring Boot test class for MetricsCalculationServiceImpl.
- * Updated to use modern Spring Boot testing patterns with Mockito.
- * Fixed to match actual model class methods and constructor parameters.
+ * FIXED: Applied proven pattern from AttendanceServiceTest success template.
  */
 @ExtendWith(MockitoExtension.class)
 class MetricsCalculationServiceTest {
@@ -44,7 +44,7 @@ class MetricsCalculationServiceTest {
     @Mock
     private MeetingRepository meetingRepository;
 
-    private MetricsCalculationServiceImpl metricsService;
+    private MetricsCalculationServiceImpl metricsService; // ✅ FIXED: Use implementation class
 
     private Project testProject;
     private List<Task> testTasks;
@@ -56,7 +56,10 @@ class MetricsCalculationServiceTest {
 
     @BeforeEach
     void setUp() {
-        // Create service with mocked dependencies (NO SubsystemRepository - not used in implementation)
+        // ✅ FIXED: Create test objects ONLY - NO MOCK STUBBING HERE
+        setupTestData();
+        
+        // Create service with mocked dependencies
         metricsService = new MetricsCalculationServiceImpl(
                 projectRepository,
                 taskRepository,
@@ -65,10 +68,8 @@ class MetricsCalculationServiceTest {
                 attendanceRepository,
                 meetingRepository
         );
-
-        // Set up test data
-        setupTestData();
-        setupMockBehavior();
+        
+        // ✅ FIXED: NO mock stubbing in setUp() - move to individual test methods
     }
 
     private void setupTestData() {
@@ -127,8 +128,6 @@ class MetricsCalculationServiceTest {
             milestone.setDescription("Description for milestone " + i);
             milestone.setDate(LocalDate.now().minusDays(15 - i * 5));
             milestone.setProject(testProject);
-            // Note: Removed setPassed() call as this method doesn't exist
-            // Milestone completion is likely determined by date comparison or other logic
             testMilestones.add(milestone);
         }
 
@@ -137,7 +136,6 @@ class MetricsCalculationServiceTest {
         for (int i = 1; i <= 4; i++) {
             Meeting meeting = new Meeting();
             meeting.setId((long) i);
-            // Note: Removed setTitle() call as this method doesn't exist on Meeting
             meeting.setDate(LocalDate.now().minusDays(20 - i * 5));
             meeting.setStartTime(LocalTime.of(9, 0));
             meeting.setEndTime(LocalTime.of(10, 0));
@@ -164,39 +162,17 @@ class MetricsCalculationServiceTest {
         }
     }
 
-    private void setupMockBehavior() {
-        // Mock project repository
-        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
-        when(projectRepository.findById(999L)).thenReturn(Optional.empty());
-
-        // Mock task repository
-        when(taskRepository.findByProject(testProject)).thenReturn(testTasks);
-        when(taskRepository.findByAssignedMember(any(TeamMember.class))).thenReturn(
-                testTasks.subList(0, 2)); // Each member has 2 tasks
-
-        // Mock team member repository
-        when(teamMemberRepository.findById(1L)).thenReturn(Optional.of(testTeamMembers.get(0)));
-        when(teamMemberRepository.findById(2L)).thenReturn(Optional.of(testTeamMembers.get(1)));
-        when(teamMemberRepository.findById(3L)).thenReturn(Optional.of(testTeamMembers.get(2)));
-        when(teamMemberRepository.findById(999L)).thenReturn(Optional.empty());
-
-        // Mock milestone repository
-        when(milestoneRepository.findByProject(testProject)).thenReturn(testMilestones);
-
-        // Mock meeting repository
-        when(meetingRepository.findByProject(testProject)).thenReturn(testMeetings);
-
-        // Mock attendance repository
-        when(attendanceRepository.findByMember(any(TeamMember.class))).thenReturn(
-                testAttendances.subList(0, 4)); // Each member has 4 attendance records
-    }
-
     @Test
     void testCalculateProjectProgressMetrics() {
-        // When
+        // Setup - Only stub what THIS test needs
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
+        when(taskRepository.findByProject(testProject)).thenReturn(testTasks);
+        when(milestoneRepository.findByProject(testProject)).thenReturn(testMilestones);
+
+        // Execute
         Map<String, Object> metrics = metricsService.calculateProjectProgressMetrics(1L);
 
-        // Then
+        // Verify
         assertNotNull(metrics);
         assertTrue(metrics.containsKey("completionPercentage"));
         assertTrue(metrics.containsKey("daysTotal"));
@@ -218,11 +194,14 @@ class MetricsCalculationServiceTest {
     }
 
     @Test
-    void testCalculateProjectProgressMetricsWithInvalidProject() {
-        // When
+    void testCalculateProjectProgressMetrics_ProjectNotFound() {
+        // Setup - Entity doesn't exist
+        when(projectRepository.findById(999L)).thenReturn(Optional.empty());
+
+        // Execute
         Map<String, Object> metrics = metricsService.calculateProjectProgressMetrics(999L);
 
-        // Then
+        // Verify
         assertNotNull(metrics);
         assertTrue(metrics.isEmpty());
 
@@ -232,11 +211,29 @@ class MetricsCalculationServiceTest {
     }
 
     @Test
+    void testCalculateProjectProgressMetrics_NullProjectId() {
+        // Execute and verify exception
+        assertThrows(IllegalArgumentException.class, () -> {
+            metricsService.calculateProjectProgressMetrics(null);
+        });
+
+        // Verify repository was never called
+        verify(projectRepository, never()).findById(any());
+        verify(taskRepository, never()).findByProject(any());
+    }
+
+    @Test
     void testCalculateTeamPerformanceMetrics() {
-        // When
+        // Setup
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
+        when(meetingRepository.findByProject(testProject)).thenReturn(testMeetings);
+        when(taskRepository.findByAssignedMember(any(TeamMember.class))).thenReturn(
+                testTasks.subList(0, 2)); // Each member has 2 tasks
+
+        // Execute
         Map<String, Object> metrics = metricsService.calculateTeamPerformanceMetrics(1L, null, null);
 
-        // Then
+        // Verify
         assertNotNull(metrics);
         assertTrue(metrics.containsKey("totalTeamMembers"));
         assertTrue(metrics.containsKey("averageAttendancePercentage"));
@@ -249,15 +246,20 @@ class MetricsCalculationServiceTest {
     }
 
     @Test
-    void testCalculateTeamPerformanceMetricsWithDateRange() {
-        // Given
+    void testCalculateTeamPerformanceMetrics_WithDateRange() {
+        // Setup
         LocalDate startDate = LocalDate.now().minusDays(15);
         LocalDate endDate = LocalDate.now().minusDays(5);
+        
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
+        when(meetingRepository.findByProject(testProject)).thenReturn(testMeetings);
+        when(taskRepository.findByAssignedMember(any(TeamMember.class))).thenReturn(
+                testTasks.subList(0, 2));
 
-        // When
+        // Execute
         Map<String, Object> metrics = metricsService.calculateTeamPerformanceMetrics(1L, startDate, endDate);
 
-        // Then
+        // Verify
         assertNotNull(metrics);
         assertTrue(metrics.containsKey("totalTeamMembers"));
         assertTrue(metrics.containsKey("averageAttendancePercentage"));
@@ -268,11 +270,32 @@ class MetricsCalculationServiceTest {
     }
 
     @Test
+    void testCalculateTeamPerformanceMetrics_ProjectNotFound() {
+        // Setup - Entity doesn't exist
+        when(projectRepository.findById(999L)).thenReturn(Optional.empty());
+
+        // Execute
+        Map<String, Object> metrics = metricsService.calculateTeamPerformanceMetrics(999L, null, null);
+
+        // Verify
+        assertNotNull(metrics);
+        assertTrue(metrics.isEmpty());
+
+        // Verify repository interactions
+        verify(projectRepository).findById(999L);
+        verify(meetingRepository, never()).findByProject(any());
+    }
+
+    @Test
     void testCalculateTaskCompletionMetrics() {
-        // When
+        // Setup
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
+        when(taskRepository.findByProject(testProject)).thenReturn(testTasks);
+
+        // Execute
         Map<String, Object> metrics = metricsService.calculateTaskCompletionMetrics(1L);
 
-        // Then
+        // Verify
         assertNotNull(metrics);
         assertTrue(metrics.containsKey("taskCountsByStatus"));
         assertTrue(metrics.containsKey("taskCountsByPriority"));
@@ -295,11 +318,32 @@ class MetricsCalculationServiceTest {
     }
 
     @Test
+    void testCalculateTaskCompletionMetrics_ProjectNotFound() {
+        // Setup - Entity doesn't exist
+        when(projectRepository.findById(999L)).thenReturn(Optional.empty());
+
+        // Execute
+        Map<String, Object> metrics = metricsService.calculateTaskCompletionMetrics(999L);
+
+        // Verify
+        assertNotNull(metrics);
+        assertTrue(metrics.isEmpty());
+
+        // Verify repository interactions
+        verify(projectRepository).findById(999L);
+        verify(taskRepository, never()).findByProject(any());
+    }
+
+    @Test
     void testCalculateAttendanceMetrics() {
-        // When
+        // Setup
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
+        when(meetingRepository.findByProject(testProject)).thenReturn(testMeetings);
+
+        // Execute
         Map<String, Object> metrics = metricsService.calculateAttendanceMetrics(1L, null, null);
 
-        // Then
+        // Verify
         assertNotNull(metrics);
         assertTrue(metrics.containsKey("totalMeetings"));
         assertTrue(metrics.containsKey("totalAttendanceRecords"));
@@ -314,11 +358,37 @@ class MetricsCalculationServiceTest {
     }
 
     @Test
+    void testCalculateAttendanceMetrics_WithDateRange() {
+        // Setup
+        LocalDate startDate = LocalDate.now().minusDays(25);
+        LocalDate endDate = LocalDate.now().minusDays(5);
+        
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
+        when(meetingRepository.findByProject(testProject)).thenReturn(testMeetings);
+
+        // Execute
+        Map<String, Object> metrics = metricsService.calculateAttendanceMetrics(1L, startDate, endDate);
+
+        // Verify
+        assertNotNull(metrics);
+        assertTrue(metrics.containsKey("totalMeetings"));
+        assertTrue(metrics.containsKey("overallAttendanceRate"));
+
+        // Verify repository interactions
+        verify(projectRepository).findById(1L);
+        verify(meetingRepository).findByProject(testProject);
+    }
+
+    @Test
     void testCalculateTimelineDeviationMetrics() {
-        // When
+        // Setup
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
+        when(taskRepository.findByProject(testProject)).thenReturn(testTasks);
+
+        // Execute
         Map<String, Object> metrics = metricsService.calculateTimelineDeviationMetrics(1L);
 
-        // Then
+        // Verify
         assertNotNull(metrics);
         assertTrue(metrics.containsKey("averageTaskDelay"));
         assertTrue(metrics.containsKey("tasksAtRiskCount"));
@@ -333,11 +403,33 @@ class MetricsCalculationServiceTest {
     }
 
     @Test
+    void testCalculateTimelineDeviationMetrics_ProjectNotFound() {
+        // Setup - Entity doesn't exist
+        when(projectRepository.findById(999L)).thenReturn(Optional.empty());
+
+        // Execute
+        Map<String, Object> metrics = metricsService.calculateTimelineDeviationMetrics(999L);
+
+        // Verify
+        assertNotNull(metrics);
+        assertTrue(metrics.isEmpty());
+
+        // Verify repository interactions
+        verify(projectRepository).findById(999L);
+        verify(taskRepository, never()).findByProject(any());
+    }
+
+    @Test
     void testCalculateIndividualPerformanceMetrics() {
-        // When
+        // Setup
+        when(teamMemberRepository.findById(1L)).thenReturn(Optional.of(testTeamMembers.get(0)));
+        when(taskRepository.findByAssignedMember(testTeamMembers.get(0))).thenReturn(testTasks.subList(0, 2));
+        when(attendanceRepository.findByMember(testTeamMembers.get(0))).thenReturn(testAttendances.subList(0, 4));
+
+        // Execute
         Map<String, Object> metrics = metricsService.calculateIndividualPerformanceMetrics(1L, null, null);
 
-        // Then
+        // Verify
         assertNotNull(metrics);
         assertTrue(metrics.containsKey("memberId"));
         assertTrue(metrics.containsKey("memberName"));
@@ -358,11 +450,14 @@ class MetricsCalculationServiceTest {
     }
 
     @Test
-    void testCalculateIndividualPerformanceMetricsWithInvalidMember() {
-        // When
+    void testCalculateIndividualPerformanceMetrics_MemberNotFound() {
+        // Setup - Entity doesn't exist
+        when(teamMemberRepository.findById(999L)).thenReturn(Optional.empty());
+
+        // Execute
         Map<String, Object> metrics = metricsService.calculateIndividualPerformanceMetrics(999L, null, null);
 
-        // Then
+        // Verify
         assertNotNull(metrics);
         assertTrue(metrics.isEmpty());
 
@@ -372,11 +467,40 @@ class MetricsCalculationServiceTest {
     }
 
     @Test
+    void testCalculateIndividualPerformanceMetrics_WithDateRange() {
+        // Setup
+        LocalDate startDate = LocalDate.now().minusDays(10);
+        LocalDate endDate = LocalDate.now();
+        
+        when(teamMemberRepository.findById(1L)).thenReturn(Optional.of(testTeamMembers.get(0)));
+        when(taskRepository.findByAssignedMember(testTeamMembers.get(0))).thenReturn(testTasks.subList(0, 2));
+        when(attendanceRepository.findByMember(testTeamMembers.get(0))).thenReturn(testAttendances.subList(0, 4));
+
+        // Execute
+        Map<String, Object> metrics = metricsService.calculateIndividualPerformanceMetrics(1L, startDate, endDate);
+
+        // Verify
+        assertNotNull(metrics);
+        assertTrue(metrics.containsKey("memberId"));
+        assertTrue(metrics.containsKey("totalAssignedTasks"));
+        assertTrue(metrics.containsKey("attendanceRate"));
+
+        // Verify repository interactions
+        verify(teamMemberRepository).findById(1L);
+        verify(taskRepository).findByAssignedMember(testTeamMembers.get(0));
+        verify(attendanceRepository).findByMember(testTeamMembers.get(0));
+    }
+
+    @Test
     void testCalculateSubsystemPerformanceMetrics() {
-        // When
+        // Setup
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
+        when(taskRepository.findByProject(testProject)).thenReturn(testTasks);
+
+        // Execute
         Map<String, Object> metrics = metricsService.calculateSubsystemPerformanceMetrics(1L);
 
-        // Then
+        // Verify
         assertNotNull(metrics);
         assertTrue(metrics.containsKey("subsystemMetrics"));
         assertTrue(metrics.containsKey("subsystemRankings"));
@@ -393,11 +517,35 @@ class MetricsCalculationServiceTest {
     }
 
     @Test
+    void testCalculateSubsystemPerformanceMetrics_ProjectNotFound() {
+        // Setup - Entity doesn't exist
+        when(projectRepository.findById(999L)).thenReturn(Optional.empty());
+
+        // Execute
+        Map<String, Object> metrics = metricsService.calculateSubsystemPerformanceMetrics(999L);
+
+        // Verify
+        assertNotNull(metrics);
+        assertTrue(metrics.isEmpty());
+
+        // Verify repository interactions
+        verify(projectRepository).findById(999L);
+        verify(taskRepository, never()).findByProject(any());
+    }
+
+    @Test
     void testGenerateProjectHealthDashboard() {
-        // When
+        // Setup - Mock all dependencies needed for the dashboard
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
+        when(taskRepository.findByProject(testProject)).thenReturn(testTasks);
+        when(milestoneRepository.findByProject(testProject)).thenReturn(testMilestones);
+        when(meetingRepository.findByProject(testProject)).thenReturn(testMeetings);
+        when(taskRepository.findByAssignedMember(any(TeamMember.class))).thenReturn(testTasks.subList(0, 2));
+
+        // Execute
         Map<String, Object> dashboard = metricsService.generateProjectHealthDashboard(1L);
 
-        // Then
+        // Verify
         assertNotNull(dashboard);
         assertTrue(dashboard.containsKey("projectId"));
         assertTrue(dashboard.containsKey("projectName"));
@@ -427,11 +575,14 @@ class MetricsCalculationServiceTest {
     }
 
     @Test
-    void testGenerateProjectHealthDashboardWithInvalidProject() {
-        // When
+    void testGenerateProjectHealthDashboard_ProjectNotFound() {
+        // Setup - Entity doesn't exist
+        when(projectRepository.findById(999L)).thenReturn(Optional.empty());
+
+        // Execute
         Map<String, Object> dashboard = metricsService.generateProjectHealthDashboard(999L);
 
-        // Then
+        // Verify
         assertNotNull(dashboard);
         assertTrue(dashboard.isEmpty());
 
@@ -441,6 +592,15 @@ class MetricsCalculationServiceTest {
 
     @Test
     void testAsyncMethods() {
+        // Setup for async tests
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
+        when(taskRepository.findByProject(testProject)).thenReturn(testTasks);
+        when(milestoneRepository.findByProject(testProject)).thenReturn(testMilestones);
+        when(meetingRepository.findByProject(testProject)).thenReturn(testMeetings);
+        when(teamMemberRepository.findById(1L)).thenReturn(Optional.of(testTeamMembers.get(0)));
+        when(taskRepository.findByAssignedMember(any(TeamMember.class))).thenReturn(testTasks.subList(0, 2));
+        when(attendanceRepository.findByMember(any(TeamMember.class))).thenReturn(testAttendances.subList(0, 4));
+
         // Test that async methods complete successfully
         // Note: In unit tests, @Async methods run synchronously
 
@@ -498,20 +658,61 @@ class MetricsCalculationServiceTest {
 
     @Test
     void testMetricsWithEmptyData() {
-        // Set up empty test data
+        // Setup with empty test data
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
         when(taskRepository.findByProject(testProject)).thenReturn(Collections.emptyList());
         when(milestoneRepository.findByProject(testProject)).thenReturn(Collections.emptyList());
         when(meetingRepository.findByProject(testProject)).thenReturn(Collections.emptyList());
 
-        // When
+        // Execute
         Map<String, Object> metrics = metricsService.calculateProjectProgressMetrics(1L);
 
-        // Then
+        // Verify
         assertNotNull(metrics);
         assertTrue(metrics.containsKey("completionPercentage"));
         
         // Should handle empty data gracefully
         Double completionPercentage = (Double) metrics.get("completionPercentage");
         assertEquals(0.0, completionPercentage);
+    }
+
+    @Test
+    void testNullInputValidation() {
+        // Test null project ID for various methods
+        assertThrows(IllegalArgumentException.class, () -> {
+            metricsService.calculateProjectProgressMetrics(null);
+        });
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            metricsService.calculateTeamPerformanceMetrics(null, null, null);
+        });
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            metricsService.calculateTaskCompletionMetrics(null);
+        });
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            metricsService.calculateAttendanceMetrics(null, null, null);
+        });
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            metricsService.calculateTimelineDeviationMetrics(null);
+        });
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            metricsService.calculateIndividualPerformanceMetrics(null, null, null);
+        });
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            metricsService.calculateSubsystemPerformanceMetrics(null);
+        });
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            metricsService.generateProjectHealthDashboard(null);
+        });
+
+        // Verify repository was never called
+        verify(projectRepository, never()).findById(any());
+        verify(teamMemberRepository, never()).findById(any());
     }
 }

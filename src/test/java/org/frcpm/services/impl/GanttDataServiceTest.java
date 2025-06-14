@@ -1,4 +1,5 @@
 // src/test/java/org/frcpm/services/impl/GanttDataServiceTest.java
+
 package org.frcpm.services.impl;
 
 import org.frcpm.models.GanttChartData;
@@ -25,6 +26,7 @@ import static org.mockito.Mockito.*;
 
 /**
  * Test class for GanttDataService implementation using Spring Boot testing patterns.
+ * FIXED: Applied proven pattern from AttendanceServiceTest success template.
  */
 @ExtendWith(MockitoExtension.class)
 class GanttDataServiceTest {
@@ -41,7 +43,7 @@ class GanttDataServiceTest {
     @Mock
     private GanttChartTransformationService transformationService;
     
-    private GanttDataServiceImpl ganttDataService;
+    private GanttDataServiceImpl ganttDataService; // ✅ FIXED: Use implementation class
     
     private Project testProject;
     private Task testTask;
@@ -53,7 +55,7 @@ class GanttDataServiceTest {
     
     @BeforeEach
     void setUp() {
-        // Initialize dates and objects
+        // ✅ FIXED: Create test objects ONLY - NO MOCK STUBBING HERE
         now = LocalDate.now();
         testProject = createTestProject();
         testTask = createTestTask();
@@ -62,32 +64,6 @@ class GanttDataServiceTest {
         testMilestonesGanttData = createTestMilestonesGanttData();
         testDependencyData = createTestDependencyData();
         
-        // Configure mock repository responses
-        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
-        when(taskRepository.findByProject(testProject)).thenReturn(List.of(testTask));
-        when(milestoneRepository.findByProject(testProject)).thenReturn(List.of(testMilestone));
-        
-        // Configure transformation service mocks
-        when(transformationService.transformTasksToChartData(anyList())).thenReturn(testTasksGanttData);
-        when(transformationService.transformMilestonesToChartData(anyList())).thenReturn(testMilestonesGanttData);
-        when(transformationService.createDependencyData(anyList())).thenReturn(testDependencyData);
-        when(transformationService.filterChartData(
-                eq(testTasksGanttData), 
-                anyString(), 
-                anyString(), 
-                anyString(), 
-                any(LocalDate.class), 
-                any(LocalDate.class)
-        )).thenReturn(testTasksGanttData);
-        when(transformationService.filterChartData(
-                eq(testMilestonesGanttData), 
-                isNull(), 
-                isNull(), 
-                isNull(), 
-                any(LocalDate.class), 
-                any(LocalDate.class)
-        )).thenReturn(testMilestonesGanttData);
-        
         // Create service with injected mocks
         ganttDataService = new GanttDataServiceImpl(
             projectRepository,
@@ -95,6 +71,8 @@ class GanttDataServiceTest {
             milestoneRepository,
             transformationService
         );
+        
+        // ✅ FIXED: NO mock stubbing in setUp() - move to individual test methods
     }
     
     /**
@@ -164,6 +142,14 @@ class GanttDataServiceTest {
     
     @Test
     void testFormatTasksForGantt() {
+        // Setup - Only stub what THIS test needs
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
+        when(taskRepository.findByProject(testProject)).thenReturn(List.of(testTask));
+        when(milestoneRepository.findByProject(testProject)).thenReturn(List.of(testMilestone));
+        when(transformationService.transformTasksToChartData(anyList())).thenReturn(testTasksGanttData);
+        when(transformationService.transformMilestonesToChartData(anyList())).thenReturn(testMilestonesGanttData);
+        when(transformationService.createDependencyData(anyList())).thenReturn(testDependencyData);
+        
         // Execute
         Map<String, Object> result = ganttDataService.formatTasksForGantt(1L, null, null);
         
@@ -200,20 +186,33 @@ class GanttDataServiceTest {
     
     @Test
     void testFormatTasksForGantt_ProjectNotFound() {
-        // Setup
-        when(projectRepository.findById(99L)).thenReturn(Optional.empty());
+        // Setup - Entity doesn't exist
+        when(projectRepository.findById(999L)).thenReturn(Optional.empty());
         
         // Execute
-        Map<String, Object> result = ganttDataService.formatTasksForGantt(99L, null, null);
+        Map<String, Object> result = ganttDataService.formatTasksForGantt(999L, null, null);
         
         // Verify
         assertNotNull(result);
         assertTrue(result.isEmpty());
         
         // Verify repository calls
-        verify(projectRepository).findById(99L);
+        verify(projectRepository).findById(999L);
         verify(taskRepository, never()).findByProject(any(Project.class));
         verify(milestoneRepository, never()).findByProject(any(Project.class));
+    }
+    
+    @Test
+    void testFormatTasksForGantt_NullProjectId() {
+        // Execute and verify exception
+        assertThrows(IllegalArgumentException.class, () -> {
+            ganttDataService.formatTasksForGantt(null, null, null);
+        });
+        
+        // Verify repository was never called
+        verify(projectRepository, never()).findById(any());
+        verify(taskRepository, never()).findByProject(any());
+        verify(milestoneRepository, never()).findByProject(any());
     }
     
     @Test
@@ -221,6 +220,13 @@ class GanttDataServiceTest {
         // Setup specific date range
         LocalDate startDate = now.minusDays(5);
         LocalDate endDate = now.plusDays(15);
+        
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
+        when(taskRepository.findByProject(testProject)).thenReturn(List.of(testTask));
+        when(milestoneRepository.findByProject(testProject)).thenReturn(List.of(testMilestone));
+        when(transformationService.transformTasksToChartData(anyList())).thenReturn(testTasksGanttData);
+        when(transformationService.transformMilestonesToChartData(anyList())).thenReturn(testMilestonesGanttData);
+        when(transformationService.createDependencyData(anyList())).thenReturn(testDependencyData);
         
         // Execute
         Map<String, Object> result = ganttDataService.formatTasksForGantt(1L, startDate, endDate);
@@ -324,6 +330,21 @@ class GanttDataServiceTest {
     }
     
     @Test
+    void testApplyFiltersToGanttData_NullInputs() {
+        // Execute with null gantt data
+        Map<String, Object> result1 = ganttDataService.applyFiltersToGanttData(null, Collections.emptyMap());
+        assertNull(result1);
+        
+        // Execute with null filter criteria
+        Map<String, Object> ganttData = new HashMap<>();
+        Map<String, Object> result2 = ganttDataService.applyFiltersToGanttData(ganttData, null);
+        assertSame(ganttData, result2);
+        
+        // Verify transformation service was never called
+        verify(transformationService, never()).filterChartData(anyList(), anyString(), anyString(), anyString(), any(), any());
+    }
+    
+    @Test
     void testCalculateCriticalPath() {
         // Setup
         Task criticalTask = new Task("Critical Task", testProject, null);
@@ -331,6 +352,7 @@ class GanttDataServiceTest {
         criticalTask.setPriority(Task.Priority.CRITICAL);
         
         List<Task> tasks = List.of(testTask, criticalTask);
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
         when(taskRepository.findByProject(testProject)).thenReturn(tasks);
         
         // Execute
@@ -348,19 +370,31 @@ class GanttDataServiceTest {
     
     @Test
     void testCalculateCriticalPath_ProjectNotFound() {
-        // Setup
-        when(projectRepository.findById(99L)).thenReturn(Optional.empty());
+        // Setup - Entity doesn't exist
+        when(projectRepository.findById(999L)).thenReturn(Optional.empty());
         
         // Execute
-        List<Long> result = ganttDataService.calculateCriticalPath(99L);
+        List<Long> result = ganttDataService.calculateCriticalPath(999L);
         
         // Verify
         assertNotNull(result);
         assertTrue(result.isEmpty());
         
         // Verify repository calls
-        verify(projectRepository).findById(99L);
+        verify(projectRepository).findById(999L);
         verify(taskRepository, never()).findByProject(any(Project.class));
+    }
+    
+    @Test
+    void testCalculateCriticalPath_NullProjectId() {
+        // Execute and verify exception
+        assertThrows(IllegalArgumentException.class, () -> {
+            ganttDataService.calculateCriticalPath(null);
+        });
+        
+        // Verify repository was never called
+        verify(projectRepository, never()).findById(any());
+        verify(taskRepository, never()).findByProject(any());
     }
     
     @Test
@@ -368,12 +402,13 @@ class GanttDataServiceTest {
         // Setup a specific date
         LocalDate targetDate = now.plusDays(3);
         
-        // Mock the formatTasksForGantt method
+        // Mock the formatTasksForGantt method by using spy
+        GanttDataServiceImpl serviceSpy = spy(ganttDataService);
+        
         Map<String, Object> fullData = new HashMap<>();
         fullData.put("tasks", testTasksGanttData);
         fullData.put("milestones", testMilestonesGanttData);
         
-        GanttDataServiceImpl serviceSpy = spy(ganttDataService);
         doReturn(fullData).when(serviceSpy).formatTasksForGantt(eq(1L), isNull(), isNull());
         doReturn(fullData).when(serviceSpy).applyFiltersToGanttData(eq(fullData), any());
         
@@ -397,14 +432,47 @@ class GanttDataServiceTest {
     }
     
     @Test
+    void testGetGanttDataForDate_NullDate() {
+        // Setup 
+        GanttDataServiceImpl serviceSpy = spy(ganttDataService);
+        
+        Map<String, Object> fullData = new HashMap<>();
+        fullData.put("tasks", testTasksGanttData);
+        fullData.put("milestones", testMilestonesGanttData);
+        
+        doReturn(fullData).when(serviceSpy).formatTasksForGantt(eq(1L), isNull(), isNull());
+        doReturn(fullData).when(serviceSpy).applyFiltersToGanttData(eq(fullData), any());
+        
+        // Execute with null date (should use current date)
+        Map<String, Object> result = serviceSpy.getGanttDataForDate(1L, null);
+        
+        // Verify
+        assertNotNull(result);
+        assertEquals(fullData, result);
+        
+        // Verify methods were called
+        verify(serviceSpy).formatTasksForGantt(1L, null, null);
+        verify(serviceSpy).applyFiltersToGanttData(eq(fullData), any());
+    }
+    
+    @Test
+    void testGetGanttDataForDate_NullProjectId() {
+        // Execute and verify exception
+        assertThrows(IllegalArgumentException.class, () -> {
+            ganttDataService.getGanttDataForDate(null, now);
+        });
+    }
+    
+    @Test
     void testGetTaskDependencies() {
-        // Setup a task with dependencies
+        // Setup tasks with dependencies
         Task dependentTask = new Task("Dependent Task", testProject, null);
         dependentTask.setId(2L);
         
         testTask.getPreDependencies().add(dependentTask);
         
         List<Task> tasks = List.of(testTask, dependentTask);
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
         when(taskRepository.findByProject(testProject)).thenReturn(tasks);
         
         // Execute
@@ -420,6 +488,35 @@ class GanttDataServiceTest {
         // Verify repository calls
         verify(projectRepository).findById(1L);
         verify(taskRepository).findByProject(testProject);
+    }
+    
+    @Test
+    void testGetTaskDependencies_ProjectNotFound() {
+        // Setup - Entity doesn't exist
+        when(projectRepository.findById(999L)).thenReturn(Optional.empty());
+        
+        // Execute
+        Map<Long, List<Long>> result = ganttDataService.getTaskDependencies(999L);
+        
+        // Verify
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+        
+        // Verify repository calls
+        verify(projectRepository).findById(999L);
+        verify(taskRepository, never()).findByProject(any(Project.class));
+    }
+    
+    @Test
+    void testGetTaskDependencies_NullProjectId() {
+        // Execute and verify exception
+        assertThrows(IllegalArgumentException.class, () -> {
+            ganttDataService.getTaskDependencies(null);
+        });
+        
+        // Verify repository was never called
+        verify(projectRepository, never()).findById(any());
+        verify(taskRepository, never()).findByProject(any());
     }
     
     @Test
@@ -444,6 +541,7 @@ class GanttDataServiceTest {
         task4.getPreDependencies().add(task3);
         
         List<Task> tasks = List.of(task1, task2, task3, task4);
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
         when(taskRepository.findByProject(testProject)).thenReturn(tasks);
         
         // Execute
@@ -457,6 +555,35 @@ class GanttDataServiceTest {
         // Verify repository calls
         verify(projectRepository).findById(1L);
         verify(taskRepository).findByProject(testProject);
+    }
+    
+    @Test
+    void testIdentifyBottlenecks_ProjectNotFound() {
+        // Setup - Entity doesn't exist
+        when(projectRepository.findById(999L)).thenReturn(Optional.empty());
+        
+        // Execute
+        List<Long> result = ganttDataService.identifyBottlenecks(999L);
+        
+        // Verify
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+        
+        // Verify repository calls
+        verify(projectRepository).findById(999L);
+        verify(taskRepository, never()).findByProject(any(Project.class));
+    }
+    
+    @Test
+    void testIdentifyBottlenecks_NullProjectId() {
+        // Execute and verify exception
+        assertThrows(IllegalArgumentException.class, () -> {
+            ganttDataService.identifyBottlenecks(null);
+        });
+        
+        // Verify repository was never called
+        verify(projectRepository, never()).findById(any());
+        verify(taskRepository, never()).findByProject(any());
     }
     
     @Test
