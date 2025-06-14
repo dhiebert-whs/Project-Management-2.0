@@ -1,4 +1,5 @@
 // src/test/java/org/frcpm/services/impl/ProjectServiceTest.java
+
 package org.frcpm.services.impl;
 
 import org.frcpm.models.Project;
@@ -24,6 +25,7 @@ import static org.mockito.Mockito.*;
 
 /**
  * Test class for ProjectService implementation using Spring Boot testing patterns.
+ * FIXED: Applied proven pattern from AttendanceServiceTest success template.
  */
 @ExtendWith(MockitoExtension.class)
 class ProjectServiceTest {
@@ -34,24 +36,21 @@ class ProjectServiceTest {
     @Mock
     private TaskRepository taskRepository;
     
-    private ProjectServiceImpl projectService;
+    private ProjectServiceImpl projectService; // ✅ FIXED: Use implementation class
     
     private Project testProject;
     private LocalDate now;
     
     @BeforeEach
     void setUp() {
-        // Initialize the now variable first to avoid NullPointerException
+        // ✅ FIXED: Create test objects ONLY - NO MOCK STUBBING HERE
         now = LocalDate.now();
         testProject = createTestProject();
         
-        // Setup mocks with complete stubbing
-        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
-        when(projectRepository.findAll()).thenReturn(List.of(testProject));
-        when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        
-        // Initialize the service with mocked repositories
+        // Create service with injected mocks
         projectService = new ProjectServiceImpl(projectRepository, taskRepository);
+        
+        // ✅ FIXED: NO mock stubbing in setUp() - move to individual test methods
     }
     
     /**
@@ -76,6 +75,9 @@ class ProjectServiceTest {
     
     @Test
     void testFindById() {
+        // Setup - Only stub what THIS test needs
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
+        
         // Execute
         Project result = projectService.findById(1L);
         
@@ -90,7 +92,7 @@ class ProjectServiceTest {
     
     @Test
     void testFindById_NotFound() {
-        // Setup
+        // Setup - Entity doesn't exist
         when(projectRepository.findById(99L)).thenReturn(Optional.empty());
         
         // Execute
@@ -104,7 +106,22 @@ class ProjectServiceTest {
     }
     
     @Test
+    void testFindById_NullId() {
+        // Execute
+        Project result = projectService.findById(null);
+        
+        // Verify
+        assertNull(result);
+        
+        // Verify repository was never called with null
+        verify(projectRepository, never()).findById(any());
+    }
+    
+    @Test
     void testFindAll() {
+        // Setup
+        when(projectRepository.findAll()).thenReturn(List.of(testProject));
+        
         // Execute
         List<Project> results = projectService.findAll();
         
@@ -121,6 +138,7 @@ class ProjectServiceTest {
     void testSave() {
         // Setup
         Project newProject = new Project("New Project", now, now.plusMonths(1), now.plusMonths(2));
+        when(projectRepository.save(newProject)).thenReturn(newProject);
         
         // Execute
         Project result = projectService.save(newProject);
@@ -134,9 +152,20 @@ class ProjectServiceTest {
     }
     
     @Test
+    void testSave_NullEntity() {
+        // Execute and verify exception
+        assertThrows(IllegalArgumentException.class, () -> {
+            projectService.save(null);
+        });
+        
+        // Verify repository was never called
+        verify(projectRepository, never()).save(any());
+    }
+    
+    @Test
     void testDelete() {
         // Setup
-        doNothing().when(projectRepository).delete(any(Project.class));
+        doNothing().when(projectRepository).delete(testProject);
         
         // Execute
         projectService.delete(testProject);
@@ -146,15 +175,58 @@ class ProjectServiceTest {
     }
     
     @Test
+    void testDelete_NullEntity() {
+        // Execute - should not throw exception
+        projectService.delete(null);
+        
+        // Verify repository was never called
+        verify(projectRepository, never()).delete(any());
+    }
+    
+    @Test
     void testDeleteById() {
-        // Setup - Use doNothing() for void methods instead of when().thenReturn()
+        // ✅ FIXED: Setup - Mock both existsById and deleteById as service calls both
+        when(projectRepository.existsById(1L)).thenReturn(true);
         doNothing().when(projectRepository).deleteById(anyLong());
         
-        // Execute - deleteById returns void, so don't capture return value
-        projectService.deleteById(1L);
+        // Execute
+        boolean result = projectService.deleteById(1L);
         
-        // Verify repository was called
+        // Verify result
+        assertTrue(result);
+        
+        // Verify repository calls in correct order
+        verify(projectRepository).existsById(1L);
         verify(projectRepository).deleteById(1L);
+    }
+    
+    @Test
+    void testDeleteById_NotExists() {
+        // ✅ FIXED: Setup - Entity doesn't exist
+        when(projectRepository.existsById(999L)).thenReturn(false);
+        
+        // Execute
+        boolean result = projectService.deleteById(999L);
+        
+        // Verify result
+        assertFalse(result);
+        
+        // Verify repository calls
+        verify(projectRepository).existsById(999L);
+        verify(projectRepository, never()).deleteById(anyLong());
+    }
+    
+    @Test
+    void testDeleteById_NullId() {
+        // Execute
+        boolean result = projectService.deleteById(null);
+        
+        // Verify result
+        assertFalse(result);
+        
+        // Verify repository was never called
+        verify(projectRepository, never()).existsById(any());
+        verify(projectRepository, never()).deleteById(any());
     }
     
     @Test
@@ -191,6 +263,21 @@ class ProjectServiceTest {
     }
     
     @Test
+    void testFindByName_EmptyName() {
+        // Execute and verify exception
+        assertThrows(IllegalArgumentException.class, () -> {
+            projectService.findByName("");
+        });
+        
+        assertThrows(IllegalArgumentException.class, () -> {
+            projectService.findByName(null);
+        });
+        
+        // Verify repository was never called
+        verify(projectRepository, never()).findByNameContainingIgnoreCase(any());
+    }
+    
+    @Test
     void testFindByDeadlineBefore() {
         // Setup
         List<Project> expectedProjects = List.of(testProject);
@@ -209,6 +296,17 @@ class ProjectServiceTest {
     }
     
     @Test
+    void testFindByDeadlineBefore_NullDate() {
+        // Execute and verify exception
+        assertThrows(IllegalArgumentException.class, () -> {
+            projectService.findByDeadlineBefore(null);
+        });
+        
+        // Verify repository was never called
+        verify(projectRepository, never()).findByHardDeadlineBefore(any());
+    }
+    
+    @Test
     void testFindByStartDateAfter() {
         // Setup
         List<Project> expectedProjects = List.of(testProject);
@@ -224,6 +322,17 @@ class ProjectServiceTest {
         
         // Verify repository was called
         verify(projectRepository).findByStartDateAfter(startDate);
+    }
+    
+    @Test
+    void testFindByStartDateAfter_NullDate() {
+        // Execute and verify exception
+        assertThrows(IllegalArgumentException.class, () -> {
+            projectService.findByStartDateAfter(null);
+        });
+        
+        // Verify repository was never called
+        verify(projectRepository, never()).findByStartDateAfter(any());
     }
     
     @Test
@@ -258,15 +367,41 @@ class ProjectServiceTest {
             projectService.createProject(null, now, now.plusMonths(1), now.plusMonths(2))
         );
         
+        assertThrows(IllegalArgumentException.class, () -> 
+            projectService.createProject("", now, now.plusMonths(1), now.plusMonths(2))
+        );
+        
+        assertThrows(IllegalArgumentException.class, () -> 
+            projectService.createProject("   ", now, now.plusMonths(1), now.plusMonths(2))
+        );
+        
         // Verify repository was not called
         verify(projectRepository, never()).save(any(Project.class));
     }
     
     @Test
     void testCreateProject_InvalidDates() {
-        // Execute and verify
+        // Test null dates
+        assertThrows(IllegalArgumentException.class, () -> 
+            projectService.createProject("New Project", null, now.plusMonths(1), now.plusMonths(2))
+        );
+        
+        assertThrows(IllegalArgumentException.class, () -> 
+            projectService.createProject("New Project", now, null, now.plusMonths(2))
+        );
+        
+        assertThrows(IllegalArgumentException.class, () -> 
+            projectService.createProject("New Project", now, now.plusMonths(1), null)
+        );
+        
+        // Test invalid date order - goal end before start
         assertThrows(IllegalArgumentException.class, () -> 
             projectService.createProject("New Project", now, now.minusDays(1), now.plusMonths(2))
+        );
+        
+        // Test invalid date order - hard deadline before start
+        assertThrows(IllegalArgumentException.class, () -> 
+            projectService.createProject("New Project", now, now.plusMonths(1), now.minusDays(1))
         );
         
         // Verify repository was not called
@@ -320,6 +455,39 @@ class ProjectServiceTest {
     }
     
     @Test
+    void testUpdateProject_NullId() {
+        // Execute and verify exception
+        assertThrows(IllegalArgumentException.class, () -> {
+            projectService.updateProject(null, "Updated Name", null, null, null, null);
+        });
+        
+        // Verify repository was never called
+        verify(projectRepository, never()).findById(any());
+        verify(projectRepository, never()).save(any());
+    }
+    
+    @Test
+    void testUpdateProject_InvalidDateOrder() {
+        // Setup
+        Long id = 1L;
+        when(projectRepository.findById(id)).thenReturn(Optional.of(testProject));
+        
+        // Test goal end before start
+        assertThrows(IllegalArgumentException.class, () -> {
+            projectService.updateProject(id, "Updated Name", now, now.minusDays(1), null, null);
+        });
+        
+        // Test hard deadline before start
+        assertThrows(IllegalArgumentException.class, () -> {
+            projectService.updateProject(id, "Updated Name", now, null, now.minusDays(1), null);
+        });
+        
+        // Verify repository was called to find but never to save
+        verify(projectRepository, times(2)).findById(id);
+        verify(projectRepository, never()).save(any());
+    }
+    
+    @Test
     void testGetProjectSummary() {
         // Setup
         Long projectId = 1L;
@@ -364,5 +532,65 @@ class ProjectServiceTest {
         // Verify repository was called
         verify(projectRepository).findById(projectId);
         verify(taskRepository, never()).findByProject(any(Project.class));
+    }
+    
+    @Test
+    void testGetProjectSummary_NullProjectId() {
+        // Execute
+        Map<String, Object> summary = projectService.getProjectSummary(null);
+        
+        // Verify
+        assertNotNull(summary);
+        assertTrue(summary.isEmpty());
+        
+        // Verify repository was never called
+        verify(projectRepository, never()).findById(any());
+        verify(taskRepository, never()).findByProject(any());
+    }
+    
+    @Test
+    void testGetProjectSummary_NoTasks() {
+        // Setup
+        Long projectId = 1L;
+        when(projectRepository.findById(projectId)).thenReturn(Optional.of(testProject));
+        when(taskRepository.findByProject(testProject)).thenReturn(new ArrayList<>());
+        
+        // Execute
+        Map<String, Object> summary = projectService.getProjectSummary(projectId);
+        
+        // Verify
+        assertNotNull(summary);
+        assertEquals(projectId, summary.get("id"));
+        assertEquals("Test Project", summary.get("name"));
+        assertEquals(0, summary.get("totalTasks"));
+        assertEquals(0, summary.get("completedTasks"));
+        assertEquals(0.0, summary.get("completionPercentage"));
+        
+        // Verify repository was called
+        verify(projectRepository).findById(projectId);
+        verify(taskRepository).findByProject(testProject);
+    }
+    
+    @Test
+    void testGetProjectSummary_NullTasks() {
+        // Setup
+        Long projectId = 1L;
+        when(projectRepository.findById(projectId)).thenReturn(Optional.of(testProject));
+        when(taskRepository.findByProject(testProject)).thenReturn(null);
+        
+        // Execute
+        Map<String, Object> summary = projectService.getProjectSummary(projectId);
+        
+        // Verify
+        assertNotNull(summary);
+        assertEquals(projectId, summary.get("id"));
+        assertEquals("Test Project", summary.get("name"));
+        assertEquals(0, summary.get("totalTasks"));
+        assertEquals(0, summary.get("completedTasks"));
+        assertEquals(0.0, summary.get("completionPercentage"));
+        
+        // Verify repository was called
+        verify(projectRepository).findById(projectId);
+        verify(taskRepository).findByProject(testProject);
     }
 }
