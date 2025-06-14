@@ -60,6 +60,10 @@ public class MetricsCalculationServiceImpl implements MetricsCalculationService 
     
     @Override
     public Map<String, Object> calculateProjectProgressMetrics(Long projectId) {
+        if (projectId == null) {
+            throw new IllegalArgumentException("Project ID cannot be null");
+        }
+
         LOGGER.info("Calculating project progress metrics for project ID: " + projectId);
         
         Map<String, Object> metrics = new HashMap<>();
@@ -133,6 +137,10 @@ public class MetricsCalculationServiceImpl implements MetricsCalculationService 
     
     @Override
     public Map<String, Object> calculateTeamPerformanceMetrics(Long projectId, LocalDate startDate, LocalDate endDate) {
+        if (projectId == null) {
+            throw new IllegalArgumentException("Project ID cannot be null");
+        }
+        
         LOGGER.info("Calculating team performance metrics for project ID: " + projectId);
         
         Map<String, Object> metrics = new HashMap<>();
@@ -233,6 +241,10 @@ public class MetricsCalculationServiceImpl implements MetricsCalculationService 
     
     @Override
     public Map<String, Object> calculateTaskCompletionMetrics(Long projectId) {
+        if (projectId == null) {
+            throw new IllegalArgumentException("Project ID cannot be null");
+        }
+
         LOGGER.info("Calculating task completion metrics for project ID: " + projectId);
         
         Map<String, Object> metrics = new HashMap<>();
@@ -328,6 +340,10 @@ public class MetricsCalculationServiceImpl implements MetricsCalculationService 
     
     @Override
     public Map<String, Object> calculateAttendanceMetrics(Long projectId, LocalDate startDate, LocalDate endDate) {
+        if (projectId == null) {
+            throw new IllegalArgumentException("Project ID cannot be null");
+        }
+        
         LOGGER.info("Calculating attendance metrics for project ID: " + projectId);
         
         Map<String, Object> metrics = new HashMap<>();
@@ -423,6 +439,10 @@ public class MetricsCalculationServiceImpl implements MetricsCalculationService 
     
     @Override
     public Map<String, Object> calculateTimelineDeviationMetrics(Long projectId) {
+        if (projectId == null) {
+            throw new IllegalArgumentException("Project ID cannot be null");
+        }
+        
         LOGGER.info("Calculating timeline deviation metrics for project ID: " + projectId);
         
         Map<String, Object> metrics = new HashMap<>();
@@ -509,6 +529,10 @@ public class MetricsCalculationServiceImpl implements MetricsCalculationService 
     
     @Override
     public Map<String, Object> calculateIndividualPerformanceMetrics(Long teamMemberId, LocalDate startDate, LocalDate endDate) {
+        if (teamMemberId == null) {
+            throw new IllegalArgumentException("Team member ID cannot be null");
+        }
+        
         LOGGER.info("Calculating individual performance metrics for team member ID: " + teamMemberId);
         
         Map<String, Object> metrics = new HashMap<>();
@@ -614,6 +638,10 @@ public class MetricsCalculationServiceImpl implements MetricsCalculationService 
     
     @Override
     public Map<String, Object> calculateSubsystemPerformanceMetrics(Long projectId) {
+        if (projectId == null) {
+            throw new IllegalArgumentException("Project ID cannot be null");
+        }
+        
         LOGGER.info("Calculating subsystem performance metrics for project ID: " + projectId);
         
         Map<String, Object> metrics = new HashMap<>();
@@ -732,6 +760,10 @@ public class MetricsCalculationServiceImpl implements MetricsCalculationService 
     
     @Override
     public Map<String, Object> generateProjectHealthDashboard(Long projectId) {
+        if (projectId == null) {
+            throw new IllegalArgumentException("Project ID cannot be null");
+        }
+        
         LOGGER.info("Generating project health dashboard for project ID: " + projectId);
         
         Map<String, Object> dashboard = new HashMap<>();
@@ -1080,14 +1112,28 @@ public class MetricsCalculationServiceImpl implements MetricsCalculationService 
             }
         }
         
-        // Tasks at risk recommendations
-        Integer tasksAtRisk = (Integer) timelineMetrics.get("tasksAtRiskCount");
+        // Tasks at risk recommendations - FIX: Handle both Integer and Long
+        Object tasksAtRiskObj = timelineMetrics.get("tasksAtRiskCount");
+        Integer tasksAtRisk = null;
+        if (tasksAtRiskObj instanceof Integer) {
+            tasksAtRisk = (Integer) tasksAtRiskObj;
+        } else if (tasksAtRiskObj instanceof Long) {
+            tasksAtRisk = ((Long) tasksAtRiskObj).intValue();
+        }
+
         if (tasksAtRisk != null && tasksAtRisk > 0) {
             recommendations.add("Focus on " + tasksAtRisk + " overdue tasks to get back on track.");
         }
-        
-        // Bottleneck recommendations
-        Integer bottleneckTasks = (Integer) taskMetrics.get("bottleneckTaskCount");
+
+        // Bottleneck recommendations - FIX: Handle both Integer and Long
+        Object bottleneckTasksObj = taskMetrics.get("bottleneckTaskCount");
+        Integer bottleneckTasks = null;
+        if (bottleneckTasksObj instanceof Integer) {
+            bottleneckTasks = (Integer) bottleneckTasksObj;
+        } else if (bottleneckTasksObj instanceof Long) {
+            bottleneckTasks = ((Long) bottleneckTasksObj).intValue();
+        }
+
         if (bottleneckTasks != null && bottleneckTasks > 0) {
             recommendations.add("Address " + bottleneckTasks + " bottleneck tasks that may be blocking other work.");
         }
@@ -1098,9 +1144,25 @@ public class MetricsCalculationServiceImpl implements MetricsCalculationService 
             recommendations.add("Team attendance is low (" + String.format("%.1f", avgAttendance) + "%). Consider adjusting meeting times or format.");
         }
         
-        // Milestone recommendations
-        Long passedMilestones = (Long) progressMetrics.get("passedMilestones");
-        Long totalMilestones = (Long) progressMetrics.get("totalMilestones");
+        // Milestone recommendations - FIX: Handle both Integer and Long
+        Object passedMilestonesObj = progressMetrics.get("passedMilestones");
+        Object totalMilestonesObj = progressMetrics.get("totalMilestones");
+
+        Long passedMilestones = null;
+        Long totalMilestones = null;
+
+        if (passedMilestonesObj instanceof Integer) {
+            passedMilestones = ((Integer) passedMilestonesObj).longValue();
+        } else if (passedMilestonesObj instanceof Long) {
+            passedMilestones = (Long) passedMilestonesObj;
+        }
+
+        if (totalMilestonesObj instanceof Integer) {
+            totalMilestones = ((Integer) totalMilestonesObj).longValue();
+        } else if (totalMilestonesObj instanceof Long) {
+            totalMilestones = (Long) totalMilestonesObj;
+        }
+
         if (passedMilestones != null && totalMilestones != null && totalMilestones > 0) {
             double milestoneProgress = 100.0 * passedMilestones / totalMilestones;
             Double timeProgress = (Double) progressMetrics.get("timeProgressPercentage");

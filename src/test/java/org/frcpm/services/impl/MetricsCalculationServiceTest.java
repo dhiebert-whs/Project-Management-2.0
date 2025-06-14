@@ -658,11 +658,11 @@ class MetricsCalculationServiceTest {
 
     @Test
     void testMetricsWithEmptyData() {
-        // Setup with empty test data
+        // Setup with empty test data - ONLY stub what this test needs
         when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
         when(taskRepository.findByProject(testProject)).thenReturn(Collections.emptyList());
         when(milestoneRepository.findByProject(testProject)).thenReturn(Collections.emptyList());
-        when(meetingRepository.findByProject(testProject)).thenReturn(Collections.emptyList());
+        // Remove unnecessary stubbing that caused the error
 
         // Execute
         Map<String, Object> metrics = metricsService.calculateProjectProgressMetrics(1L);
