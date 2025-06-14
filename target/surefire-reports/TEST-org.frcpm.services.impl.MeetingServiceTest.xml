@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="org.frcpm.services.impl.ComponentServiceTest" time="1.187" tests="17" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="org.frcpm.services.impl.MeetingServiceTest" time="0.166" tests="18" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="21"/>
     <property name="sun.cpu.isalist" value="amd64"/>
@@ -65,27 +65,22 @@
     <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
     <property name="java.class.version" value="65.0"/>
   </properties>
-  <testcase name="testFindAll" classname="org.frcpm.services.impl.ComponentServiceTest" time="1.058">
-    <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (C:\Users\dhiebert\.m2\repository\net\bytebuddy\byte-buddy-agent\1.14.10\byte-buddy-agent-1.14.10.jar)
-WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
-WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
-WARNING: Dynamic loading of agents will be disallowed by default in a future release
-]]></system-err>
-  </testcase>
-  <testcase name="testCount" classname="org.frcpm.services.impl.ComponentServiceTest" time="0.003"/>
-  <testcase name="testSave" classname="org.frcpm.services.impl.ComponentServiceTest" time="0.013"/>
-  <testcase name="testFindByName" classname="org.frcpm.services.impl.ComponentServiceTest" time="0.001"/>
-  <testcase name="testCreateComponent_PartNumberExists" classname="org.frcpm.services.impl.ComponentServiceTest" time="0.005"/>
-  <testcase name="testAssociateComponentsWithTask_TaskNotFound" classname="org.frcpm.services.impl.ComponentServiceTest" time="0.01"/>
-  <testcase name="testMarkAsDelivered_ComponentNotFound" classname="org.frcpm.services.impl.ComponentServiceTest" time="0.005"/>
-  <testcase name="testFindById" classname="org.frcpm.services.impl.ComponentServiceTest" time="0.002"/>
-  <testcase name="testUpdateExpectedDelivery" classname="org.frcpm.services.impl.ComponentServiceTest" time="0.002"/>
-  <testcase name="testFindByDelivered" classname="org.frcpm.services.impl.ComponentServiceTest" time="0.002"/>
-  <testcase name="testMarkAsDelivered" classname="org.frcpm.services.impl.ComponentServiceTest" time="0.002"/>
-  <testcase name="testDeleteById" classname="org.frcpm.services.impl.ComponentServiceTest" time="0.007"/>
-  <testcase name="testCreateComponent" classname="org.frcpm.services.impl.ComponentServiceTest" time="0.005"/>
-  <testcase name="testDelete" classname="org.frcpm.services.impl.ComponentServiceTest" time="0.001"/>
-  <testcase name="testDeleteById_NotExists" classname="org.frcpm.services.impl.ComponentServiceTest" time="0.002"/>
-  <testcase name="testFindByPartNumber" classname="org.frcpm.services.impl.ComponentServiceTest" time="0.003"/>
-  <testcase name="testAssociateComponentsWithTask" classname="org.frcpm.services.impl.ComponentServiceTest" time="0.003"/>
+  <testcase name="testGetUpcomingMeetings_ProjectNotFound" classname="org.frcpm.services.impl.MeetingServiceTest" time="0.109"/>
+  <testcase name="testFindByProject" classname="org.frcpm.services.impl.MeetingServiceTest" time="0.001"/>
+  <testcase name="testUpdateNotes" classname="org.frcpm.services.impl.MeetingServiceTest" time="0.003"/>
+  <testcase name="testFindAll" classname="org.frcpm.services.impl.MeetingServiceTest" time="0.003"/>
+  <testcase name="testFindByDateBetween" classname="org.frcpm.services.impl.MeetingServiceTest" time="0.002"/>
+  <testcase name="testCount" classname="org.frcpm.services.impl.MeetingServiceTest" time="0.001"/>
+  <testcase name="testSave" classname="org.frcpm.services.impl.MeetingServiceTest" time="0.002"/>
+  <testcase name="testFindByDate" classname="org.frcpm.services.impl.MeetingServiceTest" time="0.002"/>
+  <testcase name="testUpdateMeetingDateTime_MeetingNotFound" classname="org.frcpm.services.impl.MeetingServiceTest" time="0.003"/>
+  <testcase name="testFindById" classname="org.frcpm.services.impl.MeetingServiceTest" time="0.002"/>
+  <testcase name="testFindByDateAfter" classname="org.frcpm.services.impl.MeetingServiceTest" time="0.002"/>
+  <testcase name="testCreateMeeting" classname="org.frcpm.services.impl.MeetingServiceTest" time="0.002"/>
+  <testcase name="testGetUpcomingMeetings" classname="org.frcpm.services.impl.MeetingServiceTest" time="0.002"/>
+  <testcase name="testDeleteById" classname="org.frcpm.services.impl.MeetingServiceTest" time="0.001"/>
+  <testcase name="testDelete" classname="org.frcpm.services.impl.MeetingServiceTest" time="0.002"/>
+  <testcase name="testDeleteById_NotExists" classname="org.frcpm.services.impl.MeetingServiceTest" time="0.002"/>
+  <testcase name="testUpdateMeetingDateTime" classname="org.frcpm.services.impl.MeetingServiceTest" time="0.004"/>
+  <testcase name="testCreateMeeting_ProjectNotFound" classname="org.frcpm.services.impl.MeetingServiceTest" time="0.004"/>
 </testsuite>

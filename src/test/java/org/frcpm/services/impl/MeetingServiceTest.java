@@ -24,6 +24,8 @@ import static org.mockito.Mockito.*;
 
 /**
  * Test class for MeetingService implementation using Spring Boot testing patterns.
+ * FIXED: Applied AttendanceServiceTest success pattern - removed unnecessary stubbing,
+ * fixed deleteById logic, and corrected return type handling.
  */
 @ExtendWith(MockitoExtension.class)
 class MeetingServiceTest {
@@ -41,23 +43,17 @@ class MeetingServiceTest {
     
     @BeforeEach
     void setUp() {
-        // Initialize test objects
+        // Create test objects ONLY - NO MOCK STUBBING HERE
         testProject = createTestProject();
         testMeeting = createTestMeeting();
-        
-        // Configure mock repository responses
-        when(meetingRepository.findById(1L)).thenReturn(Optional.of(testMeeting));
-        when(meetingRepository.findAll()).thenReturn(List.of(testMeeting));
-        when(meetingRepository.save(any(Meeting.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        
-        // Configure project repository
-        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
         
         // Create service with injected mocks
         meetingService = new MeetingServiceImpl(
             meetingRepository,
             projectRepository
         );
+        
+        // ✅ FIXED: NO mock stubbing in setUp() - move to individual test methods
     }
     
     /**
@@ -77,19 +73,21 @@ class MeetingServiceTest {
      * Creates a test meeting for use in tests.
      */
     private Meeting createTestMeeting() {
-        Meeting meeting = new Meeting(
-            LocalDate.now().plusDays(5),
-            LocalTime.of(9, 0),
-            LocalTime.of(10, 30),
-            testProject
-        );
+        Meeting meeting = new Meeting();
         meeting.setId(1L);
+        meeting.setDate(LocalDate.now().plusDays(5));
+        meeting.setStartTime(LocalTime.of(9, 0));
+        meeting.setEndTime(LocalTime.of(10, 30));
+        meeting.setProject(testProject);
         meeting.setNotes("Test meeting notes");
         return meeting;
     }
     
     @Test
     void testFindById() {
+        // Setup - Only stub what this test needs
+        when(meetingRepository.findById(1L)).thenReturn(Optional.of(testMeeting));
+        
         // Execute
         Meeting result = meetingService.findById(1L);
         
@@ -104,6 +102,9 @@ class MeetingServiceTest {
     
     @Test
     void testFindAll() {
+        // Setup - Only stub what this test needs
+        when(meetingRepository.findAll()).thenReturn(List.of(testMeeting));
+        
         // Execute
         List<Meeting> results = meetingService.findAll();
         
@@ -118,13 +119,15 @@ class MeetingServiceTest {
     
     @Test
     void testSave() {
+        // Setup - Only stub what this test needs
+        when(meetingRepository.save(any(Meeting.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        
         // Setup
-        Meeting newMeeting = new Meeting(
-            LocalDate.now().plusDays(2),
-            LocalTime.of(14, 0),
-            LocalTime.of(15, 0),
-            testProject
-        );
+        Meeting newMeeting = new Meeting();
+        newMeeting.setDate(LocalDate.now().plusDays(2));
+        newMeeting.setStartTime(LocalTime.of(14, 0));
+        newMeeting.setEndTime(LocalTime.of(15, 0));
+        newMeeting.setProject(testProject);
         
         // Execute
         Meeting result = meetingService.save(newMeeting);
@@ -151,19 +154,40 @@ class MeetingServiceTest {
     
     @Test
     void testDeleteById() {
-        // Setup - Use doNothing() for void methods instead of when().thenReturn()
+        // Setup - Mock both existsById and deleteById as service calls both
+        when(meetingRepository.existsById(1L)).thenReturn(true);
         doNothing().when(meetingRepository).deleteById(anyLong());
         
-        // Execute - deleteById returns void, so don't capture return value
-        meetingService.deleteById(1L);
+        // Execute
+        boolean result = meetingService.deleteById(1L);
         
-        // Verify repository was called
+        // Verify result
+        assertTrue(result);
+        
+        // Verify repository calls in correct order
+        verify(meetingRepository).existsById(1L);
         verify(meetingRepository).deleteById(1L);
     }
     
     @Test
+    void testDeleteById_NotExists() {
+        // Setup - Meeting doesn't exist
+        when(meetingRepository.existsById(999L)).thenReturn(false);
+        
+        // Execute
+        boolean result = meetingService.deleteById(999L);
+        
+        // Verify result
+        assertFalse(result);
+        
+        // Verify repository calls
+        verify(meetingRepository).existsById(999L);
+        verify(meetingRepository, never()).deleteById(anyLong());
+    }
+    
+    @Test
     void testCount() {
-        // Setup
+        // Setup - Only stub what this test needs
         when(meetingRepository.count()).thenReturn(5L);
         
         // Execute
@@ -178,7 +202,7 @@ class MeetingServiceTest {
     
     @Test
     void testFindByProject() {
-        // Setup
+        // Setup - Only stub what this test needs
         when(meetingRepository.findByProject(testProject)).thenReturn(List.of(testMeeting));
         
         // Execute
@@ -195,7 +219,7 @@ class MeetingServiceTest {
     
     @Test
     void testFindByDate() {
-        // Setup
+        // Setup - Only stub what this test needs
         LocalDate testDate = LocalDate.now().plusDays(5);
         when(meetingRepository.findByDate(testDate)).thenReturn(List.of(testMeeting));
         
@@ -213,7 +237,7 @@ class MeetingServiceTest {
     
     @Test
     void testFindByDateAfter() {
-        // Setup
+        // Setup - Only stub what this test needs
         LocalDate testDate = LocalDate.now();
         when(meetingRepository.findByDateAfter(testDate)).thenReturn(List.of(testMeeting));
         
@@ -231,7 +255,7 @@ class MeetingServiceTest {
     
     @Test
     void testFindByDateBetween() {
-        // Setup
+        // Setup - Only stub what this test needs
         LocalDate startDate = LocalDate.now();
         LocalDate endDate = LocalDate.now().plusDays(10);
         when(meetingRepository.findByDateBetween(startDate, endDate)).thenReturn(List.of(testMeeting));
@@ -250,6 +274,10 @@ class MeetingServiceTest {
     
     @Test
     void testCreateMeeting() {
+        // Setup - Only stub what this test needs
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
+        when(meetingRepository.save(any(Meeting.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        
         // Execute
         Meeting result = meetingService.createMeeting(
             LocalDate.now().plusDays(3),
@@ -274,7 +302,7 @@ class MeetingServiceTest {
     
     @Test
     void testCreateMeeting_ProjectNotFound() {
-        // Setup
+        // Setup - Only stub what this test needs
         when(projectRepository.findById(999L)).thenReturn(Optional.empty());
         
         // Execute and verify exception
@@ -298,7 +326,10 @@ class MeetingServiceTest {
     
     @Test
     void testUpdateMeetingDateTime() {
-        // Setup
+        // Setup - Only stub what this test needs
+        when(meetingRepository.findById(1L)).thenReturn(Optional.of(testMeeting));
+        when(meetingRepository.save(any(Meeting.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        
         LocalDate newDate = LocalDate.now().plusDays(7);
         LocalTime newStartTime = LocalTime.of(10, 0);
         LocalTime newEndTime = LocalTime.of(11, 30);
@@ -319,7 +350,7 @@ class MeetingServiceTest {
     
     @Test
     void testUpdateMeetingDateTime_MeetingNotFound() {
-        // Setup
+        // Setup - Only stub what this test needs
         when(meetingRepository.findById(999L)).thenReturn(Optional.empty());
         
         // Execute
@@ -339,11 +370,28 @@ class MeetingServiceTest {
     }
     
     @Test
+    void testUpdateNotes() {
+        // Setup - Only stub what this test needs
+        when(meetingRepository.findById(1L)).thenReturn(Optional.of(testMeeting));
+        when(meetingRepository.save(any(Meeting.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        
+        // Execute
+        Meeting result = meetingService.updateNotes(1L, "Updated notes");
+        
+        // Verify
+        assertNotNull(result);
+        assertEquals("Updated notes", result.getNotes());
+        
+        // Verify repository calls
+        verify(meetingRepository).findById(1L);
+        verify(meetingRepository).save(any(Meeting.class));
+    }
+    
+    @Test
     void testGetUpcomingMeetings() {
-        // Setup
-        LocalDate today = LocalDate.now();
+        // Setup - Only stub what this test needs
         when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
-        when(meetingRepository.findByDateBetween(any(LocalDate.class), any(LocalDate.class)))
+        when(meetingRepository.findByProjectAndDateBetween(eq(testProject), any(LocalDate.class), any(LocalDate.class)))
             .thenReturn(List.of(testMeeting));
         
         // Execute
@@ -356,23 +404,24 @@ class MeetingServiceTest {
         
         // Verify repository calls
         verify(projectRepository).findById(1L);
-        verify(meetingRepository).findByDateBetween(any(LocalDate.class), any(LocalDate.class));
+        verify(meetingRepository).findByProjectAndDateBetween(eq(testProject), any(LocalDate.class), any(LocalDate.class));
     }
     
     @Test
     void testGetUpcomingMeetings_ProjectNotFound() {
-        // Setup
+        // Setup - Only stub what this test needs
         when(projectRepository.findById(999L)).thenReturn(Optional.empty());
         
-        // Execute
-        List<Meeting> results = meetingService.getUpcomingMeetings(999L, 7);
+        // Execute and verify exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            meetingService.getUpcomingMeetings(999L, 7);
+        });
         
-        // Verify
-        assertNotNull(results);
-        assertTrue(results.isEmpty());
+        // Verify exception message
+        assertTrue(exception.getMessage().contains("Project not found"));
         
         // Verify repository calls
         verify(projectRepository).findById(999L);
-        verify(meetingRepository, never()).findByDateBetween(any(LocalDate.class), any(LocalDate.class));
+        verify(meetingRepository, never()).findByProjectAndDateBetween(any(), any(LocalDate.class), any(LocalDate.class));
     }
 }

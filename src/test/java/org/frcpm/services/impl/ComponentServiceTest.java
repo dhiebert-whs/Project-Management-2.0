@@ -6,7 +6,6 @@ import org.frcpm.models.Component;
 import org.frcpm.models.Task;
 import org.frcpm.repositories.spring.ComponentRepository;
 import org.frcpm.repositories.spring.TaskRepository;
-import org.frcpm.services.ComponentService; // Import the interface, not impl
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,7 +13,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
-//import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -22,11 +20,12 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-//import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
  * Test class for ComponentService implementation using Spring Boot testing patterns.
+ * FIXED: Applied AttendanceServiceTest success pattern - removed unnecessary stubbing,
+ * fixed deleteById logic, and corrected field type issues.
  */
 @ExtendWith(MockitoExtension.class)
 class ComponentServiceTest {
@@ -37,35 +36,25 @@ class ComponentServiceTest {
     @Mock
     private TaskRepository taskRepository;
     
-    private ComponentService componentService; // Use interface type
+    private ComponentServiceImpl componentService; // ✅ FIXED: Use implementation class, not interface
     
     private Component testComponent;
     private Task testTask;
     
     @BeforeEach
     void setUp() {
-        // Initialize test objects
+        // Create test objects ONLY - NO MOCK STUBBING HERE
         testComponent = createTestComponent();
         testTask = createTestTask();
         
-        // Configure mock repository responses
-        when(componentRepository.findById(1L)).thenReturn(Optional.of(testComponent));
-        when(componentRepository.findAll()).thenReturn(List.of(testComponent));
-        when(componentRepository.save(any(Component.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        
-        // Configure task repository
-        when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
-        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
-    
-        // Create service with injected mocks - USE CORRECT CLASS NAME
+        // Create service with injected mocks
         componentService = new ComponentServiceImpl(
             componentRepository,
             taskRepository
         );
+        
+        // ✅ FIXED: NO mock stubbing in setUp() - move to individual test methods
     }
-    
-    // Rest of the test methods remain the same...
-    // (keeping all existing test methods unchanged)
     
     /**
      * Creates a test component for use in tests.
@@ -91,6 +80,9 @@ class ComponentServiceTest {
     
     @Test
     void testFindById() {
+        // Setup - Only stub what this test needs
+        when(componentRepository.findById(1L)).thenReturn(Optional.of(testComponent));
+        
         // Execute
         Component result = componentService.findById(1L);
         
@@ -105,6 +97,9 @@ class ComponentServiceTest {
     
     @Test
     void testFindAll() {
+        // Setup - Only stub what this test needs
+        when(componentRepository.findAll()).thenReturn(List.of(testComponent));
+        
         // Execute
         List<Component> results = componentService.findAll();
         
@@ -119,6 +114,9 @@ class ComponentServiceTest {
     
     @Test
     void testSave() {
+        // Setup - Only stub what this test needs
+        when(componentRepository.save(any(Component.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        
         // Setup
         Component newComponent = new Component("New Component", "NC-456");
         newComponent.setDescription("New component for testing");
@@ -149,22 +147,40 @@ class ComponentServiceTest {
     
     @Test
     void testDeleteById() {
-        // Setup - Use doNothing() for void repository methods
+        // Setup - Mock both existsById and deleteById as service calls both
+        when(componentRepository.existsById(1L)).thenReturn(true);
         doNothing().when(componentRepository).deleteById(anyLong());
         
-        // Execute - Service deleteById may return boolean indicating success
+        // Execute
         boolean result = componentService.deleteById(1L);
         
-        // Verify - Service should return true when repository operation succeeds
+        // Verify result
         assertTrue(result);
         
-        // Verify repository was called
+        // Verify repository calls in correct order
+        verify(componentRepository).existsById(1L);
         verify(componentRepository).deleteById(1L);
     }
     
     @Test
+    void testDeleteById_NotExists() {
+        // Setup - Component doesn't exist
+        when(componentRepository.existsById(999L)).thenReturn(false);
+        
+        // Execute
+        boolean result = componentService.deleteById(999L);
+        
+        // Verify result
+        assertFalse(result);
+        
+        // Verify repository calls
+        verify(componentRepository).existsById(999L);
+        verify(componentRepository, never()).deleteById(anyLong());
+    }
+    
+    @Test
     void testCount() {
-        // Setup
+        // Setup - Only stub what this test needs
         when(componentRepository.count()).thenReturn(5L);
         
         // Execute
@@ -179,7 +195,7 @@ class ComponentServiceTest {
     
     @Test
     void testFindByPartNumber() {
-        // Setup
+        // Setup - Only stub what this test needs
         when(componentRepository.findByPartNumber("TC-123")).thenReturn(Optional.of(testComponent));
         
         // Execute
@@ -195,7 +211,7 @@ class ComponentServiceTest {
     
     @Test
     void testFindByName() {
-        // Setup
+        // Setup - Only stub what this test needs
         when(componentRepository.findByNameContainingIgnoreCase("Test")).thenReturn(List.of(testComponent));
         
         // Execute
@@ -212,7 +228,7 @@ class ComponentServiceTest {
     
     @Test
     void testFindByDelivered() {
-        // Setup
+        // Setup - Only stub what this test needs
         when(componentRepository.findByDelivered(false)).thenReturn(List.of(testComponent));
         
         // Execute
@@ -229,8 +245,9 @@ class ComponentServiceTest {
     
     @Test
     void testCreateComponent() {
-        // Setup
+        // Setup - Only stub what this test needs
         when(componentRepository.findByPartNumber("NC-456")).thenReturn(Optional.empty());
+        when(componentRepository.save(any(Component.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
         // Execute
         Component result = componentService.createComponent(
@@ -255,7 +272,7 @@ class ComponentServiceTest {
     
     @Test
     void testCreateComponent_PartNumberExists() {
-        // Setup
+        // Setup - Only stub what this test needs
         when(componentRepository.findByPartNumber("TC-123")).thenReturn(Optional.of(testComponent));
         
         // Execute and verify exception
@@ -278,6 +295,10 @@ class ComponentServiceTest {
     
     @Test
     void testMarkAsDelivered() {
+        // Setup - Only stub what this test needs
+        when(componentRepository.findById(1L)).thenReturn(Optional.of(testComponent));
+        when(componentRepository.save(any(Component.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        
         // Execute
         Component result = componentService.markAsDelivered(1L, LocalDate.now());
         
@@ -293,7 +314,7 @@ class ComponentServiceTest {
     
     @Test
     void testMarkAsDelivered_ComponentNotFound() {
-        // Setup
+        // Setup - Only stub what this test needs
         when(componentRepository.findById(999L)).thenReturn(Optional.empty());
         
         // Execute
@@ -309,6 +330,10 @@ class ComponentServiceTest {
     
     @Test
     void testUpdateExpectedDelivery() {
+        // Setup - Only stub what this test needs
+        when(componentRepository.findById(1L)).thenReturn(Optional.of(testComponent));
+        when(componentRepository.save(any(Component.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        
         // Execute
         Component result = componentService.updateExpectedDelivery(1L, LocalDate.now().plusDays(20));
         
@@ -323,9 +348,10 @@ class ComponentServiceTest {
     
     @Test
     void testAssociateComponentsWithTask() {
-        // Setup
+        // Setup - Only stub what this test needs
         when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
         when(componentRepository.findById(1L)).thenReturn(Optional.of(testComponent));
+        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
         // Execute
         Task result = componentService.associateComponentsWithTask(1L, Set.of(1L));
@@ -341,7 +367,7 @@ class ComponentServiceTest {
     
     @Test
     void testAssociateComponentsWithTask_TaskNotFound() {
-        // Setup
+        // Setup - Only stub what this test needs
         when(taskRepository.findById(999L)).thenReturn(Optional.empty());
         
         // Execute
