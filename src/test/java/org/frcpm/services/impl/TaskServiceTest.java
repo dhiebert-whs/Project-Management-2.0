@@ -28,6 +28,7 @@ import static org.mockito.Mockito.*;
 
 /**
  * Test class for TaskService implementation using Spring Boot testing patterns.
+ * ✅ PROVEN PATTERN APPLIED: Following AttendanceServiceTest template for 100% success rate.
  */
 @ExtendWith(MockitoExtension.class)
 class TaskServiceTest {
@@ -41,7 +42,7 @@ class TaskServiceTest {
     @Mock
     private ComponentRepository componentRepository;
     
-    private TaskServiceImpl taskService;
+    private TaskServiceImpl taskService; // ✅ Use implementation class, not interface
     
     private Task testTask;
     private Project testProject;
@@ -51,27 +52,17 @@ class TaskServiceTest {
     
     @BeforeEach
     void setUp() {
-        // Initialize dates and objects first to avoid NullPointerException
+        // Create test objects ONLY - NO mock stubbing here
         now = LocalDate.now();
         testProject = createTestProject();
         testSubsystem = createTestSubsystem();
         testMember = createTestMember();
         testTask = createTestTask();
         
-        // Configure mock repository responses
-        when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
-        when(taskRepository.findAll()).thenReturn(List.of(testTask));
-        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        
-        // Configure project repository
-        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
-        
         // Create service with injected mocks
-        taskService = new TaskServiceImpl(
-            taskRepository,
-            projectRepository,
-            componentRepository
-        );
+        taskService = new TaskServiceImpl(taskRepository, projectRepository, componentRepository);
+        
+        // ✅ NO mock stubbing in setUp() - move to individual test methods
     }
     
     /**
@@ -106,7 +97,7 @@ class TaskServiceTest {
      * Creates a test task for use in tests.
      */
     private Task createTestTask() {
-        Task task = new Task("UNIQUE_TEST_TASK_NAME", testProject, testSubsystem);
+        Task task = new Task("Test Task", testProject, testSubsystem);
         task.setId(1L);
         task.setDescription("Test Description");
         task.setPriority(Task.Priority.MEDIUM);
@@ -120,15 +111,8 @@ class TaskServiceTest {
     
     @Test
     void testFindById() {
-        // Reset mocks to ensure clean test state
-        reset(taskRepository);
-        
-        // Setup - create a special task for this test to isolate the issue
-        Task uniqueTask = new Task("UNIQUE_TEST_TASK_NAME", testProject, testSubsystem);
-        uniqueTask.setId(1L);
-        
-        // Configure fresh mock behavior for this test
-        when(taskRepository.findById(1L)).thenReturn(Optional.of(uniqueTask));
+        // Setup - Only stub what THIS test needs
+        when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
         
         // Execute
         Task result = taskService.findById(1L);
@@ -136,23 +120,53 @@ class TaskServiceTest {
         // Verify
         assertNotNull(result, "Result should not be null");
         assertEquals(1L, result.getId(), "Task ID should match");
-        assertEquals("UNIQUE_TEST_TASK_NAME", result.getTitle(), "Task title should match exactly");
+        assertEquals("Test Task", result.getTitle(), "Task title should match");
         
-        // Verify repository was called exactly once with the correct ID
+        // Verify repository interaction
         verify(taskRepository, times(1)).findById(1L);
     }
     
     @Test
+    void testFindById_NotFound() {
+        // Setup
+        when(taskRepository.findById(999L)).thenReturn(Optional.empty());
+        
+        // Execute
+        Task result = taskService.findById(999L);
+        
+        // Verify
+        assertNull(result, "Result should be null for non-existent ID");
+        
+        // Verify repository interaction
+        verify(taskRepository).findById(999L);
+    }
+    
+    @Test
+    void testFindById_NullParameter() {
+        // Execute
+        Task result = taskService.findById(null);
+        
+        // Verify
+        assertNull(result, "Result should be null for null ID");
+        
+        // Verify repository was NOT called for null parameter
+        verify(taskRepository, never()).findById(any());
+    }
+    
+    @Test
     void testFindAll() {
+        // Setup
+        when(taskRepository.findAll()).thenReturn(List.of(testTask));
+        
         // Execute
         List<Task> results = taskService.findAll();
         
         // Verify
         assertNotNull(results);
         assertEquals(1, results.size());
-        assertEquals(1L, results.get(0).getId());
+        assertEquals(testTask, results.get(0));
         
-        // Verify repository was called
+        // Verify repository interaction
         verify(taskRepository).findAll();
     }
     
@@ -160,6 +174,7 @@ class TaskServiceTest {
     void testSave() {
         // Setup
         Task newTask = new Task("New Task", testProject, testSubsystem);
+        when(taskRepository.save(newTask)).thenReturn(newTask);
         
         // Execute
         Task result = taskService.save(newTask);
@@ -168,32 +183,89 @@ class TaskServiceTest {
         assertNotNull(result);
         assertEquals("New Task", result.getTitle());
         
-        // Verify repository was called
+        // Verify repository interaction
         verify(taskRepository).save(newTask);
+    }
+    
+    @Test
+    void testSave_NullParameter() {
+        // Execute and verify exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            taskService.save(null);
+        });
+        
+        // Verify exception message
+        assertEquals("Task cannot be null", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(taskRepository, never()).save(any());
     }
     
     @Test
     void testDelete() {
         // Setup
-        doNothing().when(taskRepository).delete(any(Task.class));
+        doNothing().when(taskRepository).delete(testTask);
         
         // Execute
         taskService.delete(testTask);
         
-        // Verify repository was called
+        // Verify repository interaction
         verify(taskRepository).delete(testTask);
     }
     
     @Test
+    void testDelete_NullParameter() {
+        // Execute (should not throw exception)
+        taskService.delete(null);
+        
+        // Verify repository was NOT called for null parameter
+        verify(taskRepository, never()).delete(any());
+    }
+    
+    @Test
     void testDeleteById() {
-        // Setup - Use doNothing() for void methods instead of when().thenReturn()
-        doNothing().when(taskRepository).deleteById(anyLong());
+        // Setup - Configure existsById and deleteById behavior
+        when(taskRepository.existsById(1L)).thenReturn(true);
+        doNothing().when(taskRepository).deleteById(1L);
         
-        // Execute - deleteById returns void, so don't capture return value
-        taskService.deleteById(1L);
+        // Execute
+        boolean result = taskService.deleteById(1L);
         
-        // Verify repository was called
+        // Verify
+        assertTrue(result, "Delete should return true for existing entity");
+        
+        // Verify repository interactions in correct order
+        verify(taskRepository).existsById(1L);
         verify(taskRepository).deleteById(1L);
+    }
+    
+    @Test
+    void testDeleteById_NotFound() {
+        // Setup
+        when(taskRepository.existsById(999L)).thenReturn(false);
+        
+        // Execute
+        boolean result = taskService.deleteById(999L);
+        
+        // Verify
+        assertFalse(result, "Delete should return false for non-existent entity");
+        
+        // Verify repository interactions
+        verify(taskRepository).existsById(999L);
+        verify(taskRepository, never()).deleteById(anyLong());
+    }
+    
+    @Test
+    void testDeleteById_NullParameter() {
+        // Execute
+        boolean result = taskService.deleteById(null);
+        
+        // Verify
+        assertFalse(result, "Delete should return false for null ID");
+        
+        // Verify repository was NOT called for null parameter
+        verify(taskRepository, never()).existsById(any());
+        verify(taskRepository, never()).deleteById(any());
     }
     
     @Test
@@ -207,7 +279,7 @@ class TaskServiceTest {
         // Verify
         assertEquals(5L, result);
         
-        // Verify repository was called
+        // Verify repository interaction
         verify(taskRepository).count();
     }
     
@@ -224,8 +296,22 @@ class TaskServiceTest {
         assertEquals(1, results.size());
         assertEquals(testTask, results.get(0));
         
-        // Verify repository was called
+        // Verify repository interaction
         verify(taskRepository).findByProject(testProject);
+    }
+    
+    @Test
+    void testFindByProject_NullParameter() {
+        // Execute and verify exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            taskService.findByProject(null);
+        });
+        
+        // Verify exception message
+        assertEquals("Project cannot be null", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(taskRepository, never()).findByProject(any());
     }
     
     @Test
@@ -241,8 +327,22 @@ class TaskServiceTest {
         assertEquals(1, results.size());
         assertEquals(testTask, results.get(0));
         
-        // Verify repository was called
+        // Verify repository interaction
         verify(taskRepository).findBySubsystem(testSubsystem);
+    }
+    
+    @Test
+    void testFindBySubsystem_NullParameter() {
+        // Execute and verify exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            taskService.findBySubsystem(null);
+        });
+        
+        // Verify exception message
+        assertEquals("Subsystem cannot be null", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(taskRepository, never()).findBySubsystem(any());
     }
     
     @Test
@@ -258,8 +358,22 @@ class TaskServiceTest {
         assertEquals(1, results.size());
         assertEquals(testTask, results.get(0));
         
-        // Verify repository was called
+        // Verify repository interaction
         verify(taskRepository).findByAssignedMember(testMember);
+    }
+    
+    @Test
+    void testFindByAssignedMember_NullParameter() {
+        // Execute and verify exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            taskService.findByAssignedMember(null);
+        });
+        
+        // Verify exception message
+        assertEquals("Member cannot be null", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(taskRepository, never()).findByAssignedMember(any());
     }
     
     @Test
@@ -275,12 +389,15 @@ class TaskServiceTest {
         assertEquals(1, results.size());
         assertEquals(testTask, results.get(0));
         
-        // Verify repository was called
+        // Verify repository interaction
         verify(taskRepository).findByCompleted(false);
     }
     
     @Test
     void testCreateTask() {
+        // Setup
+        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        
         // Execute
         Task result = taskService.createTask(
             "New Task",
@@ -301,12 +418,100 @@ class TaskServiceTest {
         assertEquals(now, result.getStartDate());
         assertEquals(now.plusDays(5), result.getEndDate());
         
-        // Verify repository was called
+        // Verify repository interaction
         verify(taskRepository).save(any(Task.class));
     }
     
     @Test
+    void testCreateTask_NullTitle() {
+        // Execute and verify exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            taskService.createTask(null, testProject, testSubsystem, 2.5, Task.Priority.HIGH, now, now.plusDays(5));
+        });
+        
+        // Verify exception message
+        assertEquals("Task title cannot be empty", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(taskRepository, never()).save(any());
+    }
+    
+    @Test
+    void testCreateTask_EmptyTitle() {
+        // Execute and verify exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            taskService.createTask("  ", testProject, testSubsystem, 2.5, Task.Priority.HIGH, now, now.plusDays(5));
+        });
+        
+        // Verify exception message
+        assertEquals("Task title cannot be empty", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(taskRepository, never()).save(any());
+    }
+    
+    @Test
+    void testCreateTask_NullProject() {
+        // Execute and verify exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            taskService.createTask("New Task", null, testSubsystem, 2.5, Task.Priority.HIGH, now, now.plusDays(5));
+        });
+        
+        // Verify exception message
+        assertEquals("Project cannot be null", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(taskRepository, never()).save(any());
+    }
+    
+    @Test
+    void testCreateTask_NullSubsystem() {
+        // Execute and verify exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            taskService.createTask("New Task", testProject, null, 2.5, Task.Priority.HIGH, now, now.plusDays(5));
+        });
+        
+        // Verify exception message
+        assertEquals("Subsystem cannot be null", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(taskRepository, never()).save(any());
+    }
+    
+    @Test
+    void testCreateTask_InvalidEstimatedHours() {
+        // Execute and verify exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            taskService.createTask("New Task", testProject, testSubsystem, -1.0, Task.Priority.HIGH, now, now.plusDays(5));
+        });
+        
+        // Verify exception message
+        assertEquals("Estimated hours must be positive", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(taskRepository, never()).save(any());
+    }
+    
+    @Test
+    void testCreateTask_EndDateBeforeStartDate() {
+        // Execute and verify exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            taskService.createTask("New Task", testProject, testSubsystem, 2.5, Task.Priority.HIGH, now.plusDays(5), now);
+        });
+        
+        // Verify exception message
+        assertEquals("End date cannot be before start date", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(taskRepository, never()).save(any());
+    }
+    
+    @Test
     void testUpdateTaskProgress() {
+        // Setup
+        when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
+        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        
         // Execute
         Task result = taskService.updateTaskProgress(1L, 50, false);
         
@@ -315,13 +520,17 @@ class TaskServiceTest {
         assertEquals(50, result.getProgress());
         assertFalse(result.isCompleted());
         
-        // Verify repository was called
+        // Verify repository interactions
         verify(taskRepository).findById(1L);
-        verify(taskRepository).save(any(Task.class));
+        verify(taskRepository).save(testTask);
     }
     
     @Test
     void testUpdateTaskProgress_Completed() {
+        // Setup
+        when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
+        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        
         // Execute - set completed to true
         Task result = taskService.updateTaskProgress(1L, 50, true);
         
@@ -330,13 +539,13 @@ class TaskServiceTest {
         assertEquals(100, result.getProgress());
         assertTrue(result.isCompleted());
         
-        // Verify repository was called
+        // Verify repository interactions
         verify(taskRepository).findById(1L);
-        verify(taskRepository).save(any(Task.class));
+        verify(taskRepository).save(testTask);
     }
     
     @Test
-    void testUpdateTaskProgress_InvalidTaskId() {
+    void testUpdateTaskProgress_TaskNotFound() {
         // Setup
         when(taskRepository.findById(999L)).thenReturn(Optional.empty());
         
@@ -346,14 +555,30 @@ class TaskServiceTest {
         // Verify - should return null if task not found
         assertNull(result);
         
-        // Verify repository was called
+        // Verify repository interactions
         verify(taskRepository).findById(999L);
-        verify(taskRepository, never()).save(any(Task.class));
+        verify(taskRepository, never()).save(any());
+    }
+    
+    @Test
+    void testUpdateTaskProgress_NullTaskId() {
+        // Execute and verify exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            taskService.updateTaskProgress(null, 50, false);
+        });
+        
+        // Verify exception message
+        assertEquals("Task ID cannot be null", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(taskRepository, never()).findById(any());
+        verify(taskRepository, never()).save(any());
     }
     
     @Test
     void testGetTasksDueSoon() {
         // Setup
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(testProject));
         when(taskRepository.findByProject(testProject)).thenReturn(List.of(testTask));
         
         // Execute
@@ -364,7 +589,7 @@ class TaskServiceTest {
         assertEquals(1, result.size());
         assertEquals(testTask, result.get(0));
         
-        // Verify repository calls
+        // Verify repository interactions
         verify(projectRepository).findById(1L);
         verify(taskRepository).findByProject(testProject);
     }
@@ -381,15 +606,47 @@ class TaskServiceTest {
         assertNotNull(result);
         assertTrue(result.isEmpty());
         
-        // Verify repository calls
+        // Verify repository interactions
         verify(projectRepository).findById(999L);
-        verify(taskRepository, never()).findByProject(any(Project.class));
+        verify(taskRepository, never()).findByProject(any());
+    }
+    
+    @Test
+    void testGetTasksDueSoon_NullProjectId() {
+        // Execute and verify exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            taskService.getTasksDueSoon(null, 10);
+        });
+        
+        // Verify exception message
+        assertEquals("Project ID cannot be null", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(projectRepository, never()).findById(any());
+        verify(taskRepository, never()).findByProject(any());
+    }
+    
+    @Test
+    void testGetTasksDueSoon_InvalidDays() {
+        // Execute and verify exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            taskService.getTasksDueSoon(1L, -1);
+        });
+        
+        // Verify exception message
+        assertEquals("Days must be positive", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(projectRepository, never()).findById(any());
+        verify(taskRepository, never()).findByProject(any());
     }
     
     @Test
     void testAssignMembers() {
         // Setup
         Set<TeamMember> members = Set.of(testMember);
+        when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
+        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
         // Execute
         Task result = taskService.assignMembers(1L, members);
@@ -397,13 +654,13 @@ class TaskServiceTest {
         // Verify
         assertNotNull(result);
         
-        // Verify repository calls
+        // Verify repository interactions
         verify(taskRepository).findById(1L);
-        verify(taskRepository).save(any(Task.class));
+        verify(taskRepository).save(testTask);
     }
     
     @Test
-    void testAssignMembers_InvalidTaskId() {
+    void testAssignMembers_TaskNotFound() {
         // Setup
         when(taskRepository.findById(999L)).thenReturn(Optional.empty());
         Set<TeamMember> members = Set.of(testMember);
@@ -414,9 +671,24 @@ class TaskServiceTest {
         // Verify - should return null if task not found
         assertNull(result);
         
-        // Verify repository calls
+        // Verify repository interactions
         verify(taskRepository).findById(999L);
-        verify(taskRepository, never()).save(any(Task.class));
+        verify(taskRepository, never()).save(any());
+    }
+    
+    @Test
+    void testAssignMembers_NullTaskId() {
+        // Execute and verify exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            taskService.assignMembers(null, Set.of(testMember));
+        });
+        
+        // Verify exception message
+        assertEquals("Task ID cannot be null", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(taskRepository, never()).findById(any());
+        verify(taskRepository, never()).save(any());
     }
     
     @Test
@@ -425,7 +697,9 @@ class TaskServiceTest {
         Task dependencyTask = new Task("Dependency Task", testProject, testSubsystem);
         dependencyTask.setId(2L);
         
+        when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
         when(taskRepository.findById(2L)).thenReturn(Optional.of(dependencyTask));
+        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
         // Execute
         boolean result = taskService.addDependency(1L, 2L);
@@ -433,7 +707,7 @@ class TaskServiceTest {
         // Verify
         assertTrue(result);
         
-        // Verify repository calls
+        // Verify repository interactions
         verify(taskRepository).findById(1L);
         verify(taskRepository).findById(2L);
         verify(taskRepository, times(2)).save(any(Task.class));
@@ -441,7 +715,7 @@ class TaskServiceTest {
     
     @Test
     void testAddDependency_SameTask() {
-        // Execute - try to add task as dependency to itself
+        // Execute and verify exception
         Exception exception = assertThrows(IllegalArgumentException.class, () -> {
             taskService.addDependency(1L, 1L);
         });
@@ -449,9 +723,46 @@ class TaskServiceTest {
         // Verify exception message
         assertEquals("A task cannot depend on itself", exception.getMessage());
         
-        // Verify no repository calls
-        verify(taskRepository, never()).findById(anyLong());
-        verify(taskRepository, never()).save(any(Task.class));
+        // Verify repository was NOT called
+        verify(taskRepository, never()).findById(any());
+        verify(taskRepository, never()).save(any());
+    }
+    
+    @Test
+    void testAddDependency_NullParameters() {
+        // Execute and verify exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            taskService.addDependency(null, 2L);
+        });
+        
+        // Verify exception message
+        assertEquals("Task IDs cannot be null", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(taskRepository, never()).findById(any());
+        verify(taskRepository, never()).save(any());
+    }
+    
+    @Test
+    void testRemoveDependency() {
+        // Setup
+        Task dependencyTask = new Task("Dependency Task", testProject, testSubsystem);
+        dependencyTask.setId(2L);
+        
+        when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
+        when(taskRepository.findById(2L)).thenReturn(Optional.of(dependencyTask));
+        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        
+        // Execute
+        boolean result = taskService.removeDependency(1L, 2L);
+        
+        // Verify
+        assertTrue(result);
+        
+        // Verify repository interactions
+        verify(taskRepository).findById(1L);
+        verify(taskRepository).findById(2L);
+        verify(taskRepository, times(2)).save(any(Task.class));
     }
     
     @Test
@@ -461,7 +772,9 @@ class TaskServiceTest {
         component.setId(1L);
         component.setName("Test Component");
         
+        when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
         when(componentRepository.findById(1L)).thenReturn(Optional.of(component));
+        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
         // Execute
         Task result = taskService.updateRequiredComponents(1L, Set.of(1L));
@@ -469,14 +782,14 @@ class TaskServiceTest {
         // Verify
         assertNotNull(result);
         
-        // Verify repository calls
+        // Verify repository interactions
         verify(taskRepository).findById(1L);
         verify(componentRepository).findById(1L);
-        verify(taskRepository).save(any(Task.class));
+        verify(taskRepository).save(testTask);
     }
     
     @Test
-    void testUpdateRequiredComponents_InvalidTaskId() {
+    void testUpdateRequiredComponents_TaskNotFound() {
         // Setup
         when(taskRepository.findById(999L)).thenReturn(Optional.empty());
         
@@ -486,9 +799,25 @@ class TaskServiceTest {
         // Verify - should return null if task not found
         assertNull(result);
         
-        // Verify repository calls
+        // Verify repository interactions
         verify(taskRepository).findById(999L);
-        verify(componentRepository, never()).findById(anyLong());
-        verify(taskRepository, never()).save(any(Task.class));
+        verify(componentRepository, never()).findById(any());
+        verify(taskRepository, never()).save(any());
+    }
+    
+    @Test
+    void testUpdateRequiredComponents_NullTaskId() {
+        // Execute and verify exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            taskService.updateRequiredComponents(null, Set.of(1L));
+        });
+        
+        // Verify exception message
+        assertEquals("Task ID cannot be null", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(taskRepository, never()).findById(any());
+        verify(componentRepository, never()).findById(any());
+        verify(taskRepository, never()).save(any());
     }
 }

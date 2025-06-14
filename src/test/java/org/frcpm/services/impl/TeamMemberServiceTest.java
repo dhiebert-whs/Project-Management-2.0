@@ -22,6 +22,7 @@ import static org.mockito.Mockito.*;
 
 /**
  * Test class for TeamMemberService implementation using Spring Boot testing patterns.
+ * ✅ PROVEN PATTERN APPLIED: Following AttendanceServiceTest template for 100% success rate.
  */
 @ExtendWith(MockitoExtension.class)
 class TeamMemberServiceTest {
@@ -32,30 +33,21 @@ class TeamMemberServiceTest {
     @Mock
     private SubteamRepository subteamRepository;
     
-    private TeamMemberServiceImpl teamMemberService;
+    private TeamMemberServiceImpl teamMemberService; // ✅ Use implementation class, not interface
     
     private TeamMember testMember;
     private Subteam testSubteam;
     
     @BeforeEach
     void setUp() {
-        // Initialize test objects
+        // Create test objects ONLY - NO mock stubbing here
         testSubteam = createTestSubteam();
         testMember = createTestMember();
         
-        // Configure mock repository responses
-        when(teamMemberRepository.findById(1L)).thenReturn(Optional.of(testMember));
-        when(teamMemberRepository.findAll()).thenReturn(List.of(testMember));
-        when(teamMemberRepository.save(any(TeamMember.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        
-        // Configure subteam repository
-        when(subteamRepository.findById(1L)).thenReturn(Optional.of(testSubteam));
-        
         // Create service with injected mocks
-        teamMemberService = new TeamMemberServiceImpl(
-            teamMemberRepository,
-            subteamRepository
-        );
+        teamMemberService = new TeamMemberServiceImpl(teamMemberRepository, subteamRepository);
+        
+        // ✅ NO mock stubbing in setUp() - move to individual test methods
     }
     
     /**
@@ -83,15 +75,8 @@ class TeamMemberServiceTest {
     
     @Test
     void testFindById() {
-        // Reset mocks to ensure clean test state
-        reset(teamMemberRepository);
-        
-        // Setup - create a special member for this test
-        TeamMember uniqueMember = new TeamMember("unique_user", "Unique", "User", "unique@example.com");
-        uniqueMember.setId(1L);
-        
-        // Configure fresh mock behavior for this test
-        when(teamMemberRepository.findById(1L)).thenReturn(Optional.of(uniqueMember));
+        // Setup - Only stub what THIS test needs
+        when(teamMemberRepository.findById(1L)).thenReturn(Optional.of(testMember));
         
         // Execute
         TeamMember result = teamMemberService.findById(1L);
@@ -99,23 +84,53 @@ class TeamMemberServiceTest {
         // Verify
         assertNotNull(result, "Result should not be null");
         assertEquals(1L, result.getId(), "Team member ID should match");
-        assertEquals("unique_user", result.getUsername(), "Username should match exactly");
+        assertEquals("testuser", result.getUsername(), "Username should match");
         
-        // Verify repository was called exactly once with the correct ID
+        // Verify repository interaction
         verify(teamMemberRepository, times(1)).findById(1L);
     }
     
     @Test
+    void testFindById_NotFound() {
+        // Setup
+        when(teamMemberRepository.findById(999L)).thenReturn(Optional.empty());
+        
+        // Execute
+        TeamMember result = teamMemberService.findById(999L);
+        
+        // Verify
+        assertNull(result, "Result should be null for non-existent ID");
+        
+        // Verify repository interaction
+        verify(teamMemberRepository).findById(999L);
+    }
+    
+    @Test
+    void testFindById_NullParameter() {
+        // Execute
+        TeamMember result = teamMemberService.findById(null);
+        
+        // Verify
+        assertNull(result, "Result should be null for null ID");
+        
+        // Verify repository was NOT called for null parameter
+        verify(teamMemberRepository, never()).findById(any());
+    }
+    
+    @Test
     void testFindAll() {
+        // Setup
+        when(teamMemberRepository.findAll()).thenReturn(List.of(testMember));
+        
         // Execute
         List<TeamMember> results = teamMemberService.findAll();
         
         // Verify
         assertNotNull(results);
         assertEquals(1, results.size());
-        assertEquals(1L, results.get(0).getId());
+        assertEquals(testMember, results.get(0));
         
-        // Verify repository was called
+        // Verify repository interaction
         verify(teamMemberRepository).findAll();
     }
     
@@ -123,6 +138,7 @@ class TeamMemberServiceTest {
     void testSave() {
         // Setup
         TeamMember newMember = new TeamMember("newuser", "New", "User", "new@example.com");
+        when(teamMemberRepository.save(newMember)).thenReturn(newMember);
         
         // Execute
         TeamMember result = teamMemberService.save(newMember);
@@ -131,32 +147,89 @@ class TeamMemberServiceTest {
         assertNotNull(result);
         assertEquals("newuser", result.getUsername());
         
-        // Verify repository was called
+        // Verify repository interaction
         verify(teamMemberRepository).save(newMember);
+    }
+    
+    @Test
+    void testSave_NullParameter() {
+        // Execute and verify exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            teamMemberService.save(null);
+        });
+        
+        // Verify exception message
+        assertEquals("TeamMember cannot be null", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(teamMemberRepository, never()).save(any());
     }
     
     @Test
     void testDelete() {
         // Setup
-        doNothing().when(teamMemberRepository).delete(any(TeamMember.class));
+        doNothing().when(teamMemberRepository).delete(testMember);
         
         // Execute
         teamMemberService.delete(testMember);
         
-        // Verify repository was called
+        // Verify repository interaction
         verify(teamMemberRepository).delete(testMember);
     }
     
     @Test
+    void testDelete_NullParameter() {
+        // Execute (should not throw exception)
+        teamMemberService.delete(null);
+        
+        // Verify repository was NOT called for null parameter
+        verify(teamMemberRepository, never()).delete(any());
+    }
+    
+    @Test
     void testDeleteById() {
-        // Setup - Use doNothing() for void methods instead of when().thenReturn()
-        doNothing().when(teamMemberRepository).deleteById(anyLong());
+        // Setup - Configure existsById and deleteById behavior
+        when(teamMemberRepository.existsById(1L)).thenReturn(true);
+        doNothing().when(teamMemberRepository).deleteById(1L);
         
-        // Execute - deleteById returns void, so don't capture return value
-        teamMemberService.deleteById(1L);
+        // Execute
+        boolean result = teamMemberService.deleteById(1L);
         
-        // Verify repository was called
+        // Verify
+        assertTrue(result, "Delete should return true for existing entity");
+        
+        // Verify repository interactions in correct order
+        verify(teamMemberRepository).existsById(1L);
         verify(teamMemberRepository).deleteById(1L);
+    }
+    
+    @Test
+    void testDeleteById_NotFound() {
+        // Setup
+        when(teamMemberRepository.existsById(999L)).thenReturn(false);
+        
+        // Execute
+        boolean result = teamMemberService.deleteById(999L);
+        
+        // Verify
+        assertFalse(result, "Delete should return false for non-existent entity");
+        
+        // Verify repository interactions
+        verify(teamMemberRepository).existsById(999L);
+        verify(teamMemberRepository, never()).deleteById(anyLong());
+    }
+    
+    @Test
+    void testDeleteById_NullParameter() {
+        // Execute
+        boolean result = teamMemberService.deleteById(null);
+        
+        // Verify
+        assertFalse(result, "Delete should return false for null ID");
+        
+        // Verify repository was NOT called for null parameter
+        verify(teamMemberRepository, never()).existsById(any());
+        verify(teamMemberRepository, never()).deleteById(any());
     }
     
     @Test
@@ -170,7 +243,7 @@ class TeamMemberServiceTest {
         // Verify
         assertEquals(5L, result);
         
-        // Verify repository was called
+        // Verify repository interaction
         verify(teamMemberRepository).count();
     }
     
@@ -186,7 +259,7 @@ class TeamMemberServiceTest {
         assertTrue(result.isPresent());
         assertEquals("testuser", result.get().getUsername());
         
-        // Verify repository was called
+        // Verify repository interaction
         verify(teamMemberRepository).findByUsername("testuser");
     }
     
@@ -201,8 +274,32 @@ class TeamMemberServiceTest {
         // Verify
         assertFalse(result.isPresent());
         
-        // Verify repository was called
+        // Verify repository interaction
         verify(teamMemberRepository).findByUsername("nonexistent");
+    }
+    
+    @Test
+    void testFindByUsername_NullParameter() {
+        // Execute
+        Optional<TeamMember> result = teamMemberService.findByUsername(null);
+        
+        // Verify
+        assertFalse(result.isPresent(), "Should return empty Optional for null username");
+        
+        // Verify repository was NOT called for null parameter
+        verify(teamMemberRepository, never()).findByUsername(any());
+    }
+    
+    @Test
+    void testFindByUsername_EmptyParameter() {
+        // Execute
+        Optional<TeamMember> result = teamMemberService.findByUsername("  ");
+        
+        // Verify
+        assertFalse(result.isPresent(), "Should return empty Optional for empty username");
+        
+        // Verify repository was NOT called for empty parameter
+        verify(teamMemberRepository, never()).findByUsername(any());
     }
     
     @Test
@@ -218,8 +315,22 @@ class TeamMemberServiceTest {
         assertEquals(1, results.size());
         assertEquals(testMember, results.get(0));
         
-        // Verify repository was called
+        // Verify repository interaction
         verify(teamMemberRepository).findBySubteam(testSubteam);
+    }
+    
+    @Test
+    void testFindBySubteam_NullParameter() {
+        // Execute and verify exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            teamMemberService.findBySubteam(null);
+        });
+        
+        // Verify exception message
+        assertEquals("Subteam cannot be null", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(teamMemberRepository, never()).findBySubteam(any());
     }
     
     @Test
@@ -235,8 +346,36 @@ class TeamMemberServiceTest {
         assertEquals(1, results.size());
         assertEquals(testMember, results.get(0));
         
-        // Verify repository was called
+        // Verify repository interaction
         verify(teamMemberRepository).findBySkillsContainingIgnoreCase("Java");
+    }
+    
+    @Test
+    void testFindBySkill_NullParameter() {
+        // Execute and verify exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            teamMemberService.findBySkill(null);
+        });
+        
+        // Verify exception message
+        assertEquals("Skill cannot be empty", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(teamMemberRepository, never()).findBySkillsContainingIgnoreCase(any());
+    }
+    
+    @Test
+    void testFindBySkill_EmptyParameter() {
+        // Execute and verify exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            teamMemberService.findBySkill("  ");
+        });
+        
+        // Verify exception message
+        assertEquals("Skill cannot be empty", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(teamMemberRepository, never()).findBySkillsContainingIgnoreCase(any());
     }
     
     @Test
@@ -256,7 +395,7 @@ class TeamMemberServiceTest {
         assertEquals(1, results.size());
         assertTrue(results.get(0).isLeader());
         
-        // Verify repository was called
+        // Verify repository interaction
         verify(teamMemberRepository).findByIsLeaderTrue();
     }
     
@@ -264,6 +403,7 @@ class TeamMemberServiceTest {
     void testCreateTeamMember() {
         // Setup
         when(teamMemberRepository.findByUsername("newuser")).thenReturn(Optional.empty());
+        when(teamMemberRepository.save(any(TeamMember.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
         // Execute
         TeamMember result = teamMemberService.createTeamMember(
@@ -284,7 +424,7 @@ class TeamMemberServiceTest {
         assertEquals("555-5678", result.getPhone());
         assertTrue(result.isLeader());
         
-        // Verify repository was called
+        // Verify repository interactions
         verify(teamMemberRepository).findByUsername("newuser");
         verify(teamMemberRepository).save(any(TeamMember.class));
     }
@@ -309,37 +449,76 @@ class TeamMemberServiceTest {
         // Verify exception message
         assertEquals("Username already exists", exception.getMessage());
         
-        // Verify repository calls
+        // Verify repository interactions
         verify(teamMemberRepository).findByUsername("testuser");
         verify(teamMemberRepository, never()).save(any(TeamMember.class));
     }
     
     @Test
+    void testCreateTeamMember_NullUsername() {
+        // Execute and verify exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            teamMemberService.createTeamMember(null, "New", "User", "new@example.com", "555-5678", true);
+        });
+        
+        // Verify exception message
+        assertEquals("Username cannot be empty", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(teamMemberRepository, never()).findByUsername(any());
+        verify(teamMemberRepository, never()).save(any());
+    }
+    
+    @Test
+    void testCreateTeamMember_EmptyUsername() {
+        // Execute and verify exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            teamMemberService.createTeamMember("  ", "New", "User", "new@example.com", "555-5678", true);
+        });
+        
+        // Verify exception message
+        assertEquals("Username cannot be empty", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(teamMemberRepository, never()).findByUsername(any());
+        verify(teamMemberRepository, never()).save(any());
+    }
+    
+    @Test
     void testAssignToSubteam() {
+        // Setup
+        when(teamMemberRepository.findById(1L)).thenReturn(Optional.of(testMember));
+        when(subteamRepository.findById(1L)).thenReturn(Optional.of(testSubteam));
+        when(teamMemberRepository.save(any(TeamMember.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        
         // Execute
         TeamMember result = teamMemberService.assignToSubteam(1L, 1L);
         
         // Verify
         assertNotNull(result);
         
-        // Verify repository calls
+        // Verify repository interactions
         verify(teamMemberRepository).findById(1L);
         verify(subteamRepository).findById(1L);
-        verify(teamMemberRepository).save(any(TeamMember.class));
+        verify(teamMemberRepository).save(testMember);
     }
     
     @Test
     void testAssignToSubteam_NullSubteam() {
+        // Setup
+        when(teamMemberRepository.findById(1L)).thenReturn(Optional.of(testMember));
+        when(teamMemberRepository.save(any(TeamMember.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        
         // Execute
         TeamMember result = teamMemberService.assignToSubteam(1L, null);
         
         // Verify
         assertNotNull(result);
         
-        // Verify repository calls
+        // Verify repository interactions
         verify(teamMemberRepository).findById(1L);
-        verify(subteamRepository, never()).findById(anyLong());
-        verify(teamMemberRepository).save(any(TeamMember.class));
+        verify(subteamRepository, never()).findById(any());
+        verify(teamMemberRepository).save(testMember);
     }
     
     @Test
@@ -353,15 +532,16 @@ class TeamMemberServiceTest {
         // Verify
         assertNull(result);
         
-        // Verify repository calls
+        // Verify repository interactions
         verify(teamMemberRepository).findById(999L);
-        verify(subteamRepository, never()).findById(anyLong());
-        verify(teamMemberRepository, never()).save(any(TeamMember.class));
+        verify(subteamRepository, never()).findById(any());
+        verify(teamMemberRepository, never()).save(any());
     }
     
     @Test
     void testAssignToSubteam_SubteamNotFound() {
         // Setup
+        when(teamMemberRepository.findById(1L)).thenReturn(Optional.of(testMember));
         when(subteamRepository.findById(999L)).thenReturn(Optional.empty());
         
         // Execute
@@ -370,14 +550,34 @@ class TeamMemberServiceTest {
         // Verify
         assertNull(result);
         
-        // Verify repository calls
+        // Verify repository interactions
         verify(teamMemberRepository).findById(1L);
         verify(subteamRepository).findById(999L);
-        verify(teamMemberRepository, never()).save(any(TeamMember.class));
+        verify(teamMemberRepository, never()).save(any());
+    }
+    
+    @Test
+    void testAssignToSubteam_NullMemberId() {
+        // Execute and verify exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            teamMemberService.assignToSubteam(null, 1L);
+        });
+        
+        // Verify exception message
+        assertEquals("Team member ID cannot be null", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(teamMemberRepository, never()).findById(any());
+        verify(subteamRepository, never()).findById(any());
+        verify(teamMemberRepository, never()).save(any());
     }
     
     @Test
     void testUpdateSkills() {
+        // Setup
+        when(teamMemberRepository.findById(1L)).thenReturn(Optional.of(testMember));
+        when(teamMemberRepository.save(any(TeamMember.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        
         // Execute
         TeamMember result = teamMemberService.updateSkills(1L, "Java, Python, Project Management");
         
@@ -385,9 +585,9 @@ class TeamMemberServiceTest {
         assertNotNull(result);
         assertEquals("Java, Python, Project Management", result.getSkills());
         
-        // Verify repository calls
+        // Verify repository interactions
         verify(teamMemberRepository).findById(1L);
-        verify(teamMemberRepository).save(any(TeamMember.class));
+        verify(teamMemberRepository).save(testMember);
     }
     
     @Test
@@ -401,13 +601,32 @@ class TeamMemberServiceTest {
         // Verify
         assertNull(result);
         
-        // Verify repository calls
+        // Verify repository interactions
         verify(teamMemberRepository).findById(999L);
-        verify(teamMemberRepository, never()).save(any(TeamMember.class));
+        verify(teamMemberRepository, never()).save(any());
+    }
+    
+    @Test
+    void testUpdateSkills_NullMemberId() {
+        // Execute and verify exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            teamMemberService.updateSkills(null, "New Skills");
+        });
+        
+        // Verify exception message
+        assertEquals("Member ID cannot be null", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(teamMemberRepository, never()).findById(any());
+        verify(teamMemberRepository, never()).save(any());
     }
     
     @Test
     void testUpdateContactInfo() {
+        // Setup
+        when(teamMemberRepository.findById(1L)).thenReturn(Optional.of(testMember));
+        when(teamMemberRepository.save(any(TeamMember.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        
         // Execute
         TeamMember result = teamMemberService.updateContactInfo(1L, "updated@example.com", "555-9876");
         
@@ -416,9 +635,9 @@ class TeamMemberServiceTest {
         assertEquals("updated@example.com", result.getEmail());
         assertEquals("555-9876", result.getPhone());
         
-        // Verify repository calls
+        // Verify repository interactions
         verify(teamMemberRepository).findById(1L);
-        verify(teamMemberRepository).save(any(TeamMember.class));
+        verify(teamMemberRepository).save(testMember);
     }
     
     @Test
@@ -432,8 +651,40 @@ class TeamMemberServiceTest {
         // Verify
         assertNull(result);
         
-        // Verify repository calls
+        // Verify repository interactions
         verify(teamMemberRepository).findById(999L);
-        verify(teamMemberRepository, never()).save(any(TeamMember.class));
+        verify(teamMemberRepository, never()).save(any());
+    }
+    
+    @Test
+    void testUpdateContactInfo_NullMemberId() {
+        // Execute and verify exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            teamMemberService.updateContactInfo(null, "email@example.com", "555-1111");
+        });
+        
+        // Verify exception message
+        assertEquals("Member ID cannot be null", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(teamMemberRepository, never()).findById(any());
+        verify(teamMemberRepository, never()).save(any());
+    }
+    
+    @Test
+    void testUpdateContactInfo_NullParameters() {
+        // Setup
+        when(teamMemberRepository.findById(1L)).thenReturn(Optional.of(testMember));
+        when(teamMemberRepository.save(any(TeamMember.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        
+        // Execute - both email and phone null should not cause issues
+        TeamMember result = teamMemberService.updateContactInfo(1L, null, null);
+        
+        // Verify
+        assertNotNull(result);
+        
+        // Verify repository interactions
+        verify(teamMemberRepository).findById(1L);
+        verify(teamMemberRepository).save(testMember);
     }
 }
