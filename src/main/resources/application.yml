@@ -16,16 +16,20 @@ spring:
   # JPA Configuration (preserves existing database schema)
   jpa:
     hibernate:
-      ddl-auto: update  # Preserves existing data while allowing schema evolution
-    show-sql: false     # Set to true in development profile
+      ddl-auto: update
+    show-sql: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.H2Dialect  # Will be overridden by profile
+        # ✅ REMOVED: Explicit dialect (let Spring Boot auto-detect)
         format_sql: true
         jdbc:
           time_zone: UTC
         connection:
           provider_class: org.hibernate.hikaricp.internal.HikariCPConnectionProvider
+        # ✅ FIXED: Proper second-level cache configuration
+        cache:
+          use_second_level_cache: false  # Disable for simplicity
+          use_query_cache: false
     defer-datasource-initialization: true
     
   # SQL Initialization

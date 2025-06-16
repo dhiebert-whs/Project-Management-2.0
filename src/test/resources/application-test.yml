@@ -1,22 +1,48 @@
+# FRC Project Management System - Test Profile Configuration
+# ✅ NEW FILE: Essential for @DataJpaTest to work properly
+
 spring:
+  # Test DataSource Configuration (H2 in-memory)
   datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=LEGACY
     driver-class-name: org.h2.Driver
     username: sa
     password: ""
+    hikari:
+      maximum-pool-size: 2
+      minimum-idle: 1
+      connection-timeout: 5000
     
+  # Test JPA Configuration
   jpa:
     hibernate:
-      ddl-auto: create-drop
-    show-sql: true
-    defer-datasource-initialization: true
+      ddl-auto: create-drop  # Fresh schema for each test
+    show-sql: false          # Reduce test noise
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: false
+        hbm2ddl:
+          auto: create-drop
+        jdbc:
+          time_zone: UTC
+    defer-datasource-initialization: false
     
+  # SQL Initialization for tests
   sql:
     init:
-      mode: embedded
+      mode: never           # Don't run data.sql in tests
+      
+  # H2 Console (disabled in tests)
+  h2:
+    console:
+      enabled: false
 
+# Test Logging (minimal)
 logging:
   level:
-    org.frcpm: DEBUG
-    org.springframework: WARN
-    org.hibernate: DEBUG
+    org.frcpm: WARN
+    org.springframework: ERROR
+    org.hibernate: ERROR
+    org.h2: ERROR
+    com.zaxxer.hikari: ERROR
