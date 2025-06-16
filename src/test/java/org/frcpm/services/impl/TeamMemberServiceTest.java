@@ -385,7 +385,7 @@ class TeamMemberServiceTest {
         leaderMember.setId(2L);
         leaderMember.setLeader(true);
         
-        when(teamMemberRepository.findByIsLeaderTrue()).thenReturn(List.of(leaderMember));
+        when(teamMemberRepository.findByLeaderTrue()).thenReturn(List.of(leaderMember));
         
         // Execute
         List<TeamMember> results = teamMemberService.findLeaders();
@@ -396,7 +396,7 @@ class TeamMemberServiceTest {
         assertTrue(results.get(0).isLeader());
         
         // Verify repository interaction
-        verify(teamMemberRepository).findByIsLeaderTrue();
+        verify(teamMemberRepository).findByLeaderTrue();
     }
     
     @Test

@@ -132,7 +132,7 @@ public class TeamMemberServiceImpl implements TeamMemberService {
     
     @Override
     public List<TeamMember> findLeaders() {
-        return teamMemberRepository.findByIsLeaderTrue();
+        return teamMemberRepository.findByLeaderTrue();
     }
     
     @Override
