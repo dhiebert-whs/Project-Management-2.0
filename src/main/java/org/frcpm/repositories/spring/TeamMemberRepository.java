@@ -76,7 +76,7 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
      * 
      * @return a list of team members who are leaders
      */
-    List<TeamMember> findByIsLeaderTrue();
+    //List<TeamMember> findByIsLeaderTrue();
     
     /**
      * Finds team members by name (first name or last name).
