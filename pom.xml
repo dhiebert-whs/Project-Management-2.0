@@ -23,7 +23,7 @@
             <maven.compiler.source>21</maven.compiler.source>
             <maven.compiler.target>21</maven.compiler.target>
             <java.version>21</java.version>
-            <junit.version>5.10.2</junit.version>
+            <!-- ✅ REMOVED: junit.version - Spring Boot manages JUnit version automatically -->
         </properties>
     
         <dependencies>
@@ -68,7 +68,7 @@
     
             <!-- ===== DATABASE CONNECTIVITY (PRESERVED + ENHANCED) ===== -->
             
-            <!-- Keep H2 for development -->
+            <!-- H2 for development and testing -->
             <dependency>
                 <groupId>com.h2database</groupId>
                 <artifactId>h2</artifactId>
@@ -99,24 +99,17 @@
     
             <!-- ===== TESTING FRAMEWORKS (PRESERVED + ENHANCED) ===== -->
             
-            <!-- Spring Boot Test Starter -->
+            <!-- Spring Boot Test Starter (includes JUnit Jupiter, Mockito, etc.) -->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-test</artifactId>
                 <scope>test</scope>
             </dependency>
-            
-            <!-- Keep existing JUnit Jupiter -->
+
+            <!-- Spring Boot test containers (optional but helpful) -->
             <dependency>
-                <groupId>org.junit.jupiter</groupId>
-                <artifactId>junit-jupiter</artifactId>
-                <scope>test</scope>
-            </dependency>
-            
-            <!-- Keep Mockito (Spring Boot includes it, but explicit for clarity) -->
-            <dependency>
-                <groupId>org.mockito</groupId>
-                <artifactId>mockito-core</artifactId>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-testcontainers</artifactId>
                 <scope>test</scope>
             </dependency>
     
@@ -148,20 +141,22 @@
                 <artifactId>jgrapht-core</artifactId>
                 <version>1.5.2</version>
             </dependency>
-    
-            <!-- Explicit H2 test dependency -->
-            <dependency>
-                <groupId>com.h2database</groupId>
-                <artifactId>h2</artifactId>
-                <scope>test</scope>
-            </dependency>
 
-            <!-- Spring Boot test containers (optional but helpful) -->
-            <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-testcontainers</artifactId>
-                <scope>test</scope>
-            </dependency>
+            <!-- ===== REMOVED: JavaFX AND MVVMFx DEPENDENCIES =====
+            The following dependencies have been REMOVED in Phase 1:
+            - javafx-controls
+            - javafx-fxml  
+            - javafx-graphics
+            - javafx-web
+            - mvvmfx
+            - mvvmfx-testing-utils
+            - testfx-core
+            - testfx-junit5
+            - openjfx-monocle
+            - chartfx-chart (REMOVED - was causing JavaFX conflicts)
+            - javax.annotation-api (REMOVED - conflicts with Spring Boot)
+            ===== -->
+    
         </dependencies>
     
         <build>
@@ -190,20 +185,18 @@
                         <encoding>UTF-8</encoding>
                         <!-- Exclude JavaFX/MVVMFx components during Spring Boot migration -->
                         <excludes>
-                            <exclude>**/mvvm/views/**</exclude>
-                            <exclude>**/mvvm/viewmodels/**</exclude>
-                            <exclude>**/mvvm/BaseMvvmViewModel.java</exclude>
-                            <exclude>**/mvvm/MvvmDialogHelper.java</exclude>
-                            <exclude>**/mvvm/MvvmConfig.java</exclude>
-                            <exclude>**/mvvm/CommandAdapter.java</exclude>
-                            <exclude>**/mvvm/MvvmViewAdapter.java</exclude>
-                            <exclude>**/mvvm/NotificationType.java</exclude>
-                            <exclude>**/mvvm/async/**</exclude>
+                            <!-- Exclude ALL JavaFX-dependent files -->
+                            <exclude>**/mvvm/**</exclude>
+                            <exclude>**/async/**</exclude>
+                            <exclude>**/binding/**</exclude>
+                            <exclude>**/charts/**</exclude>
                             <exclude>**/di/ViewLoader.java</exclude>
                             <exclude>**/di/DialogFactory.java</exclude>
                             <exclude>**/di/ServiceLocator.java</exclude>
                             <exclude>**/services/impl/JavaFXDialogService.java</exclude>
                             <exclude>**/utils/MenuFactory.java</exclude>
+                            <exclude>**/utils/ShortcutManager.java</exclude>
+                            <exclude>**/utils/UpdatedErrorHandler.java</exclude>
                             <exclude>**/MvvmMainApp.java</exclude>
                             <!-- Exclude old database utilities that conflict with Spring Boot -->
                             <exclude>**/db/BackupManager.java</exclude>
@@ -220,34 +213,33 @@
                     </configuration>
                 </plugin>
                 
-                <!-- ===== Surefire plugin configuration ===== -->
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <version>3.1.2</version>
-                        <configuration>
-                            <includes>
-                                <include>**/*Test.java</include>
-                                <include>**/*Tests.java</include>
-                            </includes>
-                            <excludes>
-                                <exclude>**/mvvm/views/**</exclude>
-                                <exclude>**/testfx/**</exclude>
-                            </excludes>
-                            <!-- ✅ FIXED: Remove JavaFX system properties that cause conflicts -->
-                            <systemPropertyVariables>
-                                <java.awt.headless>true</java.awt.headless>
-                                <spring.profiles.active>test</spring.profiles.active>
-                            </systemPropertyVariables>
-                            <!-- ✅ ADD: JVM arguments for better test performance -->
-                            <argLine>
-                                -Xmx1024m
-                                -XX:+UseG1GC
-                                -Djava.awt.headless=true
-                            </argLine>
-                        </configuration>
-                    </plugin>
-                    
+                <!-- Surefire Plugin for Tests -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.1.2</version>
+                    <configuration>
+                        <includes>
+                            <include>**/*Test.java</include>
+                            <include>**/*Tests.java</include>
+                        </includes>
+                        <excludes>
+                            <exclude>**/mvvm/views/**</exclude>
+                            <exclude>**/testfx/**</exclude>
+                        </excludes>
+                        <!-- ✅ FIXED: Remove JavaFX system properties that cause conflicts -->
+                        <systemPropertyVariables>
+                            <java.awt.headless>true</java.awt.headless>
+                            <spring.profiles.active>test</spring.profiles.active>
+                        </systemPropertyVariables>
+                        <!-- ✅ ADD: JVM arguments for better test performance -->
+                        <argLine>
+                            -Xmx1024m
+                            -XX:+UseG1GC
+                            -Djava.awt.headless=true
+                        </argLine>
+                    </configuration>
+                </plugin>
                 
                 <!-- Resources Plugin -->
                 <plugin>

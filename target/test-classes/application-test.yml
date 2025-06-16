@@ -1,5 +1,5 @@
 # FRC Project Management System - Test Profile Configuration
-# ✅ NEW FILE: Essential for @DataJpaTest to work properly
+# ✅ CRITICAL FILE: Essential for @DataJpaTest to work properly
 
 spring:
   # Test DataSource Configuration (H2 in-memory)
