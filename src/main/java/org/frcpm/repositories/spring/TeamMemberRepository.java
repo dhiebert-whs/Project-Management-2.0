@@ -60,7 +60,10 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
      * @param skill the skill to search for
      * @return a list of team members with matching skills
      */
-    @Query("SELECT tm FROM TeamMember tm WHERE LOWER(tm.skills) LIKE LOWER(CONCAT('%', :skill, '%'))")
+    @Query("SELECT DISTINCT tm FROM TeamMember tm WHERE " +
+           "EXISTS (SELECT 1 FROM TeamMember tm2 WHERE tm2.id = tm.id AND " +
+           "(LOWER(tm2.skills) LIKE LOWER(CONCAT('%', :skill, '%')))" +
+           ")")
     List<TeamMember> findBySkillsContainingIgnoreCase(@Param("skill") String skill);
     
     /**
@@ -84,7 +87,8 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
      * @param name the name to search for
      * @return a list of team members matching the name
      */
-    @Query("SELECT tm FROM TeamMember tm WHERE tm.firstName LIKE %:name% OR tm.lastName LIKE %:name%")
+    @Query("SELECT tm FROM TeamMember tm WHERE " +
+           "LOWER(CONCAT(tm.firstName, ' ', tm.lastName)) LIKE LOWER(CONCAT('%', :name, '%'))")
     List<TeamMember> findByName(@Param("name") String name);
     
     /**
@@ -125,9 +129,10 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
      * @return a list of team members with any of the specified skills
      */
     @Query("SELECT DISTINCT tm FROM TeamMember tm WHERE " +
-           "EXISTS (SELECT 1 FROM unnest(string_to_array(tm.skills, ',')) AS skill " +
-           "WHERE trim(skill) IN :skills)")
-    List<TeamMember> findBySkillsIn(@Param("skills") List<String> skills);
+           "tm.skills IS NOT NULL AND " +
+           "EXISTS (SELECT 1 FROM TeamMember tm2 WHERE tm2.id = tm.id AND " +
+           "CONCAT(',', REPLACE(LOWER(tm2.skills), ' ', ''), ',') LIKE CONCAT('%,', LOWER(TRIM(:skill)), ',%'))")
+    List<TeamMember> findBySkillsIn(@Param("skill") String skill);
     
     /**
      * Finds team members who are not leaders.
