@@ -1,7 +1,10 @@
+C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\repositories\TaskRepositoryIntegrationTest.java
+C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\repositories\SubteamRepositoryIntegrationTest.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\services\impl\MeetingServiceTest.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\services\impl\MilestoneServiceTest.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\services\impl\SubteamServiceTest.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\services\impl\TeamMemberServiceTest.java
+C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\repositories\ProjectRepositoryIntegrationTest.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\services\impl\ComponentServiceTest.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\services\impl\VisualizationServiceTest.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\services\impl\SubsystemServiceTest.java
@@ -12,3 +15,4 @@ C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\fr
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\services\impl\AttendanceServiceTest.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\repositories\AttendanceRepositoryIntegrationTest.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\services\impl\ProjectServiceTest.java
+C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\test\java\org\frcpm\repositories\MilestoneRepositoryIntegrationTest.java
