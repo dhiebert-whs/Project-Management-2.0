@@ -1,18 +1,18 @@
 -------------------------------------------------------------------------------
 Test set: org.frcpm.repositories.TeamMemberRepositoryIntegrationTest
 -------------------------------------------------------------------------------
-Tests run: 30, Failures: 1, Errors: 1, Skipped: 0, Time elapsed: 7.178 s <<< FAILURE! -- in org.frcpm.repositories.TeamMemberRepositoryIntegrationTest
-org.frcpm.repositories.TeamMemberRepositoryIntegrationTest.testFindByFirstNameContainingIgnoreCase -- Time elapsed: 1.290 s <<< FAILURE!
+Tests run: 30, Failures: 1, Errors: 1, Skipped: 0, Time elapsed: 11.69 s <<< FAILURE! -- in org.frcpm.repositories.TeamMemberRepositoryIntegrationTest
+org.frcpm.repositories.TeamMemberRepositoryIntegrationTest.testFindByFirstNameContainingIgnoreCase -- Time elapsed: 1.409 s <<< FAILURE!
 java.lang.AssertionError: 
 
 Expected size: 2 but was: 1 in:
 [Team Leader]
-	at org.frcpm.repositories.TeamMemberRepositoryIntegrationTest.testFindByFirstNameContainingIgnoreCase(TeamMemberRepositoryIntegrationTest.java:291)
+	at org.frcpm.repositories.TeamMemberRepositoryIntegrationTest.testFindByFirstNameContainingIgnoreCase(TeamMemberRepositoryIntegrationTest.java:305)
 	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 
-org.frcpm.repositories.TeamMemberRepositoryIntegrationTest.testUniqueConstraint_Username -- Time elapsed: 0.022 s <<< ERROR!
+org.frcpm.repositories.TeamMemberRepositoryIntegrationTest.testUniqueConstraint_Username -- Time elapsed: 0.024 s <<< ERROR!
 org.springframework.dao.DataIntegrityViolationException: 
 could not execute statement [Unique index or primary key violation: "PUBLIC.CONSTRAINT_INDEX_37 ON PUBLIC.TEAM_MEMBERS(USERNAME NULLS FIRST) VALUES ( /* 19 */ 'testuser' )"; SQL statement:
 insert into team_members (email,first_name,last_name,is_leader,phone,skills,subteam_id,username,id) values (?,?,?,?,?,?,?,?,default) [23505-224]] [insert into team_members (email,first_name,last_name,is_leader,phone,skills,subteam_id,username,id) values (?,?,?,?,?,?,?,?,default)]; SQL [insert into team_members (email,first_name,last_name,is_leader,phone,skills,subteam_id,username,id) values (?,?,?,?,?,?,?,?,default)]; constraint ["PUBLIC.CONSTRAINT_INDEX_37 ON PUBLIC.TEAM_MEMBERS(USERNAME NULLS FIRST) VALUES ( /* 19 */ 'testuser' )"; SQL statement:
@@ -29,8 +29,8 @@ insert into team_members (email,first_name,last_name,is_leader,phone,skills,subt
 	at org.springframework.aop.interceptor.ExposeInvocationInterceptor.invoke(ExposeInvocationInterceptor.java:97)
 	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
 	at org.springframework.aop.framework.JdkDynamicAopProxy.invoke(JdkDynamicAopProxy.java:249)
-	at jdk.proxy2/jdk.proxy2.$Proxy126.save(Unknown Source)
-	at org.frcpm.repositories.TeamMemberRepositoryIntegrationTest.testUniqueConstraint_Username(TeamMemberRepositoryIntegrationTest.java:534)
+	at jdk.proxy2/jdk.proxy2.$Proxy148.save(Unknown Source)
+	at org.frcpm.repositories.TeamMemberRepositoryIntegrationTest.testUniqueConstraint_Username(TeamMemberRepositoryIntegrationTest.java:548)
 	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
@@ -64,7 +64,7 @@ insert into team_members (email,first_name,last_name,is_leader,phone,skills,subt
 	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
 	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
 	at org.springframework.orm.jpa.SharedEntityManagerCreator$SharedEntityManagerInvocationHandler.invoke(SharedEntityManagerCreator.java:311)
-	at jdk.proxy2/jdk.proxy2.$Proxy112.persist(Unknown Source)
+	at jdk.proxy2/jdk.proxy2.$Proxy140.persist(Unknown Source)
 	at org.springframework.data.jpa.repository.support.SimpleJpaRepository.save(SimpleJpaRepository.java:618)
 	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
 	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
@@ -104,6 +104,8 @@ insert into team_members (email,first_name,last_name,is_leader,phone,skills,subt
 	at org.h2.command.Command.executeUpdate(Command.java:256)
 	at org.h2.jdbc.JdbcPreparedStatement.executeUpdateInternal(JdbcPreparedStatement.java:216)
 	at org.h2.jdbc.JdbcPreparedStatement.executeUpdate(JdbcPreparedStatement.java:174)
+	at com.zaxxer.hikari.pool.ProxyPreparedStatement.executeUpdate(ProxyPreparedStatement.java:61)
+	at com.zaxxer.hikari.pool.HikariProxyPreparedStatement.executeUpdate(HikariProxyPreparedStatement.java)
 	at org.hibernate.engine.jdbc.internal.ResultSetReturnImpl.executeUpdate(ResultSetReturnImpl.java:280)
 	... 57 more
 

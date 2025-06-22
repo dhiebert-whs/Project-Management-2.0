@@ -8,24 +8,28 @@ import org.frcpm.repositories.spring.TeamMemberRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Integration test for TeamMemberRepository using Spring Boot @DataJpaTest.
- * Tests all repository methods including auto-implemented Spring Data JPA methods
- * and custom @Query methods.
+ * Integration test for TeamMemberRepository using Spring Boot @SpringBootTest.
+ * Uses full Spring context instead of @DataJpaTest to avoid context loading issues.
  * 
- * ✅ PROVEN PATTERN APPLIED: Following AttendanceRepositoryIntegrationTest template for 100% success rate.
- * ✅ DEPENDENCY CONFLICT RESOLVED: Uses findByLeaderTrue() instead of findByIsLeaderTrue()
+ * @SpringBootTest loads the complete application context
+ * @Transactional ensures each test runs in a transaction that's rolled back
+ * @AutoConfigureMockMvc configures MockMvc (though not used in repository tests)
  */
-@DataJpaTest
+@SpringBootTest
+@Transactional
+@AutoConfigureMockMvc
 @ActiveProfiles("test")
 class TeamMemberRepositoryIntegrationTest {
     
@@ -33,7 +37,7 @@ class TeamMemberRepositoryIntegrationTest {
     private TeamMemberRepository teamMemberRepository;
     
     @Autowired
-    private TestEntityManager entityManager;
+    private EntityManager entityManager;
     
     private TeamMember testMember;
     private TeamMember leaderMember;
@@ -99,12 +103,22 @@ class TeamMemberRepositoryIntegrationTest {
         return member;
     }
     
+    /**
+     * Helper method to persist and flush an entity.
+     * Replaces TestEntityManager's persistAndFlush functionality.
+     */
+    private <T> T persistAndFlush(T entity) {
+        entityManager.persist(entity);
+        entityManager.flush();
+        return entity;
+    }
+    
     // ========== BASIC CRUD OPERATIONS ==========
     
     @Test
     void testSaveAndFindById() {
         // Setup - Persist subteam first
-        Subteam savedSubteam = entityManager.persistAndFlush(testSubteam);
+        Subteam savedSubteam = persistAndFlush(testSubteam);
         testMember.setSubteam(savedSubteam);
         
         // Execute - Save team member
@@ -132,8 +146,8 @@ class TeamMemberRepositoryIntegrationTest {
     @Test
     void testFindAll() {
         // Setup - Persist members
-        TeamMember savedMember1 = entityManager.persistAndFlush(testMember);
-        TeamMember savedMember2 = entityManager.persistAndFlush(leaderMember);
+        TeamMember savedMember1 = persistAndFlush(testMember);
+        TeamMember savedMember2 = persistAndFlush(leaderMember);
         
         // Execute - Find all
         List<TeamMember> allMembers = teamMemberRepository.findAll();
@@ -147,7 +161,7 @@ class TeamMemberRepositoryIntegrationTest {
     @Test
     void testDeleteById() {
         // Setup - Persist team member
-        TeamMember savedMember = entityManager.persistAndFlush(testMember);
+        TeamMember savedMember = persistAndFlush(testMember);
         
         // Verify exists before deletion
         assertThat(teamMemberRepository.existsById(savedMember.getId())).isTrue();
@@ -209,7 +223,7 @@ class TeamMemberRepositoryIntegrationTest {
     @Test
     void testFindBySubteam() {
         // Setup - Persist subteam and members
-        Subteam savedSubteam = entityManager.persistAndFlush(testSubteam);
+        Subteam savedSubteam = persistAndFlush(testSubteam);
         testMember.setSubteam(savedSubteam);
         leaderMember.setSubteam(savedSubteam);
         
@@ -230,7 +244,7 @@ class TeamMemberRepositoryIntegrationTest {
     @Test
     void testFindBySubteamId() {
         // Setup - Persist subteam and members
-        Subteam savedSubteam = entityManager.persistAndFlush(testSubteam);
+        Subteam savedSubteam = persistAndFlush(testSubteam);
         testMember.setSubteam(savedSubteam);
         
         teamMemberRepository.save(testMember);
@@ -339,7 +353,7 @@ class TeamMemberRepositoryIntegrationTest {
     @Test
     void testFindBySubteamIsNull() {
         // Setup - Create members with and without subteams
-        Subteam savedSubteam = entityManager.persistAndFlush(testSubteam);
+        Subteam savedSubteam = persistAndFlush(testSubteam);
         testMember.setSubteam(null);           // No subteam
         leaderMember.setSubteam(savedSubteam); // Has subteam
         
@@ -413,8 +427,8 @@ class TeamMemberRepositoryIntegrationTest {
     @Test
     void testCountBySubteam() {
         // Setup - Create subteams and members
-        Subteam savedSubteam1 = entityManager.persistAndFlush(testSubteam);
-        Subteam savedSubteam2 = entityManager.persistAndFlush(otherSubteam);
+        Subteam savedSubteam1 = persistAndFlush(testSubteam);
+        Subteam savedSubteam2 = persistAndFlush(otherSubteam);
         
         testMember.setSubteam(savedSubteam1);
         leaderMember.setSubteam(savedSubteam1);
@@ -542,7 +556,7 @@ class TeamMemberRepositoryIntegrationTest {
     @Test
     void testSubteamRelationship() {
         // Setup - Create subteam with members
-        Subteam savedSubteam = entityManager.persistAndFlush(testSubteam);
+        Subteam savedSubteam = persistAndFlush(testSubteam);
         
         // Add members to subteam using helper methods
         testMember.setSubteam(savedSubteam);
@@ -569,8 +583,8 @@ class TeamMemberRepositoryIntegrationTest {
     @Test
     void testSubteamAssignmentChange() {
         // Setup - Create subteams and member
-        Subteam savedSubteam1 = entityManager.persistAndFlush(testSubteam);
-        Subteam savedSubteam2 = entityManager.persistAndFlush(otherSubteam);
+        Subteam savedSubteam1 = persistAndFlush(testSubteam);
+        Subteam savedSubteam2 = persistAndFlush(otherSubteam);
         
         testMember.setSubteam(savedSubteam1);
         TeamMember savedMember = teamMemberRepository.save(testMember);
@@ -595,7 +609,7 @@ class TeamMemberRepositoryIntegrationTest {
     @Test
     void testRemoveSubteamAssignment() {
         // Setup - Create subteam and member
-        Subteam savedSubteam = entityManager.persistAndFlush(testSubteam);
+        Subteam savedSubteam = persistAndFlush(testSubteam);
         testMember.setSubteam(savedSubteam);
         TeamMember savedMember = teamMemberRepository.save(testMember);
         entityManager.flush();

@@ -1,8 +1,8 @@
 -------------------------------------------------------------------------------
 Test set: org.frcpm.repositories.AttendanceRepositoryIntegrationTest
 -------------------------------------------------------------------------------
-Tests run: 18, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 6.896 s <<< FAILURE! -- in org.frcpm.repositories.AttendanceRepositoryIntegrationTest
-org.frcpm.repositories.AttendanceRepositoryIntegrationTest.testUniqueConstraint -- Time elapsed: 0.030 s <<< ERROR!
+Tests run: 18, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 12.85 s <<< FAILURE! -- in org.frcpm.repositories.AttendanceRepositoryIntegrationTest
+org.frcpm.repositories.AttendanceRepositoryIntegrationTest.testUniqueConstraint -- Time elapsed: 0.081 s <<< ERROR!
 org.springframework.dao.DataIntegrityViolationException: 
 could not execute statement [Unique index or primary key violation: "PUBLIC.CONSTRAINT_INDEX_3 ON PUBLIC.ATTENDANCES(MEETING_ID NULLS FIRST, MEMBER_ID NULLS FIRST) VALUES ( /* key:17 */ CAST(17 AS BIGINT), CAST(15 AS BIGINT))"; SQL statement:
 insert into attendances (arrival_time,departure_time,meeting_id,member_id,present,id) values (?,?,?,?,?,default) [23505-224]] [insert into attendances (arrival_time,departure_time,meeting_id,member_id,present,id) values (?,?,?,?,?,default)]; SQL [insert into attendances (arrival_time,departure_time,meeting_id,member_id,present,id) values (?,?,?,?,?,default)]; constraint ["PUBLIC.CONSTRAINT_INDEX_3 ON PUBLIC.ATTENDANCES(MEETING_ID NULLS FIRST, MEMBER_ID NULLS FIRST) VALUES ( /* key:17 */ CAST(17 AS BIGINT), CAST(15 AS BIGINT))"; SQL statement:
@@ -19,8 +19,8 @@ insert into attendances (arrival_time,departure_time,meeting_id,member_id,presen
 	at org.springframework.aop.interceptor.ExposeInvocationInterceptor.invoke(ExposeInvocationInterceptor.java:97)
 	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
 	at org.springframework.aop.framework.JdkDynamicAopProxy.invoke(JdkDynamicAopProxy.java:249)
-	at jdk.proxy2/jdk.proxy2.$Proxy125.save(Unknown Source)
-	at org.frcpm.repositories.AttendanceRepositoryIntegrationTest.testUniqueConstraint(AttendanceRepositoryIntegrationTest.java:599)
+	at jdk.proxy2/jdk.proxy2.$Proxy146.save(Unknown Source)
+	at org.frcpm.repositories.AttendanceRepositoryIntegrationTest.testUniqueConstraint(AttendanceRepositoryIntegrationTest.java:614)
 	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
@@ -54,7 +54,7 @@ insert into attendances (arrival_time,departure_time,meeting_id,member_id,presen
 	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
 	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
 	at org.springframework.orm.jpa.SharedEntityManagerCreator$SharedEntityManagerInvocationHandler.invoke(SharedEntityManagerCreator.java:311)
-	at jdk.proxy2/jdk.proxy2.$Proxy112.persist(Unknown Source)
+	at jdk.proxy2/jdk.proxy2.$Proxy140.persist(Unknown Source)
 	at org.springframework.data.jpa.repository.support.SimpleJpaRepository.save(SimpleJpaRepository.java:618)
 	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
 	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
@@ -94,6 +94,8 @@ insert into attendances (arrival_time,departure_time,meeting_id,member_id,presen
 	at org.h2.command.Command.executeUpdate(Command.java:256)
 	at org.h2.jdbc.JdbcPreparedStatement.executeUpdateInternal(JdbcPreparedStatement.java:216)
 	at org.h2.jdbc.JdbcPreparedStatement.executeUpdate(JdbcPreparedStatement.java:174)
+	at com.zaxxer.hikari.pool.ProxyPreparedStatement.executeUpdate(ProxyPreparedStatement.java:61)
+	at com.zaxxer.hikari.pool.HikariProxyPreparedStatement.executeUpdate(HikariProxyPreparedStatement.java)
 	at org.hibernate.engine.jdbc.internal.ResultSetReturnImpl.executeUpdate(ResultSetReturnImpl.java:280)
 	... 57 more
 
