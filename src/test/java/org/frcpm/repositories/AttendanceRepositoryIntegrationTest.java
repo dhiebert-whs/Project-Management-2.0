@@ -605,17 +605,25 @@ class AttendanceRepositoryIntegrationTest {
         
         // Execute - Save first attendance
         attendanceRepository.save(testAttendance);
-        entityManager.flush();
+        entityManager.flush(); // This should succeed
+        
+        // Clear the persistence context to ensure fresh entity
+        entityManager.clear();
         
         // Execute - Try to save duplicate attendance (same meeting + member)
-        Attendance duplicateAttendance = new Attendance(savedMeeting, savedMember, false);
-        
-        // Verify - Should throw constraint violation when flushed
-        attendanceRepository.save(duplicateAttendance);
-        
+        // THIS IS WHERE THE EXCEPTION SHOULD BE CAUGHT
         org.junit.jupiter.api.Assertions.assertThrows(
             org.springframework.dao.DataIntegrityViolationException.class,
-            () -> entityManager.flush()
+            () -> {
+                Attendance duplicateAttendance = new Attendance();
+                duplicateAttendance.setMeeting(savedMeeting);
+                duplicateAttendance.setMember(savedMember);
+                duplicateAttendance.setPresent(false); // Different presence status but same meeting+member
+                
+                // The save operation itself may trigger the constraint violation
+                attendanceRepository.save(duplicateAttendance);
+                entityManager.flush(); // Ensure the save is flushed to database
+            }
         );
     }
     

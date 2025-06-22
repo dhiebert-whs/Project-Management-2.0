@@ -298,13 +298,23 @@ class TeamMemberRepositoryIntegrationTest {
         teamMemberRepository.save(leaderMember);   // firstName = "Team"
         entityManager.flush();
         
-        // Execute - Case insensitive search
-        List<TeamMember> results = teamMemberRepository.findByFirstNameContainingIgnoreCase("tea");
+        // Execute - Case insensitive search for "te" (should match both "Test" and "Team")
+        List<TeamMember> results = teamMemberRepository.findByFirstNameContainingIgnoreCase("te");
         
-        // Verify - Should find both "Test" and "Team"
+        // Verify - Should find both "Test" and "Team" since both contain "te"
         assertThat(results).hasSize(2);
         assertThat(results).extracting(TeamMember::getFirstName)
             .containsExactlyInAnyOrder("Test", "Team");
+        
+        // Additional test - Search for "tea" (should only match "Team")
+        List<TeamMember> teamResults = teamMemberRepository.findByFirstNameContainingIgnoreCase("tea");
+        assertThat(teamResults).hasSize(1);
+        assertThat(teamResults.get(0).getFirstName()).isEqualTo("Team");
+        
+        // Additional test - Search for "est" (should only match "Test")
+        List<TeamMember> testResults = teamMemberRepository.findByFirstNameContainingIgnoreCase("est");
+        assertThat(testResults).hasSize(1);
+        assertThat(testResults.get(0).getFirstName()).isEqualTo("Test");
     }
     
     @Test
@@ -535,21 +545,26 @@ class TeamMemberRepositoryIntegrationTest {
     void testUniqueConstraint_Username() {
         // Setup - Persist first member
         teamMemberRepository.save(testMember);
-        entityManager.flush();
+        entityManager.flush(); // This should succeed
+        
+        // Clear the persistence context to ensure fresh entity
+        entityManager.clear();
         
         // Execute - Try to save member with same username
-        TeamMember duplicateUsername = new TeamMember();
-        duplicateUsername.setUsername("testuser");  // Same username
-        duplicateUsername.setFirstName("Different");
-        duplicateUsername.setLastName("User");
-        duplicateUsername.setEmail("different@example.com");
-        
-        // Verify - Should throw constraint violation when flushed
-        teamMemberRepository.save(duplicateUsername);
-        
+        // THIS IS WHERE THE EXCEPTION SHOULD BE CAUGHT
         org.junit.jupiter.api.Assertions.assertThrows(
             org.springframework.dao.DataIntegrityViolationException.class,
-            () -> entityManager.flush()
+            () -> {
+                TeamMember duplicateUsername = new TeamMember();
+                duplicateUsername.setUsername("testuser");  // Same username as testMember
+                duplicateUsername.setFirstName("Different");
+                duplicateUsername.setLastName("User");
+                duplicateUsername.setEmail("different@example.com");
+                
+                // The save operation itself may trigger the constraint violation
+                teamMemberRepository.save(duplicateUsername);
+                entityManager.flush(); // Ensure the save is flushed to database
+            }
         );
     }
     
