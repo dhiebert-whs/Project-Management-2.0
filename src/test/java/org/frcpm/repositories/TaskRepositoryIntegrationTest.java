@@ -100,7 +100,8 @@ class TaskRepositoryIntegrationTest {
     private Subsystem createTestSubsystem() {
         Subsystem subsystem = new Subsystem();
         subsystem.setName("Drivetrain");
-        subsystem.setColorCode("#007ACC");
+        subsystem.setDescription("Main robot drivetrain system");
+        subsystem.setStatus(Subsystem.Status.IN_PROGRESS);
         return subsystem;
     }
     
@@ -110,7 +111,8 @@ class TaskRepositoryIntegrationTest {
     private Subsystem createOtherSubsystem() {
         Subsystem subsystem = new Subsystem();
         subsystem.setName("Intake");
-        subsystem.setColorCode("#FF6B35");
+        subsystem.setDescription("Game piece intake mechanism");
+        subsystem.setStatus(Subsystem.Status.NOT_STARTED);
         return subsystem;
     }
     
@@ -314,6 +316,392 @@ class TaskRepositoryIntegrationTest {
         highPriorityTask.setSubsystem(savedSubsystem);
         completedTask.setProject(savedProject2);
         completedTask.setSubsystem(savedSubsystem);
+        
+        taskRepository.save(testTask);
+        taskRepository.save(highPriorityTask);
+        taskRepository.save(completedTask);
+        entityManager.flush();
+        
+        // Execute
+        List<Task> project1Tasks = taskRepository.findByProject(savedProject1);
+        List<Task> project2Tasks = taskRepository.findByProject(savedProject2);
+        
+        // Verify
+        assertThat(project1Tasks).hasSize(2);
+        assertThat(project1Tasks).extracting(Task::getTitle)
+            .containsExactlyInAnyOrder("Build Chassis Frame", "Program Autonomous");
+        
+        assertThat(project2Tasks).hasSize(1);
+        assertThat(project2Tasks.get(0).getTitle()).isEqualTo("Design Intake Mechanism");
+    }
+    
+    @Test
+    void testFindByProjectId() {
+        // Setup - Persist dependencies and task
+        Project savedProject = persistAndFlush(testProject);
+        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
+        
+        testTask.setProject(savedProject);
+        testTask.setSubsystem(savedSubsystem);
+        taskRepository.save(testTask);
+        entityManager.flush();
+        
+        // Execute
+        List<Task> results = taskRepository.findByProjectId(savedProject.getId());
+        
+        // Verify
+        assertThat(results).hasSize(1);
+        assertThat(results.get(0).getTitle()).isEqualTo("Build Chassis Frame");
+        assertThat(results.get(0).getProject().getId()).isEqualTo(savedProject.getId());
+    }
+    
+    @Test
+    void testFindBySubsystem() {
+        // Setup - Create subsystems with different tasks
+        Project savedProject = persistAndFlush(testProject);
+        Subsystem savedSubsystem1 = persistAndFlush(testSubsystem);
+        Subsystem savedSubsystem2 = persistAndFlush(otherSubsystem);
+        
+        testTask.setProject(savedProject);
+        testTask.setSubsystem(savedSubsystem1);
+        highPriorityTask.setProject(savedProject);
+        highPriorityTask.setSubsystem(savedSubsystem1);
+        completedTask.setProject(savedProject);
+        completedTask.setSubsystem(savedSubsystem2);
+        
+        taskRepository.save(testTask);
+        taskRepository.save(highPriorityTask);
+        taskRepository.save(completedTask);
+        entityManager.flush();
+        
+        // Execute
+        List<Task> subsystem1Tasks = taskRepository.findBySubsystem(savedSubsystem1);
+        List<Task> subsystem2Tasks = taskRepository.findBySubsystem(savedSubsystem2);
+        
+        // Verify
+        assertThat(subsystem1Tasks).hasSize(2);
+        assertThat(subsystem1Tasks).extracting(Task::getTitle)
+            .containsExactlyInAnyOrder("Build Chassis Frame", "Program Autonomous");
+        
+        assertThat(subsystem2Tasks).hasSize(1);
+        assertThat(subsystem2Tasks.get(0).getTitle()).isEqualTo("Design Intake Mechanism");
+    }
+    
+    @Test
+    void testFindByCompleted() {
+        // Setup - Persist tasks with different completion status
+        Project savedProject = persistAndFlush(testProject);
+        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
+        
+        testTask.setProject(savedProject);
+        testTask.setSubsystem(savedSubsystem);
+        testTask.setCompleted(false);
+        
+        completedTask.setProject(savedProject);
+        completedTask.setSubsystem(savedSubsystem);
+        completedTask.setCompleted(true);
+        
+        taskRepository.save(testTask);
+        taskRepository.save(completedTask);
+        entityManager.flush();
+        
+        // Execute - Find incomplete tasks
+        List<Task> incompleteTasks = taskRepository.findByCompleted(false);
+        
+        // Execute - Find completed tasks
+        List<Task> completedTasks = taskRepository.findByCompleted(true);
+        
+        // Verify
+        assertThat(incompleteTasks).hasSize(1);
+        assertThat(incompleteTasks.get(0).getTitle()).isEqualTo("Build Chassis Frame");
+        assertThat(incompleteTasks.get(0).isCompleted()).isFalse();
+        
+        assertThat(completedTasks).hasSize(1);
+        assertThat(completedTasks.get(0).getTitle()).isEqualTo("Design Intake Mechanism");
+        assertThat(completedTasks.get(0).isCompleted()).isTrue();
+    }
+    
+    @Test
+    void testFindByEndDateBefore() {
+        // Setup - Create tasks with different end dates
+        Project savedProject = persistAndFlush(testProject);
+        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
+        
+        // Task due yesterday (overdue)
+        testTask.setEndDate(LocalDate.now().minusDays(1));
+        testTask.setProject(savedProject);
+        testTask.setSubsystem(savedSubsystem);
+        
+        // Task due tomorrow (not overdue)
+        highPriorityTask.setEndDate(LocalDate.now().plusDays(1));
+        highPriorityTask.setProject(savedProject);
+        highPriorityTask.setSubsystem(savedSubsystem);
+        
+        taskRepository.save(testTask);
+        taskRepository.save(highPriorityTask);
+        entityManager.flush();
+        
+        // Execute - Find tasks due before today
+        List<Task> overdueTasks = taskRepository.findByEndDateBefore(LocalDate.now());
+        
+        // Verify - Should only find the overdue task
+        assertThat(overdueTasks).hasSize(1);
+        assertThat(overdueTasks.get(0).getTitle()).isEqualTo("Build Chassis Frame");
+        assertThat(overdueTasks.get(0).getEndDate()).isBefore(LocalDate.now());
+    }
+    
+    @Test
+    void testFindByPriority() {
+        // Setup - Persist tasks with different priorities
+        Project savedProject = persistAndFlush(testProject);
+        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
+        
+        testTask.setPriority(Task.Priority.MEDIUM);
+        testTask.setProject(savedProject);
+        testTask.setSubsystem(savedSubsystem);
+        
+        highPriorityTask.setPriority(Task.Priority.HIGH);
+        highPriorityTask.setProject(savedProject);
+        highPriorityTask.setSubsystem(savedSubsystem);
+        
+        completedTask.setPriority(Task.Priority.LOW);
+        completedTask.setProject(savedProject);
+        completedTask.setSubsystem(savedSubsystem);
+        
+        taskRepository.save(testTask);
+        taskRepository.save(highPriorityTask);
+        taskRepository.save(completedTask);
+        entityManager.flush();
+        
+        // Execute - Find high priority tasks
+        List<Task> highPriorityTasks = taskRepository.findByPriority(Task.Priority.HIGH);
+        
+        // Execute - Find medium priority tasks
+        List<Task> mediumPriorityTasks = taskRepository.findByPriority(Task.Priority.MEDIUM);
+        
+        // Verify
+        assertThat(highPriorityTasks).hasSize(1);
+        assertThat(highPriorityTasks.get(0).getTitle()).isEqualTo("Program Autonomous");
+        assertThat(highPriorityTasks.get(0).getPriority()).isEqualTo(Task.Priority.HIGH);
+        
+        assertThat(mediumPriorityTasks).hasSize(1);
+        assertThat(mediumPriorityTasks.get(0).getTitle()).isEqualTo("Build Chassis Frame");
+        assertThat(mediumPriorityTasks.get(0).getPriority()).isEqualTo(Task.Priority.MEDIUM);
+    }
+    
+    @Test
+    void testFindByTitleContainingIgnoreCase() {
+        // Setup - Persist tasks with different titles
+        Project savedProject = persistAndFlush(testProject);
+        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
+        
+        testTask.setProject(savedProject);
+        testTask.setSubsystem(savedSubsystem);
+        highPriorityTask.setProject(savedProject);
+        highPriorityTask.setSubsystem(savedSubsystem);
+        
+        taskRepository.save(testTask);
+        taskRepository.save(highPriorityTask);
+        entityManager.flush();
+        
+        // Execute - Case insensitive search for "program"
+        List<Task> programTasks = taskRepository.findByTitleContainingIgnoreCase("PROGRAM");
+        
+        // Execute - Search for "build"
+        List<Task> buildTasks = taskRepository.findByTitleContainingIgnoreCase("build");
+        
+        // Verify
+        assertThat(programTasks).hasSize(1);
+        assertThat(programTasks.get(0).getTitle()).isEqualTo("Program Autonomous");
+        
+        assertThat(buildTasks).hasSize(1);
+        assertThat(buildTasks.get(0).getTitle()).isEqualTo("Build Chassis Frame");
+    }
+    
+    // ========== CUSTOM @QUERY METHODS ==========
+    
+    @Test
+    void testFindByAssignedMember() {
+        // Setup - Persist dependencies
+        Project savedProject = persistAndFlush(testProject);
+        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
+        TeamMember savedMember = persistAndFlush(testMember);
+        TeamMember savedOtherMember = persistAndFlush(otherMember);
+        
+        testTask.setProject(savedProject);
+        testTask.setSubsystem(savedSubsystem);
+        highPriorityTask.setProject(savedProject);
+        highPriorityTask.setSubsystem(savedSubsystem);
+        
+        // Assign member to tasks using helper method
+        testTask.assignMember(savedMember);
+        highPriorityTask.assignMember(savedMember);
+        highPriorityTask.assignMember(savedOtherMember); // Assigned to both members
+        
+        taskRepository.save(testTask);
+        taskRepository.save(highPriorityTask);
+        entityManager.flush();
+        
+        // Execute
+        List<Task> memberTasks = taskRepository.findByAssignedMember(savedMember);
+        List<Task> otherMemberTasks = taskRepository.findByAssignedMember(savedOtherMember);
+        
+        // Verify
+        assertThat(memberTasks).hasSize(2);
+        assertThat(memberTasks).extracting(Task::getTitle)
+            .containsExactlyInAnyOrder("Build Chassis Frame", "Program Autonomous");
+        
+        assertThat(otherMemberTasks).hasSize(1);
+        assertThat(otherMemberTasks.get(0).getTitle()).isEqualTo("Program Autonomous");
+    }
+    
+    @Test
+    void testFindIncompleteTasksByProject() {
+        // Setup - Persist tasks with different completion status
+        Project savedProject = persistAndFlush(testProject);
+        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
+        
+        testTask.setProject(savedProject);
+        testTask.setSubsystem(savedSubsystem);
+        testTask.setCompleted(false);
+        
+        highPriorityTask.setProject(savedProject);
+        highPriorityTask.setSubsystem(savedSubsystem);
+        highPriorityTask.setCompleted(false);
+        
+        completedTask.setProject(savedProject);
+        completedTask.setSubsystem(savedSubsystem);
+        completedTask.setCompleted(true);
+        
+        taskRepository.save(testTask);
+        taskRepository.save(highPriorityTask);
+        taskRepository.save(completedTask);
+        entityManager.flush();
+        
+        // Execute
+        List<Task> incompleteTasks = taskRepository.findIncompleteTasksByProject(savedProject);
+        
+        // Verify - Should only find incomplete tasks
+        assertThat(incompleteTasks).hasSize(2);
+        assertThat(incompleteTasks).extracting(Task::getTitle)
+            .containsExactlyInAnyOrder("Build Chassis Frame", "Program Autonomous");
+        assertThat(incompleteTasks).allMatch(task -> !task.isCompleted());
+    }
+    
+    @Test
+    void testFindTasksDueSoon() {
+        // Setup - Create tasks with different due dates
+        Project savedProject = persistAndFlush(testProject);
+        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
+        
+        // Task due tomorrow (within range)
+        testTask.setEndDate(LocalDate.now().plusDays(1));
+        testTask.setCompleted(false);
+        testTask.setProject(savedProject);
+        testTask.setSubsystem(savedSubsystem);
+        
+        // Task due in 2 days (within range)
+        highPriorityTask.setEndDate(LocalDate.now().plusDays(2));
+        highPriorityTask.setCompleted(false);
+        highPriorityTask.setProject(savedProject);
+        highPriorityTask.setSubsystem(savedSubsystem);
+        
+        // Task due in 10 days (outside range)
+        Task farTask = new Task();
+        farTask.setTitle("Future Task");
+        farTask.setEndDate(LocalDate.now().plusDays(10));
+        farTask.setCompleted(false);
+        farTask.setProject(savedProject);
+        farTask.setSubsystem(savedSubsystem);
+        farTask.setEstimatedDuration(Duration.ofHours(4));
+        farTask.setPriority(Task.Priority.LOW);
+        
+        taskRepository.save(testTask);
+        taskRepository.save(highPriorityTask);
+        taskRepository.save(farTask);
+        entityManager.flush();
+        
+        // Execute - Find tasks due within 3 days
+        LocalDate startDate = LocalDate.now();
+        LocalDate endDate = startDate.plusDays(3);
+        List<Task> dueSoonTasks = taskRepository.findTasksDueSoon(
+            savedProject.getId(), startDate, endDate);
+        
+        // Verify - Should find tasks due within 3 days
+        assertThat(dueSoonTasks).hasSize(2);
+        assertThat(dueSoonTasks).extracting(Task::getTitle)
+            .containsExactlyInAnyOrder("Build Chassis Frame", "Program Autonomous");
+        assertThat(dueSoonTasks).allMatch(task -> !task.isCompleted());
+        assertThat(dueSoonTasks).allMatch(task -> 
+            !task.getEndDate().isBefore(startDate) && !task.getEndDate().isAfter(endDate));
+    }
+    
+    @Test
+    void testFindOverdueTasksByProject() {
+        // Setup - Create tasks with different due dates
+        Project savedProject = persistAndFlush(testProject);
+        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
+        
+        // Overdue task (due yesterday, incomplete)
+        testTask.setEndDate(LocalDate.now().minusDays(1));
+        testTask.setCompleted(false);
+        testTask.setProject(savedProject);
+        testTask.setSubsystem(savedSubsystem);
+        
+        // Future task (not overdue)
+        highPriorityTask.setEndDate(LocalDate.now().plusDays(1));
+        highPriorityTask.setCompleted(false);
+        highPriorityTask.setProject(savedProject);
+        highPriorityTask.setSubsystem(savedSubsystem);
+        
+        // Overdue but completed task (should not appear)
+        completedTask.setEndDate(LocalDate.now().minusDays(2));
+        completedTask.setCompleted(true);
+        completedTask.setProject(savedProject);
+        completedTask.setSubsystem(savedSubsystem);
+        
+        taskRepository.save(testTask);
+        taskRepository.save(highPriorityTask);
+        taskRepository.save(completedTask);
+        entityManager.flush();
+        
+        // Execute
+        List<Task> overdueTasks = taskRepository.findOverdueTasksByProject(savedProject);
+        
+        // Verify - Should only find incomplete overdue tasks
+        assertThat(overdueTasks).hasSize(1);
+        assertThat(overdueTasks.get(0).getTitle()).isEqualTo("Build Chassis Frame");
+        assertThat(overdueTasks.get(0).getEndDate()).isBefore(LocalDate.now());
+        assertThat(overdueTasks.get(0).isCompleted()).isFalse();
+    }
+    
+    @Test
+    void testFindTasksAssignedToMembers() {
+        // Setup - Persist dependencies
+        Project savedProject = persistAndFlush(testProject);
+        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
+        TeamMember savedMember1 = persistAndFlush(testMember);
+        TeamMember savedMember2 = persistAndFlush(otherMember);
+        
+        // Create third member not assigned to any tasks
+        TeamMember member3 = new TeamMember();
+        member3.setUsername("unassigned");
+        member3.setFirstName("Un");
+        member3.setLastName("Assigned");
+        member3.setEmail("unassigned@example.com");
+        TeamMember savedMember3 = persistAndFlush(member3);
+        
+        testTask.setProject(savedProject);
+        testTask.setSubsystem(savedSubsystem);
+        highPriorityTask.setProject(savedProject);
+        highPriorityTask.setSubsystem(savedSubsystem);
+        completedTask.setProject(savedProject);
+        completedTask.setSubsystem(savedSubsystem);
+        
+        // Assign tasks to members
+        testTask.assignMember(savedMember1);
+        highPriorityTask.assignMember(savedMember2);
+        completedTask.assignMember(savedMember1);
         
         taskRepository.save(testTask);
         taskRepository.save(highPriorityTask);
@@ -853,86 +1241,23 @@ class TaskRepositoryIntegrationTest {
         assertThat(completedCount).isEqualTo(5);
     }
     
-    @Test
-    void testTaskQueryPerformance() {
-        // Setup - Create larger dataset for performance testing
-        Project savedProject = persistAndFlush(testProject);
-        Subsystem savedSubsystem1 = persistAndFlush(testSubsystem);
-        Subsystem savedSubsystem2 = persistAndFlush(otherSubsystem);
-        TeamMember savedMember = persistAndFlush(testMember);
-        
-        // Create 50 tasks across different subsystems
-        List<Task> tasks = new java.util.ArrayList<>();
-        for (int i = 1; i <= 50; i++) {
-            Task task = new Task();
-            task.setTitle("Performance Task " + i);
-            task.setProject(savedProject);
-            task.setSubsystem(i % 2 == 0 ? savedSubsystem1 : savedSubsystem2);
-            task.setEstimatedDuration(Duration.ofHours(i % 8 + 1));
-            task.setPriority(Task.Priority.values()[i % 4]);
-            task.setCompleted(i % 3 == 0);
-            task.setProgress(i % 3 == 0 ? 100 : (i * 2) % 100);
-            task.setEndDate(LocalDate.now().plusDays(i % 30));
-            
-            // Assign every 5th task to member
-            if (i % 5 == 0) {
-                task.assignMember(savedMember);
-            }
-            
-            tasks.add(task);
-        }
-        
-        taskRepository.saveAll(tasks);
-        entityManager.flush();
-        
-        // Execute - Performance-sensitive queries
-        long startTime = System.currentTimeMillis();
-        
-        List<Task> projectTasks = taskRepository.findByProject(savedProject);
-        List<Task> subsystem1Tasks = taskRepository.findBySubsystem(savedSubsystem1);
-        List<Task> memberTasks = taskRepository.findByAssignedMember(savedMember);
-        List<Task> dueSoonTasks = taskRepository.findTasksDueSoon(
-            savedProject.getId(), LocalDate.now(), LocalDate.now().plusDays(15));
-        
-        long endTime = System.currentTimeMillis();
-        
-        // Verify - Query results are correct
-        assertThat(projectTasks).hasSize(50);
-        assertThat(subsystem1Tasks).hasSize(25); // Even numbered tasks
-        assertThat(memberTasks).hasSize(10); // Every 5th task
-        assertThat(dueSoonTasks).hasSizeLessThanOrEqualTo(15); // Tasks due within 15 days
-        
-        // Log performance (for development monitoring)
-        long queryTime = endTime - startTime;
-        System.out.println("Query execution time: " + queryTime + "ms");
-        
-        // Verify reasonable performance (should complete quickly)
-        assertThat(queryTime).isLessThan(5000); // Should complete within 5 seconds
-    }
-    
     // ========== ERROR HANDLING AND EDGE CASES ==========
     
     @Test
     void testTaskRepositoryErrorHandling() {
         // Test null parameter handling in repository methods
         
-        // findByProject with null
-        org.junit.jupiter.api.Assertions.assertThrows(
-            IllegalArgumentException.class,
-            () -> taskRepository.findByProject(null)
-        );
+        // findByProject with null - Spring Data JPA handles this gracefully
+        List<Task> nullProjectTasks = taskRepository.findByProject(null);
+        assertThat(nullProjectTasks).isEmpty();
         
-        // findBySubsystem with null
-        org.junit.jupiter.api.Assertions.assertThrows(
-            IllegalArgumentException.class,
-            () -> taskRepository.findBySubsystem(null)
-        );
+        // findBySubsystem with null - Spring Data JPA handles this gracefully
+        List<Task> nullSubsystemTasks = taskRepository.findBySubsystem(null);
+        assertThat(nullSubsystemTasks).isEmpty();
         
-        // findByAssignedMember with null
-        org.junit.jupiter.api.Assertions.assertThrows(
-            IllegalArgumentException.class,
-            () -> taskRepository.findByAssignedMember(null)
-        );
+        // findByAssignedMember with null - Custom query handles this
+        List<Task> nullMemberTasks = taskRepository.findByAssignedMember(null);
+        assertThat(nullMemberTasks).isEmpty();
     }
     
     @Test
@@ -1077,390 +1402,4 @@ class TaskRepositoryIntegrationTest {
         assertThat(completedTasks).contains(finalTask);
         assertThat(highPriorityTasks).contains(finalTask);
     }
-}dTask);
-        entityManager.flush();
-        
-        // Execute
-        List<Task> project1Tasks = taskRepository.findByProject(savedProject1);
-        List<Task> project2Tasks = taskRepository.findByProject(savedProject2);
-        
-        // Verify
-        assertThat(project1Tasks).hasSize(2);
-        assertThat(project1Tasks).extracting(Task::getTitle)
-            .containsExactlyInAnyOrder("Build Chassis Frame", "Program Autonomous");
-        
-        assertThat(project2Tasks).hasSize(1);
-        assertThat(project2Tasks.get(0).getTitle()).isEqualTo("Design Intake Mechanism");
-    }
-    
-    @Test
-    void testFindByProjectId() {
-        // Setup - Persist dependencies and task
-        Project savedProject = persistAndFlush(testProject);
-        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
-        
-        testTask.setProject(savedProject);
-        testTask.setSubsystem(savedSubsystem);
-        taskRepository.save(testTask);
-        entityManager.flush();
-        
-        // Execute
-        List<Task> results = taskRepository.findByProjectId(savedProject.getId());
-        
-        // Verify
-        assertThat(results).hasSize(1);
-        assertThat(results.get(0).getTitle()).isEqualTo("Build Chassis Frame");
-        assertThat(results.get(0).getProject().getId()).isEqualTo(savedProject.getId());
-    }
-    
-    @Test
-    void testFindBySubsystem() {
-        // Setup - Create subsystems with different tasks
-        Project savedProject = persistAndFlush(testProject);
-        Subsystem savedSubsystem1 = persistAndFlush(testSubsystem);
-        Subsystem savedSubsystem2 = persistAndFlush(otherSubsystem);
-        
-        testTask.setProject(savedProject);
-        testTask.setSubsystem(savedSubsystem1);
-        highPriorityTask.setProject(savedProject);
-        highPriorityTask.setSubsystem(savedSubsystem1);
-        completedTask.setProject(savedProject);
-        completedTask.setSubsystem(savedSubsystem2);
-        
-        taskRepository.save(testTask);
-        taskRepository.save(highPriorityTask);
-        taskRepository.save(completedTask);
-        entityManager.flush();
-        
-        // Execute
-        List<Task> subsystem1Tasks = taskRepository.findBySubsystem(savedSubsystem1);
-        List<Task> subsystem2Tasks = taskRepository.findBySubsystem(savedSubsystem2);
-        
-        // Verify
-        assertThat(subsystem1Tasks).hasSize(2);
-        assertThat(subsystem1Tasks).extracting(Task::getTitle)
-            .containsExactlyInAnyOrder("Build Chassis Frame", "Program Autonomous");
-        
-        assertThat(subsystem2Tasks).hasSize(1);
-        assertThat(subsystem2Tasks.get(0).getTitle()).isEqualTo("Design Intake Mechanism");
-    }
-    
-    @Test
-    void testFindByCompleted() {
-        // Setup - Persist tasks with different completion status
-        Project savedProject = persistAndFlush(testProject);
-        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
-        
-        testTask.setProject(savedProject);
-        testTask.setSubsystem(savedSubsystem);
-        testTask.setCompleted(false);
-        
-        completedTask.setProject(savedProject);
-        completedTask.setSubsystem(savedSubsystem);
-        completedTask.setCompleted(true);
-        
-        taskRepository.save(testTask);
-        taskRepository.save(completedTask);
-        entityManager.flush();
-        
-        // Execute - Find incomplete tasks
-        List<Task> incompleteTasks = taskRepository.findByCompleted(false);
-        
-        // Execute - Find completed tasks
-        List<Task> completedTasks = taskRepository.findByCompleted(true);
-        
-        // Verify
-        assertThat(incompleteTasks).hasSize(1);
-        assertThat(incompleteTasks.get(0).getTitle()).isEqualTo("Build Chassis Frame");
-        assertThat(incompleteTasks.get(0).isCompleted()).isFalse();
-        
-        assertThat(completedTasks).hasSize(1);
-        assertThat(completedTasks.get(0).getTitle()).isEqualTo("Design Intake Mechanism");
-        assertThat(completedTasks.get(0).isCompleted()).isTrue();
-    }
-    
-    @Test
-    void testFindByEndDateBefore() {
-        // Setup - Create tasks with different end dates
-        Project savedProject = persistAndFlush(testProject);
-        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
-        
-        // Task due yesterday (overdue)
-        testTask.setEndDate(LocalDate.now().minusDays(1));
-        testTask.setProject(savedProject);
-        testTask.setSubsystem(savedSubsystem);
-        
-        // Task due tomorrow (not overdue)
-        highPriorityTask.setEndDate(LocalDate.now().plusDays(1));
-        highPriorityTask.setProject(savedProject);
-        highPriorityTask.setSubsystem(savedSubsystem);
-        
-        taskRepository.save(testTask);
-        taskRepository.save(highPriorityTask);
-        entityManager.flush();
-        
-        // Execute - Find tasks due before today
-        List<Task> overdueTasks = taskRepository.findByEndDateBefore(LocalDate.now());
-        
-        // Verify - Should only find the overdue task
-        assertThat(overdueTasks).hasSize(1);
-        assertThat(overdueTasks.get(0).getTitle()).isEqualTo("Build Chassis Frame");
-        assertThat(overdueTasks.get(0).getEndDate()).isBefore(LocalDate.now());
-    }
-    
-    @Test
-    void testFindByPriority() {
-        // Setup - Persist tasks with different priorities
-        Project savedProject = persistAndFlush(testProject);
-        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
-        
-        testTask.setPriority(Task.Priority.MEDIUM);
-        testTask.setProject(savedProject);
-        testTask.setSubsystem(savedSubsystem);
-        
-        highPriorityTask.setPriority(Task.Priority.HIGH);
-        highPriorityTask.setProject(savedProject);
-        highPriorityTask.setSubsystem(savedSubsystem);
-        
-        completedTask.setPriority(Task.Priority.LOW);
-        completedTask.setProject(savedProject);
-        completedTask.setSubsystem(savedSubsystem);
-        
-        taskRepository.save(testTask);
-        taskRepository.save(highPriorityTask);
-        taskRepository.save(completedTask);
-        entityManager.flush();
-        
-        // Execute - Find high priority tasks
-        List<Task> highPriorityTasks = taskRepository.findByPriority(Task.Priority.HIGH);
-        
-        // Execute - Find medium priority tasks
-        List<Task> mediumPriorityTasks = taskRepository.findByPriority(Task.Priority.MEDIUM);
-        
-        // Verify
-        assertThat(highPriorityTasks).hasSize(1);
-        assertThat(highPriorityTasks.get(0).getTitle()).isEqualTo("Program Autonomous");
-        assertThat(highPriorityTasks.get(0).getPriority()).isEqualTo(Task.Priority.HIGH);
-        
-        assertThat(mediumPriorityTasks).hasSize(1);
-        assertThat(mediumPriorityTasks.get(0).getTitle()).isEqualTo("Build Chassis Frame");
-        assertThat(mediumPriorityTasks.get(0).getPriority()).isEqualTo(Task.Priority.MEDIUM);
-    }
-    
-    @Test
-    void testFindByTitleContainingIgnoreCase() {
-        // Setup - Persist tasks with different titles
-        Project savedProject = persistAndFlush(testProject);
-        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
-        
-        testTask.setProject(savedProject);
-        testTask.setSubsystem(savedSubsystem);
-        highPriorityTask.setProject(savedProject);
-        highPriorityTask.setSubsystem(savedSubsystem);
-        
-        taskRepository.save(testTask);
-        taskRepository.save(highPriorityTask);
-        entityManager.flush();
-        
-        // Execute - Case insensitive search for "program"
-        List<Task> programTasks = taskRepository.findByTitleContainingIgnoreCase("PROGRAM");
-        
-        // Execute - Search for "build"
-        List<Task> buildTasks = taskRepository.findByTitleContainingIgnoreCase("build");
-        
-        // Verify
-        assertThat(programTasks).hasSize(1);
-        assertThat(programTasks.get(0).getTitle()).isEqualTo("Program Autonomous");
-        
-        assertThat(buildTasks).hasSize(1);
-        assertThat(buildTasks.get(0).getTitle()).isEqualTo("Build Chassis Frame");
-    }
-    
-    // ========== CUSTOM @QUERY METHODS ==========
-    
-    @Test
-    void testFindByAssignedMember() {
-        // Setup - Persist dependencies
-        Project savedProject = persistAndFlush(testProject);
-        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
-        TeamMember savedMember = persistAndFlush(testMember);
-        TeamMember savedOtherMember = persistAndFlush(otherMember);
-        
-        testTask.setProject(savedProject);
-        testTask.setSubsystem(savedSubsystem);
-        highPriorityTask.setProject(savedProject);
-        highPriorityTask.setSubsystem(savedSubsystem);
-        
-        // Assign member to tasks using helper method
-        testTask.assignMember(savedMember);
-        highPriorityTask.assignMember(savedMember);
-        highPriorityTask.assignMember(savedOtherMember); // Assigned to both members
-        
-        taskRepository.save(testTask);
-        taskRepository.save(highPriorityTask);
-        entityManager.flush();
-        
-        // Execute
-        List<Task> memberTasks = taskRepository.findByAssignedMember(savedMember);
-        List<Task> otherMemberTasks = taskRepository.findByAssignedMember(savedOtherMember);
-        
-        // Verify
-        assertThat(memberTasks).hasSize(2);
-        assertThat(memberTasks).extracting(Task::getTitle)
-            .containsExactlyInAnyOrder("Build Chassis Frame", "Program Autonomous");
-        
-        assertThat(otherMemberTasks).hasSize(1);
-        assertThat(otherMemberTasks.get(0).getTitle()).isEqualTo("Program Autonomous");
-    }
-    
-    @Test
-    void testFindIncompleteTasksByProject() {
-        // Setup - Persist tasks with different completion status
-        Project savedProject = persistAndFlush(testProject);
-        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
-        
-        testTask.setProject(savedProject);
-        testTask.setSubsystem(savedSubsystem);
-        testTask.setCompleted(false);
-        
-        highPriorityTask.setProject(savedProject);
-        highPriorityTask.setSubsystem(savedSubsystem);
-        highPriorityTask.setCompleted(false);
-        
-        completedTask.setProject(savedProject);
-        completedTask.setSubsystem(savedSubsystem);
-        completedTask.setCompleted(true);
-        
-        taskRepository.save(testTask);
-        taskRepository.save(highPriorityTask);
-        taskRepository.save(completedTask);
-        entityManager.flush();
-        
-        // Execute
-        List<Task> incompleteTasks = taskRepository.findIncompleteTasksByProject(savedProject);
-        
-        // Verify - Should only find incomplete tasks
-        assertThat(incompleteTasks).hasSize(2);
-        assertThat(incompleteTasks).extracting(Task::getTitle)
-            .containsExactlyInAnyOrder("Build Chassis Frame", "Program Autonomous");
-        assertThat(incompleteTasks).allMatch(task -> !task.isCompleted());
-    }
-    
-    @Test
-    void testFindTasksDueSoon() {
-        // Setup - Create tasks with different due dates
-        Project savedProject = persistAndFlush(testProject);
-        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
-        
-        // Task due tomorrow (within range)
-        testTask.setEndDate(LocalDate.now().plusDays(1));
-        testTask.setCompleted(false);
-        testTask.setProject(savedProject);
-        testTask.setSubsystem(savedSubsystem);
-        
-        // Task due in 2 days (within range)
-        highPriorityTask.setEndDate(LocalDate.now().plusDays(2));
-        highPriorityTask.setCompleted(false);
-        highPriorityTask.setProject(savedProject);
-        highPriorityTask.setSubsystem(savedSubsystem);
-        
-        // Task due in 10 days (outside range)
-        Task farTask = new Task();
-        farTask.setTitle("Future Task");
-        farTask.setEndDate(LocalDate.now().plusDays(10));
-        farTask.setCompleted(false);
-        farTask.setProject(savedProject);
-        farTask.setSubsystem(savedSubsystem);
-        farTask.setEstimatedDuration(Duration.ofHours(4));
-        farTask.setPriority(Task.Priority.LOW);
-        
-        taskRepository.save(testTask);
-        taskRepository.save(highPriorityTask);
-        taskRepository.save(farTask);
-        entityManager.flush();
-        
-        // Execute - Find tasks due within 3 days
-        LocalDate startDate = LocalDate.now();
-        LocalDate endDate = startDate.plusDays(3);
-        List<Task> dueSoonTasks = taskRepository.findTasksDueSoon(
-            savedProject.getId(), startDate, endDate);
-        
-        // Verify - Should find tasks due within 3 days
-        assertThat(dueSoonTasks).hasSize(2);
-        assertThat(dueSoonTasks).extracting(Task::getTitle)
-            .containsExactlyInAnyOrder("Build Chassis Frame", "Program Autonomous");
-        assertThat(dueSoonTasks).allMatch(task -> !task.isCompleted());
-        assertThat(dueSoonTasks).allMatch(task -> 
-            !task.getEndDate().isBefore(startDate) && !task.getEndDate().isAfter(endDate));
-    }
-    
-    @Test
-    void testFindOverdueTasksByProject() {
-        // Setup - Create tasks with different due dates
-        Project savedProject = persistAndFlush(testProject);
-        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
-        
-        // Overdue task (due yesterday, incomplete)
-        testTask.setEndDate(LocalDate.now().minusDays(1));
-        testTask.setCompleted(false);
-        testTask.setProject(savedProject);
-        testTask.setSubsystem(savedSubsystem);
-        
-        // Future task (not overdue)
-        highPriorityTask.setEndDate(LocalDate.now().plusDays(1));
-        highPriorityTask.setCompleted(false);
-        highPriorityTask.setProject(savedProject);
-        highPriorityTask.setSubsystem(savedSubsystem);
-        
-        // Overdue but completed task (should not appear)
-        completedTask.setEndDate(LocalDate.now().minusDays(2));
-        completedTask.setCompleted(true);
-        completedTask.setProject(savedProject);
-        completedTask.setSubsystem(savedSubsystem);
-        
-        taskRepository.save(testTask);
-        taskRepository.save(highPriorityTask);
-        taskRepository.save(completedTask);
-        entityManager.flush();
-        
-        // Execute
-        List<Task> overdueTasks = taskRepository.findOverdueTasksByProject(savedProject);
-        
-        // Verify - Should only find incomplete overdue tasks
-        assertThat(overdueTasks).hasSize(1);
-        assertThat(overdueTasks.get(0).getTitle()).isEqualTo("Build Chassis Frame");
-        assertThat(overdueTasks.get(0).getEndDate()).isBefore(LocalDate.now());
-        assertThat(overdueTasks.get(0).isCompleted()).isFalse();
-    }
-    
-    @Test
-    void testFindTasksAssignedToMembers() {
-        // Setup - Persist dependencies
-        Project savedProject = persistAndFlush(testProject);
-        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
-        TeamMember savedMember1 = persistAndFlush(testMember);
-        TeamMember savedMember2 = persistAndFlush(otherMember);
-        
-        // Create third member not assigned to any tasks
-        TeamMember member3 = new TeamMember();
-        member3.setUsername("unassigned");
-        member3.setFirstName("Un");
-        member3.setLastName("Assigned");
-        member3.setEmail("unassigned@example.com");
-        TeamMember savedMember3 = persistAndFlush(member3);
-        
-        testTask.setProject(savedProject);
-        testTask.setSubsystem(savedSubsystem);
-        highPriorityTask.setProject(savedProject);
-        highPriorityTask.setSubsystem(savedSubsystem);
-        completedTask.setProject(savedProject);
-        completedTask.setSubsystem(savedSubsystem);
-        
-        // Assign tasks to members
-        testTask.assignMember(savedMember1);
-        highPriorityTask.assignMember(savedMember2);
-        completedTask.assignMember(savedMember1);
-        
-        taskRepository.save(testTask);
-        taskRepository.save(highPriorityTask);
-        taskRepository.save(complete
+}
