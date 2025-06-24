@@ -1,6 +1,4 @@
-2025-06-23 10:19:37 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - Referential integrity constraint violation: "FK5IRPAISPCX79XWY6N1QOMAXNV: PUBLIC.TASK_COMPONENTS FOREIGN KEY(COMPONENT_ID) REFERENCES PUBLIC.COMPONENTS(ID) (CAST(239 AS BIGINT))"; SQL statement:
-delete from components where id=? [23503-224]
-2025-06-23 10:23:02 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - Referential integrity constraint violation: "FK5IRPAISPCX79XWY6N1QOMAXNV: PUBLIC.TASK_COMPONENTS FOREIGN KEY(COMPONENT_ID) REFERENCES PUBLIC.COMPONENTS(ID) (CAST(239 AS BIGINT))"; SQL statement:
-delete from components where id=? [23503-224]
-2025-06-23 10:24:39 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - Referential integrity constraint violation: "FK5IRPAISPCX79XWY6N1QOMAXNV: PUBLIC.TASK_COMPONENTS FOREIGN KEY(COMPONENT_ID) REFERENCES PUBLIC.COMPONENTS(ID) (CAST(1 AS BIGINT))"; SQL statement:
-delete from components where id=? [23503-224]
+2025-06-24 08:36:03 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - Unique index or primary key violation: "PUBLIC.CONSTRAINT_INDEX_F ON PUBLIC.SUBSYSTEMS(NAME NULLS FIRST) VALUES ( /* 1 */ 'Drivetrain' )"; SQL statement:
+insert into subsystems (description,name,responsible_subteam_id,status,id) values (?,?,?,?,default) [23505-224]
+2025-06-24 08:38:04 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - Referential integrity constraint violation: "FKNWFXKTX9EMCWSYLQOFAD5CXBX: PUBLIC.TASK_DEPENDENCIES FOREIGN KEY(DEPENDENCY_ID) REFERENCES PUBLIC.TASKS(ID) (CAST(1 AS BIGINT))"; SQL statement:
+delete from tasks where id=? [23503-224]

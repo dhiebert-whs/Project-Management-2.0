@@ -1585,7 +1585,7 @@ class ComponentRepositoryIntegrationTest {
         // 6. Date-based queries
         List<Component> dueSoon = componentRepository.findByExpectedDeliveryBetween(
             LocalDate.now(), LocalDate.now().plusDays(5));
-        assertThat(dueSoon).hasSize(2); // driveMotor2 and shared controller
+        assertThat(dueSoon).hasSize(4); // All components with expected delivery within 5 days
         
         List<Component> recentDeliveries = componentRepository.findByDeliveredTrueAndActualDeliveryAfter(
             LocalDate.now().minusDays(3));

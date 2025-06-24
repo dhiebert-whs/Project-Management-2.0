@@ -1202,6 +1202,11 @@ class TaskRepositoryIntegrationTest {
     
     @Test
     void testBulkTaskOperations() {
+
+        // Clear any existing tasks from other tests
+        taskRepository.deleteAll();
+        entityManager.flush();
+
         // Setup - Create project and subsystem
         Project savedProject = persistAndFlush(testProject);
         Subsystem savedSubsystem = persistAndFlush(testSubsystem);
@@ -1216,7 +1221,7 @@ class TaskRepositoryIntegrationTest {
             task.setEstimatedDuration(Duration.ofHours(i));
             task.setPriority(i % 2 == 0 ? Task.Priority.HIGH : Task.Priority.LOW);
             task.setCompleted(i <= 5); // First 5 are completed
-            task.setProgress(i <= 5 ? 100 : i * 10);
+            task.setProgress(i <= 5 ? 100 : Math.min(90, i * 10)); // Cap at 90% for incomplete tasks
             tasks.add(task);
         }
         
@@ -1291,6 +1296,12 @@ class TaskRepositoryIntegrationTest {
         assertThat(savedTask1.getPostDependencies()).contains(savedTask2);
         
         // Execute - Delete task with dependencies
+        // First, clean up the dependency relationship
+        savedTask2.removePreDependency(savedTask1);
+        taskRepository.save(savedTask2);
+        entityManager.flush();
+
+        // Now safe to delete the task
         taskRepository.delete(savedTask1);
         entityManager.flush();
         

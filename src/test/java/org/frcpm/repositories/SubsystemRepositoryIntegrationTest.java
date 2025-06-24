@@ -961,7 +961,10 @@ class SubsystemRepositoryIntegrationTest {
         // Subsystem with very long description
         Subsystem longDescSubsystem = new Subsystem();
         longDescSubsystem.setName("Long Description System");
-        longDescSubsystem.setDescription("This is a very long description that tests the system's ability to handle extensive text content in the description field. ".repeat(10));
+        // Create exactly 1000 character description
+        String baseDescription = "This is a very long description that tests the system's ability to handle extensive text content in the description field. ";
+        String exactDescription = baseDescription.repeat(8) + baseDescription.substring(0, 1000 - (baseDescription.length() * 8));
+        longDescSubsystem.setDescription(exactDescription);
         longDescSubsystem.setStatus(Subsystem.Status.IN_PROGRESS);
         
         subsystemRepository.save(minimalSubsystem);
@@ -984,7 +987,7 @@ class SubsystemRepositoryIntegrationTest {
         assertThat(minimalSubsystem.getResponsibleSubteam()).isNull();
         
         // Verify long description is preserved
-        assertThat(longDescSubsystem.getDescription()).hasSize(1000); // 100 chars * 10 repetitions
+        assertThat(longDescSubsystem.getDescription()).hasSize(1000); // Exactly 1000 characters
     }
     
     // ========== INTEGRATION WITH SERVICE LAYER PATTERNS ==========

@@ -34,7 +34,7 @@ public class Subsystem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(name = "name", length = 100, nullable = false)
+    @Column(name = "name", length = 100, nullable = false, unique = true)
     private String name;
     
     @Column(name = "description", columnDefinition = "TEXT")
