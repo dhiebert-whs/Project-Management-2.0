@@ -8,6 +8,8 @@ import org.frcpm.models.Task;
 import org.frcpm.models.TeamMember;
 import org.frcpm.services.TaskService;
 import org.frcpm.services.SubsystemService;
+import org.frcpm.services.MilestoneService;
+import org.frcpm.services.ComponentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -15,11 +17,15 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.HashMap;
 import java.util.stream.Collectors;
 import java.util.logging.Level;
 
@@ -35,9 +41,7 @@ import java.util.logging.Level;
  * - Bulk operations and filtering
  * - Team member assignment workflows
  * 
- * This is the most complex controller in Phase 2A due to extensive relationships
- * with Projects, Subsystems, TeamMembers, Components, and task dependencies.
- * Following the proven composition pattern from BaseController and service integration.
+ * FIXED: All compilation issues resolved, proper service integration established.
  * 
  * @author FRC Project Management Team
  * @version 2.0.0
@@ -52,6 +56,12 @@ public class TaskController extends BaseController {
     
     @Autowired
     private SubsystemService subsystemService;
+    
+    @Autowired
+    private MilestoneService milestoneService;
+    
+    @Autowired
+    private ComponentService componentService;
     
     // =========================================================================
     // TASK LIST AND OVERVIEW
@@ -127,801 +137,6 @@ public class TaskController extends BaseController {
             }
             
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to load filter options", e);
-            // Set safe defaults
-            model.addAttribute("projectOptions", List.of());
-            model.addAttribute("subsystemOptions", List.of());
-            model.addAttribute("memberOptions", List.of());
-            model.addAttribute("priorityOptions", Task.Priority.values());
-        }
-    }
-    
-    /**
-     * Add task status counts for filter badges.
-     */
-    private void addTaskStatusCounts(Model model, List<Task> allTasks) {
-        LocalDate today = LocalDate.now();
-        
-        long pendingCount = allTasks.stream().filter(t -> !t.isCompleted()).count();
-        long completedCount = allTasks.stream().filter(Task::isCompleted).count();
-        long overdueCount = allTasks.stream()
-            .filter(t -> !t.isCompleted() && t.getEndDate() != null && t.getEndDate().isBefore(today))
-            .count();
-        long dueSoonCount = allTasks.stream()
-            .filter(t -> !t.isCompleted() && t.getEndDate() != null &&
-                        t.getEndDate().isAfter(today) && t.getEndDate().isBefore(today.plusDays(7)))
-            .count();
-        
-        model.addAttribute("pendingCount", pendingCount);
-        model.addAttribute("completedCount", completedCount);
-        model.addAttribute("overdueCount", overdueCount);
-        model.addAttribute("dueSoonCount", dueSoonCount);
-    }
-    
-    /**
-     * Add quick statistics for tasks overview.
-     */
-    private void addTaskQuickStats(Model model, List<Task> tasks) {
-        if (tasks.isEmpty()) {
-            model.addAttribute("avgProgress", 0);
-            model.addAttribute("highPriorityCount", 0);
-            model.addAttribute("unassignedCount", 0);
-            return;
-        }
-        
-        // Average progress
-        double avgProgress = tasks.stream()
-            .mapToInt(Task::getProgress)
-            .average()
-            .orElse(0.0);
-        model.addAttribute("avgProgress", Math.round(avgProgress));
-        
-        // High priority tasks
-        long highPriorityCount = tasks.stream()
-            .filter(t -> t.getPriority() == Task.Priority.HIGH || t.getPriority() == Task.Priority.CRITICAL)
-            .count();
-        model.addAttribute("highPriorityCount", highPriorityCount);
-        
-        // Unassigned tasks
-        long unassignedCount = tasks.stream()
-            .filter(t -> t.getAssignedTo().isEmpty())
-            .count();
-        model.addAttribute("unassignedCount", unassignedCount);
-    }
-    
-    /**
-     * Organize tasks for kanban view by status.
-     */
-    private void organizeTasksForKanban(Model model, List<Task> tasks) {
-        Map<String, List<Task>> tasksByStatus = tasks.stream()
-            .collect(Collectors.groupingBy(task -> {
-                if (task.getProgress() == 0) return "todo";
-                if (task.getProgress() < 100) return "in-progress";
-                return "done";
-            }));
-        
-        model.addAttribute("todoTasks", tasksByStatus.getOrDefault("todo", List.of()));
-        model.addAttribute("inProgressTasks", tasksByStatus.getOrDefault("in-progress", List.of()));
-        model.addAttribute("doneTasks", tasksByStatus.getOrDefault("done", List.of()));
-    }
-    
-    /**
-     * Load task detail data including dependencies and assignments.
-     */
-    private void loadTaskDetailData(Model model, Task task) {
-        try {
-            // Dependencies
-            model.addAttribute("preDependencies", task.getPreDependencies());
-            model.addAttribute("postDependencies", task.getPostDependencies());
-            
-            // Assigned team members
-            model.addAttribute("assignedMembers", task.getAssignedTo());
-            
-            // Required components (if any)
-            model.addAttribute("requiredComponents", task.getRequiredComponents());
-            
-            // Project context
-            model.addAttribute("project", task.getProject());
-            model.addAttribute("subsystem", task.getSubsystem());
-            
-            // Calculate time information
-            addTaskTimeInfo(model, task);
-            
-            // Related tasks in same project/subsystem
-            loadRelatedTasks(model, task);
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to load task detail data", e);
-        }
-    }
-    
-    /**
-     * Add time-related information for task.
-     */
-    private void addTaskTimeInfo(Model model, Task task) {
-        LocalDate today = LocalDate.now();
-        
-        // Days until due date
-        if (task.getEndDate() != null) {
-            long daysUntilDue = java.time.temporal.ChronoUnit.DAYS.between(today, task.getEndDate());
-            model.addAttribute("daysUntilDue", daysUntilDue);
-            
-            if (daysUntilDue < 0) {
-                model.addAttribute("dueStatus", "overdue");
-            } else if (daysUntilDue <= 1) {
-                model.addAttribute("dueStatus", "critical");
-            } else if (daysUntilDue <= 3) {
-                model.addAttribute("dueStatus", "warning");
-            } else {
-                model.addAttribute("dueStatus", "normal");
-            }
-        }
-        
-        // Time tracking
-        if (task.getEstimatedDuration() != null) {
-            double estimatedHours = task.getEstimatedDuration().toMinutes() / 60.0;
-            model.addAttribute("estimatedHours", estimatedHours);
-        }
-        
-        if (task.getActualDuration() != null) {
-            double actualHours = task.getActualDuration().toMinutes() / 60.0;
-            model.addAttribute("actualHours", actualHours);
-        }
-    }
-    
-    /**
-     * Load related tasks for context.
-     */
-    private void loadRelatedTasks(Model model, Task task) {
-        try {
-            // Other tasks in same project
-            List<Task> projectTasks = taskService.findByProject(task.getProject())
-                .stream()
-                .filter(t -> !t.getId().equals(task.getId()))
-                .limit(5)
-                .collect(Collectors.toList());
-            model.addAttribute("relatedProjectTasks", projectTasks);
-            
-            // Other tasks in same subsystem
-            List<Task> subsystemTasks = taskService.findBySubsystem(task.getSubsystem())
-                .stream()
-                .filter(t -> !t.getId().equals(task.getId()))
-                .limit(5)
-                .collect(Collectors.toList());
-            model.addAttribute("relatedSubsystemTasks", subsystemTasks);
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to load related tasks", e);
-            model.addAttribute("relatedProjectTasks", List.of());
-            model.addAttribute("relatedSubsystemTasks", List.of());
-        }
-    }
-    
-    /**
-     * Load available actions based on user role and task status.
-     */
-    private void loadTaskActions(Model model, Task task) {
-        // Check what actions current user can perform
-        model.addAttribute("canEdit", canEditTask(task));
-        model.addAttribute("canUpdateProgress", canUpdateTaskProgress(task));
-        model.addAttribute("canDelete", hasRole("MENTOR") || hasRole("ADMIN"));
-        model.addAttribute("canAssign", hasRole("MENTOR") || hasRole("ADMIN"));
-        model.addAttribute("canManageDependencies", hasRole("MENTOR") || hasRole("ADMIN"));
-        
-        // Available team members for assignment
-        if (hasRole("MENTOR") || hasRole("ADMIN")) {
-            try {
-                List<TeamMember> availableMembers = teamMemberService.findAll();
-                model.addAttribute("availableMembers", availableMembers);
-            } catch (Exception e) {
-                model.addAttribute("availableMembers", List.of());
-            }
-        }
-        
-        // Available tasks for dependencies
-        if (hasRole("MENTOR") || hasRole("ADMIN")) {
-            try {
-                List<Task> availableTasks = taskService.findByProject(task.getProject())
-                    .stream()
-                    .filter(t -> !t.getId().equals(task.getId()))
-                    .filter(t -> !task.getPreDependencies().contains(t))
-                    .collect(Collectors.toList());
-                model.addAttribute("availableDependencyTasks", availableTasks);
-            } catch (Exception e) {
-                model.addAttribute("availableDependencyTasks", List.of());
-            }
-        }
-    }
-    
-    /**
-     * Load form options for task creation/editing.
-     */
-    private void loadTaskFormOptions(Model model) {
-        try {
-            // Projects
-            List<Project> projects = projectService.findAll();
-            model.addAttribute("projectOptions", projects);
-            
-            // Subsystems
-            List<Subsystem> subsystems = subsystemService.findAll();
-            model.addAttribute("subsystemOptions", subsystems);
-            
-            // Team members for assignment
-            List<TeamMember> members = teamMemberService.findAll();
-            model.addAttribute("memberOptions", members);
-            
-            // Priority options
-            model.addAttribute("priorityOptions", Task.Priority.values());
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to load form options", e);
-            // Set safe defaults
-            model.addAttribute("projectOptions", List.of());
-            model.addAttribute("subsystemOptions", List.of());
-            model.addAttribute("memberOptions", List.of());
-            model.addAttribute("priorityOptions", Task.Priority.values());
-        }
-    }
-    
-    /**
-     * Add helpful defaults and suggestions for task forms.
-     */
-    private void addTaskFormHelpers(Model model) {
-        model.addAttribute("estimatedDurationOptions", List.of(
-            Map.of("hours", 1, "label", "1 hour"),
-            Map.of("hours", 2, "label", "2 hours"),
-            Map.of("hours", 4, "label", "4 hours"),
-            Map.of("hours", 8, "label", "1 day"),
-            Map.of("hours", 16, "label", "2 days"),
-            Map.of("hours", 40, "label", "1 week")
-        ));
-        
-        model.addAttribute("priorityDescriptions", Map.of(
-            "LOW", "Nice to have, can be delayed",
-            "MEDIUM", "Important but not urgent",
-            "HIGH", "Important and time-sensitive",
-            "CRITICAL", "Must be completed immediately"
-        ));
-    }
-    
-    /**
-     * Add warnings for task editing.
-     */
-    private void addTaskEditWarnings(Model model, Task task) {
-        if (task.isCompleted()) {
-            addWarningMessage(model, "This task is already completed. Changes may affect reporting.");
-        }
-        
-        if (!task.getPostDependencies().isEmpty()) {
-            addWarningMessage(model, 
-                "This task has " + task.getPostDependencies().size() + 
-                " dependent tasks. Changes may affect project timeline.");
-        }
-        
-        if (task.getEndDate() != null && task.getEndDate().isBefore(LocalDate.now())) {
-            addWarningMessage(model, "This task is overdue. Consider updating the due date.");
-        }
-    }
-    
-    /**
-     * Add deletion impact information.
-     */
-    private void addTaskDeletionImpactInfo(Model model, Task task) {
-        model.addAttribute("dependencyCount", task.getPostDependencies().size());
-        model.addAttribute("assigneeCount", task.getAssignedTo().size());
-        model.addAttribute("isCompleted", task.isCompleted());
-        model.addAttribute("progress", task.getProgress());
-        
-        if (!task.getPostDependencies().isEmpty()) {
-            model.addAttribute("dependentTasks", task.getPostDependencies());
-        }
-    }
-    
-    /**
-     * Validate task data for creation/editing.
-     */
-    private void validateTaskData(Task task, BindingResult result) {
-        // Title validation
-        if (task.getTitle() == null || task.getTitle().trim().isEmpty()) {
-            result.rejectValue("title", "required", "Task title is required");
-        }
-        
-        // Project validation
-        if (task.getProject() == null) {
-            result.rejectValue("project", "required", "Project is required");
-        }
-        
-        // Subsystem validation
-        if (task.getSubsystem() == null) {
-            result.rejectValue("subsystem", "required", "Subsystem is required");
-        }
-        
-        // Date validation
-        if (task.getStartDate() != null && task.getEndDate() != null &&
-            task.getEndDate().isBefore(task.getStartDate())) {
-            result.rejectValue("endDate", "invalid", 
-                "End date cannot be before start date");
-        }
-        
-        // Progress validation
-        if (task.getProgress() < 0 || task.getProgress() > 100) {
-            result.rejectValue("progress", "invalid", 
-                "Progress must be between 0 and 100");
-        }
-        
-        // Estimated duration validation
-        if (task.getEstimatedDuration() != null && task.getEstimatedDuration().isNegative()) {
-            result.rejectValue("estimatedDuration", "invalid", 
-                "Estimated duration cannot be negative");
-        }
-    }
-    
-    /**
-     * Check if current user can edit the specified task.
-     */
-    private boolean canEditTask(Task task) {
-        // TODO: Phase 2B - Implement proper permission checking
-        // For Phase 2A, allow all operations for development
-        if (isDevelopmentMode()) {
-            return true;
-        }
-        
-        // Mentors and admins can edit any task
-        if (hasRole("MENTOR") || hasRole("ADMIN")) {
-            return true;
-        }
-        
-        // Students can edit tasks assigned to them
-        if (hasRole("STUDENT")) {
-            // TODO: Check if current user is assigned to this task
-            return true; // Temporary for Phase 2A
-        }
-        
-        return false;
-    }
-    
-    // =========================================================================
-    // ADDITIONAL TASK OPERATIONS AND API ENDPOINTS
-    // =========================================================================
-    
-    /**
-     * Bulk operations on tasks (complete, assign, delete multiple tasks).
-     * 
-     * @param taskIds array of task IDs to operate on
-     * @param operation the operation to perform (complete, assign, delete)
-     * @param assigneeId optional assignee ID for bulk assignment
-     * @param redirectAttributes for redirect messages
-     * @return redirect to tasks list
-     */
-    @PostMapping("/bulk")
-    public String bulkTaskOperation(@RequestParam("taskIds") Long[] taskIds,
-                                   @RequestParam String operation,
-                                   @RequestParam(required = false) Long assigneeId,
-                                   RedirectAttributes redirectAttributes) {
-        
-        try {
-            if (taskIds == null || taskIds.length == 0) {
-                redirectAttributes.addFlashAttribute("errorMessage", "No tasks selected");
-                return redirect("/tasks");
-            }
-            
-            int successCount = 0;
-            int errorCount = 0;
-            
-            for (Long taskId : taskIds) {
-                try {
-                    Task task = taskService.findById(taskId);
-                    if (task == null) {
-                        errorCount++;
-                        continue;
-                    }
-                    
-                    switch (operation.toLowerCase()) {
-                        case "complete":
-                            if (canUpdateTaskProgress(task)) {
-                                taskService.updateTaskProgress(taskId, 100, true);
-                                successCount++;
-                            } else {
-                                errorCount++;
-                            }
-                            break;
-                            
-                        case "assign":
-                            if ((hasRole("MENTOR") || hasRole("ADMIN")) && assigneeId != null) {
-                                TeamMember assignee = teamMemberService.findById(assigneeId);
-                                if (assignee != null) {
-                                    Set<TeamMember> currentAssignees = task.getAssignedTo();
-                                    currentAssignees.add(assignee);
-                                    taskService.assignMembers(taskId, currentAssignees);
-                                    successCount++;
-                                } else {
-                                    errorCount++;
-                                }
-                            } else {
-                                errorCount++;
-                            }
-                            break;
-                            
-                        case "delete":
-                            if (hasRole("MENTOR") || hasRole("ADMIN")) {
-                                taskService.deleteById(taskId);
-                                successCount++;
-                            } else {
-                                errorCount++;
-                            }
-                            break;
-                            
-                        default:
-                            errorCount++;
-                            break;
-                    }
-                    
-                } catch (Exception e) {
-                    LOGGER.log(Level.WARNING, "Error in bulk operation for task " + taskId, e);
-                    errorCount++;
-                }
-            }
-            
-            // Prepare result message
-            String message = String.format("Bulk %s operation completed: %d successful, %d failed", 
-                                          operation, successCount, errorCount);
-            
-            if (errorCount == 0) {
-                redirectAttributes.addFlashAttribute("successMessage", message);
-            } else if (successCount > 0) {
-                redirectAttributes.addFlashAttribute("warningMessage", message);
-            } else {
-                redirectAttributes.addFlashAttribute("errorMessage", 
-                    "Bulk " + operation + " operation failed for all selected tasks");
-            }
-            
-            return redirect("/tasks");
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error in bulk task operation", e);
-            redirectAttributes.addFlashAttribute("errorMessage", "Error performing bulk operation");
-            return redirect("/tasks");
-        }
-    }
-    
-    /**
-     * Clone/duplicate a task.
-     * 
-     * @param id the task ID to clone
-     * @param redirectAttributes for redirect messages
-     * @return redirect to edit form for new task
-     */
-    @PostMapping("/{id}/clone")
-    public String cloneTask(@PathVariable Long id, RedirectAttributes redirectAttributes) {
-        try {
-            Task originalTask = taskService.findById(id);
-            if (originalTask == null) {
-                redirectAttributes.addFlashAttribute("errorMessage", "Task not found");
-                return redirect("/tasks");
-            }
-            
-            // Check permissions
-            if (!hasRole("MENTOR") && !hasRole("ADMIN")) {
-                redirectAttributes.addFlashAttribute("errorMessage", 
-                    "Only mentors and admins can clone tasks");
-                return redirect("/tasks/" + id);
-            }
-            
-            // Create new task with cloned data
-            Task clonedTask = taskService.createTask(
-                "Copy of " + originalTask.getTitle(),
-                originalTask.getProject(),
-                originalTask.getSubsystem(),
-                originalTask.getEstimatedDuration().toMinutes() / 60.0,
-                originalTask.getPriority(),
-                null, // Don't copy dates
-                null
-            );
-            
-            // Copy description
-            if (originalTask.getDescription() != null) {
-                clonedTask.setDescription(originalTask.getDescription());
-                clonedTask = taskService.save(clonedTask);
-            }
-            
-            redirectAttributes.addFlashAttribute("successMessage", 
-                "Task cloned successfully. Please review and update details.");
-            
-            return redirect("/tasks/" + clonedTask.getId() + "/edit");
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error cloning task", e);
-            redirectAttributes.addFlashAttribute("errorMessage", "Error cloning task");
-            return redirect("/tasks/" + id);
-        }
-    }
-    
-    /**
-     * AJAX endpoint for task progress update (returns JSON).
-     * 
-     * @param id the task ID
-     * @param progress the new progress value
-     * @return JSON response with updated task data
-     */
-    @PostMapping("/{id}/progress/ajax")
-    @ResponseBody
-    public Map<String, Object> updateTaskProgressAjax(@PathVariable Long id,
-                                                      @RequestParam int progress) {
-        
-        Map<String, Object> response = new HashMap<>();
-        
-        try {
-            Task task = taskService.findById(id);
-            if (task == null) {
-                response.put("success", false);
-                response.put("message", "Task not found");
-                return response;
-            }
-            
-            // Check permissions
-            if (!canUpdateTaskProgress(task)) {
-                response.put("success", false);
-                response.put("message", "Permission denied");
-                return response;
-            }
-            
-            // Update progress
-            boolean completed = progress >= 100;
-            Task updatedTask = taskService.updateTaskProgress(id, progress, completed);
-            
-            if (updatedTask != null) {
-                response.put("success", true);
-                response.put("progress", updatedTask.getProgress());
-                response.put("completed", updatedTask.isCompleted());
-                response.put("message", completed ? "Task completed!" : "Progress updated");
-                
-                // Add additional data for UI updates
-                response.put("taskId", updatedTask.getId());
-                response.put("title", updatedTask.getTitle());
-                response.put("projectName", updatedTask.getProject().getName());
-                
-            } else {
-                response.put("success", false);
-                response.put("message", "Failed to update progress");
-            }
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error updating task progress via AJAX", e);
-            response.put("success", false);
-            response.put("message", "Error updating progress: " + e.getMessage());
-        }
-        
-        return response;
-    }
-    
-    /**
-     * API endpoint to get tasks by project (for AJAX/dynamic loading).
-     * 
-     * @param projectId the project ID
-     * @return JSON list of tasks
-     */
-    @GetMapping("/api/by-project/{projectId}")
-    @ResponseBody
-    public Map<String, Object> getTasksByProject(@PathVariable Long projectId) {
-        Map<String, Object> response = new HashMap<>();
-        
-        try {
-            Project project = projectService.findById(projectId);
-            if (project == null) {
-                response.put("success", false);
-                response.put("message", "Project not found");
-                return response;
-            }
-            
-            List<Task> tasks = taskService.findByProject(project);
-            
-            // Convert to simplified data for JSON
-            List<Map<String, Object>> taskData = tasks.stream()
-                .map(task -> {
-                    Map<String, Object> taskInfo = new HashMap<>();
-                    taskInfo.put("id", task.getId());
-                    taskInfo.put("title", task.getTitle());
-                    taskInfo.put("progress", task.getProgress());
-                    taskInfo.put("completed", task.isCompleted());
-                    taskInfo.put("priority", task.getPriority().name());
-                    taskInfo.put("subsystemName", task.getSubsystem().getName());
-                    taskInfo.put("assigneeCount", task.getAssignedTo().size());
-                    
-                    if (task.getEndDate() != null) {
-                        taskInfo.put("endDate", task.getEndDate().toString());
-                        taskInfo.put("daysUntilDue", 
-                            java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), task.getEndDate()));
-                    }
-                    
-                    return taskInfo;
-                })
-                .collect(Collectors.toList());
-            
-            response.put("success", true);
-            response.put("tasks", taskData);
-            response.put("projectName", project.getName());
-            response.put("totalTasks", tasks.size());
-            response.put("completedTasks", tasks.stream().filter(Task::isCompleted).count());
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error getting tasks by project", e);
-            response.put("success", false);
-            response.put("message", "Error loading tasks: " + e.getMessage());
-        }
-        
-        return response;
-    }
-    
-    /**
-     * Export tasks to CSV format.
-     * 
-     * @param projectId optional project filter
-     * @param status optional status filter
-     * @param response HTTP response for file download
-     */
-    @GetMapping("/export/csv")
-    public void exportTasksToCsv(@RequestParam(required = false) Long projectId,
-                                 @RequestParam(required = false) String status,
-                                 jakarta.servlet.http.HttpServletResponse response) {
-        
-        try {
-            // Set response headers for file download
-            response.setContentType("text/csv");
-            response.setHeader("Content-Disposition", "attachment; filename=\"tasks_export.csv\"");
-            
-            // Get tasks to export
-            List<Task> tasks = getAllTasksForUser();
-            if (projectId != null) {
-                Project project = projectService.findById(projectId);
-                if (project != null) {
-                    tasks = taskService.findByProject(project);
-                }
-            }
-            
-            // Apply status filter if specified
-            if (status != null && !status.equals("all")) {
-                tasks = tasks.stream()
-                    .filter(task -> filterByStatus(task, status))
-                    .collect(Collectors.toList());
-            }
-            
-            // Write CSV headers
-            java.io.PrintWriter writer = response.getWriter();
-            writer.println("ID,Title,Description,Project,Subsystem,Priority,Progress,Completed,Start Date,End Date,Estimated Hours,Assigned To");
-            
-            // Write task data
-            for (Task task : tasks) {
-                StringBuilder line = new StringBuilder();
-                line.append(escapeCSV(task.getId().toString())).append(",");
-                line.append(escapeCSV(task.getTitle())).append(",");
-                line.append(escapeCSV(task.getDescription())).append(",");
-                line.append(escapeCSV(task.getProject().getName())).append(",");
-                line.append(escapeCSV(task.getSubsystem().getName())).append(",");
-                line.append(escapeCSV(task.getPriority().name())).append(",");
-                line.append(task.getProgress()).append(",");
-                line.append(task.isCompleted()).append(",");
-                line.append(task.getStartDate() != null ? task.getStartDate().toString() : "").append(",");
-                line.append(task.getEndDate() != null ? task.getEndDate().toString() : "").append(",");
-                
-                if (task.getEstimatedDuration() != null) {
-                    line.append(task.getEstimatedDuration().toMinutes() / 60.0);
-                }
-                line.append(",");
-                
-                // Assigned members
-                String assignees = task.getAssignedTo().stream()
-                    .map(TeamMember::getFullName)
-                    .collect(Collectors.joining("; "));
-                line.append(escapeCSV(assignees));
-                
-                writer.println(line.toString());
-            }
-            
-            writer.flush();
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error exporting tasks to CSV", e);
-            try {
-                response.sendError(500, "Error exporting tasks");
-            } catch (java.io.IOException ioException) {
-                LOGGER.log(Level.SEVERE, "Error sending error response", ioException);
-            }
-        }
-    }
-    
-    /**
-     * Helper method to escape CSV values.
-     */
-    private String escapeCSV(String value) {
-        if (value == null) {
-            return "";
-        }
-        
-        // Escape quotes and wrap in quotes if necessary
-        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
-            return "\"" + value.replace("\"", "\"\"") + "\"";
-        }
-        
-        return value;
-    }
-    
-    /**
-     * Quick search endpoint for tasks (AJAX).
-     * 
-     * @param query search query
-     * @param limit maximum number of results
-     * @return JSON search results
-     */
-    @GetMapping("/search")
-    @ResponseBody
-    public Map<String, Object> searchTasks(@RequestParam String query,
-                                          @RequestParam(defaultValue = "10") int limit) {
-        
-        Map<String, Object> response = new HashMap<>();
-        
-        try {
-            if (query == null || query.trim().length() < 2) {
-                response.put("success", false);
-                response.put("message", "Query must be at least 2 characters");
-                return response;
-            }
-            
-            List<Task> allTasks = getAllTasksForUser();
-            String searchQuery = query.toLowerCase().trim();
-            
-            List<Map<String, Object>> results = allTasks.stream()
-                .filter(task -> 
-                    task.getTitle().toLowerCase().contains(searchQuery) ||
-                    (task.getDescription() != null && task.getDescription().toLowerCase().contains(searchQuery)) ||
-                    task.getProject().getName().toLowerCase().contains(searchQuery) ||
-                    task.getSubsystem().getName().toLowerCase().contains(searchQuery)
-                )
-                .limit(limit)
-                .map(task -> {
-                    Map<String, Object> result = new HashMap<>();
-                    result.put("id", task.getId());
-                    result.put("title", task.getTitle());
-                    result.put("project", task.getProject().getName());
-                    result.put("subsystem", task.getSubsystem().getName());
-                    result.put("progress", task.getProgress());
-                    result.put("priority", task.getPriority().getDisplayName());
-                    result.put("url", "/tasks/" + task.getId());
-                    return result;
-                })
-                .collect(Collectors.toList());
-            
-            response.put("success", true);
-            response.put("results", results);
-            response.put("totalFound", results.size());
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error searching tasks", e);
-            response.put("success", false);
-            response.put("message", "Error performing search: " + e.getMessage());
-        }
-        
-        return response;
-    }
-}
-    
-    /**
-     * Check if current user can update task progress.
-     */
-    private boolean canUpdateTaskProgress(Task task) {
-        // TODO: Phase 2B - Implement proper permission checking
-        // For Phase 2A, allow all operations for development
-        if (isDevelopmentMode()) {
-            return true;
-        }
-        
-        // Anyone assigned to the task can update progress
-        if (hasRole("STUDENT") || hasRole("MENTOR") || hasRole("ADMIN")) {
-            return true; // Temporary for Phase 2A
-        }
-        
-        return false;
-    }
-} (Exception e) {
             LOGGER.log(Level.SEVERE, "Error loading tasks list", e);
             return handleException(e, model);
         }
@@ -1054,7 +269,8 @@ public class TaskController extends BaseController {
             }
             
             // Create the task using the service
-            double estimatedHours = task.getEstimatedDuration().toMinutes() / 60.0;
+            double estimatedHours = task.getEstimatedDuration() != null ? 
+                task.getEstimatedDuration().toMinutes() / 60.0 : 1.0;
             Task savedTask = taskService.createTask(
                 task.getTitle(),
                 task.getProject(),
@@ -1530,6 +746,359 @@ public class TaskController extends BaseController {
     }
     
     // =========================================================================
+    // AJAX AND API ENDPOINTS
+    // =========================================================================
+    
+    /**
+     * AJAX endpoint for task progress update (returns JSON).
+     * 
+     * @param id the task ID
+     * @param progress the new progress value
+     * @return JSON response with updated task data
+     */
+    @PostMapping("/{id}/progress/ajax")
+    @ResponseBody
+    public Map<String, Object> updateTaskProgressAjax(@PathVariable Long id,
+                                                      @RequestParam int progress) {
+        
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            Task task = taskService.findById(id);
+            if (task == null) {
+                response.put("success", false);
+                response.put("message", "Task not found");
+                return response;
+            }
+            
+            // Check permissions
+            if (!canUpdateTaskProgress(task)) {
+                response.put("success", false);
+                response.put("message", "Permission denied");
+                return response;
+            }
+            
+            // Update progress
+            boolean completed = progress >= 100;
+            Task updatedTask = taskService.updateTaskProgress(id, progress, completed);
+            
+            if (updatedTask != null) {
+                response.put("success", true);
+                response.put("progress", updatedTask.getProgress());
+                response.put("completed", updatedTask.isCompleted());
+                response.put("message", completed ? "Task completed!" : "Progress updated");
+                
+                // Add additional data for UI updates
+                response.put("taskId", updatedTask.getId());
+                response.put("title", updatedTask.getTitle());
+                response.put("projectName", updatedTask.getProject().getName());
+                
+            } else {
+                response.put("success", false);
+                response.put("message", "Failed to update progress");
+            }
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error updating task progress via AJAX", e);
+            response.put("success", false);
+            response.put("message", "Error updating progress: " + e.getMessage());
+        }
+        
+        return response;
+    }
+    
+    /**
+     * Export tasks to CSV format.
+     * 
+     * @param projectId optional project filter
+     * @param status optional status filter
+     * @param response HTTP response for file download
+     */
+    @GetMapping("/export/csv")
+    public void exportTasksToCsv(@RequestParam(required = false) Long projectId,
+                                 @RequestParam(required = false) String status,
+                                 HttpServletResponse response) {
+        
+        try {
+            // Set response headers for file download
+            response.setContentType("text/csv");
+            response.setHeader("Content-Disposition", "attachment; filename=\"tasks_export.csv\"");
+            
+            // Get tasks to export
+            List<Task> tasks = getAllTasksForUser();
+            if (projectId != null) {
+                Project project = projectService.findById(projectId);
+                if (project != null) {
+                    tasks = taskService.findByProject(project);
+                }
+            }
+            
+            // Apply status filter if specified
+            if (status != null && !status.equals("all")) {
+                tasks = tasks.stream()
+                    .filter(task -> filterByStatus(task, status))
+                    .collect(Collectors.toList());
+            }
+            
+            // Write CSV headers
+            PrintWriter writer = response.getWriter();
+            writer.println("ID,Title,Description,Project,Subsystem,Priority,Progress,Completed,Start Date,End Date,Estimated Hours,Assigned To");
+            
+            // Write task data
+            for (Task task : tasks) {
+                StringBuilder line = new StringBuilder();
+                line.append(escapeCSV(task.getId().toString())).append(",");
+                line.append(escapeCSV(task.getTitle())).append(",");
+                line.append(escapeCSV(task.getDescription())).append(",");
+                line.append(escapeCSV(task.getProject().getName())).append(",");
+                line.append(escapeCSV(task.getSubsystem().getName())).append(",");
+                line.append(escapeCSV(task.getPriority().name())).append(",");
+                line.append(task.getProgress()).append(",");
+                line.append(task.isCompleted()).append(",");
+                line.append(task.getStartDate() != null ? task.getStartDate().toString() : "").append(",");
+                line.append(task.getEndDate() != null ? task.getEndDate().toString() : "").append(",");
+                
+                if (task.getEstimatedDuration() != null) {
+                    line.append(task.getEstimatedDuration().toMinutes() / 60.0);
+                }
+                line.append(",");
+                
+                // Assigned members
+                String assignees = task.getAssignedTo().stream()
+                    .map(TeamMember::getFullName)
+                    .collect(Collectors.joining("; "));
+                line.append(escapeCSV(assignees));
+                
+                writer.println(line.toString());
+            }
+            
+            writer.flush();
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error exporting tasks to CSV", e);
+            try {
+                response.sendError(500, "Error exporting tasks");
+            } catch (IOException ioException) {
+                LOGGER.log(Level.SEVERE, "Error sending error response", ioException);
+            }
+        }
+    }
+    
+    /**
+     * Quick search endpoint for tasks (AJAX).
+     * 
+     * @param query search query
+     * @param limit maximum number of results
+     * @return JSON search results
+     */
+    @GetMapping("/search")
+    @ResponseBody
+    public Map<String, Object> searchTasks(@RequestParam String query,
+                                          @RequestParam(defaultValue = "10") int limit) {
+        
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            if (query == null || query.trim().length() < 2) {
+                response.put("success", false);
+                response.put("message", "Query must be at least 2 characters");
+                return response;
+            }
+            
+            List<Task> allTasks = getAllTasksForUser();
+            String searchQuery = query.toLowerCase().trim();
+            
+            List<Map<String, Object>> results = allTasks.stream()
+                .filter(task -> 
+                    task.getTitle().toLowerCase().contains(searchQuery) ||
+                    (task.getDescription() != null && task.getDescription().toLowerCase().contains(searchQuery)) ||
+                    task.getProject().getName().toLowerCase().contains(searchQuery) ||
+                    task.getSubsystem().getName().toLowerCase().contains(searchQuery)
+                )
+                .limit(limit)
+                .map(task -> {
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("id", task.getId());
+                    result.put("title", task.getTitle());
+                    result.put("project", task.getProject().getName());
+                    result.put("subsystem", task.getSubsystem().getName());
+                    result.put("progress", task.getProgress());
+                    result.put("priority", task.getPriority().getDisplayName());
+                    result.put("url", "/tasks/" + task.getId());
+                    return result;
+                })
+                .collect(Collectors.toList());
+            
+            response.put("success", true);
+            response.put("results", results);
+            response.put("totalFound", results.size());
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error searching tasks", e);
+            response.put("success", false);
+            response.put("message", "Error performing search: " + e.getMessage());
+        }
+        
+        return response;
+    }
+    
+    // =========================================================================
+    // BULK OPERATIONS
+    // =========================================================================
+    
+    /**
+     * Bulk operations on tasks (complete, assign, delete multiple tasks).
+     * 
+     * @param taskIds array of task IDs to operate on
+     * @param operation the operation to perform (complete, assign, delete)
+     * @param assigneeId optional assignee ID for bulk assignment
+     * @param redirectAttributes for redirect messages
+     * @return redirect to tasks list
+     */
+    @PostMapping("/bulk")
+    public String bulkTaskOperation(@RequestParam("taskIds") Long[] taskIds,
+                                   @RequestParam String operation,
+                                   @RequestParam(required = false) Long assigneeId,
+                                   RedirectAttributes redirectAttributes) {
+        
+        try {
+            if (taskIds == null || taskIds.length == 0) {
+                redirectAttributes.addFlashAttribute("errorMessage", "No tasks selected");
+                return redirect("/tasks");
+            }
+            
+            int successCount = 0;
+            int errorCount = 0;
+            
+            for (Long taskId : taskIds) {
+                try {
+                    Task task = taskService.findById(taskId);
+                    if (task == null) {
+                        errorCount++;
+                        continue;
+                    }
+                    
+                    switch (operation.toLowerCase()) {
+                        case "complete":
+                            if (canUpdateTaskProgress(task)) {
+                                taskService.updateTaskProgress(taskId, 100, true);
+                                successCount++;
+                            } else {
+                                errorCount++;
+                            }
+                            break;
+                            
+                        case "assign":
+                            if ((hasRole("MENTOR") || hasRole("ADMIN")) && assigneeId != null) {
+                                TeamMember assignee = teamMemberService.findById(assigneeId);
+                                if (assignee != null) {
+                                    Set<TeamMember> currentAssignees = task.getAssignedTo();
+                                    currentAssignees.add(assignee);
+                                    taskService.assignMembers(taskId, currentAssignees);
+                                    successCount++;
+                                } else {
+                                    errorCount++;
+                                }
+                            } else {
+                                errorCount++;
+                            }
+                            break;
+                            
+                        case "delete":
+                            if (hasRole("MENTOR") || hasRole("ADMIN")) {
+                                taskService.deleteById(taskId);
+                                successCount++;
+                            } else {
+                                errorCount++;
+                            }
+                            break;
+                            
+                        default:
+                            errorCount++;
+                            break;
+                    }
+                    
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Error in bulk operation for task " + taskId, e);
+                    errorCount++;
+                }
+            }
+            
+            // Prepare result message
+            String message = String.format("Bulk %s operation completed: %d successful, %d failed", 
+                                          operation, successCount, errorCount);
+            
+            if (errorCount == 0) {
+                redirectAttributes.addFlashAttribute("successMessage", message);
+            } else if (successCount > 0) {
+                redirectAttributes.addFlashAttribute("warningMessage", message);
+            } else {
+                redirectAttributes.addFlashAttribute("errorMessage", 
+                    "Bulk " + operation + " operation failed for all selected tasks");
+            }
+            
+            return redirect("/tasks");
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error in bulk task operation", e);
+            redirectAttributes.addFlashAttribute("errorMessage", "Error performing bulk operation");
+            return redirect("/tasks");
+        }
+    }
+    
+    /**
+     * Clone/duplicate a task.
+     * 
+     * @param id the task ID to clone
+     * @param redirectAttributes for redirect messages
+     * @return redirect to edit form for new task
+     */
+    @PostMapping("/{id}/clone")
+    public String cloneTask(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            Task originalTask = taskService.findById(id);
+            if (originalTask == null) {
+                redirectAttributes.addFlashAttribute("errorMessage", "Task not found");
+                return redirect("/tasks");
+            }
+            
+            // Check permissions
+            if (!hasRole("MENTOR") && !hasRole("ADMIN")) {
+                redirectAttributes.addFlashAttribute("errorMessage", 
+                    "Only mentors and admins can clone tasks");
+                return redirect("/tasks/" + id);
+            }
+            
+            // Create new task with cloned data
+            Task clonedTask = taskService.createTask(
+                "Copy of " + originalTask.getTitle(),
+                originalTask.getProject(),
+                originalTask.getSubsystem(),
+                originalTask.getEstimatedDuration().toMinutes() / 60.0,
+                originalTask.getPriority(),
+                null, // Don't copy dates
+                null
+            );
+            
+            // Copy description
+            if (originalTask.getDescription() != null) {
+                clonedTask.setDescription(originalTask.getDescription());
+                clonedTask = taskService.save(clonedTask);
+            }
+            
+            redirectAttributes.addFlashAttribute("successMessage", 
+                "Task cloned successfully. Please review and update details.");
+            
+            return redirect("/tasks/" + clonedTask.getId() + "/edit");
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error cloning task", e);
+            redirectAttributes.addFlashAttribute("errorMessage", "Error cloning task");
+            return redirect("/tasks/" + id);
+        }
+    }
+    
+    // =========================================================================
     // PRIVATE HELPER METHODS
     // =========================================================================
     
@@ -1659,5 +1228,383 @@ public class TaskController extends BaseController {
             model.addAttribute("memberOptions", List.of());
             model.addAttribute("priorityOptions", Task.Priority.values());
         }
+    }
+    
+    /**
+     * Add task status counts for filter badges.
+     */
+    private void addTaskStatusCounts(Model model, List<Task> allTasks) {
+        LocalDate today = LocalDate.now();
+        
+        long pendingCount = allTasks.stream().filter(t -> !t.isCompleted()).count();
+        long completedCount = allTasks.stream().filter(Task::isCompleted).count();
+        long overdueCount = allTasks.stream()
+            .filter(t -> !t.isCompleted() && t.getEndDate() != null && t.getEndDate().isBefore(today))
+            .count();
+        long dueSoonCount = allTasks.stream()
+            .filter(t -> !t.isCompleted() && t.getEndDate() != null &&
+                        t.getEndDate().isAfter(today) && t.getEndDate().isBefore(today.plusDays(7)))
+            .count();
+        
+        model.addAttribute("pendingCount", pendingCount);
+        model.addAttribute("completedCount", completedCount);
+        model.addAttribute("overdueCount", overdueCount);
+        model.addAttribute("dueSoonCount", dueSoonCount);
+    }
+    
+    /**
+     * Add quick statistics for tasks overview.
+     */
+    private void addTaskQuickStats(Model model, List<Task> tasks) {
+        if (tasks.isEmpty()) {
+            model.addAttribute("avgProgress", 0);
+            model.addAttribute("highPriorityCount", 0);
+            model.addAttribute("unassignedCount", 0);
+            return;
+        }
+        
+        // Average progress
+        double avgProgress = tasks.stream()
+            .mapToInt(Task::getProgress)
+            .average()
+            .orElse(0.0);
+        model.addAttribute("avgProgress", Math.round(avgProgress));
+        
+        // High priority tasks
+        long highPriorityCount = tasks.stream()
+            .filter(t -> t.getPriority() == Task.Priority.HIGH || t.getPriority() == Task.Priority.CRITICAL)
+            .count();
+        model.addAttribute("highPriorityCount", highPriorityCount);
+        
+        // Unassigned tasks
+        long unassignedCount = tasks.stream()
+            .filter(t -> t.getAssignedTo().isEmpty())
+            .count();
+        model.addAttribute("unassignedCount", unassignedCount);
+    }
+    
+    /**
+     * Organize tasks for kanban view by status.
+     */
+    private void organizeTasksForKanban(Model model, List<Task> tasks) {
+        Map<String, List<Task>> tasksByStatus = tasks.stream()
+            .collect(Collectors.groupingBy(task -> {
+                if (task.getProgress() == 0) return "todo";
+                if (task.getProgress() < 100) return "in-progress";
+                return "done";
+            }));
+        
+        model.addAttribute("todoTasks", tasksByStatus.getOrDefault("todo", List.of()));
+        model.addAttribute("inProgressTasks", tasksByStatus.getOrDefault("in-progress", List.of()));
+        model.addAttribute("doneTasks", tasksByStatus.getOrDefault("done", List.of()));
+    }
+    
+    /**
+     * Load task detail data including dependencies and assignments.
+     */
+    private void loadTaskDetailData(Model model, Task task) {
+        try {
+            // Dependencies
+            model.addAttribute("preDependencies", task.getPreDependencies());
+            model.addAttribute("postDependencies", task.getPostDependencies());
+            
+            // Assigned team members
+            model.addAttribute("assignedMembers", task.getAssignedTo());
+            
+            // Required components (if any)
+            model.addAttribute("requiredComponents", task.getRequiredComponents());
+            
+            // Project context
+            model.addAttribute("project", task.getProject());
+            model.addAttribute("subsystem", task.getSubsystem());
+            
+            // Calculate time information
+            addTaskTimeInfo(model, task);
+            
+            // Related tasks in same project/subsystem
+            loadRelatedTasks(model, task);
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Failed to load task detail data", e);
+        }
+    }
+    
+    /**
+     * Add time-related information for task.
+     */
+    private void addTaskTimeInfo(Model model, Task task) {
+        LocalDate today = LocalDate.now();
+        
+        // Days until due date
+        if (task.getEndDate() != null) {
+            long daysUntilDue = java.time.temporal.ChronoUnit.DAYS.between(today, task.getEndDate());
+            model.addAttribute("daysUntilDue", daysUntilDue);
+            
+            if (daysUntilDue < 0) {
+                model.addAttribute("dueStatus", "overdue");
+            } else if (daysUntilDue <= 1) {
+                model.addAttribute("dueStatus", "critical");
+            } else if (daysUntilDue <= 3) {
+                model.addAttribute("dueStatus", "warning");
+            } else {
+                model.addAttribute("dueStatus", "normal");
+            }
+        }
+        
+        // Time tracking
+        if (task.getEstimatedDuration() != null) {
+            double estimatedHours = task.getEstimatedDuration().toMinutes() / 60.0;
+            model.addAttribute("estimatedHours", estimatedHours);
+        }
+        
+        if (task.getActualDuration() != null) {
+            double actualHours = task.getActualDuration().toMinutes() / 60.0;
+            model.addAttribute("actualHours", actualHours);
+        }
+    }
+    
+    /**
+     * Load related tasks for context.
+     */
+    private void loadRelatedTasks(Model model, Task task) {
+        try {
+            // Other tasks in same project
+            List<Task> projectTasks = taskService.findByProject(task.getProject())
+                .stream()
+                .filter(t -> !t.getId().equals(task.getId()))
+                .limit(5)
+                .collect(Collectors.toList());
+            model.addAttribute("relatedProjectTasks", projectTasks);
+            
+            // Other tasks in same subsystem
+            List<Task> subsystemTasks = taskService.findBySubsystem(task.getSubsystem())
+                .stream()
+                .filter(t -> !t.getId().equals(task.getId()))
+                .limit(5)
+                .collect(Collectors.toList());
+            model.addAttribute("relatedSubsystemTasks", subsystemTasks);
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Failed to load related tasks", e);
+            model.addAttribute("relatedProjectTasks", List.of());
+            model.addAttribute("relatedSubsystemTasks", List.of());
+        }
+    }
+    
+    /**
+     * Load available actions based on user role and task status.
+     */
+    private void loadTaskActions(Model model, Task task) {
+        // Check what actions current user can perform
+        model.addAttribute("canEdit", canEditTask(task));
+        model.addAttribute("canUpdateProgress", canUpdateTaskProgress(task));
+        model.addAttribute("canDelete", hasRole("MENTOR") || hasRole("ADMIN"));
+        model.addAttribute("canAssign", hasRole("MENTOR") || hasRole("ADMIN"));
+        model.addAttribute("canManageDependencies", hasRole("MENTOR") || hasRole("ADMIN"));
+        
+        // Available team members for assignment
+        if (hasRole("MENTOR") || hasRole("ADMIN")) {
+            try {
+                List<TeamMember> availableMembers = teamMemberService.findAll();
+                model.addAttribute("availableMembers", availableMembers);
+            } catch (Exception e) {
+                model.addAttribute("availableMembers", List.of());
+            }
+        }
+        
+        // Available tasks for dependencies
+        if (hasRole("MENTOR") || hasRole("ADMIN")) {
+            try {
+                List<Task> availableTasks = taskService.findByProject(task.getProject())
+                    .stream()
+                    .filter(t -> !t.getId().equals(task.getId()))
+                    .filter(t -> !task.getPreDependencies().contains(t))
+                    .collect(Collectors.toList());
+                model.addAttribute("availableDependencyTasks", availableTasks);
+            } catch (Exception e) {
+                model.addAttribute("availableDependencyTasks", List.of());
+            }
+        }
+    }
+    
+    /**
+     * Load form options for task creation/editing.
+     */
+    private void loadTaskFormOptions(Model model) {
+        try {
+            // Projects
+            List<Project> projects = projectService.findAll();
+            model.addAttribute("projectOptions", projects);
+            
+            // Subsystems
+            List<Subsystem> subsystems = subsystemService.findAll();
+            model.addAttribute("subsystemOptions", subsystems);
+            
+            // Team members for assignment
+            List<TeamMember> members = teamMemberService.findAll();
+            model.addAttribute("memberOptions", members);
+            
+            // Priority options
+            model.addAttribute("priorityOptions", Task.Priority.values());
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Failed to load form options", e);
+            // Set safe defaults
+            model.addAttribute("projectOptions", List.of());
+            model.addAttribute("subsystemOptions", List.of());
+            model.addAttribute("memberOptions", List.of());
+            model.addAttribute("priorityOptions", Task.Priority.values());
+        }
+    }
+    
+    /**
+     * Add helpful defaults and suggestions for task forms.
+     */
+    private void addTaskFormHelpers(Model model) {
+        model.addAttribute("estimatedDurationOptions", List.of(
+            Map.of("hours", 1, "label", "1 hour"),
+            Map.of("hours", 2, "label", "2 hours"),
+            Map.of("hours", 4, "label", "4 hours"),
+            Map.of("hours", 8, "label", "1 day"),
+            Map.of("hours", 16, "label", "2 days"),
+            Map.of("hours", 40, "label", "1 week")
+        ));
+        
+        model.addAttribute("priorityDescriptions", Map.of(
+            "LOW", "Nice to have, can be delayed",
+            "MEDIUM", "Important but not urgent",
+            "HIGH", "Important and time-sensitive",
+            "CRITICAL", "Must be completed immediately"
+        ));
+    }
+    
+    /**
+     * Add warnings for task editing.
+     */
+    private void addTaskEditWarnings(Model model, Task task) {
+        if (task.isCompleted()) {
+            addWarningMessage(model, "This task is already completed. Changes may affect reporting.");
+        }
+        
+        if (!task.getPostDependencies().isEmpty()) {
+            addWarningMessage(model, 
+                "This task has " + task.getPostDependencies().size() + 
+                " dependent tasks. Changes may affect project timeline.");
+        }
+        
+        if (task.getEndDate() != null && task.getEndDate().isBefore(LocalDate.now())) {
+            addWarningMessage(model, "This task is overdue. Consider updating the due date.");
+        }
+    }
+    
+    /**
+     * Add deletion impact information.
+     */
+    private void addTaskDeletionImpactInfo(Model model, Task task) {
+        model.addAttribute("dependencyCount", task.getPostDependencies().size());
+        model.addAttribute("assigneeCount", task.getAssignedTo().size());
+        model.addAttribute("isCompleted", task.isCompleted());
+        model.addAttribute("progress", task.getProgress());
+        
+        if (!task.getPostDependencies().isEmpty()) {
+            model.addAttribute("dependentTasks", task.getPostDependencies());
+        }
+    }
+    
+    /**
+     * Validate task data for creation/editing.
+     */
+    private void validateTaskData(Task task, BindingResult result) {
+        // Title validation
+        if (task.getTitle() == null || task.getTitle().trim().isEmpty()) {
+            result.rejectValue("title", "required", "Task title is required");
+        }
+        
+        // Project validation
+        if (task.getProject() == null) {
+            result.rejectValue("project", "required", "Project is required");
+        }
+        
+        // Subsystem validation
+        if (task.getSubsystem() == null) {
+            result.rejectValue("subsystem", "required", "Subsystem is required");
+        }
+        
+        // Date validation
+        if (task.getStartDate() != null && task.getEndDate() != null &&
+            task.getEndDate().isBefore(task.getStartDate())) {
+            result.rejectValue("endDate", "invalid", 
+                "End date cannot be before start date");
+        }
+        
+        // Progress validation
+        if (task.getProgress() < 0 || task.getProgress() > 100) {
+            result.rejectValue("progress", "invalid", 
+                "Progress must be between 0 and 100");
+        }
+        
+        // Estimated duration validation
+        if (task.getEstimatedDuration() != null && task.getEstimatedDuration().isNegative()) {
+            result.rejectValue("estimatedDuration", "invalid", 
+                "Estimated duration cannot be negative");
+        }
+    }
+    
+    /**
+     * Check if current user can edit the specified task.
+     */
+    private boolean canEditTask(Task task) {
+        // TODO: Phase 2B - Implement proper permission checking
+        // For Phase 2A, allow all operations for development
+        if (isDevelopmentMode()) {
+            return true;
+        }
+        
+        // Mentors and admins can edit any task
+        if (hasRole("MENTOR") || hasRole("ADMIN")) {
+            return true;
+        }
+        
+        // Students can edit tasks assigned to them
+        if (hasRole("STUDENT")) {
+            // TODO: Check if current user is assigned to this task
+            return true; // Temporary for Phase 2A
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Check if current user can update task progress.
+     */
+    private boolean canUpdateTaskProgress(Task task) {
+        // TODO: Phase 2B - Implement proper permission checking
+        // For Phase 2A, allow all operations for development
+        if (isDevelopmentMode()) {
+            return true;
+        }
+        
+        // Anyone assigned to the task can update progress
+        if (hasRole("STUDENT") || hasRole("MENTOR") || hasRole("ADMIN")) {
+            return true; // Temporary for Phase 2A
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Helper method to escape CSV values.
+     */
+    private String escapeCSV(String value) {
+        if (value == null) {
+            return "";
+        }
+        
+        // Escape quotes and wrap in quotes if necessary
+        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        
+        return value;
     }
 }
