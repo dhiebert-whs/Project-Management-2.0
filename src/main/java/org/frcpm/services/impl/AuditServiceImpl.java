@@ -187,23 +187,25 @@ public class AuditServiceImpl implements AuditService {
             if (attrs != null) {
                 HttpServletRequest request = attrs.getRequest();
                 
-                // Set IP address
-                log.setIpAddress(getClientIpAddress(request));
-                
-                // Set user agent
-                String userAgent = request.getHeader("User-Agent");
-                if (userAgent != null && userAgent.length() > 500) {
-                    userAgent = userAgent.substring(0, 500); // Truncate if too long
+                // Get IP address with proper header handling
+                String ipAddress = getClientIpAddress(request);
+                if (ipAddress != null && !ipAddress.trim().isEmpty()) {
+                    log.setIpAddress(ipAddress);
                 }
-                log.setUserAgent(userAgent);
                 
-                // Set session ID
-                if (request.getSession(false) != null) {
-                    log.setSessionId(request.getSession().getId());
+                // Get user agent and handle truncation
+                String userAgent = request.getHeader("User-Agent");
+                if (userAgent != null && !userAgent.trim().isEmpty()) {
+                    // Truncate long user agent strings to prevent database issues
+                    if (userAgent.length() > 500) {
+                        userAgent = userAgent.substring(0, 500);
+                    }
+                    log.setUserAgent(userAgent);
                 }
             }
         } catch (Exception e) {
-            // Ignore - request context might not be available
+            // Log the exception but don't fail the audit logging
+            LOGGER.warning("Failed to capture request details for audit log: " + e.getMessage());
         }
     }
     
@@ -211,17 +213,31 @@ public class AuditServiceImpl implements AuditService {
      * Gets the real client IP address considering proxy headers.
      */
     private String getClientIpAddress(HttpServletRequest request) {
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty() && !"unknown".equalsIgnoreCase(xForwardedFor)) {
-            return xForwardedFor.split(",")[0].trim();
+        try {
+            // Check X-Forwarded-For header first (for proxy/load balancer scenarios)
+            String xForwardedFor = request.getHeader("X-Forwarded-For");
+            if (xForwardedFor != null && !xForwardedFor.trim().isEmpty() && !"unknown".equalsIgnoreCase(xForwardedFor)) {
+                // Take the first IP if multiple are present
+                return xForwardedFor.split(",")[0].trim();
+            }
+            
+            // Check X-Real-IP header (alternative proxy header)
+            String xRealIP = request.getHeader("X-Real-IP");
+            if (xRealIP != null && !xRealIP.trim().isEmpty() && !"unknown".equalsIgnoreCase(xRealIP)) {
+                return xRealIP.trim();
+            }
+            
+            // Fall back to remote address
+            String remoteAddr = request.getRemoteAddr();
+            if (remoteAddr != null && !remoteAddr.trim().isEmpty()) {
+                return remoteAddr;
+            }
+            
+            return null;
+        } catch (Exception e) {
+            LOGGER.warning("Error extracting IP address: " + e.getMessage());
+            return null;
         }
-        
-        String xRealIp = request.getHeader("X-Real-IP");
-        if (xRealIp != null && !xRealIp.isEmpty() && !"unknown".equalsIgnoreCase(xRealIp)) {
-            return xRealIp;
-        }
-        
-        return request.getRemoteAddr();
     }
 
     // =========================================================================

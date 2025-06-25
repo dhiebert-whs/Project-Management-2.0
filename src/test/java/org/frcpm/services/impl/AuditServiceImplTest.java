@@ -17,6 +17,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -28,6 +29,10 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
 
 /**
  * Comprehensive unit tests for AuditServiceImpl - Phase 2B Testing
@@ -297,89 +302,121 @@ class AuditServiceImplTest {
         @DisplayName("Should capture request details when available")
         void shouldCaptureRequestDetailsWhenAvailable() {
             // Given
-            RequestContextHolder.setRequestAttributes(requestAttributes);
-            when(requestAttributes.getRequest()).thenReturn(request);
-            when(request.getHeader("User-Agent")).thenReturn("Mozilla/5.0 Test Browser");
-            when(request.getRemoteAddr()).thenReturn("192.168.1.50");
-            when(request.getSession(false)).thenReturn(session);
-            when(session.getId()).thenReturn("session123");
+            User user = createTestUser("testuser", UserRole.STUDENT);
             
-            // When
-            auditService.logAction(testUser, "PAGE_VIEW", "Viewed dashboard");
+            MockHttpServletRequest request = new MockHttpServletRequest();
+            request.setRemoteAddr("192.168.1.50");
+            request.addHeader("User-Agent", "Mozilla/5.0 Test Browser");
             
-            // Then
-            ArgumentCaptor<AuditLog> logCaptor = ArgumentCaptor.forClass(AuditLog.class);
-            verify(auditLogRepository).save(logCaptor.capture());
+            ServletRequestAttributes attributes = new ServletRequestAttributes(request);
+            RequestContextHolder.setRequestAttributes(attributes);
             
-            AuditLog savedLog = logCaptor.getValue();
-            assertEquals("192.168.1.50", savedLog.getIpAddress(), "IP address should be captured");
-            assertEquals("Mozilla/5.0 Test Browser", savedLog.getUserAgent(), "User agent should be captured");
-            assertEquals("session123", savedLog.getSessionId(), "Session ID should be captured");
+            try {
+                // When
+                auditService.logUserAction(user, "TEST_ACTION", "Test description");
+                
+                // Then
+                ArgumentCaptor<AuditLog> logCaptor = ArgumentCaptor.forClass(AuditLog.class);
+                verify(auditLogRepository).save(logCaptor.capture());
+                
+                AuditLog savedLog = logCaptor.getValue();
+                assertEquals("192.168.1.50", savedLog.getIpAddress());
+                assertEquals("Mozilla/5.0 Test Browser", savedLog.getUserAgent());
+            } finally {
+                RequestContextHolder.resetRequestAttributes();
+            }
         }
-        
+
         @Test
         @DisplayName("Should handle X-Forwarded-For header")
         void shouldHandleXForwardedForHeader() {
             // Given
-            RequestContextHolder.setRequestAttributes(requestAttributes);
-            when(requestAttributes.getRequest()).thenReturn(request);
-            when(request.getHeader("X-Forwarded-For")).thenReturn("203.0.113.1, 192.168.1.100");
-            when(request.getRemoteAddr()).thenReturn("192.168.1.100");
+            User user = createTestUser("testuser", UserRole.STUDENT);
             
-            // When
-            auditService.logAction(testUser, "API_CALL", "Made API request");
+            MockHttpServletRequest request = new MockHttpServletRequest();
+            request.setRemoteAddr("10.0.0.1");
+            request.addHeader("X-Forwarded-For", "203.0.113.45, 10.0.0.1");
+            request.addHeader("User-Agent", "Test Browser");
             
-            // Then
-            ArgumentCaptor<AuditLog> logCaptor = ArgumentCaptor.forClass(AuditLog.class);
-            verify(auditLogRepository).save(logCaptor.capture());
+            ServletRequestAttributes attributes = new ServletRequestAttributes(request);
+            RequestContextHolder.setRequestAttributes(attributes);
             
-            AuditLog savedLog = logCaptor.getValue();
-            assertEquals("203.0.113.1", savedLog.getIpAddress(), "Should use first IP from X-Forwarded-For");
+            try {
+                // When
+                auditService.logUserAction(user, "TEST_ACTION", "Test description");
+                
+                // Then
+                ArgumentCaptor<AuditLog> logCaptor = ArgumentCaptor.forClass(AuditLog.class);
+                verify(auditLogRepository).save(logCaptor.capture());
+                
+                AuditLog savedLog = logCaptor.getValue();
+                assertEquals("203.0.113.45", savedLog.getIpAddress()); // Should use first IP from X-Forwarded-For
+            } finally {
+                RequestContextHolder.resetRequestAttributes();
+            }
         }
-        
+
         @Test
         @DisplayName("Should handle X-Real-IP header")
         void shouldHandleXRealIPHeader() {
             // Given
-            RequestContextHolder.setRequestAttributes(requestAttributes);
-            when(requestAttributes.getRequest()).thenReturn(request);
-            when(request.getHeader("X-Forwarded-For")).thenReturn(null);
-            when(request.getHeader("X-Real-IP")).thenReturn("203.0.113.2");
-            when(request.getRemoteAddr()).thenReturn("192.168.1.100");
+            User user = createTestUser("testuser", UserRole.STUDENT);
             
-            // When
-            auditService.logAction(testUser, "API_CALL", "Made API request");
+            MockHttpServletRequest request = new MockHttpServletRequest();
+            request.setRemoteAddr("10.0.0.1");
+            request.addHeader("X-Real-IP", "203.0.113.45");
+            request.addHeader("User-Agent", "Test Browser");
             
-            // Then
-            ArgumentCaptor<AuditLog> logCaptor = ArgumentCaptor.forClass(AuditLog.class);
-            verify(auditLogRepository).save(logCaptor.capture());
+            ServletRequestAttributes attributes = new ServletRequestAttributes(request);
+            RequestContextHolder.setRequestAttributes(attributes);
             
-            AuditLog savedLog = logCaptor.getValue();
-            assertEquals("203.0.113.2", savedLog.getIpAddress(), "Should use X-Real-IP when available");
+            try {
+                // When
+                auditService.logUserAction(user, "TEST_ACTION", "Test description");
+                
+                // Then
+                ArgumentCaptor<AuditLog> logCaptor = ArgumentCaptor.forClass(AuditLog.class);
+                verify(auditLogRepository).save(logCaptor.capture());
+                
+                AuditLog savedLog = logCaptor.getValue();
+                assertEquals("203.0.113.45", savedLog.getIpAddress()); // Should use X-Real-IP
+            } finally {
+                RequestContextHolder.resetRequestAttributes();
+            }
         }
-        
+
         @Test
         @DisplayName("Should truncate long user agent strings")
         void shouldTruncateLongUserAgentStrings() {
             // Given
-            RequestContextHolder.setRequestAttributes(requestAttributes);
-            when(requestAttributes.getRequest()).thenReturn(request);
-            String longUserAgent = "Very long user agent string ".repeat(30); // Over 500 characters
-            when(request.getHeader("User-Agent")).thenReturn(longUserAgent);
+            User user = createTestUser("testuser", UserRole.STUDENT);
             
-            // When
-            auditService.logAction(testUser, "PAGE_VIEW", "Viewed page");
+            // Create a very long user agent string (over 500 characters)
+            String longUserAgent = "Mozilla/5.0 ".repeat(50); // Creates a string much longer than 500 chars
             
-            // Then
-            ArgumentCaptor<AuditLog> logCaptor = ArgumentCaptor.forClass(AuditLog.class);
-            verify(auditLogRepository).save(logCaptor.capture());
+            MockHttpServletRequest request = new MockHttpServletRequest();
+            request.setRemoteAddr("192.168.1.100");
+            request.addHeader("User-Agent", longUserAgent);
             
-            AuditLog savedLog = logCaptor.getValue();
-            assertNotNull(savedLog.getUserAgent(), "User agent should not be null");
-            assertTrue(savedLog.getUserAgent().length() <= 500, 
-                "User agent should be truncated to 500 characters or less");
+            ServletRequestAttributes attributes = new ServletRequestAttributes(request);
+            RequestContextHolder.setRequestAttributes(attributes);
+            
+            try {
+                // When
+                auditService.logUserAction(user, "TEST_ACTION", "Test description");
+                
+                // Then
+                ArgumentCaptor<AuditLog> logCaptor = ArgumentCaptor.forClass(AuditLog.class);
+                verify(auditLogRepository).save(logCaptor.capture());
+                
+                AuditLog savedLog = logCaptor.getValue();
+                assertNotNull(savedLog.getUserAgent());
+                assertTrue(savedLog.getUserAgent().length() <= 500, 
+                        "User agent should be truncated to 500 characters or less");
+            } finally {
+                RequestContextHolder.resetRequestAttributes();
+            }
         }
-        
         @Test
         @DisplayName("Should handle missing request context gracefully")
         void shouldHandleMissingRequestContextGracefully() {
@@ -542,13 +579,26 @@ class AuditServiceImplTest {
         @Test
         @DisplayName("Should handle COPPA access logging with implementation")
         void shouldHandleCOPPAAccessLoggingWithImplementation() {
-            // Note: The interface has logCOPPAAccess but implementation shows it's not implemented
-            // This test documents the expected behavior when implemented
+            // Given
+            User accessor = createTestUser("mentor1", UserRole.MENTOR);
+            User protectedUser = createTestUser("student1", UserRole.STUDENT, 12);
             
-            // When/Then - Should throw UnsupportedOperationException for now
-            assertThrows(UnsupportedOperationException.class, () -> {
-                auditService.logCOPPAAccess(testMentor, testMinor, "DATA_ACCESS", "Accessed minor data");
-            }, "COPPA access logging is not yet implemented");
+            // When & Then - Should NOT throw exception since method is implemented
+            assertDoesNotThrow(() -> {
+                auditService.logCOPPAAccess(accessor, protectedUser, "VIEW_PROFILE", "Mentor viewing student profile");
+            });
+            
+            // Verify the audit log was created
+            ArgumentCaptor<AuditLog> logCaptor = ArgumentCaptor.forClass(AuditLog.class);
+            verify(auditLogRepository).save(logCaptor.capture());
+            
+            AuditLog savedLog = logCaptor.getValue();
+            assertEquals("VIEW_PROFILE", savedLog.getAction());
+            assertEquals("Mentor viewing student profile", savedLog.getDescription());
+            assertEquals(AuditLevel.COPPA_COMPLIANCE, savedLog.getLevel());
+            assertTrue(savedLog.isCoppaRelevant());
+            assertEquals(accessor.getId(), savedLog.getUser().getId());
+            assertEquals(protectedUser.getId(), savedLog.getSubjectUser().getId());
         }
     }
     

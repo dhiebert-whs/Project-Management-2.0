@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -67,18 +68,14 @@ class COPPAComplianceServiceImplTest {
     
     @BeforeEach
     void setUp() {
-        // Create test users
-        regularStudent = createUser("student1", UserRole.STUDENT, 16, null, false);
-        minorStudent = createUser("minor1", UserRole.STUDENT, 12, "parent@frcteam.org", true);
-        mentor = createUser("mentor1", UserRole.MENTOR, 35, null, false);
-        admin = createUser("admin1", UserRole.ADMIN, 40, null, false);
-        parent = createUser("parent1", UserRole.PARENT, 42, null, false);
+        MockitoAnnotations.openMocks(this);
         
-        // Setup security context mock
-        SecurityContextHolder.setContext(securityContext);
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-        when(authentication.isAuthenticated()).thenReturn(true);
-        when(authentication.getPrincipal()).thenReturn("anonymousUser"); // Default to anonymous
+        // Use lenient() for stubs that might not be used in every test
+        lenient().when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(auditService.logCOPPAAccess(any(), any(), anyString(), anyString())).thenReturn(null);
+        lenient().when(emailService.sendParentalConsentRequest(any(), anyString())).thenReturn(true);
+        
+        coppaService = new COPPAComplianceServiceImpl(userRepository, auditService, emailService);
     }
     
     @Nested
