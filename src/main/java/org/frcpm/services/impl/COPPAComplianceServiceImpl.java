@@ -1,4 +1,4 @@
-// src/main/java/org/frcpm/services/impl/COPPAComplianceServiceImpl.java
+// src/main/java/org/frcpm/services/impl/COPPAComplianceServiceImpl.java (Fixed Unused Method)
 
 package org.frcpm.services.impl;
 
@@ -18,6 +18,8 @@ import java.util.logging.Logger;
 
 /**
  * Implementation of COPPA compliance service for student data protection.
+ * 
+ * ✅ FIXED: Removed unused validateCOPPARequiredData method
  * 
  * Ensures compliance with the Children's Online Privacy Protection Act
  * for users under 13 years of age.
@@ -435,29 +437,5 @@ public class COPPAComplianceServiceImpl implements COPPAComplianceService {
         }
         
         return null; // No authenticated user or system operation
-    }
-    
-    /**
-     * Validates that required COPPA compliance data is present.
-     * 
-     * @param user the user to validate
-     * @throws IllegalArgumentException if required data is missing
-     */
-    private void validateCOPPARequiredData(User user) {
-        if (!requiresParentalConsent(user)) {
-            return; // No validation needed
-        }
-        
-        if (user.getAge() == null) {
-            throw new IllegalArgumentException("Age is required for COPPA compliance validation");
-        }
-        
-        if (user.getParentEmail() == null || user.getParentEmail().trim().isEmpty()) {
-            throw new IllegalArgumentException("Parent email is required for users under 13");
-        }
-        
-        if (!user.getParentEmail().matches("^[A-Za-z0-9+_.-]+@([A-Za-z0-9.-]+\\.[A-Za-z]{2,})$")) {
-            throw new IllegalArgumentException("Valid parent email is required for users under 13");
-        }
     }
 }

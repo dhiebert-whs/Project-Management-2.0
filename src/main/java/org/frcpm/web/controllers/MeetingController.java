@@ -60,7 +60,7 @@ public class MeetingController extends BaseController {
     
     // Date and time formatters for display
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
-    private static final DateTimeFormatter TIME_INPUT_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
+    //private static final DateTimeFormatter TIME_INPUT_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
     
     // =========================================================================
     // MEETING LIST AND CALENDAR VIEW
@@ -580,7 +580,7 @@ public class MeetingController extends BaseController {
             }
             
             // Record attendance for all members
-            int recordsUpdated = attendanceService.recordAttendanceForMeeting(id, presentMemberIds);
+            //int recordsUpdated = attendanceService.recordAttendanceForMeeting(id, presentMemberIds);
             
             // Calculate attendance rate
             List<Attendance> attendanceRecords = attendanceService.findByMeeting(meeting);
@@ -1393,13 +1393,18 @@ public class MeetingController extends BaseController {
     /**
      * Format time for display.
      */
+
+    /* 
     private String formatTime(LocalTime time) {
         return time != null ? time.format(TIME_FORMATTER) : "";
     }
-    
+    */
+
     /**
      * Parse time from HTML time input.
      */
+
+    /* 
     private LocalTime parseTimeFromInput(String timeString) {
         if (timeString == null || timeString.trim().isEmpty()) {
             return null;
@@ -1411,6 +1416,7 @@ public class MeetingController extends BaseController {
             return null;
         }
     }
+    */
     
     /**
      * Helper method to escape CSV values.

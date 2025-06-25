@@ -1,6 +1,9 @@
+// src/main/java/org/frcpm/config/WebConfig.java (Fixed NonNull Annotations)
+
 package org.frcpm.config;
 
 import org.springframework.context.annotation.Configuration;
+import org.springframework.lang.NonNull;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -8,6 +11,8 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 
 /**
  * Web MVC configuration for the FRC Project Management System.
+ * 
+ * ✅ FIXED: Added @NonNull annotations for Spring Boot 6.1+ compatibility
  * 
  * This configuration sets up the web layer infrastructure for the Spring Boot
  * application, replacing the JavaFX UI framework with modern web technologies.
@@ -35,6 +40,8 @@ public class WebConfig implements WebMvcConfigurer {
     /**
      * Configures static resource handling for web assets.
      * 
+     * ✅ FIXED: Added @NonNull annotation for Spring Boot 6.1+ compatibility
+     * 
      * Sets up resource mappings for:
      * - CSS stylesheets (Bootstrap + custom FRC styles)
      * - JavaScript files (application logic + PWA features)
@@ -47,7 +54,7 @@ public class WebConfig implements WebMvcConfigurer {
      * @param registry ResourceHandlerRegistry for configuration
      */
     @Override
-    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+    public void addResourceHandlers(@NonNull ResourceHandlerRegistry registry) {
         // Main static resources
         registry.addResourceHandler("/static/**")
                 .addResourceLocations("classpath:/static/")
@@ -86,6 +93,8 @@ public class WebConfig implements WebMvcConfigurer {
     /**
      * Configures simple view controllers for pages that don't need complex logic.
      * 
+     * ✅ FIXED: Added @NonNull annotation for Spring Boot 6.1+ compatibility
+     * 
      * Maps URLs directly to template names for:
      * - Login page
      * - Error pages
@@ -96,7 +105,7 @@ public class WebConfig implements WebMvcConfigurer {
      * @param registry ViewControllerRegistry for configuration
      */
     @Override
-    public void addViewControllers(ViewControllerRegistry registry) {
+    public void addViewControllers(@NonNull ViewControllerRegistry registry) {
         // Login page
         registry.addViewController("/login").setViewName("auth/login");
         
@@ -113,6 +122,8 @@ public class WebConfig implements WebMvcConfigurer {
     /**
      * Configures CORS (Cross-Origin Resource Sharing) for API access.
      * 
+     * ✅ FIXED: Added @NonNull annotation for Spring Boot 6.1+ compatibility
+     * 
      * Phase 1: Basic CORS setup for potential future API consumption
      * Phase 2: Will be enhanced for mobile app integration
      * Phase 3: May include FRC-specific tool integrations
@@ -125,7 +136,7 @@ public class WebConfig implements WebMvcConfigurer {
      * @param registry CorsRegistry for configuration
      */
     @Override
-    public void addCorsMappings(CorsRegistry registry) {
+    public void addCorsMappings(@NonNull CorsRegistry registry) {
         registry.addMapping("/api/**")
                 .allowedOriginPatterns("http://localhost:*") // Development
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")

@@ -11,7 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.util.Base64;
+//import java.util.Base64;
 
 /**
  * Time-based One-Time Password (TOTP) service for multi-factor authentication.

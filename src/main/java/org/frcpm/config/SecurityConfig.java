@@ -1,4 +1,4 @@
-// src/main/java/org/frcpm/config/SecurityConfig.java (Enhanced for Phase 2B)
+// src/main/java/org/frcpm/config/SecurityConfig.java (Fixed Deprecations)
 
 package org.frcpm.config;
 
@@ -24,6 +24,10 @@ import org.springframework.security.web.session.HttpSessionEventPublisher;
 
 /**
  * Enhanced Security Configuration for FRC Project Management System.
+ * 
+ * ✅ FIXED: Updated for Spring Security 6.1+ compatibility
+ * - Removed deprecated and() calls
+ * - Updated frameOptions() to modern API
  * 
  * Provides comprehensive security including:
  * - COPPA compliance for users under 13
@@ -103,12 +107,14 @@ public class SecurityConfig {
                 .permitAll()
             )
             
-            // Session management
+            // ✅ FIXED: Session management without deprecated and() calls
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                 .maximumSessions(1)
                 .maxSessionsPreventsLogin(false)
-                .and()
+                .sessionRegistry(sessionRegistry()) // Add session registry
+            )
+            .sessionManagement(session -> session
                 .sessionFixation().changeSessionId()
             )
             
@@ -128,9 +134,9 @@ public class SecurityConfig {
                 .ignoringRequestMatchers("/api/**", "/h2-console/**")
             )
             
-            // Headers configuration
+            // ✅ FIXED: Headers configuration without deprecated frameOptions()
             .headers(headers -> headers
-                .frameOptions().sameOrigin() // For H2 console
+                .frameOptions(frameOptions -> frameOptions.sameOrigin()) // Modern API
                 .httpStrictTransportSecurity(hstsConfig -> hstsConfig
                     .maxAgeInSeconds(31536000)
                     .includeSubDomains(true)
@@ -138,6 +144,14 @@ public class SecurityConfig {
             );
             
         return http.build();
+    }
+    
+    /**
+     * ✅ ADDED: Session registry bean for session management
+     */
+    @Bean
+    public org.springframework.security.core.session.SessionRegistry sessionRegistry() {
+        return new org.springframework.security.core.session.SessionRegistryImpl();
     }
     
     /**
