@@ -224,9 +224,21 @@ public class AuditServiceImpl implements AuditService {
         return request.getRemoteAddr();
     }
 
+    // =========================================================================
+    // COPPA-SPECIFIC LOGGING - ✅ FIXED: Implement missing method
+    // =========================================================================
+    
     @Override
     public void logCOPPAAccess(User user, User subjectUser, String action, String description) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'logCOPPAAccess'");
+        try {
+            AuditLog log = new AuditLog(user, action, description, AuditLevel.COPPA_COMPLIANCE);
+            log.setSubjectUser(subjectUser);
+            log.setCoppaRelevant(true);
+            
+            enrichLogWithRequestData(log);
+            auditLogRepository.save(log);
+        } catch (Exception e) {
+            LOGGER.severe("Failed to save COPPA audit log: " + e.getMessage());
+        }
     }
 }

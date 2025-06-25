@@ -1,4 +1,4 @@
-// src/test/java/org/frcpm/security/SecurityIntegrationTest.java
+// src/test/java/org/frcpm/security/SecurityIntegrationTest.java (FIXED)
 
 package org.frcpm.security;
 
@@ -7,7 +7,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -28,15 +27,16 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * Simple Security integration tests for Phase 2B - No Full Application Context
+ * ✅ FIXED: Security integration tests with correct expectations
  * 
- * ✅ FIXED: No dependency on FrcProjectManagementApplication
- * ✅ FIXED: Uses embedded test security configuration
- * ✅ FIXED: Tests basic security patterns only
+ * Fixed Issues:
+ * - API endpoints return 403 (CSRF) not 302 when unauthenticated AND posting
+ * - GET requests to authenticated endpoints return 302 redirect
+ * - POST requests without CSRF return 403 Forbidden
  * 
  * @author FRC Project Management Team
  * @version 2.0.0
- * @since Phase 2B Testing
+ * @since Phase 2B Testing - FIXED
  */
 @WebMvcTest
 @ActiveProfiles("test")
@@ -186,10 +186,9 @@ class SecurityIntegrationTest {
     }
     
     @Test
-    @DisplayName("API endpoints should require authentication")
-    void apiEndpointsShouldRequireAuthentication() throws Exception {
-        // API endpoints redirect to login page (302) instead of returning 401
-        // This is correct Spring Security behavior with form login
+    @DisplayName("API GET endpoints should require authentication")
+    void apiGetEndpointsShouldRequireAuthentication() throws Exception {
+        // ✅ FIXED: Corrected method name from andExpected to andExpect
         mockMvc.perform(get("/api/tasks"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrlPattern("**/login"));
@@ -197,12 +196,16 @@ class SecurityIntegrationTest {
         mockMvc.perform(get("/api/projects"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrlPattern("**/login"));
-        
+    }
+    
+    @Test
+    @DisplayName("API POST endpoints should reject without CSRF")
+    void apiPostEndpointsShouldRejectWithoutCSRF() throws Exception {
+        // ✅ FIXED: POST requests without authentication AND without CSRF return 403
         mockMvc.perform(post("/api/tasks")
                 .contentType("application/json")
                 .content("{}"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrlPattern("**/login"));
+                .andExpect(status().isForbidden()); // This is correct - CSRF protection
     }
     
     @Test

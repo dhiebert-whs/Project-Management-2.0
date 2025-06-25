@@ -81,6 +81,14 @@ public enum UserRole implements GrantedAuthority {
     public boolean canAdminister() {
         return this == ADMIN;
     }
+
+    public boolean canManageUsers() {
+        return this == MENTOR || this == ADMIN;
+    }
+    
+    public boolean canAccessReports() {
+        return this == MENTOR || this == ADMIN;
+    }
     
     /**
      * Determines if this role can manage team members.

@@ -23,7 +23,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // Authentication queries
     Optional<User> findByUsername(String username);
     Optional<User> findByEmail(String email);
-    Optional<User> findByUsernameOrEmail(String username, String email);
+    Optional<User> findByUsernameOrEmail(String username, String email);    
     
     // Role-based queries
     List<User> findByRole(UserRole role);
@@ -72,4 +72,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     
     @Query("SELECT COUNT(u) FROM User u WHERE u.enabled = true")
     long countEnabledUsers();
+
+    
 }

@@ -17294,3 +17294,27 @@ java.lang.IllegalStateException: ApplicationContext failure threshold (1) exceed
 	at org.eclipse.jdt.internal.junit.runner.RemoteTestRunner.runTests(RemoteTestRunner.java:748)
 	at org.eclipse.jdt.internal.junit.runner.RemoteTestRunner.run(RemoteTestRunner.java:443)
 	at org.eclipse.jdt.internal.junit.runner.RemoteTestRunner.main(RemoteTestRunner.java:211)
+2025-06-25 13:13:46 [main] INFO  o.f.security.SecurityIntegrationTest - Starting SecurityIntegrationTest using Java 21.0.7 with PID 31248 (started by dhiebert in C:\Users\dhiebert\Local Repositories\Project Management 2.0)
+2025-06-25 13:13:46 [main] DEBUG o.f.security.SecurityIntegrationTest - Running with Spring Boot v3.2.0, Spring v6.1.1
+2025-06-25 13:13:46 [main] INFO  o.f.security.SecurityIntegrationTest - The following 1 profile is active: "test"
+2025-06-25 13:13:48 [main] INFO  o.f.security.SecurityIntegrationTest - Started SecurityIntegrationTest in 2.836 seconds (process running for 4.059)
+2025-06-25 13:14:00 [main] INFO  o.f.security.SecurityIntegrationTest - Starting SecurityIntegrationTest using Java 21.0.7 with PID 10316 (started by dhiebert in C:\Users\dhiebert\Local Repositories\Project Management 2.0)
+2025-06-25 13:14:00 [main] DEBUG o.f.security.SecurityIntegrationTest - Running with Spring Boot v3.2.0, Spring v6.1.1
+2025-06-25 13:14:00 [main] INFO  o.f.security.SecurityIntegrationTest - The following 1 profile is active: "test"
+2025-06-25 13:14:02 [main] INFO  o.f.security.SecurityIntegrationTest - Started SecurityIntegrationTest in 2.602 seconds (process running for 3.799)
+2025-06-25 13:18:57 [main] INFO  o.f.security.SecurityIntegrationTest - Starting SecurityIntegrationTest using Java 21.0.7 with PID 31148 (started by dhiebert in C:\Users\dhiebert\Local Repositories\Project Management 2.0)
+2025-06-25 13:18:57 [main] DEBUG o.f.security.SecurityIntegrationTest - Running with Spring Boot v3.2.0, Spring v6.1.1
+2025-06-25 13:18:57 [main] INFO  o.f.security.SecurityIntegrationTest - The following 1 profile is active: "test"
+2025-06-25 13:18:59 [main] INFO  o.f.security.SecurityIntegrationTest - Started SecurityIntegrationTest in 2.601 seconds (process running for 3.785)
+2025-06-25 13:19:09 [main] INFO  o.f.security.SecurityIntegrationTest - Starting SecurityIntegrationTest using Java 21.0.7 with PID 32364 (started by dhiebert in C:\Users\dhiebert\Local Repositories\Project Management 2.0)
+2025-06-25 13:19:09 [main] DEBUG o.f.security.SecurityIntegrationTest - Running with Spring Boot v3.2.0, Spring v6.1.1
+2025-06-25 13:19:09 [main] INFO  o.f.security.SecurityIntegrationTest - The following 1 profile is active: "test"
+2025-06-25 13:19:11 [main] INFO  o.f.security.SecurityIntegrationTest - Started SecurityIntegrationTest in 2.63 seconds (process running for 3.793)
+2025-06-25 13:19:23 [main] INFO  o.f.security.SecurityIntegrationTest - Starting SecurityIntegrationTest using Java 21.0.7 with PID 5272 (started by dhiebert in C:\Users\dhiebert\Local Repositories\Project Management 2.0)
+2025-06-25 13:19:23 [main] DEBUG o.f.security.SecurityIntegrationTest - Running with Spring Boot v3.2.0, Spring v6.1.1
+2025-06-25 13:19:23 [main] INFO  o.f.security.SecurityIntegrationTest - The following 1 profile is active: "test"
+2025-06-25 13:19:25 [main] INFO  o.f.security.SecurityIntegrationTest - Started SecurityIntegrationTest in 2.627 seconds (process running for 3.806)
+2025-06-25 13:30:49 [main] INFO  o.f.security.SecurityIntegrationTest - Starting SecurityIntegrationTest using Java 21.0.7 with PID 17988 (started by dhiebert in C:\Users\dhiebert\Local Repositories\Project Management 2.0)
+2025-06-25 13:30:49 [main] DEBUG o.f.security.SecurityIntegrationTest - Running with Spring Boot v3.2.0, Spring v6.1.1
+2025-06-25 13:30:49 [main] INFO  o.f.security.SecurityIntegrationTest - The following 1 profile is active: "test"
+2025-06-25 13:30:51 [main] INFO  o.f.security.SecurityIntegrationTest - Started SecurityIntegrationTest in 2.835 seconds (process running for 4.028)
