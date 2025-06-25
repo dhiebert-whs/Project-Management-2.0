@@ -1,541 +1,4 @@
-// =========================================================================
-    // PRIVATE HELPER METHODS
-    // =========================================================================
-    
-    /**
-     * Apply filters to meeting list.
-     */
-    private List<Meeting> applyMeetingFilters(List<Meeting> meetings, Long projectId) {
-        return meetings.stream()
-            .filter(meeting -> projectId == null || meeting.getProject().getId().equals(projectId))
-            .collect(Collectors.toList());
-    }
-    
-    /**
-     * Sort meetings by specified criteria.
-     */
-    private void sortMeetings(List<Meeting> meetings, String sort) {
-        switch (sort.toLowerCase()) {
-            case "date":
-                meetings.sort((m1, m2) -> {
-                    int dateCompare = m1.getDate().compareTo(m2.getDate());
-                    return dateCompare != 0 ? dateCompare : m1.getStartTime().compareTo(m2.getStartTime());
-                });
-                break;
-            case "project":
-                meetings.sort((m1, m2) -> m1.getProject().getName().compareToIgnoreCase(m2.getProject().getName()));
-                break;
-            case "duration":
-                meetings.sort((m1, m2) -> {
-                    long duration1 = java.time.Duration.between(m1.getStartTime(), m1.getEndTime()).toMinutes();
-                    long duration2 = java.time.Duration.between(m2.getStartTime(), m2.getEndTime()).toMinutes();
-                    return Long.compare(duration2, duration1); // Longest first
-                });
-                break;
-            default:
-                // Default: date and time
-                meetings.sort((m1, m2) -> {
-                    int dateCompare = m1.getDate().compareTo(m2.getDate());
-                    return dateCompare != 0 ? dateCompare : m1.getStartTime().compareTo(m2.getStartTime());
-                });
-                break;
-        }
-    }
-    
-    /**
-     * Load filter options for dropdowns.
-     */
-    private void loadMeetingFilterOptions(Model model) {
-        try {
-            // Projects
-            List<Project> projects = projectService.findAll();
-            model.addAttribute("projectOptions", projects);
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to load filter options", e);
-            model.addAttribute("projectOptions", List.of());
-        }
-    }
-    
-    /**
-     * Add meeting statistics to model.
-     */
-    private void addMeetingStatistics(Model model, List<Meeting> meetings) {
-        if (meetings.isEmpty()) {
-            model.addAttribute("totalDuration", 0);
-            model.addAttribute("avgAttendanceRate", 0);
-            model.addAttribute("upcomingCount", 0);
-            return;
-        }
-        
-        // Total duration in hours
-        long totalMinutes = meetings.stream()
-            .mapToLong(meeting -> java.time.Duration.between(meeting.getStartTime(), meeting.getEndTime()).toMinutes())
-            .sum();
-        double totalHours = totalMinutes / 60.0;
-        model.addAttribute("totalDuration", String.format("%.1f", totalHours));
-        
-        // Average attendance rate
-        double avgAttendanceRate = meetings.stream()
-            .mapToDouble(meeting -> {
-                try {
-                    return meeting.getAttendancePercentage();
-                } catch (Exception e) {
-                    return 0.0;
-                }
-            })
-            .average()
-            .orElse(0.0);
-        model.addAttribute("avgAttendanceRate", Math.round(avgAttendanceRate));
-        
-        // Upcoming meetings count
-        LocalDate today = LocalDate.now();
-        long upcomingCount = meetings.stream()
-            .filter(meeting -> meeting.getDate().isAfter(today) || meeting.getDate().isEqual(today))
-            .count();
-        model.addAttribute("upcomingCount", upcomingCount);
-    }
-    
-    /**
-     * Organize meetings for calendar view.
-     */
-    private void organizeMeetingsForCalendar(Model model, List<Meeting> meetings, LocalDate startDate, LocalDate endDate) {
-        // Group meetings by date
-        Map<LocalDate, List<Meeting>> meetingsByDate = meetings.stream()
-            .collect(Collectors.groupingBy(Meeting::getDate));
-        
-        model.addAttribute("meetingsByDate", meetingsByDate);
-        
-        // Calendar navigation
-        LocalDate prevMonth = startDate.minusMonths(1);
-        LocalDate nextMonth = startDate.plusMonths(1);
-        model.addAttribute("prevMonth", prevMonth.format(DateTimeFormatter.ofPattern("yyyy-MM")));
-        model.addAttribute("nextMonth", nextMonth.format(DateTimeFormatter.ofPattern("yyyy-MM")));
-        model.addAttribute("currentMonth", startDate.format(DateTimeFormatter.ofPattern("MMMM yyyy")));
-        
-        // Generate calendar grid
-        generateCalendarGrid(model, startDate, endDate, meetingsByDate);
-    }
-    
-    /**
-     * Generate calendar grid for display.
-     */
-    private void generateCalendarGrid(Model model, LocalDate startDate, LocalDate endDate, Map<LocalDate, List<Meeting>> meetingsByDate) {
-        // Start from the first day of the week containing startDate
-        LocalDate gridStart = startDate.with(java.time.DayOfWeek.MONDAY);
-        
-        // End at the last day of the week containing endDate
-        LocalDate gridEnd = endDate.with(java.time.DayOfWeek.SUNDAY);
-        
-        List<List<Map<String, Object>>> calendarWeeks = new java.util.ArrayList<>();
-        LocalDate currentDate = gridStart;
-        
-        while (!currentDate.isAfter(gridEnd)) {
-            List<Map<String, Object>> week = new java.util.ArrayList<>();
-            
-            for (int day = 0; day < 7; day++) {
-                Map<String, Object> dayData = new HashMap<>();
-                dayData.put("date", currentDate);
-                dayData.put("dayOfMonth", currentDate.getDayOfMonth());
-                dayData.put("isCurrentMonth", !currentDate.isBefore(startDate) && !currentDate.isAfter(endDate));
-                dayData.put("isToday", currentDate.equals(LocalDate.now()));
-                dayData.put("meetings", meetingsByDate.getOrDefault(currentDate, List.of()));
-                
-                week.add(dayData);
-                currentDate = currentDate.plusDays(1);
-            }
-            
-            calendarWeeks.add(week);
-        }
-        
-        model.addAttribute("calendarWeeks", calendarWeeks);
-    }
-    
-    /**
-     * Add upcoming meeting specific data.
-     */
-    private void addUpcomingMeetingData(Model model, List<Meeting> meetings) {
-        LocalDate today = LocalDate.now();
-        
-        // Today's meetings
-        List<Meeting> todaysMeetings = meetings.stream()
-            .filter(meeting -> meeting.getDate().equals(today))
-            .collect(Collectors.toList());
-        model.addAttribute("todaysMeetings", todaysMeetings);
-        
-        // This week's meetings
-        LocalDate weekEnd = today.plusDays(7);
-        List<Meeting> thisWeeksMeetings = meetings.stream()
-            .filter(meeting -> meeting.getDate().isAfter(today) && !meeting.getDate().isAfter(weekEnd))
-            .collect(Collectors.toList());
-        model.addAttribute("thisWeeksMeetings", thisWeeksMeetings);
-        
-        // Next meeting
-        Meeting nextMeeting = meetings.stream()
-            .filter(meeting -> meeting.getDate().isAfter(today) || 
-                             (meeting.getDate().equals(today) && meeting.getStartTime().isAfter(LocalTime.now())))
-            .min((m1, m2) -> {
-                int dateCompare = m1.getDate().compareTo(m2.getDate());
-                return dateCompare != 0 ? dateCompare : m1.getStartTime().compareTo(m2.getStartTime());
-            })
-            .orElse(null);
-        model.addAttribute("nextMeeting", nextMeeting);
-    }
-    
-    /**
-     * Load overview tab data.
-     */
-    private void loadOverviewTabData(Model model, Meeting meeting) {
-        // Basic meeting information already in model
-        
-        // Calculate meeting duration
-        long durationMinutes = java.time.Duration.between(meeting.getStartTime(), meeting.getEndTime()).toMinutes();
-        model.addAttribute("durationMinutes", durationMinutes);
-        model.addAttribute("durationHours", String.format("%.1f", durationMinutes / 60.0));
-        
-        // Meeting status
-        LocalDate today = LocalDate.now();
-        LocalTime now = LocalTime.now();
-        String status;
-        
-        if (meeting.getDate().isBefore(today)) {
-            status = "completed";
-        } else if (meeting.getDate().equals(today)) {
-            if (now.isBefore(meeting.getStartTime())) {
-                status = "today-upcoming";
-            } else if (now.isAfter(meeting.getEndTime())) {
-                status = "today-completed";
-            } else {
-                status = "in-progress";
-            }
-        } else {
-            status = "upcoming";
-        }
-        model.addAttribute("meetingStatus", status);
-        
-        // Time until meeting (if upcoming)
-        if ("upcoming".equals(status) || "today-upcoming".equals(status)) {
-            long daysUntil = java.time.temporal.ChronoUnit.DAYS.between(today, meeting.getDate());
-            model.addAttribute("daysUntilMeeting", daysUntil);
-        }
-    }
-    
-    /**
-     * Load attendance tab data.
-     */
-    private void loadAttendanceTabData(Model model, Meeting meeting) {
-        try {
-            List<Attendance> attendanceRecords = attendanceService.findByMeeting(meeting);
-            model.addAttribute("attendanceRecords", attendanceRecords);
-            
-            // Attendance statistics
-            long presentCount = attendanceRecords.stream().filter(Attendance::isPresent).count();
-            long absentCount = attendanceRecords.size() - presentCount;
-            double attendanceRate = attendanceRecords.size() > 0 ? 
-                (double) presentCount / attendanceRecords.size() * 100 : 0;
-            
-            model.addAttribute("presentCount", presentCount);
-            model.addAttribute("absentCount", absentCount);
-            model.addAttribute("totalMembers", attendanceRecords.size());
-            model.addAttribute("attendanceRate", Math.round(attendanceRate));
-            
-            // Group by subteams for better organization
-            Map<String, List<Attendance>> attendanceBySubteam = attendanceRecords.stream()
-                .collect(Collectors.groupingBy(attendance -> 
-                    attendance.getMember().getSubteam() != null ? 
-                    attendance.getMember().getSubteam().getName() : "Unassigned"));
-            
-            model.addAttribute("attendanceBySubteam", attendanceBySubteam);
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to load attendance data", e);
-            model.addAttribute("attendanceRecords", List.of());
-            model.addAttribute("presentCount", 0);
-            model.addAttribute("absentCount", 0);
-            model.addAttribute("totalMembers", 0);
-            model.addAttribute("attendanceRate", 0);
-        }
-    }
-    
-    /**
-     * Load notes tab data.
-     */
-    private void loadNotesTabData(Model model, Meeting meeting) {
-        // Notes are already part of the meeting object
-        
-        // Add note editing capability check
-        model.addAttribute("canEditNotes", hasRole("MENTOR") || hasRole("ADMIN"));
-        
-        // Parse notes for better display (simple line breaks)
-        if (meeting.getNotes() != null) {
-            String[] noteLines = meeting.getNotes().split("\n");
-            model.addAttribute("noteLines", noteLines);
-        }
-    }
-    
-    /**
-     * Add meeting detail statistics.
-     */
-    private void addMeetingDetailStatistics(Model model, Meeting meeting) {
-        try {
-            // Get attendance data
-            List<Attendance> attendanceRecords = attendanceService.findByMeeting(meeting);
-            
-            if (!attendanceRecords.isEmpty()) {
-                // Present/absent counts
-                long presentCount = attendanceRecords.stream().filter(Attendance::isPresent).count();
-                model.addAttribute("detailPresentCount", presentCount);
-                model.addAttribute("detailAbsentCount", attendanceRecords.size() - presentCount);
-                
-                // Average attendance duration for present members
-                double avgDuration = attendanceRecords.stream()
-                    .filter(Attendance::isPresent)
-                    .mapToLong(Attendance::getDurationMinutes)
-                    .average()
-                    .orElse(0.0);
-                model.addAttribute("avgAttendanceDuration", String.format("%.0f", avgDuration));
-                
-                // Attendance by role
-                long leadersPresentCount = attendanceRecords.stream()
-                    .filter(att -> att.isPresent() && att.getMember().isLeader())
-                    .count();
-                model.addAttribute("leadersPresentCount", leadersPresentCount);
-            }
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to load meeting detail statistics", e);
-        }
-    }
-    
-    /**
-     * Load form options for meeting creation/editing.
-     */
-    private void loadMeetingFormOptions(Model model) {
-        try {
-            // Projects
-            List<Project> projects = projectService.findAll();
-            model.addAttribute("projectOptions", projects);
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to load meeting form options", e);
-            model.addAttribute("projectOptions", List.of());
-        }
-    }
-    
-    /**
-     * Add helpful defaults and suggestions for meeting forms.
-     */
-    private void addMeetingFormHelpers(Model model) {
-        model.addAttribute("commonTimes", List.of(
-            Map.of("time", "15:30", "label", "3:30 PM (After School)"),
-            Map.of("time", "16:00", "label", "4:00 PM"),
-            Map.of("time", "16:30", "label", "4:30 PM"),
-            Map.of("time", "17:00", "label", "5:00 PM"),
-            Map.of("time", "18:00", "label", "6:00 PM"),
-            Map.of("time", "19:00", "label", "7:00 PM (Evening)")
-        ));
-        
-        model.addAttribute("commonDurations", List.of(
-            Map.of("hours", 1, "label", "1 hour"),
-            Map.of("hours", 1.5, "label", "1.5 hours"),
-            Map.of("hours", 2, "label", "2 hours"),
-            Map.of("hours", 2.5, "label", "2.5 hours"),
-            Map.of("hours", 3, "label", "3 hours")
-        ));
-    }
-    
-    /**
-     * Check for scheduling conflicts.
-     */
-    private void checkSchedulingConflicts(Model model, LocalDate date, LocalTime startTime, LocalTime endTime) {
-        checkSchedulingConflicts(model, date, startTime, endTime, null);
-    }
-    
-    /**
-     * Check for scheduling conflicts, excluding a specific meeting.
-     */
-    private void checkSchedulingConflicts(Model model, LocalDate date, LocalTime startTime, LocalTime endTime, Long excludeMeetingId) {
-        try {
-            if (date != null && startTime != null && endTime != null) {
-                List<Meeting> allMeetings = meetingService.findByDate(date);
-                
-                List<Meeting> conflicts = allMeetings.stream()
-                    .filter(meeting -> excludeMeetingId == null || !meeting.getId().equals(excludeMeetingId))
-                    .filter(meeting -> {
-                        // Check for time overlap
-                        return !(endTime.isBefore(meeting.getStartTime()) || startTime.isAfter(meeting.getEndTime()));
-                    })
-                    .collect(Collectors.toList());
-                
-                if (!conflicts.isEmpty()) {
-                    model.addAttribute("hasConflicts", true);
-                    model.addAttribute("conflicts", conflicts);
-                    addWarningMessage(model, 
-                        "Warning: " + conflicts.size() + " scheduling conflict(s) detected on this date and time.");
-                }
-            }
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to check scheduling conflicts", e);
-        }
-    }
-    
-    /**
-     * Initialize attendance records for all team members.
-     */
-    private void initializeAttendanceRecords(Meeting meeting) {
-        try {
-            List<TeamMember> allMembers = teamMemberService.findAll();
-            
-            for (TeamMember member : allMembers) {
-                // Create attendance record with default absent status
-                attendanceService.createAttendance(meeting.getId(), member.getId(), false);
-            }
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to initialize attendance records", e);
-        }
-    }
-    
-    /**
-     * Validate meeting data for creation/editing.
-     */
-    private void validateMeetingData(Meeting meeting, BindingResult result) {
-        // Date validation
-        if (meeting.getDate() == null) {
-            result.rejectValue("date", "required", "Meeting date is required");
-        }
-        
-        // Time validation
-        if (meeting.getStartTime() == null) {
-            result.rejectValue("startTime", "required", "Start time is required");
-        }
-        
-        if (meeting.getEndTime() == null) {
-            result.rejectValue("endTime", "required", "End time is required");
-        }
-        
-        if (meeting.getStartTime() != null && meeting.getEndTime() != null) {
-            if (meeting.getEndTime().isBefore(meeting.getStartTime())) {
-                result.rejectValue("endTime", "invalid", "End time cannot be before start time");
-            }
-            
-            if (meeting.getStartTime().equals(meeting.getEndTime())) {
-                result.rejectValue("endTime", "invalid", "End time cannot be the same as start time");
-            }
-            
-            // Check for reasonable duration (not more than 8 hours)
-            long durationMinutes = java.time.Duration.between(meeting.getStartTime(), meeting.getEndTime()).toMinutes();
-            if (durationMinutes > 480) { // 8 hours
-                result.rejectValue("endTime", "invalid", "Meeting duration cannot exceed 8 hours");
-            }
-        }
-        
-        // Project validation
-        if (meeting.getProject() == null) {
-            result.rejectValue("project", "required", "Project is required");
-        }
-    }
-    
-    /**
-     * Add warnings for meeting editing.
-     */
-    private void addMeetingEditWarnings(Model model, Meeting meeting) {
-        try {
-            List<Attendance> attendanceRecords = attendanceService.findByMeeting(meeting);
-            
-            if (!attendanceRecords.isEmpty()) {
-                long recordedAttendance = attendanceRecords.stream()
-                    .filter(Attendance::isPresent)
-                    .count();
-                
-                if (recordedAttendance > 0) {
-                    model.addAttribute("hasRecordedAttendance", true);
-                    model.addAttribute("recordedAttendanceCount", recordedAttendance);
-                    addWarningMessage(model, 
-                        "This meeting has recorded attendance for " + recordedAttendance + " members. " +
-                        "Changing the meeting details may affect attendance reporting.");
-                }
-            }
-            
-            // Check if meeting is in the past
-            if (meeting.getDate().isBefore(LocalDate.now())) {
-                addWarningMessage(model, "This meeting is in the past. Consider the impact on historical records.");
-            }
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to load edit warnings", e);
-        }
-    }
-    
-    /**
-     * Add deletion impact information.
-     */
-    private void addMeetingDeletionImpactInfo(Model model, Meeting meeting) {
-        try {
-            List<Attendance> attendanceRecords = attendanceService.findByMeeting(meeting);
-            model.addAttribute("attendanceRecordCount", attendanceRecords.size());
-            
-            long recordedAttendance = attendanceRecords.stream()
-                .filter(Attendance::isPresent)
-                .count();
-            model.addAttribute("recordedAttendanceCount", recordedAttendance);
-            
-            model.addAttribute("isCompletedMeeting", meeting.getDate().isBefore(LocalDate.now()));
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to load deletion impact info", e);
-            model.addAttribute("attendanceRecordCount", 0);
-            model.addAttribute("recordedAttendanceCount", 0);
-        }
-    }
-    
-    /**
-     * Format meeting title for display.
-     */
-    private String formatMeetingTitle(Meeting meeting) {
-        return String.format("%s - %s", 
-            meeting.getProject().getName(),
-            meeting.getDate().format(DATE_FORMATTER));
-    }
-    
-    /**
-     * Format time for display.
-     */
-    private String formatTime(LocalTime time) {
-        return time != null ? time.format(TIME_FORMATTER) : "";
-    }
-    
-    /**
-     * Parse time from HTML time input.
-     */
-    private LocalTime parseTimeFromInput(String timeString) {
-        if (timeString == null || timeString.trim().isEmpty()) {
-            return null;
-        }
-        try {
-            return LocalTime.parse(timeString, TIME_INPUT_FORMATTER);
-        } catch (Exception e) {
-            LOGGER.warning("Failed to parse time: " + timeString);
-            return null;
-        }
-    }
-    
-    /**
-     * Helper method to escape CSV values.
-     */
-    private String escapeCSV(String value) {
-        if (value == null) {
-            return "";
-        }
-        
-        // Escape quotes and wrap in quotes if necessary
-        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
-            return "\"" + value.replace("\"", "\"\"") + "\"";
-        }
-        
-        return value;
-    }
-}// src/main/java/org/frcpm/web/controllers/MeetingController.java
+// src/main/java/org/frcpm/web/controllers/MeetingController.java
 
 package org.frcpm.web.controllers;
 
@@ -1426,3 +889,542 @@ public class MeetingController extends BaseController {
             }
         }
     }
+    
+    // =========================================================================
+    // PRIVATE HELPER METHODS
+    // =========================================================================
+    
+    /**
+     * Apply filters to meeting list.
+     */
+    private List<Meeting> applyMeetingFilters(List<Meeting> meetings, Long projectId) {
+        return meetings.stream()
+            .filter(meeting -> projectId == null || meeting.getProject().getId().equals(projectId))
+            .collect(Collectors.toList());
+    }
+    
+    /**
+     * Sort meetings by specified criteria.
+     */
+    private void sortMeetings(List<Meeting> meetings, String sort) {
+        switch (sort.toLowerCase()) {
+            case "date":
+                meetings.sort((m1, m2) -> {
+                    int dateCompare = m1.getDate().compareTo(m2.getDate());
+                    return dateCompare != 0 ? dateCompare : m1.getStartTime().compareTo(m2.getStartTime());
+                });
+                break;
+            case "project":
+                meetings.sort((m1, m2) -> m1.getProject().getName().compareToIgnoreCase(m2.getProject().getName()));
+                break;
+            case "duration":
+                meetings.sort((m1, m2) -> {
+                    long duration1 = java.time.Duration.between(m1.getStartTime(), m1.getEndTime()).toMinutes();
+                    long duration2 = java.time.Duration.between(m2.getStartTime(), m2.getEndTime()).toMinutes();
+                    return Long.compare(duration2, duration1); // Longest first
+                });
+                break;
+            default:
+                // Default: date and time
+                meetings.sort((m1, m2) -> {
+                    int dateCompare = m1.getDate().compareTo(m2.getDate());
+                    return dateCompare != 0 ? dateCompare : m1.getStartTime().compareTo(m2.getStartTime());
+                });
+                break;
+        }
+    }
+    
+    /**
+     * Load filter options for dropdowns.
+     */
+    private void loadMeetingFilterOptions(Model model) {
+        try {
+            // Projects
+            List<Project> projects = projectService.findAll();
+            model.addAttribute("projectOptions", projects);
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Failed to load filter options", e);
+            model.addAttribute("projectOptions", List.of());
+        }
+    }
+    
+    /**
+     * Add meeting statistics to model.
+     */
+    private void addMeetingStatistics(Model model, List<Meeting> meetings) {
+        if (meetings.isEmpty()) {
+            model.addAttribute("totalDuration", 0);
+            model.addAttribute("avgAttendanceRate", 0);
+            model.addAttribute("upcomingCount", 0);
+            return;
+        }
+        
+        // Total duration in hours
+        long totalMinutes = meetings.stream()
+            .mapToLong(meeting -> java.time.Duration.between(meeting.getStartTime(), meeting.getEndTime()).toMinutes())
+            .sum();
+        double totalHours = totalMinutes / 60.0;
+        model.addAttribute("totalDuration", String.format("%.1f", totalHours));
+        
+        // Average attendance rate
+        double avgAttendanceRate = meetings.stream()
+            .mapToDouble(meeting -> {
+                try {
+                    return meeting.getAttendancePercentage();
+                } catch (Exception e) {
+                    return 0.0;
+                }
+            })
+            .average()
+            .orElse(0.0);
+        model.addAttribute("avgAttendanceRate", Math.round(avgAttendanceRate));
+        
+        // Upcoming meetings count
+        LocalDate today = LocalDate.now();
+        long upcomingCount = meetings.stream()
+            .filter(meeting -> meeting.getDate().isAfter(today) || meeting.getDate().isEqual(today))
+            .count();
+        model.addAttribute("upcomingCount", upcomingCount);
+    }
+    
+    /**
+     * Organize meetings for calendar view.
+     */
+    private void organizeMeetingsForCalendar(Model model, List<Meeting> meetings, LocalDate startDate, LocalDate endDate) {
+        // Group meetings by date
+        Map<LocalDate, List<Meeting>> meetingsByDate = meetings.stream()
+            .collect(Collectors.groupingBy(Meeting::getDate));
+        
+        model.addAttribute("meetingsByDate", meetingsByDate);
+        
+        // Calendar navigation
+        LocalDate prevMonth = startDate.minusMonths(1);
+        LocalDate nextMonth = startDate.plusMonths(1);
+        model.addAttribute("prevMonth", prevMonth.format(DateTimeFormatter.ofPattern("yyyy-MM")));
+        model.addAttribute("nextMonth", nextMonth.format(DateTimeFormatter.ofPattern("yyyy-MM")));
+        model.addAttribute("currentMonth", startDate.format(DateTimeFormatter.ofPattern("MMMM yyyy")));
+        
+        // Generate calendar grid
+        generateCalendarGrid(model, startDate, endDate, meetingsByDate);
+    }
+    
+    /**
+     * Generate calendar grid for display.
+     */
+    private void generateCalendarGrid(Model model, LocalDate startDate, LocalDate endDate, Map<LocalDate, List<Meeting>> meetingsByDate) {
+        // Start from the first day of the week containing startDate
+        LocalDate gridStart = startDate.with(java.time.DayOfWeek.MONDAY);
+        
+        // End at the last day of the week containing endDate
+        LocalDate gridEnd = endDate.with(java.time.DayOfWeek.SUNDAY);
+        
+        List<List<Map<String, Object>>> calendarWeeks = new java.util.ArrayList<>();
+        LocalDate currentDate = gridStart;
+        
+        while (!currentDate.isAfter(gridEnd)) {
+            List<Map<String, Object>> week = new java.util.ArrayList<>();
+            
+            for (int day = 0; day < 7; day++) {
+                Map<String, Object> dayData = new HashMap<>();
+                dayData.put("date", currentDate);
+                dayData.put("dayOfMonth", currentDate.getDayOfMonth());
+                dayData.put("isCurrentMonth", !currentDate.isBefore(startDate) && !currentDate.isAfter(endDate));
+                dayData.put("isToday", currentDate.equals(LocalDate.now()));
+                dayData.put("meetings", meetingsByDate.getOrDefault(currentDate, List.of()));
+                
+                week.add(dayData);
+                currentDate = currentDate.plusDays(1);
+            }
+            
+            calendarWeeks.add(week);
+        }
+        
+        model.addAttribute("calendarWeeks", calendarWeeks);
+    }
+    
+    /**
+     * Add upcoming meeting specific data.
+     */
+    private void addUpcomingMeetingData(Model model, List<Meeting> meetings) {
+        LocalDate today = LocalDate.now();
+        
+        // Today's meetings
+        List<Meeting> todaysMeetings = meetings.stream()
+            .filter(meeting -> meeting.getDate().equals(today))
+            .collect(Collectors.toList());
+        model.addAttribute("todaysMeetings", todaysMeetings);
+        
+        // This week's meetings
+        LocalDate weekEnd = today.plusDays(7);
+        List<Meeting> thisWeeksMeetings = meetings.stream()
+            .filter(meeting -> meeting.getDate().isAfter(today) && !meeting.getDate().isAfter(weekEnd))
+            .collect(Collectors.toList());
+        model.addAttribute("thisWeeksMeetings", thisWeeksMeetings);
+        
+        // Next meeting
+        Meeting nextMeeting = meetings.stream()
+            .filter(meeting -> meeting.getDate().isAfter(today) || 
+                             (meeting.getDate().equals(today) && meeting.getStartTime().isAfter(LocalTime.now())))
+            .min((m1, m2) -> {
+                int dateCompare = m1.getDate().compareTo(m2.getDate());
+                return dateCompare != 0 ? dateCompare : m1.getStartTime().compareTo(m2.getStartTime());
+            })
+            .orElse(null);
+        model.addAttribute("nextMeeting", nextMeeting);
+    }
+    
+    /**
+     * Load overview tab data.
+     */
+    private void loadOverviewTabData(Model model, Meeting meeting) {
+        // Basic meeting information already in model
+        
+        // Calculate meeting duration
+        long durationMinutes = java.time.Duration.between(meeting.getStartTime(), meeting.getEndTime()).toMinutes();
+        model.addAttribute("durationMinutes", durationMinutes);
+        model.addAttribute("durationHours", String.format("%.1f", durationMinutes / 60.0));
+        
+        // Meeting status
+        LocalDate today = LocalDate.now();
+        LocalTime now = LocalTime.now();
+        String status;
+        
+        if (meeting.getDate().isBefore(today)) {
+            status = "completed";
+        } else if (meeting.getDate().equals(today)) {
+            if (now.isBefore(meeting.getStartTime())) {
+                status = "today-upcoming";
+            } else if (now.isAfter(meeting.getEndTime())) {
+                status = "today-completed";
+            } else {
+                status = "in-progress";
+            }
+        } else {
+            status = "upcoming";
+        }
+        model.addAttribute("meetingStatus", status);
+        
+        // Time until meeting (if upcoming)
+        if ("upcoming".equals(status) || "today-upcoming".equals(status)) {
+            long daysUntil = java.time.temporal.ChronoUnit.DAYS.between(today, meeting.getDate());
+            model.addAttribute("daysUntilMeeting", daysUntil);
+        }
+    }
+    
+    /**
+     * Load attendance tab data.
+     */
+    private void loadAttendanceTabData(Model model, Meeting meeting) {
+        try {
+            List<Attendance> attendanceRecords = attendanceService.findByMeeting(meeting);
+            model.addAttribute("attendanceRecords", attendanceRecords);
+            
+            // Attendance statistics
+            long presentCount = attendanceRecords.stream().filter(Attendance::isPresent).count();
+            long absentCount = attendanceRecords.size() - presentCount;
+            double attendanceRate = attendanceRecords.size() > 0 ? 
+                (double) presentCount / attendanceRecords.size() * 100 : 0;
+            
+            model.addAttribute("presentCount", presentCount);
+            model.addAttribute("absentCount", absentCount);
+            model.addAttribute("totalMembers", attendanceRecords.size());
+            model.addAttribute("attendanceRate", Math.round(attendanceRate));
+            
+            // Group by subteams for better organization
+            Map<String, List<Attendance>> attendanceBySubteam = attendanceRecords.stream()
+                .collect(Collectors.groupingBy(attendance -> 
+                    attendance.getMember().getSubteam() != null ? 
+                    attendance.getMember().getSubteam().getName() : "Unassigned"));
+            
+            model.addAttribute("attendanceBySubteam", attendanceBySubteam);
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Failed to load attendance data", e);
+            model.addAttribute("attendanceRecords", List.of());
+            model.addAttribute("presentCount", 0);
+            model.addAttribute("absentCount", 0);
+            model.addAttribute("totalMembers", 0);
+            model.addAttribute("attendanceRate", 0);
+        }
+    }
+    
+    /**
+     * Load notes tab data.
+     */
+    private void loadNotesTabData(Model model, Meeting meeting) {
+        // Notes are already part of the meeting object
+        
+        // Add note editing capability check
+        model.addAttribute("canEditNotes", hasRole("MENTOR") || hasRole("ADMIN"));
+        
+        // Parse notes for better display (simple line breaks)
+        if (meeting.getNotes() != null) {
+            String[] noteLines = meeting.getNotes().split("\n");
+            model.addAttribute("noteLines", noteLines);
+        }
+    }
+    
+    /**
+     * Add meeting detail statistics.
+     */
+    private void addMeetingDetailStatistics(Model model, Meeting meeting) {
+        try {
+            // Get attendance data
+            List<Attendance> attendanceRecords = attendanceService.findByMeeting(meeting);
+            
+            if (!attendanceRecords.isEmpty()) {
+                // Present/absent counts
+                long presentCount = attendanceRecords.stream().filter(Attendance::isPresent).count();
+                model.addAttribute("detailPresentCount", presentCount);
+                model.addAttribute("detailAbsentCount", attendanceRecords.size() - presentCount);
+                
+                // Average attendance duration for present members
+                double avgDuration = attendanceRecords.stream()
+                    .filter(Attendance::isPresent)
+                    .mapToLong(Attendance::getDurationMinutes)
+                    .average()
+                    .orElse(0.0);
+                model.addAttribute("avgAttendanceDuration", String.format("%.0f", avgDuration));
+                
+                // Attendance by role
+                long leadersPresentCount = attendanceRecords.stream()
+                    .filter(att -> att.isPresent() && att.getMember().isLeader())
+                    .count();
+                model.addAttribute("leadersPresentCount", leadersPresentCount);
+            }
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Failed to load meeting detail statistics", e);
+        }
+    }
+    
+    /**
+     * Load form options for meeting creation/editing.
+     */
+    private void loadMeetingFormOptions(Model model) {
+        try {
+            // Projects
+            List<Project> projects = projectService.findAll();
+            model.addAttribute("projectOptions", projects);
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Failed to load meeting form options", e);
+            model.addAttribute("projectOptions", List.of());
+        }
+    }
+    
+    /**
+     * Add helpful defaults and suggestions for meeting forms.
+     */
+    private void addMeetingFormHelpers(Model model) {
+        model.addAttribute("commonTimes", List.of(
+            Map.of("time", "15:30", "label", "3:30 PM (After School)"),
+            Map.of("time", "16:00", "label", "4:00 PM"),
+            Map.of("time", "16:30", "label", "4:30 PM"),
+            Map.of("time", "17:00", "label", "5:00 PM"),
+            Map.of("time", "18:00", "label", "6:00 PM"),
+            Map.of("time", "19:00", "label", "7:00 PM (Evening)")
+        ));
+        
+        model.addAttribute("commonDurations", List.of(
+            Map.of("hours", 1, "label", "1 hour"),
+            Map.of("hours", 1.5, "label", "1.5 hours"),
+            Map.of("hours", 2, "label", "2 hours"),
+            Map.of("hours", 2.5, "label", "2.5 hours"),
+            Map.of("hours", 3, "label", "3 hours")
+        ));
+    }
+    
+    /**
+     * Check for scheduling conflicts.
+     */
+    private void checkSchedulingConflicts(Model model, LocalDate date, LocalTime startTime, LocalTime endTime) {
+        checkSchedulingConflicts(model, date, startTime, endTime, null);
+    }
+    
+    /**
+     * Check for scheduling conflicts, excluding a specific meeting.
+     */
+    private void checkSchedulingConflicts(Model model, LocalDate date, LocalTime startTime, LocalTime endTime, Long excludeMeetingId) {
+        try {
+            if (date != null && startTime != null && endTime != null) {
+                List<Meeting> allMeetings = meetingService.findByDate(date);
+                
+                List<Meeting> conflicts = allMeetings.stream()
+                    .filter(meeting -> excludeMeetingId == null || !meeting.getId().equals(excludeMeetingId))
+                    .filter(meeting -> {
+                        // Check for time overlap
+                        return !(endTime.isBefore(meeting.getStartTime()) || startTime.isAfter(meeting.getEndTime()));
+                    })
+                    .collect(Collectors.toList());
+                
+                if (!conflicts.isEmpty()) {
+                    model.addAttribute("hasConflicts", true);
+                    model.addAttribute("conflicts", conflicts);
+                    addWarningMessage(model, 
+                        "Warning: " + conflicts.size() + " scheduling conflict(s) detected on this date and time.");
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Failed to check scheduling conflicts", e);
+        }
+    }
+    
+    /**
+     * Initialize attendance records for all team members.
+     */
+    private void initializeAttendanceRecords(Meeting meeting) {
+        try {
+            List<TeamMember> allMembers = teamMemberService.findAll();
+            
+            for (TeamMember member : allMembers) {
+                // Create attendance record with default absent status
+                attendanceService.createAttendance(meeting.getId(), member.getId(), false);
+            }
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Failed to initialize attendance records", e);
+        }
+    }
+    
+    /**
+     * Validate meeting data for creation/editing.
+     */
+    private void validateMeetingData(Meeting meeting, BindingResult result) {
+        // Date validation
+        if (meeting.getDate() == null) {
+            result.rejectValue("date", "required", "Meeting date is required");
+        }
+        
+        // Time validation
+        if (meeting.getStartTime() == null) {
+            result.rejectValue("startTime", "required", "Start time is required");
+        }
+        
+        if (meeting.getEndTime() == null) {
+            result.rejectValue("endTime", "required", "End time is required");
+        }
+        
+        if (meeting.getStartTime() != null && meeting.getEndTime() != null) {
+            if (meeting.getEndTime().isBefore(meeting.getStartTime())) {
+                result.rejectValue("endTime", "invalid", "End time cannot be before start time");
+            }
+            
+            if (meeting.getStartTime().equals(meeting.getEndTime())) {
+                result.rejectValue("endTime", "invalid", "End time cannot be the same as start time");
+            }
+            
+            // Check for reasonable duration (not more than 8 hours)
+            long durationMinutes = java.time.Duration.between(meeting.getStartTime(), meeting.getEndTime()).toMinutes();
+            if (durationMinutes > 480) { // 8 hours
+                result.rejectValue("endTime", "invalid", "Meeting duration cannot exceed 8 hours");
+            }
+        }
+        
+        // Project validation
+        if (meeting.getProject() == null) {
+            result.rejectValue("project", "required", "Project is required");
+        }
+    }
+    
+    /**
+     * Add warnings for meeting editing.
+     */
+    private void addMeetingEditWarnings(Model model, Meeting meeting) {
+        try {
+            List<Attendance> attendanceRecords = attendanceService.findByMeeting(meeting);
+            
+            if (!attendanceRecords.isEmpty()) {
+                long recordedAttendance = attendanceRecords.stream()
+                    .filter(Attendance::isPresent)
+                    .count();
+                
+                if (recordedAttendance > 0) {
+                    model.addAttribute("hasRecordedAttendance", true);
+                    model.addAttribute("recordedAttendanceCount", recordedAttendance);
+                    addWarningMessage(model, 
+                        "This meeting has recorded attendance for " + recordedAttendance + " members. " +
+                        "Changing the meeting details may affect attendance reporting.");
+                }
+            }
+            
+            // Check if meeting is in the past
+            if (meeting.getDate().isBefore(LocalDate.now())) {
+                addWarningMessage(model, "This meeting is in the past. Consider the impact on historical records.");
+            }
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Failed to load edit warnings", e);
+        }
+    }
+    
+    /**
+     * Add deletion impact information.
+     */
+    private void addMeetingDeletionImpactInfo(Model model, Meeting meeting) {
+        try {
+            List<Attendance> attendanceRecords = attendanceService.findByMeeting(meeting);
+            model.addAttribute("attendanceRecordCount", attendanceRecords.size());
+            
+            long recordedAttendance = attendanceRecords.stream()
+                .filter(Attendance::isPresent)
+                .count();
+            model.addAttribute("recordedAttendanceCount", recordedAttendance);
+            
+            model.addAttribute("isCompletedMeeting", meeting.getDate().isBefore(LocalDate.now()));
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Failed to load deletion impact info", e);
+            model.addAttribute("attendanceRecordCount", 0);
+            model.addAttribute("recordedAttendanceCount", 0);
+        }
+    }
+    
+    /**
+     * Format meeting title for display.
+     */
+    private String formatMeetingTitle(Meeting meeting) {
+        return String.format("%s - %s", 
+            meeting.getProject().getName(),
+            meeting.getDate().format(DATE_FORMATTER));
+    }
+    
+    /**
+     * Format time for display.
+     */
+    private String formatTime(LocalTime time) {
+        return time != null ? time.format(TIME_FORMATTER) : "";
+    }
+    
+    /**
+     * Parse time from HTML time input.
+     */
+    private LocalTime parseTimeFromInput(String timeString) {
+        if (timeString == null || timeString.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return LocalTime.parse(timeString, TIME_INPUT_FORMATTER);
+        } catch (Exception e) {
+            LOGGER.warning("Failed to parse time: " + timeString);
+            return null;
+        }
+    }
+    
+    /**
+     * Helper method to escape CSV values.
+     */
+    private String escapeCSV(String value) {
+        if (value == null) {
+            return "";
+        }
+        
+        // Escape quotes and wrap in quotes if necessary
+        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        
+        return value;
+    }
+}
