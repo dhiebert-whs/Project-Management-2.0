@@ -1,9 +1,9 @@
-# FRC Project Management System - Main Application Configuration
-# Version 2.0.0 - Spring Boot Migration
+# FRC Project Management System - Enhanced Application Configuration
+# Version 2.0.0 - Phase 2B: COPPA Compliance & Security
 #
-# This configuration file replaces the previous JavaFX-based setup with
-# Spring Boot web application settings while preserving the existing
-# database and service layer infrastructure.
+# This configuration adds comprehensive security features including
+# COPPA compliance for users under 13, multi-factor authentication
+# for mentors, and enhanced audit logging capabilities.
 
 spring:
   application:
@@ -13,22 +13,20 @@ spring:
   profiles:
     active: development
     
-  # JPA Configuration (preserves existing database schema)
+  # JPA Configuration (enhanced for audit logging)
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: false
     properties:
       hibernate:
-        # ✅ REMOVED: Explicit dialect (let Spring Boot auto-detect)
         format_sql: true
         jdbc:
           time_zone: UTC
         connection:
           provider_class: org.hibernate.hikaricp.internal.HikariCPConnectionProvider
-        # ✅ FIXED: Proper second-level cache configuration
         cache:
-          use_second_level_cache: false  # Disable for simplicity
+          use_second_level_cache: false
           use_query_cache: false
     defer-datasource-initialization: true
     
@@ -66,19 +64,39 @@ spring:
         cachecontrol:
           max-age: 86400
         
-  # Security Configuration
+  # Enhanced Security Configuration
   security:
     user:
-      name: admin
-      password: admin   # Changed in production profile
+      name: ${ADMIN_USERNAME:admin}
+      password: ${ADMIN_PASSWORD:admin}   # Changed in production
       roles: ADMIN
     
-  # Session Management
+  # Session Management (enhanced for role-based timeouts)
   session:
-    store-type: none
-    timeout: 30m      # 30 minute default session timeout
+    store-type: jdbc
+    timeout: 30m      # Default timeout
+    cookie:
+      name: FRCPM_SESSION
+      http-only: true
+      secure: ${COOKIE_SECURE:false}
+      same-site: strict
+      
+  # Mail Configuration for COPPA notifications
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          ssl:
+            trust: "*"
 
-# Server Configuration
+# Server Configuration (enhanced security headers)
 server:
   port: 8080
   servlet:
@@ -88,17 +106,21 @@ server:
       cookie:
         name: FRCPM_SESSION
         http-only: true
-        secure: false   # Set to true in production
+        secure: ${COOKIE_SECURE:false}
   error:
     include-message: always
     include-binding-errors: always
     include-stacktrace: on_param
     include-exception: false
+  
+  # Security headers
+  forward-headers-strategy: framework
 
-# Logging Configuration
+# Enhanced Logging Configuration
 logging:
   level:
     org.frcpm: INFO
+    org.frcpm.security: DEBUG
     org.springframework.security: WARN
     org.hibernate.SQL: WARN
     org.hibernate.type.descriptor.sql.BasicBinder: WARN
@@ -115,12 +137,14 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,auditevents
       base-path: /actuator
   endpoint:
     health:
       show-details: when-authorized
       show-components: always
+    auditevents:
+      enabled: true
   info:
     env:
       enabled: true
@@ -135,18 +159,82 @@ info:
   migration:
     from: JavaFX MVVM Application
     to: Spring Boot Web Application
-    phase: "Phase 1 - Foundation & Web Framework Setup"
+    phase: "Phase 2B - COPPA Compliance & Security"
+  security:
+    features:
+      - "COPPA Compliance for users under 13"
+      - "Multi-factor authentication for mentors"
+      - "Role-based access control"
+      - "Comprehensive audit logging"
+      - "Session security"
     
-# FRC-Specific Application Properties
+# FRC-Specific Application Properties (Enhanced)
 app:
   name: FRC Project Management System
   version: 2.0.0
   description: Project management system for FIRST Robotics Competition teams
   
-  # Team Configuration (will be moved to database in Phase 2)
+  # Team Configuration
   team:
-    default-name: "FRC Team"
-    default-number: 0
+    default-name: ${TEAM_NAME:FRC Team}
+    default-number: ${TEAM_NUMBER:0}
+    contact-email: ${TEAM_EMAIL:team@example.com}
+    
+  # Security Configuration
+  security:
+    # Password requirements
+    password:
+      min-length: 8
+      require-uppercase: true
+      require-lowercase: true
+      require-numbers: true
+      require-special-chars: false
+      max-age-days: 90
+    
+    # Session configuration
+    session:
+      student-timeout: 900     # 15 minutes for students
+      mentor-timeout: 1800     # 30 minutes for mentors
+      admin-timeout: 1800      # 30 minutes for admins
+      parent-timeout: 1800     # 30 minutes for parents
+      remember-me-validity: 86400  # 24 hours
+    
+    # MFA Configuration
+    mfa:
+      issuer: "FRC Project Management"
+      token-length: 6
+      window-size: 1
+      secret-length: 20
+      qr-code-size: 200
+      
+    # Account lockout settings
+    lockout:
+      max-attempts: 5
+      lockout-duration: 300    # 5 minutes
+      
+  # COPPA Compliance Configuration
+  coppa:
+    enabled: true
+    age-threshold: 13
+    consent-email-template: classpath:templates/email/parental-consent.html
+    consent-url-base: ${BASE_URL:http://localhost:8080}/coppa/consent
+    consent-expiry-days: 30
+    data-retention-days: 2555  # 7 years as per COPPA
+    reminder-interval-days: 7
+    
+  # Audit Configuration
+  audit:
+    enabled: true
+    retention-days: 2555       # 7 years for compliance
+    coppa-log-all: true        # Log all access to COPPA-protected data
+    security-events: true
+    cleanup-interval-hours: 24
+    
+  # Email Configuration
+  email:
+    from-address: ${FROM_EMAIL:noreply@frcteam.org}
+    from-name: ${FROM_NAME:FRC Project Management System}
+    support-email: ${SUPPORT_EMAIL:support@frcteam.org}
     
   # Build Season Configuration
   build-season:
@@ -179,17 +267,57 @@ app:
     excel-enabled: true
     json-enabled: true
     
-  # Chart Configuration (preserves Chart-FX integration)
+  # Chart Configuration
   charts:
     gantt-enabled: true
     metrics-enabled: true
     default-chart-height: 400
-    
+
 # Spring Boot Actuator Health Indicators
-# (Useful for deployment monitoring)
 health:
   database:
     enabled: true
   diskspace:
     enabled: true
     threshold: 100MB
+  mail:
+    enabled: true
+
+# Environment Variables Documentation
+# The following environment variables can be set for production deployment:
+#
+# Required for Production:
+#   ADMIN_USERNAME - Admin user login name
+#   ADMIN_PASSWORD - Secure admin password
+#   
+# Team Configuration:
+#   TEAM_NAME - FRC team name
+#   TEAM_NUMBER - FRC team number
+#   TEAM_EMAIL - Team contact email
+#   
+# Security Configuration:
+#   COOKIE_SECURE - Set to true if using HTTPS
+#   BASE_URL - Full base URL for the application
+#   
+# Email Configuration:
+#   MAIL_HOST - SMTP server hostname
+#   MAIL_PORT - SMTP server port
+#   MAIL_USERNAME - SMTP username
+#   MAIL_PASSWORD - SMTP password
+#   FROM_EMAIL - Email address for outgoing emails
+#   FROM_NAME - Display name for outgoing emails
+#   SUPPORT_EMAIL - Support contact email
+#
+# Example Production Setup:
+#   export ADMIN_USERNAME=frcadmin
+#   export ADMIN_PASSWORD=$(openssl rand -base64 32)
+#   export TEAM_NAME="Robotics Warriors"
+#   export TEAM_NUMBER=1234
+#   export TEAM_EMAIL=team1234@frcteam.org
+#   export COOKIE_SECURE=true
+#   export BASE_URL=https://frcpm.yourteam.org
+#   export MAIL_HOST=smtp.gmail.com
+#   export MAIL_USERNAME=noreply@frcteam.org
+#   export MAIL_PASSWORD=your-app-password
+#   export FROM_EMAIL=noreply@frcteam.org
+#   export SUPPORT_EMAIL=support@frcteam.org

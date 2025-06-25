@@ -1,3 +1,5 @@
+// src/main/java/org/frcpm/models/TeamMember.java (Updated for User Integration)
+
 package org.frcpm.models;
 
 import jakarta.persistence.*;
@@ -5,8 +7,20 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Entity class representing a team member in the FRC Project Management System.
- * This corresponds to the TeamMember model in the Django application.
+ * Enhanced TeamMember entity with User authentication integration.
+ * 
+ * This entity represents the FRC team member profile information,
+ * now linked to the User authentication system for comprehensive
+ * user management and COPPA compliance.
+ * 
+ * Key Changes in Phase 2B:
+ * - Added one-to-one relationship with User entity
+ * - Preserved all existing functionality for backward compatibility
+ * - Enhanced with authentication-aware methods
+ * 
+ * @author FRC Project Management Team
+ * @version 2.0.0
+ * @since Phase 2B - Enhanced with User Integration
  */
 @Entity
 @Table(name = "team_members")
@@ -16,6 +30,12 @@ public class TeamMember {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
+    // Authentication relationship (new in Phase 2B)
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", unique = true)
+    private User user;
+    
+    // Core profile information (preserved from Phase 1/2A)
     @Column(name = "username", length = 150, nullable = false, unique = true)
     private String username;
     
@@ -37,14 +57,15 @@ public class TeamMember {
     @Column(name = "is_leader")
     private boolean leader;
     
+    // Relationships (preserved from Phase 1/2A)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subteam_id")
     private Subteam subteam;
     
-    @ManyToMany(mappedBy = "assignedTo")
+    @ManyToMany(mappedBy = "assignedTo", fetch = FetchType.LAZY)
     private Set<Task> assignedTasks = new HashSet<>();
     
-    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private Set<Attendance> attendances = new HashSet<>();
     
     // Constructors
@@ -60,7 +81,126 @@ public class TeamMember {
         this.email = email;
     }
     
-    // Getters and Setters
+    // Enhanced business logic methods (Phase 2B additions)
+    
+    /**
+     * Determines if this team member has authentication enabled.
+     * 
+     * @return true if linked to a User account
+     */
+    public boolean hasAuthentication() {
+        return user != null;
+    }
+    
+    /**
+     * Gets the authentication role if available.
+     * 
+     * @return UserRole or null if no authentication
+     */
+    public UserRole getAuthenticationRole() {
+        return user != null ? user.getRole() : null;
+    }
+    
+    /**
+     * Determines if this member can perform mentor-level actions.
+     * 
+     * @return true if has mentor privileges
+     */
+    public boolean canMentor() {
+        return leader || (user != null && user.getRole().isMentor());
+    }
+    
+    /**
+     * Determines if this member requires COPPA compliance.
+     * 
+     * @return true if user is under 13 and requires protection
+     */
+    public boolean requiresCOPPACompliance() {
+        return user != null && user.requiresCOPPACompliance();
+    }
+    
+    /**
+     * Gets display name prioritizing authentication data.
+     * 
+     * @return best available full name
+     */
+    public String getDisplayName() {
+        if (user != null) {
+            return user.getFullName();
+        }
+        return getFullName();
+    }
+    
+    /**
+     * Gets primary email prioritizing authentication data.
+     * 
+     * @return best available email address
+     */
+    public String getPrimaryEmail() {
+        if (user != null) {
+            return user.getEmail();
+        }
+        return email;
+    }
+    
+    // Preserved business logic methods (Phase 1/2A compatibility)
+    
+    public String getFullName() {
+        if (firstName != null && lastName != null) {
+            return firstName + " " + lastName;
+        } else if (firstName != null) {
+            return firstName;
+        } else if (lastName != null) {
+            return lastName;
+        } else {
+            return username;
+        }
+    }
+    
+    public void addAttendance(Attendance attendance) {
+        attendances.add(attendance);
+        attendance.setMember(this);
+    }
+    
+    public void removeAttendance(Attendance attendance) {
+        attendances.remove(attendance);
+        attendance.setMember(null);
+    }
+    
+    // Data synchronization methods (Phase 2B helpers)
+    
+    /**
+     * Synchronizes profile data from linked User account.
+     * This ensures consistency between authentication and profile data.
+     */
+    public void syncFromUser() {
+        if (user != null) {
+            this.username = user.getUsername();
+            this.firstName = user.getFirstName();
+            this.lastName = user.getLastName();
+            this.email = user.getEmail();
+            
+            // Determine leadership based on role
+            if (user.getRole() != null) {
+                this.leader = user.getRole().isMentor();
+            }
+        }
+    }
+    
+    /**
+     * Synchronizes data to linked User account.
+     * Updates authentication data from profile changes.
+     */
+    public void syncToUser() {
+        if (user != null) {
+            user.setUsername(this.username);
+            user.setFirstName(this.firstName);
+            user.setLastName(this.lastName);
+            user.setEmail(this.email);
+        }
+    }
+    
+    // Standard getters and setters (preserved for compatibility)
     
     public Long getId() {
         return id;
@@ -70,12 +210,29 @@ public class TeamMember {
         this.id = id;
     }
 
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+        if (user != null) {
+            user.setTeamMember(this);
+            // Auto-sync basic data
+            syncFromUser();
+        }
+    }
+
     public String getUsername() {
         return username;
     }
 
     public void setUsername(String username) {
         this.username = username;
+        // Sync to user if linked
+        if (user != null) {
+            user.setUsername(username);
+        }
     }
 
     public String getFirstName() {
@@ -84,6 +241,10 @@ public class TeamMember {
 
     public void setFirstName(String firstName) {
         this.firstName = firstName;
+        // Sync to user if linked
+        if (user != null) {
+            user.setFirstName(firstName);
+        }
     }
 
     public String getLastName() {
@@ -92,6 +253,10 @@ public class TeamMember {
 
     public void setLastName(String lastName) {
         this.lastName = lastName;
+        // Sync to user if linked
+        if (user != null) {
+            user.setLastName(lastName);
+        }
     }
 
     public String getEmail() {
@@ -100,6 +265,10 @@ public class TeamMember {
 
     public void setEmail(String email) {
         this.email = email;
+        // Sync to user if linked
+        if (user != null) {
+            user.setEmail(email);
+        }
     }
 
     public String getPhone() {
@@ -150,32 +319,8 @@ public class TeamMember {
         this.attendances = attendances;
     }
     
-    // Helper methods
-    
-    public String getFullName() {
-        if (firstName != null && lastName != null) {
-            return firstName + " " + lastName;
-        } else if (firstName != null) {
-            return firstName;
-        } else if (lastName != null) {
-            return lastName;
-        } else {
-            return username;
-        }
-    }
-    
-    public void addAttendance(Attendance attendance) {
-        attendances.add(attendance);
-        attendance.setMember(this);
-    }
-    
-    public void removeAttendance(Attendance attendance) {
-        attendances.remove(attendance);
-        attendance.setMember(null);
-    }
-    
     @Override
     public String toString() {
-        return getFullName();
+        return getDisplayName();
     }
 }
