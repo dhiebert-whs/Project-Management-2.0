@@ -4,6 +4,7 @@ package org.frcpm.services.impl;
 
 import org.frcpm.models.User;
 import org.frcpm.models.UserRole;
+import org.frcpm.repositories.spring.UserRepository;
 import org.frcpm.services.AuditService;
 import org.frcpm.services.COPPAComplianceService;
 import org.frcpm.services.UserService;
@@ -26,6 +27,9 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+
+import org.frcpm.repositories.spring.UserRepository;
+import org.frcpm.services.EmailService;
 
 /**
  * Comprehensive unit tests for COPPAComplianceServiceImpl - Phase 2B Testing
@@ -56,6 +60,12 @@ class COPPAComplianceServiceImplTest {
     
     @Mock
     private Authentication authentication;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private EmailService emailService;
     
     @InjectMocks
     private COPPAComplianceServiceImpl coppaService;
@@ -70,12 +80,19 @@ class COPPAComplianceServiceImplTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         
-        // Use lenient() for stubs that might not be used in every test
-        lenient().when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        lenient().when(auditService.logCOPPAAccess(any(), any(), anyString(), anyString())).thenReturn(null);
-        lenient().when(emailService.sendParentalConsentRequest(any(), anyString())).thenReturn(true);
+        // Create test users
+        regularStudent = createUser("regular", UserRole.STUDENT, 16, "parent1@frcteam.org", false);
+        minorStudent = createUser("minor", UserRole.STUDENT, 12, "parent2@frcteam.org", true);
+        mentor = createUser("mentor", UserRole.MENTOR, 30, null, false);
+        admin = createUser("admin", UserRole.ADMIN, 35, null, false);
+        parent = createUser("parent", UserRole.PARENT, 40, null, false);
         
-        coppaService = new COPPAComplianceServiceImpl(userRepository, auditService, emailService);
+        // Setup security context
+        SecurityContextHolder.setContext(securityContext);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        
+        // NOTE: The @InjectMocks annotation will handle creating the service with proper dependencies
+        // Remove the manual constructor call that was causing issues
     }
     
     @Nested
@@ -613,5 +630,10 @@ class COPPAComplianceServiceImplTest {
         user.setEnabled(true);
         user.setCreatedAt(LocalDateTime.now());
         return user;
+    }
+    
+    // Add this overloaded version for simpler calls
+    private User createUser(String username, UserRole role, Integer age) {
+        return createUser(username, role, age, null, age < 13);
     }
 }

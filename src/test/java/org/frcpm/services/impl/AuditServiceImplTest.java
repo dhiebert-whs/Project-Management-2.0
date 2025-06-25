@@ -312,8 +312,8 @@ class AuditServiceImplTest {
             RequestContextHolder.setRequestAttributes(attributes);
             
             try {
-                // When
-                auditService.logUserAction(user, "TEST_ACTION", "Test description");
+                // When - FIXED: Change from logUserAction to logAction
+                auditService.logAction(user, "TEST_ACTION", "Test description");
                 
                 // Then
                 ArgumentCaptor<AuditLog> logCaptor = ArgumentCaptor.forClass(AuditLog.class);
@@ -326,7 +326,7 @@ class AuditServiceImplTest {
                 RequestContextHolder.resetRequestAttributes();
             }
         }
-
+    
         @Test
         @DisplayName("Should handle X-Forwarded-For header")
         void shouldHandleXForwardedForHeader() {
@@ -342,8 +342,8 @@ class AuditServiceImplTest {
             RequestContextHolder.setRequestAttributes(attributes);
             
             try {
-                // When
-                auditService.logUserAction(user, "TEST_ACTION", "Test description");
+                // When - FIXED: Change from logUserAction to logAction
+                auditService.logAction(user, "TEST_ACTION", "Test description");
                 
                 // Then
                 ArgumentCaptor<AuditLog> logCaptor = ArgumentCaptor.forClass(AuditLog.class);
@@ -355,7 +355,7 @@ class AuditServiceImplTest {
                 RequestContextHolder.resetRequestAttributes();
             }
         }
-
+    
         @Test
         @DisplayName("Should handle X-Real-IP header")
         void shouldHandleXRealIPHeader() {
@@ -371,8 +371,8 @@ class AuditServiceImplTest {
             RequestContextHolder.setRequestAttributes(attributes);
             
             try {
-                // When
-                auditService.logUserAction(user, "TEST_ACTION", "Test description");
+                // When - FIXED: Change from logUserAction to logAction
+                auditService.logAction(user, "TEST_ACTION", "Test description");
                 
                 // Then
                 ArgumentCaptor<AuditLog> logCaptor = ArgumentCaptor.forClass(AuditLog.class);
@@ -384,7 +384,7 @@ class AuditServiceImplTest {
                 RequestContextHolder.resetRequestAttributes();
             }
         }
-
+    
         @Test
         @DisplayName("Should truncate long user agent strings")
         void shouldTruncateLongUserAgentStrings() {
@@ -402,8 +402,8 @@ class AuditServiceImplTest {
             RequestContextHolder.setRequestAttributes(attributes);
             
             try {
-                // When
-                auditService.logUserAction(user, "TEST_ACTION", "Test description");
+                // When - FIXED: Change from logUserAction to logAction
+                auditService.logAction(user, "TEST_ACTION", "Test description");
                 
                 // Then
                 ArgumentCaptor<AuditLog> logCaptor = ArgumentCaptor.forClass(AuditLog.class);
@@ -417,6 +417,8 @@ class AuditServiceImplTest {
                 RequestContextHolder.resetRequestAttributes();
             }
         }
+        
+        // This method already uses logAction correctly, so no change needed
         @Test
         @DisplayName("Should handle missing request context gracefully")
         void shouldHandleMissingRequestContextGracefully() {
@@ -735,5 +737,13 @@ class AuditServiceImplTest {
         user.setAge(age);
         user.setEnabled(true);
         return user;
+    }
+
+    private User createTestUser(String username, UserRole role) {
+        return createUser(null, username, role, 18); // Default age 18 for non-age-specific tests
+    }
+    
+    private User createTestUser(String username, UserRole role, Integer age) {
+        return createUser(null, username, role, age);
     }
 }

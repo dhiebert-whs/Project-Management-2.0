@@ -5,6 +5,7 @@ package org.frcpm.services.impl;
 import org.frcpm.models.User;
 import org.frcpm.services.AuditService;
 import org.frcpm.services.COPPAComplianceService;
+import org.frcpm.services.EmailService;
 import org.frcpm.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -36,11 +37,15 @@ public class COPPAComplianceServiceImpl implements COPPAComplianceService {
     
     private final UserService userService;
     private final AuditService auditService;
-    
+    private final EmailService emailService; 
+
     @Autowired
-    public COPPAComplianceServiceImpl(UserService userService, AuditService auditService) {
-        this.userService = userService;
-        this.auditService = auditService;
+    public COPPAComplianceServiceImpl(UserService userService, 
+        AuditService auditService, 
+        EmailService emailService) { // Add EmailService parameter
+    this.userService = userService;
+    this.auditService = auditService;
+    this.emailService = emailService; // Add this line
     }
     
     // =========================================================================
