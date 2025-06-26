@@ -9,10 +9,12 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 
 /**
- * Audit log entity for tracking user actions and COPPA compliance.
+ * ✅ UPDATED: Audit log entity for security and COPPA compliance tracking.
  * 
- * Essential for maintaining compliance with children's privacy laws
- * by tracking all access to student data and system operations.
+ * Enhanced for Phase 2B with:
+ * - COPPA-specific logging fields
+ * - Resource tracking for data access
+ * - Enhanced audit levels for compliance
  * 
  * @author FRC Project Management Team
  * @version 2.0.0
@@ -27,52 +29,69 @@ public class AuditLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    // User who performed the action
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
     
-    // Subject user (for COPPA tracking when accessing student data)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subject_user_id")
-    private User subjectUser;
+    private User subjectUser; // User being accessed (for COPPA tracking)
     
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false)
     private String action;
     
-    @Column(columnDefinition = "TEXT")
+    @Column(length = 1000)
     private String description;
     
-    @Column(name = "ip_address", length = 45) // IPv6 compatible
+    @Column(name = "ip_address")
     private String ipAddress;
     
-    @Column(name = "user_agent", columnDefinition = "TEXT")
+    @Column(name = "user_agent", length = 500)
     private String userAgent;
-    
-    @Column(name = "session_id", length = 100)
-    private String sessionId;
     
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AuditLevel level;
     
     @CreatedDate
-    @Column(nullable = false)
+    @Column(name = "timestamp", nullable = false)
     private LocalDateTime timestamp;
     
-    // Additional metadata for compliance
-    @Column(name = "resource_type", length = 50)
-    private String resourceType; // e.g., "TeamMember", "Task", "Project"
+    // =========================================================================
+    // ✅ NEW: COPPA COMPLIANCE FIELDS
+    // =========================================================================
     
-    @Column(name = "resource_id")
-    private Long resourceId;
-    
+    /**
+     * Indicates if this log entry is relevant to COPPA compliance.
+     * Set to true for any access to data of users under 13.
+     */
     @Column(name = "coppa_relevant", nullable = false)
     private boolean coppaRelevant = false;
     
-    // Constructors
+    /**
+     * Type of resource being accessed (User, Project, Task, etc.).
+     */
+    @Column(name = "resource_type")
+    private String resourceType;
+    
+    /**
+     * ID of the specific resource being accessed.
+     */
+    @Column(name = "resource_id")
+    private Long resourceId;
+    
+    // =========================================================================
+    // CONSTRUCTORS
+    // =========================================================================
     
     public AuditLog() {}
+    
+    public AuditLog(User user, String action, String description) {
+        this.user = user;
+        this.action = action;
+        this.description = description;
+        this.level = AuditLevel.INFO;
+    }
     
     public AuditLog(User user, String action, String description, AuditLevel level) {
         this.user = user;
@@ -81,7 +100,38 @@ public class AuditLog {
         this.level = level;
     }
     
-    // Getters and setters
+    // =========================================================================
+    // BUSINESS LOGIC METHODS
+    // =========================================================================
+    
+    /**
+     * Marks this audit log as COPPA-relevant.
+     */
+    public void markAsCOPPARelevant() {
+        this.coppaRelevant = true;
+        if (this.level == AuditLevel.INFO) {
+            this.level = AuditLevel.COPPA_COMPLIANCE;
+        }
+    }
+    
+    /**
+     * Sets resource information for data access tracking.
+     */
+    public void setResourceInfo(String resourceType, Long resourceId) {
+        this.resourceType = resourceType;
+        this.resourceId = resourceId;
+    }
+    
+    /**
+     * Checks if this log entry involves access to a user under 13.
+     */
+    public boolean involvesMinor() {
+        return subjectUser != null && subjectUser.requiresCOPPACompliance();
+    }
+    
+    // =========================================================================
+    // GETTERS AND SETTERS
+    // =========================================================================
     
     public Long getId() {
         return id;
@@ -105,9 +155,9 @@ public class AuditLog {
 
     public void setSubjectUser(User subjectUser) {
         this.subjectUser = subjectUser;
-        // Auto-mark as COPPA relevant if subject is under 13
+        // Automatically mark as COPPA relevant if subject is under 13
         if (subjectUser != null && subjectUser.requiresCOPPACompliance()) {
-            this.coppaRelevant = true;
+            markAsCOPPARelevant();
         }
     }
 
@@ -143,14 +193,6 @@ public class AuditLog {
         this.userAgent = userAgent;
     }
 
-    public String getSessionId() {
-        return sessionId;
-    }
-
-    public void setSessionId(String sessionId) {
-        this.sessionId = sessionId;
-    }
-
     public AuditLevel getLevel() {
         return level;
     }
@@ -165,6 +207,16 @@ public class AuditLog {
 
     public void setTimestamp(LocalDateTime timestamp) {
         this.timestamp = timestamp;
+    }
+
+    // ✅ NEW: COPPA compliance field getters and setters
+    
+    public boolean isCoppaRelevant() {
+        return coppaRelevant;
+    }
+
+    public void setCoppaRelevant(boolean coppaRelevant) {
+        this.coppaRelevant = coppaRelevant;
     }
 
     public String getResourceType() {
@@ -182,12 +234,10 @@ public class AuditLog {
     public void setResourceId(Long resourceId) {
         this.resourceId = resourceId;
     }
-
-    public boolean isCoppaRelevant() {
-        return coppaRelevant;
-    }
-
-    public void setCoppaRelevant(boolean coppaRelevant) {
-        this.coppaRelevant = coppaRelevant;
+    
+    @Override
+    public String toString() {
+        return String.format("AuditLog{id=%d, action='%s', user='%s', level=%s, timestamp=%s, coppaRelevant=%s}", 
+                           id, action, user != null ? user.getUsername() : "null", level, timestamp, coppaRelevant);
     }
 }
