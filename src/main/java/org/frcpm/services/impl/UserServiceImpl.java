@@ -129,14 +129,11 @@ public class UserServiceImpl implements UserService {
     
     @Override
     public Optional<User> findByUsernameOrEmail(String username, String email) {
-        if ((username == null || username.trim().isEmpty()) && 
-            (email == null || email.trim().isEmpty())) {
-            return Optional.empty();
+        Optional<User> user = userRepository.findByUsername(username);
+        if (user.isPresent()) {
+            return user;
         }
-        return userRepository.findByUsernameOrEmail(
-            username != null ? username.trim() : "", 
-            email != null ? email.trim().toLowerCase() : ""
-        );
+        return userRepository.findByEmail(email);
     }
     
     // =========================================================================
@@ -262,14 +259,13 @@ public class UserServiceImpl implements UserService {
     }
     
     @Override
-    public User disableUser(Long userId) {
-        User user = findById(userId);
-        if (user == null) {
-            throw new IllegalArgumentException("User not found: " + userId);
+    public void disableUser(Long userId) {
+        Optional<User> userOpt = findById(userId);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            user.setEnabled(false);
+            save(user);
         }
-        
-        user.setEnabled(false);
-        return save(user);
     }
     
     @Override
@@ -333,60 +329,50 @@ public class UserServiceImpl implements UserService {
     
     @Override
     public List<User> findUsersRequiringParentalConsent() {
-        return userRepository.findUsersRequiringParentalConsent();
+        return userRepository.findByRequiresParentalConsentTrue();
     }
     
     @Override
     public boolean initiateParentalConsent(Long userId, String parentEmail) {
-        if (userId == null || parentEmail == null || parentEmail.trim().isEmpty()) {
-            return false;
-        }
-        
-        User user = findById(userId);
-        if (user == null || !user.requiresCOPPACompliance()) {
-            return false;
-        }
-        
-        // Generate new consent token
-        user.setParentalConsentToken(UUID.randomUUID().toString());
-        user.setParentEmail(parentEmail.trim().toLowerCase());
-        user.setRequiresParentalConsent(true);
-        
-        save(user);
-        
-        // TODO: Send email notification (will be implemented with email service)
-        LOGGER.info("Parental consent initiated for user: " + user.getUsername());
-        
-        return true;
-    }
-    
-    @Override
-    public boolean processParentalConsent(String consentToken, boolean granted) {
-        if (consentToken == null || consentToken.trim().isEmpty()) {
-            return false;
-        }
-        
-        Optional<User> userOpt = userRepository.findByParentalConsentToken(consentToken.trim());
+        Optional<User> userOpt = findById(userId);
         if (userOpt.isEmpty()) {
             return false;
         }
         
         User user = userOpt.get();
+        if (!user.requiresCOPPACompliance()) {
+            return false;
+        }
         
+        // Generate consent token
+        String token = UUID.randomUUID().toString();
+        user.setParentalConsentToken(token);
+        user.setRequiresParentalConsent(true);
+        
+        save(user);
+        
+        // Send email via EmailService
+        return emailService.sendParentalConsentRequest(user, token);
+    }
+    
+    @Override
+    public boolean processParentalConsent(String consentToken, boolean granted) {
+        Optional<User> userOpt = userRepository.findByParentalConsentToken(consentToken);
+        if (userOpt.isEmpty()) {
+            return false;
+        }
+        
+        User user = userOpt.get();
         if (granted) {
             user.setParentalConsentDate(LocalDateTime.now());
             user.setRequiresParentalConsent(false);
             user.setEnabled(true);
-            LOGGER.info("Parental consent granted for user: " + user.getUsername());
         } else {
             user.setEnabled(false);
-            LOGGER.info("Parental consent denied for user: " + user.getUsername());
         }
         
-        // Clear the consent token
-        user.setParentalConsentToken(null);
+        user.setParentalConsentToken(null); // Clear token
         save(user);
-        
         return true;
     }
     
@@ -449,7 +435,7 @@ public class UserServiceImpl implements UserService {
     
     @Override
     public long countMinorsUnder13() {
-        return userRepository.countMinorsUnder13();
+        return userRepository.countByAgeLessThan(13);
     }
     
     @Override

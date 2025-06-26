@@ -46,8 +46,13 @@ public interface UserService extends Service<User, Long> {
     List<User> findUsersRequiringMFA();
     
     // Statistics and reporting
+    long count();
     long countByRole(UserRole role);
     long countMinorsUnder13();
     long countEnabledUsers();
     List<User> findRecentlyActiveUsers(int days);
+
+
+
+
 }

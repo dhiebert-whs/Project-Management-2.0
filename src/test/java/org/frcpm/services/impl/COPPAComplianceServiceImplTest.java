@@ -4,16 +4,14 @@ package org.frcpm.services.impl;
 
 import org.frcpm.models.User;
 import org.frcpm.models.UserRole;
-import org.frcpm.repositories.spring.UserRepository;
 import org.frcpm.services.AuditService;
-import org.frcpm.services.COPPAComplianceService;
+import org.frcpm.services.EmailService;
 import org.frcpm.services.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -28,11 +26,15 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import org.frcpm.repositories.spring.UserRepository;
-import org.frcpm.services.EmailService;
-
 /**
- * Comprehensive unit tests for COPPAComplianceServiceImpl - Phase 2B Testing
+ * ✅ FIXED: Comprehensive unit tests for COPPAComplianceServiceImpl - Phase 2B Testing
+ * 
+ * Fixed Issues:
+ * 1. Removed @InjectMocks to avoid dependency injection conflicts
+ * 2. Manual service creation with proper constructor dependencies
+ * 3. Fixed method calls to match actual service interface
+ * 4. Proper authentication context mocking
+ * 5. Removed unused imports and simplified mock setup
  * 
  * Tests the complete COPPA compliance workflow including:
  * - Age-based protection detection
@@ -43,7 +45,7 @@ import org.frcpm.services.EmailService;
  * 
  * @author FRC Project Management Team
  * @version 2.0.0
- * @since Phase 2B Testing
+ * @since Phase 2B Testing - FIXED VERSION
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("COPPA Compliance Service Tests")
@@ -56,18 +58,15 @@ class COPPAComplianceServiceImplTest {
     private AuditService auditService;
     
     @Mock
+    private EmailService emailService;
+    
+    @Mock
     private SecurityContext securityContext;
     
     @Mock
     private Authentication authentication;
-
-    @Mock
-    private UserRepository userRepository;
-
-    @Mock
-    private EmailService emailService;
     
-    @InjectMocks
+    // ✅ FIXED: Manual creation instead of @InjectMocks to avoid dependency conflicts
     private COPPAComplianceServiceImpl coppaService;
     
     private User regularStudent;
@@ -91,8 +90,8 @@ class COPPAComplianceServiceImplTest {
         SecurityContextHolder.setContext(securityContext);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         
-        // NOTE: The @InjectMocks annotation will handle creating the service with proper dependencies
-        // Remove the manual constructor call that was causing issues
+        // ✅ FIXED: Manual service creation with proper dependencies
+        coppaService = new COPPAComplianceServiceImpl(userService, auditService, emailService);
     }
     
     @Nested
@@ -142,6 +141,7 @@ class COPPAComplianceServiceImplTest {
             org.frcpm.security.UserPrincipal userPrincipal = mock(org.frcpm.security.UserPrincipal.class);
             when(userPrincipal.getUser()).thenReturn(mentor);
             when(authentication.getPrincipal()).thenReturn(userPrincipal);
+            when(authentication.isAuthenticated()).thenReturn(true);
             
             // When
             coppaService.enforceDataMinimization(minorStudent);
@@ -181,6 +181,7 @@ class COPPAComplianceServiceImplTest {
             org.frcpm.security.UserPrincipal userPrincipal = mock(org.frcpm.security.UserPrincipal.class);
             when(userPrincipal.getUser()).thenReturn(mentor);
             when(authentication.getPrincipal()).thenReturn(userPrincipal);
+            when(authentication.isAuthenticated()).thenReturn(true);
             
             // When
             boolean result = coppaService.initiateParentalConsentProcess(minorStudent);
@@ -254,6 +255,7 @@ class COPPAComplianceServiceImplTest {
             org.frcpm.security.UserPrincipal userPrincipal = mock(org.frcpm.security.UserPrincipal.class);
             when(userPrincipal.getUser()).thenReturn(mentor);
             when(authentication.getPrincipal()).thenReturn(userPrincipal);
+            when(authentication.isAuthenticated()).thenReturn(true);
             
             // When
             coppaService.sendConsentReminder(minorStudent);
@@ -437,7 +439,7 @@ class COPPAComplianceServiceImplTest {
             
             // Then
             verify(userService, never()).disableUser(any());
-            // Reminder sending would be verified if we can mock the sendConsentReminder call
+            // Note: sendConsentReminder is called internally but doesn't verify easily in this test structure
         }
         
         @Test
@@ -452,6 +454,7 @@ class COPPAComplianceServiceImplTest {
             org.frcpm.security.UserPrincipal userPrincipal = mock(org.frcpm.security.UserPrincipal.class);
             when(userPrincipal.getUser()).thenReturn(admin);
             when(authentication.getPrincipal()).thenReturn(userPrincipal);
+            when(authentication.isAuthenticated()).thenReturn(true);
             
             // When
             coppaService.generateComplianceReport();
@@ -476,6 +479,7 @@ class COPPAComplianceServiceImplTest {
             org.frcpm.security.UserPrincipal userPrincipal = mock(org.frcpm.security.UserPrincipal.class);
             when(userPrincipal.getUser()).thenReturn(mentor);
             when(authentication.getPrincipal()).thenReturn(userPrincipal);
+            when(authentication.isAuthenticated()).thenReturn(true);
             
             // When
             coppaService.scheduleDataRetentionReview(minorStudent);
@@ -526,9 +530,10 @@ class COPPAComplianceServiceImplTest {
             org.frcpm.security.UserPrincipal userPrincipal = mock(org.frcpm.security.UserPrincipal.class);
             when(userPrincipal.getUser()).thenReturn(mentor);
             when(authentication.getPrincipal()).thenReturn(userPrincipal);
+            when(authentication.isAuthenticated()).thenReturn(true);
             
             // When
-            boolean result = ((COPPAComplianceServiceImpl) coppaService).validateAccountForActivation(minorStudent);
+            boolean result = coppaService.validateAccountForActivation(minorStudent);
             
             // Then
             assertTrue(result, "Account should be valid for activation");
@@ -548,7 +553,7 @@ class COPPAComplianceServiceImplTest {
             minorStudent.setRequiresParentalConsent(true);
             
             // When
-            boolean result = ((COPPAComplianceServiceImpl) coppaService).validateAccountForActivation(minorStudent);
+            boolean result = coppaService.validateAccountForActivation(minorStudent);
             
             // Then
             assertFalse(result, "Account should not be valid for activation without consent");
@@ -558,7 +563,7 @@ class COPPAComplianceServiceImplTest {
         @DisplayName("Should allow non-protected users to activate")
         void shouldAllowNonProtectedUsersToActivate() {
             // When
-            boolean result = ((COPPAComplianceServiceImpl) coppaService).validateAccountForActivation(regularStudent);
+            boolean result = coppaService.validateAccountForActivation(regularStudent);
             
             // Then
             assertTrue(result, "Non-protected users should always be valid for activation");
@@ -571,43 +576,37 @@ class COPPAComplianceServiceImplTest {
             minorStudent.setParentalConsentDate(LocalDateTime.now());
             minorStudent.setRequiresParentalConsent(false);
             
-            COPPAComplianceServiceImpl impl = (COPPAComplianceServiceImpl) coppaService;
-            
             // When/Then - Test various operations
-            assertTrue(impl.isDataOperationPermitted(mentor, minorStudent, "READ"), 
+            assertTrue(coppaService.isDataOperationPermitted(mentor, minorStudent, "READ"), 
                 "Mentor should be able to read consented student data");
-            assertTrue(impl.isDataOperationPermitted(mentor, minorStudent, "WRITE"), 
+            assertTrue(coppaService.isDataOperationPermitted(mentor, minorStudent, "WRITE"), 
                 "Mentor should be able to write consented student data");
-            assertFalse(impl.isDataOperationPermitted(mentor, minorStudent, "DELETE"), 
+            assertFalse(coppaService.isDataOperationPermitted(mentor, minorStudent, "DELETE"), 
                 "Only admin should be able to delete COPPA-protected data");
-            assertFalse(impl.isDataOperationPermitted(mentor, minorStudent, "SHARE"), 
+            assertFalse(coppaService.isDataOperationPermitted(mentor, minorStudent, "SHARE"), 
                 "Sharing COPPA-protected data should require special approval");
             
-            assertTrue(impl.isDataOperationPermitted(admin, minorStudent, "DELETE"), 
+            assertTrue(coppaService.isDataOperationPermitted(admin, minorStudent, "DELETE"), 
                 "Admin should be able to delete COPPA-protected data");
         }
         
         @Test
         @DisplayName("Should provide correct data retention periods")
         void shouldProvideCorrectDataRetentionPeriods() {
-            COPPAComplianceServiceImpl impl = (COPPAComplianceServiceImpl) coppaService;
-            
             // When/Then
-            assertEquals(2555, impl.getDataRetentionPeriodDays(minorStudent), 
+            assertEquals(2555, coppaService.getDataRetentionPeriodDays(minorStudent), 
                 "COPPA users should have 7-year retention period");
-            assertEquals(1825, impl.getDataRetentionPeriodDays(regularStudent), 
+            assertEquals(1825, coppaService.getDataRetentionPeriodDays(regularStudent), 
                 "Regular users should have 5-year retention period");
         }
         
         @Test
         @DisplayName("Should determine anonymization vs deletion")
         void shouldDetermineAnonymizationVsDeletion() {
-            COPPAComplianceServiceImpl impl = (COPPAComplianceServiceImpl) coppaService;
-            
             // When/Then
-            assertTrue(impl.shouldAnonymizeInsteadOfDelete(minorStudent), 
+            assertTrue(coppaService.shouldAnonymizeInsteadOfDelete(minorStudent), 
                 "COPPA users should be anonymized instead of deleted");
-            assertFalse(impl.shouldAnonymizeInsteadOfDelete(regularStudent), 
+            assertFalse(coppaService.shouldAnonymizeInsteadOfDelete(regularStudent), 
                 "Regular users can have data fully deleted");
         }
     }
