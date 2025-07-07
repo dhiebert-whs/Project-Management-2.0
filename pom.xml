@@ -193,6 +193,71 @@
                 <version>1.5.2</version>
             </dependency>
     
+
+            <!-- WebSocket and Messaging Support -->
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-websocket</artifactId>
+                <version>6.1.0</version>
+                <scope>test</scope>
+            </dependency>
+            
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-messaging</artifactId>
+                <version>6.1.0</version>
+            </dependency>
+            
+            <!-- STOMP Protocol Support for WebSocket -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-websocket</artifactId>
+            </dependency>
+            
+            <!-- Jackson for JSON Message Conversion -->
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.fasterxml.jackson.datatype</groupId>
+                <artifactId>jackson-datatype-jsr310</artifactId>
+            </dependency>
+            
+            <!-- Validation for WebSocket DTOs -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-validation</artifactId>
+            </dependency>
+            
+            <!-- Additional dependencies for PWA features (to be added in next steps) -->
+            
+            <!-- SockJS Client Support (for JavaScript client) -->
+            <!-- Note: This will be added via CDN in templates, not Maven -->
+            
+            <!-- Spring Boot Actuator for WebSocket Monitoring (optional) -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-actuator</artifactId>
+                <scope>runtime</scope>
+                <optional>true</optional>
+            </dependency>
+            
+            <!-- Testing Dependencies for WebSocket -->
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-test</artifactId>
+                <scope>test</scope>
+            </dependency>
+            
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-test</artifactId>
+                <scope>test</scope>
+            </dependency>
+            
+   
         </dependencies>
     
         <build>
