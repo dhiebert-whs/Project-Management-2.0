@@ -19,6 +19,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.frcpm.events.WebSocketEventPublisher;
+import org.frcpm.models.User;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.frcpm.security.UserPrincipal;
+import org.springframework.scheduling.annotation.Scheduled;
+
 /**
  * Spring Boot implementation of ProjectService using composition pattern.
  * Converted from inheritance to composition for architectural consistency.
@@ -32,13 +39,15 @@ public class ProjectServiceImpl implements ProjectService {
     private final ProjectRepository projectRepository;
     private final TaskRepository taskRepository;
     
-    /**
-     * Constructor injection for repositories.
-     * No @Autowired needed with single constructor.
-     */
-    public ProjectServiceImpl(ProjectRepository projectRepository, TaskRepository taskRepository) {
+    private final WebSocketEventPublisher webSocketEventPublisher;
+
+    // UPDATE CONSTRUCTOR (add WebSocketEventPublisher parameter):
+    public ProjectServiceImpl(ProjectRepository projectRepository, 
+                             TaskRepository taskRepository,
+                             WebSocketEventPublisher webSocketEventPublisher) {
         this.projectRepository = projectRepository;
         this.taskRepository = taskRepository;
+        this.webSocketEventPublisher = webSocketEventPublisher;
     }
     
     // =========================================================================
@@ -346,5 +355,49 @@ public class ProjectServiceImpl implements ProjectService {
             future.completeExceptionally(e);
             return future;
         }
+    }
+
+    /**
+     * Monitor project deadlines and send alerts.
+     * Runs every hour during business hours.
+     */
+    @Scheduled(cron = "0 0 8-18 * * MON-FRI") // Every hour from 8 AM to 6 PM, Mon-Fri
+    public void monitorProjectDeadlines() {
+        try {
+            List<Project> allProjects = findAll();
+            LocalDate today = LocalDate.now();
+            
+            for (Project project : allProjects) {
+                if (project.getHardDeadline() != null) {
+                    long daysUntilDeadline = java.time.temporal.ChronoUnit.DAYS.between(today, project.getHardDeadline());
+                    
+                    // Send alerts for deadlines in 1, 3, or 7 days
+                    if (daysUntilDeadline == 1 || daysUntilDeadline == 3 || daysUntilDeadline == 7 || daysUntilDeadline == 0) {
+                        webSocketEventPublisher.publishDeadlineAlert(project, daysUntilDeadline);
+                        LOGGER.info(String.format("Sent deadline alert for project %s: %d days remaining", 
+                                                project.getName(), daysUntilDeadline));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error monitoring project deadlines", e);
+        }
+    }
+
+    /**
+     * Gets the current user from Spring Security context.
+     * @return current user or null if not authenticated
+     */
+    private User getCurrentUser() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated() && 
+                authentication.getPrincipal() instanceof UserPrincipal) {
+                return ((UserPrincipal) authentication.getPrincipal()).getUser();
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Could not get current user from security context", e);
+        }
+        return null;
     }
 }

@@ -24,6 +24,12 @@ import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.frcpm.events.WebSocketEventPublisher;
+import org.frcpm.models.User;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.frcpm.security.UserPrincipal;
+
 /**
  * Spring Boot implementation of TaskService using composition pattern.
  * Converted from inheritance to composition for architectural consistency.
@@ -38,17 +44,21 @@ public class TaskServiceImpl implements TaskService {
     private final TaskRepository taskRepository;
     private final ProjectRepository projectRepository;
     private final ComponentRepository componentRepository;
+
+    private final WebSocketEventPublisher webSocketEventPublisher;
     
     /**
      * Constructor injection for repositories.
      * No @Autowired needed with single constructor.
      */
     public TaskServiceImpl(TaskRepository taskRepository,
-                          ProjectRepository projectRepository,
-                          ComponentRepository componentRepository) {
+            ProjectRepository projectRepository,
+            ComponentRepository componentRepository,
+            WebSocketEventPublisher webSocketEventPublisher) {
         this.taskRepository = taskRepository;
         this.projectRepository = projectRepository;
         this.componentRepository = componentRepository;
+        this.webSocketEventPublisher = webSocketEventPublisher;
     }
     
     // =========================================================================
@@ -73,8 +83,44 @@ public class TaskServiceImpl implements TaskService {
         if (entity == null) {
             throw new IllegalArgumentException("Task cannot be null");
         }
+        
         try {
-            return taskRepository.save(entity);
+            // Check if this is a new task or an update
+            boolean isNewTask = entity.getId() == null;
+            Integer oldProgress = null;
+            
+            if (!isNewTask) {
+                // Get old progress for comparison
+                Task existingTask = findById(entity.getId());
+                if (existingTask != null) {
+                    oldProgress = existingTask.getProgress();
+                }
+            }
+            
+            // Save the task
+            Task savedTask = taskRepository.save(entity);
+            
+            // Get current user for WebSocket events
+            User currentUser = getCurrentUser();
+            
+            // Publish WebSocket events
+            if (isNewTask) {
+                // New task created
+                webSocketEventPublisher.publishTaskCreation(savedTask, currentUser);
+            } else {
+                // Task updated - check if progress changed
+                if (oldProgress != null && !oldProgress.equals(savedTask.getProgress())) {
+                    webSocketEventPublisher.publishTaskProgressUpdate(savedTask, oldProgress, currentUser);
+                }
+                
+                // Check if task was completed
+                if (savedTask.isCompleted() && (oldProgress == null || oldProgress < 100)) {
+                    webSocketEventPublisher.publishTaskCompletion(savedTask, currentUser);
+                }
+            }
+            
+            return savedTask;
+            
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error saving task", e);
             throw new RuntimeException("Failed to save task", e);
@@ -191,25 +237,43 @@ public class TaskServiceImpl implements TaskService {
         if (taskId == null) {
             throw new IllegalArgumentException("Task ID cannot be null");
         }
-
+    
         Task task = findById(taskId);
         if (task == null) {
             LOGGER.log(Level.WARNING, "Task not found with ID: {0}", taskId);
             return null;
         }
-
+    
+        // Store old progress for WebSocket event
+        Integer oldProgress = task.getProgress();
+    
         // Progress must be between 0 and 100
         progress = Math.max(0, Math.min(100, progress));
         task.setProgress(progress);
-
+    
         // If completed is true, set progress to 100%
         if (completed && progress < 100) {
             task.setProgress(100);
         }
-
+    
+        boolean wasCompleted = task.isCompleted();
         task.setCompleted(completed || progress == 100);
-
-        return save(task);
+    
+        // Save task
+        Task savedTask = taskRepository.save(task);
+        
+        // Publish WebSocket events
+        User currentUser = getCurrentUser();
+        
+        // Publish progress update
+        webSocketEventPublisher.publishTaskProgressUpdate(savedTask, oldProgress, currentUser);
+        
+        // Publish completion event if task was just completed
+        if (savedTask.isCompleted() && !wasCompleted) {
+            webSocketEventPublisher.publishTaskCompletion(savedTask, currentUser);
+        }
+    
+        return savedTask;
     }
     
     @Override
@@ -571,5 +635,22 @@ public class TaskServiceImpl implements TaskService {
             future.completeExceptionally(e);
             return future;
         }
+    }
+
+    /**
+     * Gets the current user from Spring Security context.
+     * @return current user or null if not authenticated
+     */
+    private User getCurrentUser() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated() && 
+                authentication.getPrincipal() instanceof UserPrincipal) {
+                return ((UserPrincipal) authentication.getPrincipal()).getUser();
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Could not get current user from security context", e);
+        }
+        return null;
     }
 }

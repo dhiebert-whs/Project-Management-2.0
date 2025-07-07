@@ -21,6 +21,10 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
+import org.frcpm.events.WebSocketEventPublisher;
+import org.frcpm.security.UserPrincipal;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Enhanced Security Configuration for FRC Project Management System.
@@ -47,11 +51,16 @@ public class SecurityConfig {
     
     private final UserDetailsServiceImpl userDetailsService;
     private final AuditService auditService;
+
+    private final WebSocketEventPublisher webSocketEventPublisher;
     
     @Autowired
-    public SecurityConfig(UserDetailsServiceImpl userDetailsService, AuditService auditService) {
+    public SecurityConfig(UserDetailsServiceImpl userDetailsService,
+            AuditService auditService,
+            WebSocketEventPublisher webSocketEventPublisher) {
         this.userDetailsService = userDetailsService;
         this.auditService = auditService;
+        this.webSocketEventPublisher = webSocketEventPublisher;
     }
     
     @Bean
@@ -160,28 +169,37 @@ public class SecurityConfig {
     @Bean
     public AuthenticationSuccessHandler authenticationSuccessHandler() {
         return (request, response, authentication) -> {
-            org.frcpm.security.UserPrincipal principal = 
-                (org.frcpm.security.UserPrincipal) authentication.getPrincipal();
+            // ✅ CORRECT: Cast to UserPrincipal (our custom implementation)
+            UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
             
-            // Log successful login
-            auditService.logAction(
-                principal.getUser(),
-                "LOGIN_SUCCESS",
-                "User logged in successfully"
-            );
+            // Log successful login (existing functionality)
+            auditService.logAction(principal.getUser(), "LOGIN_SUCCESS", 
+                "User logged in successfully");
             
-            // Update last login time
-            principal.getUser().setLastLogin(java.time.LocalDateTime.now());
+            // 🚀 NEW: Publish user login activity via WebSocket
+            try {
+                webSocketEventPublisher.publishUserLogin(principal.getUser());
+            } catch (Exception e) {
+                // Don't fail login if WebSocket publishing fails
+                Logger.getLogger(SecurityConfig.class.getName())
+                    .log(Level.WARNING, "Failed to publish login activity", e);
+            }
             
-            // Set session timeout based on user role
-            request.getSession().setMaxInactiveInterval(principal.getSessionTimeout());
-            
-            // Determine redirect based on user state
-            String redirectUrl = determinePostLoginRedirect(principal);
-            
-            response.sendRedirect(redirectUrl);
+            // Determine redirect based on role and MFA status (existing logic)
+            if (principal.requiresMFA() && !principal.isMFAEnabled()) {
+                response.sendRedirect("/mfa/setup");
+            } else if (principal.requiresMFA() && principal.isMFAEnabled()) {
+                response.sendRedirect("/mfa/verify");
+            } else {
+                // Set session timeout based on role
+                int timeout = principal.getUser().getRole().isStudent() ? 900 : 1800; // 15 or 30 minutes
+                request.getSession().setMaxInactiveInterval(timeout);
+                
+                response.sendRedirect("/dashboard");
+            }
         };
     }
+    
     
     /**
      * Custom authentication failure handler with audit logging.

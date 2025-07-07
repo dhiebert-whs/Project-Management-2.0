@@ -4,7 +4,9 @@ package org.frcpm;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 /**
@@ -14,7 +16,9 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
  * Spring Boot will auto-configure JPA repositories based on basePackages scan
  */
 @SpringBootApplication(scanBasePackages = "org.frcpm")
+@EnableJpaAuditing
 @EnableAsync
+@EnableScheduling
 @EnableTransactionManagement
 public class FrcProjectManagementApplication {
     

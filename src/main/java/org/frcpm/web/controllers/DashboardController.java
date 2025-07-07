@@ -21,6 +21,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Level;
 
+import org.frcpm.events.WebSocketEventPublisher;
+import org.frcpm.models.User;
+import org.frcpm.security.UserPrincipal;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.Authentication;
+
 /**
  * Dashboard controller providing the main application entry point and overview.
  * 
@@ -48,6 +55,9 @@ public class DashboardController extends BaseController {
     
     @Autowired
     private MilestoneService milestoneService;
+
+    @Autowired
+    private WebSocketEventPublisher webSocketEventPublisher;
     
     /**
      * Main dashboard view.
@@ -92,6 +102,14 @@ public class DashboardController extends BaseController {
             // Load global statistics
             loadGlobalStatistics(model);
             
+            // Publish user activity for project viewing
+            if (currentProject != null) {
+                User currentUser = getCurrentUser();
+                if (currentUser != null) {
+                    webSocketEventPublisher.publishProjectJoin(currentUser, currentProject);
+                }
+            }
+
             return view("dashboard/index");
             
         } catch (Exception e) {
@@ -428,5 +446,23 @@ public class DashboardController extends BaseController {
         if (daysRemaining <= 1) return "critical";
         if (daysRemaining <= 3) return "warning";
         return "normal";
+    }
+
+
+    /**
+     * Gets the current user from Spring Security context.
+     * @return current user or null if not authenticated
+     */
+    private User getCurrentUser() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated() && 
+                authentication.getPrincipal() instanceof UserPrincipal) {
+                return ((UserPrincipal) authentication.getPrincipal()).getUser();
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Could not get current user from security context", e);
+        }
+        return null;
     }
 }
