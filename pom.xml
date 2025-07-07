@@ -219,32 +219,15 @@
                         <source>21</source>
                         <target>21</target>
                         <encoding>UTF-8</encoding>
-                        <!-- Exclude JavaFX/MVVMFx components during Spring Boot migration -->
+                        <!-- ✅ FIXED: Simplified excludes to only exclude JavaFX/MVVMFx -->
                         <excludes>
-                            <!-- Exclude ALL JavaFX-dependent files -->
+                            <!-- Exclude JavaFX-dependent files only -->
                             <exclude>**/mvvm/**</exclude>
-                            <exclude>**/async/**</exclude>
-                            <exclude>**/binding/**</exclude>
-                            <exclude>**/charts/**</exclude>
+                            <exclude>**/MvvmMainApp.java</exclude>
+                            <!-- Exclude specific problematic old files -->
                             <exclude>**/di/ViewLoader.java</exclude>
-                            <exclude>**/di/DialogFactory.java</exclude>
-                            <exclude>**/di/ServiceLocator.java</exclude>
                             <exclude>**/services/impl/JavaFXDialogService.java</exclude>
                             <exclude>**/utils/MenuFactory.java</exclude>
-                            <exclude>**/utils/ShortcutManager.java</exclude>
-                            <exclude>**/utils/UpdatedErrorHandler.java</exclude>
-                            <exclude>**/MvvmMainApp.java</exclude>
-                            <!-- Exclude old database utilities that conflict with Spring Boot -->
-                            <exclude>**/db/BackupManager.java</exclude>
-                            <exclude>**/db/DatabaseManager.java</exclude>
-                            <exclude>**/db/DatabaseConfigurer.java</exclude>
-                            <exclude>**/utils/DatabaseInitializer.java</exclude>
-                            <exclude>**/utils/DatabaseTestUtil.java</exclude>
-                            <exclude>**/utils/TestDatabaseCleaner.java</exclude>
-                            <!-- Exclude old service implementations that conflict -->
-                            <exclude>**/services/impl/AbstractAsyncService.java</exclude>
-                            <!-- Exclude repository implementation that uses old DatabaseConfig -->
-                            <exclude>**/repositories/impl/JpaRepositoryImpl.java</exclude>
                         </excludes>
                     </configuration>
                 </plugin>
