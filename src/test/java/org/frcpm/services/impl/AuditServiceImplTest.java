@@ -7,7 +7,7 @@ import org.frcpm.models.AuditLog;
 import org.frcpm.models.User;
 import org.frcpm.models.UserRole;
 import org.frcpm.repositories.spring.AuditLogRepository;
-import org.frcpm.services.AuditService;
+//import org.frcpm.services.AuditService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -30,9 +30,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.web.context.request.ServletRequestAttributes;
-import org.springframework.web.context.request.RequestContextHolder;
+//import org.springframework.mock.web.MockHttpServletRequest;
+//import org.springframework.web.context.request.ServletRequestAttributes;
+//import org.springframework.web.context.request.RequestContextHolder;
 
 /**
  * Comprehensive unit tests for AuditServiceImpl - Phase 2B Testing
@@ -447,7 +447,6 @@ class AuditServiceImplTest {
         @DisplayName("Should get recent logs")
         void shouldGetRecentLogs() {
             // Given
-            LocalDateTime since = LocalDateTime.now().minusDays(7);
             List<AuditLog> expectedLogs = List.of(new AuditLog(), new AuditLog());
             when(auditLogRepository.findRecentLogs(any(LocalDateTime.class))).thenReturn(expectedLogs);
             

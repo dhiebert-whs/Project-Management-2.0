@@ -16,6 +16,8 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.logging.Logger;
@@ -201,6 +203,16 @@ public class AuditServiceImpl implements AuditService {
                         userAgent = userAgent.substring(0, 500);
                     }
                     log.setUserAgent(userAgent);
+                }
+
+                // Get session ID
+                try {
+                    HttpSession session = request.getSession(false);
+                    if (session != null) {
+                        log.setSessionId(session.getId());
+                    }
+                } catch (Exception e) {
+                    // Ignore session access errors
                 }
             }
         } catch (Exception e) {

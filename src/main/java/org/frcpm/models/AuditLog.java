@@ -36,6 +36,9 @@ public class AuditLog {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subject_user_id")
     private User subjectUser; // User being accessed (for COPPA tracking)
+
+    @Column(name = "session_id")
+    private String sessionId;   
     
     @Column(nullable = false)
     private String action;
@@ -139,6 +142,14 @@ public class AuditLog {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public String getSessionId() {
+        return sessionId;
+    }
+    
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId;
     }
 
     public User getUser() {
