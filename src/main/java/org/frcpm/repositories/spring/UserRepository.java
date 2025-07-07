@@ -43,14 +43,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(String email);
     
     // =========================================================================
-    // ✅ NEW: AUTHENTICATION QUERIES
+    // ✅ FIXED: AUTHENTICATION QUERIES
     // =========================================================================
     
     /**
      * Find user by username OR email for flexible login.
+     * FIXED: Corrected method signature to match test expectations.
      */
-    @Query("SELECT u FROM User u WHERE u.username = :usernameOrEmail OR u.email = :usernameOrEmail")
-    Optional<User> findByUsernameOrEmail(@Param("usernameOrEmail") String username, @Param("usernameOrEmail") String email);
+    @Query("SELECT u FROM User u WHERE u.username = ?1 OR u.email = ?2")
+    Optional<User> findByUsernameOrEmail(String username, String email);
     
     // =========================================================================
     // ✅ NEW: COPPA COMPLIANCE QUERIES
@@ -220,8 +221,4 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     @Query("SELECT u FROM User u WHERE LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :searchTerm, '%')) AND u.enabled = true")
     List<User> searchUsersByName(@Param("searchTerm") String searchTerm);
-
-
-    @Query("SELECT u FROM User u WHERE u.username = ?1 OR u.email = ?1")
-    Optional<User> findByUsernameOrEmail(String usernameOrEmail);
 }

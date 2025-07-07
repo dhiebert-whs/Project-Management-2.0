@@ -1,17 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: org.frcpm.repositories.spring.UserRepositoryTest$AuthenticationTests
 -------------------------------------------------------------------------------
-Tests run: 5, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.209 s <<< FAILURE! -- in org.frcpm.repositories.spring.UserRepositoryTest$AuthenticationTests
-org.frcpm.repositories.spring.UserRepositoryTest$AuthenticationTests.shouldFindUserByUsernameOrEmail -- Time elapsed: 0.035 s <<< FAILURE!
-org.opentest4j.AssertionFailedError: Should find user by email ==> expected: <true> but was: <false>
-	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
-	at org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
-	at org.junit.jupiter.api.AssertTrue.failNotTrue(AssertTrue.java:63)
-	at org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:36)
-	at org.junit.jupiter.api.Assertions.assertTrue(Assertions.java:214)
-	at org.frcpm.repositories.spring.UserRepositoryTest$AuthenticationTests.shouldFindUserByUsernameOrEmail(UserRepositoryTest.java:180)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
-
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.177 s -- in org.frcpm.repositories.spring.UserRepositoryTest$AuthenticationTests
