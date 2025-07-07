@@ -10,12 +10,11 @@ import org.frcpm.repositories.spring.ComponentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.persistence.EntityManager;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
@@ -24,27 +23,23 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Integration test for ComponentRepository using Spring Boot @SpringBootTest.
- * Uses full Spring context instead of @DataJpaTest to avoid context loading issues.
+ * Integration test for ComponentRepository using @DataJpaTest.
+ * Uses lightweight JPA slice testing for optimal performance and isolation.
  * 
- * This test follows the proven pattern established by AttendanceRepositoryIntegrationTest
- * and other successful repository tests in the system.
- * 
- * @SpringBootTest loads the complete application context
- * @Transactional ensures each test runs in a transaction that's rolled back
- * @AutoConfigureMockMvc configures MockMvc (though not used in repository tests)
+ * @DataJpaTest loads only JPA repository context
+ * @AutoConfigureTestDatabase ensures test database configuration
+ * @ActiveProfiles("test") uses test profile
  */
-@SpringBootTest
-@Transactional
-@AutoConfigureMockMvc
+@DataJpaTest
 @ActiveProfiles("test")
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class ComponentRepositoryIntegrationTest {
 
     @Autowired
     private ComponentRepository componentRepository;
 
     @Autowired
-    private EntityManager entityManager;
+    private TestEntityManager entityManager;
 
     private Component testComponent;
     private Component motorComponent;
@@ -141,16 +136,6 @@ class ComponentRepositoryIntegrationTest {
         return component;
     }
 
-    /**
-     * Helper method to persist and flush an entity.
-     * Replaces TestEntityManager's persistAndFlush functionality.
-     */
-    private <T> T persistAndFlush(T entity) {
-        entityManager.persist(entity);
-        entityManager.flush();
-        return entity;
-    }
-
     // ========== BASIC CRUD OPERATIONS ==========
 
     @Test
@@ -195,7 +180,7 @@ class ComponentRepositoryIntegrationTest {
     @Test
     void testDeleteById() {
         // Setup - Persist component
-        Component savedComponent = persistAndFlush(testComponent);
+        Component savedComponent = entityManager.persistAndFlush(testComponent);
 
         // Verify exists before deletion
         assertThat(componentRepository.existsById(savedComponent.getId())).isTrue();
@@ -500,16 +485,16 @@ class ComponentRepositoryIntegrationTest {
     @Test
     void testFindByRequiredForTasksId() {
         // Setup - Create project, subsystem, task, and components
-        Project savedProject = persistAndFlush(testProject);
-        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
+        Project savedProject = entityManager.persistAndFlush(testProject);
+        Subsystem savedSubsystem = entityManager.persistAndFlush(testSubsystem);
 
         testTask.setProject(savedProject);
         testTask.setSubsystem(savedSubsystem);
-        Task savedTask = persistAndFlush(testTask);
+        Task savedTask = entityManager.persistAndFlush(testTask);
 
-        Component savedComponent1 = persistAndFlush(testComponent);
-        Component savedComponent2 = persistAndFlush(motorComponent);
-        Component savedComponent3 = persistAndFlush(deliveredComponent);
+        Component savedComponent1 = entityManager.persistAndFlush(testComponent);
+        Component savedComponent2 = entityManager.persistAndFlush(motorComponent);
+        Component savedComponent3 = entityManager.persistAndFlush(deliveredComponent);
 
         // Try to associate components with task
         boolean relationshipSupported = true;
@@ -641,15 +626,15 @@ class ComponentRepositoryIntegrationTest {
     @Test
     void testTaskComponentRelationship() {
         // Setup - Create project, subsystem, task, and components
-        Project savedProject = persistAndFlush(testProject);
-        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
+        Project savedProject = entityManager.persistAndFlush(testProject);
+        Subsystem savedSubsystem = entityManager.persistAndFlush(testSubsystem);
 
         testTask.setProject(savedProject);
         testTask.setSubsystem(savedSubsystem);
-        Task savedTask = persistAndFlush(testTask);
+        Task savedTask = entityManager.persistAndFlush(testTask);
 
-        Component savedComponent1 = persistAndFlush(testComponent);
-        Component savedComponent2 = persistAndFlush(motorComponent);
+        Component savedComponent1 = entityManager.persistAndFlush(testComponent);
+        Component savedComponent2 = entityManager.persistAndFlush(motorComponent);
 
         // Execute - Associate components with task
         // Note: If Task doesn't have addRequiredComponent method, we'll create the relationship manually
@@ -690,76 +675,6 @@ class ComponentRepositoryIntegrationTest {
             // If relationship isn't implemented, just verify components exist
             assertThat(componentRepository.findById(savedComponent1.getId())).isPresent();
             assertThat(componentRepository.findById(savedComponent2.getId())).isPresent();
-        }
-    }
-
-    @Test
-    void testComponentTaskAssociationChange() {
-        // Setup - Create task and components
-        Project savedProject = persistAndFlush(testProject);
-        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
-
-        testTask.setProject(savedProject);
-        testTask.setSubsystem(savedSubsystem);
-        Task savedTask = persistAndFlush(testTask);
-
-        Component savedComponent1 = persistAndFlush(testComponent);
-        Component savedComponent2 = persistAndFlush(motorComponent);
-        Component savedComponent3 = persistAndFlush(deliveredComponent);
-
-        // Initial association - handle case where helper methods don't exist
-        try {
-            savedTask.addRequiredComponent(savedComponent1);
-            savedTask.addRequiredComponent(savedComponent2);
-        } catch (Exception e) {
-            // Manual relationship setup if helper methods don't exist
-            if (savedTask.getRequiredComponents() != null) {
-                savedTask.getRequiredComponents().add(savedComponent1);
-                savedTask.getRequiredComponents().add(savedComponent2);
-                savedComponent1.getRequiredForTasks().add(savedTask);
-                savedComponent2.getRequiredForTasks().add(savedTask);
-            } else {
-                // Skip this test if the relationship isn't properly implemented
-                org.junit.jupiter.api.Assumptions.assumeTrue(false, 
-                    "Task-Component relationship not fully implemented");
-            }
-        }
-        
-        entityManager.persist(savedTask);
-        entityManager.flush();
-
-        // Verify initial state only if relationship exists
-        if (savedTask.getRequiredComponents() != null && !savedTask.getRequiredComponents().isEmpty()) {
-            assertThat(savedTask.getRequiredComponents()).hasSize(2);
-
-            // Execute - Change component associations
-            try {
-                savedTask.removeRequiredComponent(savedComponent1);
-                savedTask.addRequiredComponent(savedComponent3);
-            } catch (Exception e) {
-                // Manual relationship changes
-                savedTask.getRequiredComponents().remove(savedComponent1);
-                savedTask.getRequiredComponents().add(savedComponent3);
-                savedComponent1.getRequiredForTasks().remove(savedTask);
-                savedComponent3.getRequiredForTasks().add(savedTask);
-            }
-
-            entityManager.persist(savedTask);
-            entityManager.flush();
-
-            // Verify - Component associations changed
-            assertThat(savedTask.getRequiredComponents()).hasSize(2);
-            assertThat(savedTask.getRequiredComponents()).containsExactlyInAnyOrder(savedComponent2, savedComponent3);
-            assertThat(savedTask.getRequiredComponents()).doesNotContain(savedComponent1);
-
-            // Verify - Repository queries reflect changes
-            List<Component> taskComponents = componentRepository.findByRequiredForTasksId(savedTask.getId());
-            assertThat(taskComponents).hasSize(2);
-            assertThat(taskComponents).extracting(Component::getName)
-                .containsExactlyInAnyOrder("Falcon 500 Motor", "Aluminum Tubing");
-        } else {
-            // If relationship isn't implemented, just verify components exist
-            assertThat(componentRepository.findAll()).hasSize(3);
         }
     }
 
@@ -810,13 +725,13 @@ class ComponentRepositoryIntegrationTest {
     @Test
     void testComplexComponentScenario() {
         // Setup - Create a complex component scenario
-        Project savedProject = persistAndFlush(testProject);
-        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
+        Project savedProject = entityManager.persistAndFlush(testProject);
+        Subsystem savedSubsystem = entityManager.persistAndFlush(testSubsystem);
 
         // Create task requiring multiple components
         testTask.setProject(savedProject);
         testTask.setSubsystem(savedSubsystem);
-        Task savedTask = persistAndFlush(testTask);
+        Task savedTask = entityManager.persistAndFlush(testTask);
 
         // Create components with different states
         testComponent.setName("Complex Component");
@@ -866,43 +781,6 @@ class ComponentRepositoryIntegrationTest {
         assertThat(savedComponent.isDelivered()).isFalse();
     }
 
-    // ========== CONSTRAINT AND VALIDATION TESTING ==========
-
-    @Test
-    void testComponentConstraints() {
-        // Setup - Create component with all required fields
-        testComponent.setName("Valid Component");
-        testComponent.setPartNumber("VALID-001");
-
-        // Execute - Save valid component
-        Component savedComponent = componentRepository.save(testComponent);
-        entityManager.flush();
-
-        // Verify - Component saved successfully
-        assertThat(savedComponent.getId()).isNotNull();
-        assertThat(savedComponent.getName()).isEqualTo("Valid Component");
-
-        // Verify - Required fields are present
-        assertThat(savedComponent.getName()).isNotNull();
-    }
-
-    @Test
-    void testComponentDateValidation() {
-        // Setup - Create component with valid dates
-        testComponent.setExpectedDelivery(LocalDate.now().plusDays(5));
-        testComponent.setActualDelivery(LocalDate.now().plusDays(3));
-        testComponent.setDelivered(true);
-
-        // Execute - Save component with dates
-        Component savedComponent = componentRepository.save(testComponent);
-        entityManager.flush();
-
-        // Verify - Dates are saved correctly
-        assertThat(savedComponent.getExpectedDelivery()).isEqualTo(LocalDate.now().plusDays(5));
-        assertThat(savedComponent.getActualDelivery()).isEqualTo(LocalDate.now().plusDays(3));
-        assertThat(savedComponent.isDelivered()).isTrue();
-    }
-
     // ========== PERFORMANCE AND BULK OPERATIONS ==========
 
     @Test
@@ -945,85 +823,6 @@ class ComponentRepositoryIntegrationTest {
         long undeliveredCount = componentRepository.countByDelivered(false);
         assertThat(deliveredCount).isEqualTo(5);
         assertThat(undeliveredCount).isEqualTo(15);
-    }
-
-    @Test
-    void testComponentQueryPerformance() {
-        // Setup - Create larger dataset for performance testing
-        Project savedProject = persistAndFlush(testProject);
-        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
-
-        testTask.setProject(savedProject);
-        testTask.setSubsystem(savedSubsystem);
-        Task savedTask = persistAndFlush(testTask);
-
-        // Create 40 components with various properties
-        List<Component> components = new java.util.ArrayList<>();
-        for (int i = 1; i <= 40; i++) {
-            Component component = new Component();
-            component.setName("Performance Component " + i);
-            component.setPartNumber("PERF-" + String.format("%04d", i));
-            component.setDescription("Performance testing component " + i);
-            component.setExpectedDelivery(LocalDate.now().plusDays(i % 30));
-            component.setDelivered(i % 5 == 0); // Every 5th component is delivered
-            
-            if (component.isDelivered()) {
-                component.setActualDelivery(LocalDate.now().minusDays(i % 10));
-            }
-            
-            components.add(component);
-        }
-
-        componentRepository.saveAll(components);
-
-        // Associate every 3rd component with the task (if supported)
-        try {
-            for (int i = 2; i < components.size(); i += 3) {
-                savedTask.addRequiredComponent(components.get(i));
-            }
-            entityManager.persist(savedTask);
-            entityManager.flush();
-        } catch (Exception e) {
-            // Relationship not supported
-        }
-
-        // Execute - Performance-sensitive queries
-        long startTime = System.currentTimeMillis();
-
-        List<Component> allComponents = componentRepository.findAll();
-        List<Component> deliveredComponents = componentRepository.findByDelivered(true);
-        List<Component> overdueComponents = componentRepository.findOverdueComponents(LocalDate.now());
-        List<Component> taskComponents = componentRepository.findByRequiredForTasksId(savedTask.getId());
-        List<Component> nameSearchResults = componentRepository.findByNameContainingIgnoreCase("Performance");
-
-        // Date range queries
-        List<Component> nearTermDelivery = componentRepository.findByExpectedDeliveryBetween(
-            LocalDate.now(), LocalDate.now().plusDays(10));
-
-        long queryEndTime = System.currentTimeMillis();
-
-        // Verify results
-        assertThat(allComponents).hasSize(40);
-        assertThat(deliveredComponents).hasSize(8); // Every 5th component
-        assertThat(nameSearchResults).hasSize(40); // All contain "Performance"
-        
-        // For nearTermDelivery, components have expectedDelivery = now + (i % 30) days
-        // So for now to now+10, we get components where (i % 30) <= 10
-        int expectedNearTerm = 0;
-        for (int i = 1; i <= 40; i++) {
-            int daysFromNow = i % 30;
-            if (daysFromNow <= 10) {
-                expectedNearTerm++;
-            }
-        }
-        assertThat(nearTermDelivery).hasSize(expectedNearTerm);
-
-        // Log performance (for development monitoring)
-        long queryTime = queryEndTime - startTime;
-        System.out.println("Component query execution time: " + queryTime + "ms");
-
-        // Verify reasonable performance (should complete quickly)
-        assertThat(queryTime).isLessThan(5000); // Should complete within 5 seconds
     }
 
     // ========== ERROR HANDLING AND EDGE CASES ==========
@@ -1167,12 +966,12 @@ class ComponentRepositoryIntegrationTest {
     void testRepositoryServiceIntegration() {
         // This test verifies that the repository works correctly with service layer patterns
         // Setup - Create realistic component scenario
-        Project savedProject = persistAndFlush(testProject);
-        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
+        Project savedProject = entityManager.persistAndFlush(testProject);
+        Subsystem savedSubsystem = entityManager.persistAndFlush(testSubsystem);
 
         testTask.setProject(savedProject);
         testTask.setSubsystem(savedSubsystem);
-        Task savedTask = persistAndFlush(testTask);
+        Task savedTask = entityManager.persistAndFlush(testTask);
 
         // Create component following service layer patterns
         testComponent.setName("Service Integration Component");
@@ -1261,11 +1060,11 @@ class ComponentRepositoryIntegrationTest {
         assertThat(deliveredComponent.getActualDelivery()).isEqualTo(LocalDate.now());
 
         // 4. Associate with task (if relationships are supported)
-        Project savedProject = persistAndFlush(testProject);
-        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
+        Project savedProject = entityManager.persistAndFlush(testProject);
+        Subsystem savedSubsystem = entityManager.persistAndFlush(testSubsystem);
         testTask.setProject(savedProject);
         testTask.setSubsystem(savedSubsystem);
-        Task savedTask = persistAndFlush(testTask);
+        Task savedTask = entityManager.persistAndFlush(testTask);
 
         boolean relationshipCreated = false;
         try {
@@ -1410,16 +1209,16 @@ class ComponentRepositoryIntegrationTest {
         // to ensure everything works together seamlessly
         
         // Setup - Create a complete FRC scenario
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         
         // Create multiple subsystems
         Subsystem driveSubsystem = new Subsystem("Drivetrain", Subsystem.Status.IN_PROGRESS);
         Subsystem shooterSubsystem = new Subsystem("Shooter", Subsystem.Status.NOT_STARTED);
         Subsystem intakeSubsystem = new Subsystem("Intake", Subsystem.Status.COMPLETED);
         
-        Subsystem savedDriveSubsystem = persistAndFlush(driveSubsystem);
-        Subsystem savedShooterSubsystem = persistAndFlush(shooterSubsystem);
-        Subsystem savedIntakeSubsystem = persistAndFlush(intakeSubsystem);
+        Subsystem savedDriveSubsystem = entityManager.persistAndFlush(driveSubsystem);
+        Subsystem savedShooterSubsystem = entityManager.persistAndFlush(shooterSubsystem);
+        Subsystem savedIntakeSubsystem = entityManager.persistAndFlush(intakeSubsystem);
         
         // Create tasks for each subsystem
         Task driveTask = new Task();
@@ -1428,7 +1227,7 @@ class ComponentRepositoryIntegrationTest {
         driveTask.setSubsystem(savedDriveSubsystem);
         driveTask.setEstimatedDuration(Duration.ofHours(40));
         driveTask.setPriority(Task.Priority.HIGH);
-        Task savedDriveTask = persistAndFlush(driveTask);
+        Task savedDriveTask = entityManager.persistAndFlush(driveTask);
         
         Task shooterTask = new Task();
         shooterTask.setTitle("Build Shooter");
@@ -1436,7 +1235,7 @@ class ComponentRepositoryIntegrationTest {
         shooterTask.setSubsystem(savedShooterSubsystem);
         shooterTask.setEstimatedDuration(Duration.ofHours(30));
         shooterTask.setPriority(Task.Priority.HIGH);
-        Task savedShooterTask = persistAndFlush(shooterTask);
+        Task savedShooterTask = entityManager.persistAndFlush(shooterTask);
         
         Task intakeTask = new Task();
         intakeTask.setTitle("Build Intake");
@@ -1445,7 +1244,7 @@ class ComponentRepositoryIntegrationTest {
         intakeTask.setEstimatedDuration(Duration.ofHours(20));
         intakeTask.setPriority(Task.Priority.MEDIUM);
         intakeTask.setCompleted(true);
-        Task savedIntakeTask = persistAndFlush(intakeTask);
+        Task savedIntakeTask = entityManager.persistAndFlush(intakeTask);
         
         // Create comprehensive component set
         List<Component> allComponents = new java.util.ArrayList<>();

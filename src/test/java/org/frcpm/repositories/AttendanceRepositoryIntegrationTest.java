@@ -10,12 +10,11 @@ import org.frcpm.repositories.spring.AttendanceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -24,24 +23,23 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Integration test for AttendanceRepository using Spring Boot @SpringBootTest.
- * Uses full Spring context instead of @DataJpaTest to avoid context loading issues.
+ * Integration test for AttendanceRepository using @DataJpaTest.
+ * Uses lightweight JPA slice testing for optimal performance and isolation.
  * 
- * @SpringBootTest loads the complete application context
- * @Transactional ensures each test runs in a transaction that's rolled back
- * @AutoConfigureMockMvc configures MockMvc (though not used in repository tests)
+ * @DataJpaTest loads only JPA repository context
+ * @AutoConfigureTestDatabase ensures test database configuration
+ * @ActiveProfiles("test") uses test profile
  */
-@SpringBootTest
-@Transactional
-@AutoConfigureMockMvc
+@DataJpaTest
 @ActiveProfiles("test")
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class AttendanceRepositoryIntegrationTest {
     
     @Autowired
     private AttendanceRepository attendanceRepository;
     
     @Autowired
-    private EntityManager entityManager;
+    private TestEntityManager entityManager;
     
     private Attendance testAttendance;
     private Meeting testMeeting;
@@ -103,25 +101,15 @@ class AttendanceRepositoryIntegrationTest {
         return attendance;
     }
     
-    /**
-     * Helper method to persist and flush an entity.
-     * Replaces TestEntityManager's persistAndFlush functionality.
-     */
-    private <T> T persistAndFlush(T entity) {
-        entityManager.persist(entity);
-        entityManager.flush();
-        return entity;
-    }
-    
     // ========== BASIC CRUD OPERATIONS ==========
     
     @Test
     void testSaveAndFindById() {
         // Setup - Persist dependencies first
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         testMeeting.setProject(savedProject);
-        Meeting savedMeeting = persistAndFlush(testMeeting);
-        TeamMember savedMember = persistAndFlush(testMember);
+        Meeting savedMeeting = entityManager.persistAndFlush(testMeeting);
+        TeamMember savedMember = entityManager.persistAndFlush(testMember);
         
         testAttendance.setMeeting(savedMeeting);
         testAttendance.setMember(savedMember);
@@ -148,10 +136,10 @@ class AttendanceRepositoryIntegrationTest {
     @Test
     void testFindAll() {
         // Setup - Persist dependencies
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         testMeeting.setProject(savedProject);
-        Meeting savedMeeting = persistAndFlush(testMeeting);
-        TeamMember savedMember = persistAndFlush(testMember);
+        Meeting savedMeeting = entityManager.persistAndFlush(testMeeting);
+        TeamMember savedMember = entityManager.persistAndFlush(testMember);
         
         testAttendance.setMeeting(savedMeeting);
         testAttendance.setMember(savedMember);
@@ -172,14 +160,14 @@ class AttendanceRepositoryIntegrationTest {
     @Test
     void testDeleteById() {
         // Setup - Persist dependencies and attendance
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         testMeeting.setProject(savedProject);
-        Meeting savedMeeting = persistAndFlush(testMeeting);
-        TeamMember savedMember = persistAndFlush(testMember);
+        Meeting savedMeeting = entityManager.persistAndFlush(testMeeting);
+        TeamMember savedMember = entityManager.persistAndFlush(testMember);
         
         testAttendance.setMeeting(savedMeeting);
         testAttendance.setMember(savedMember);
-        Attendance savedAttendance = persistAndFlush(testAttendance);
+        Attendance savedAttendance = entityManager.persistAndFlush(testAttendance);
         
         // Verify exists before deletion
         assertThat(attendanceRepository.existsById(savedAttendance.getId())).isTrue();
@@ -199,10 +187,10 @@ class AttendanceRepositoryIntegrationTest {
         assertThat(attendanceRepository.count()).isEqualTo(0);
         
         // Setup - Persist dependencies and attendance
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         testMeeting.setProject(savedProject);
-        Meeting savedMeeting = persistAndFlush(testMeeting);
-        TeamMember savedMember = persistAndFlush(testMember);
+        Meeting savedMeeting = entityManager.persistAndFlush(testMeeting);
+        TeamMember savedMember = entityManager.persistAndFlush(testMember);
         
         testAttendance.setMeeting(savedMeeting);
         testAttendance.setMember(savedMember);
@@ -218,10 +206,10 @@ class AttendanceRepositoryIntegrationTest {
     @Test
     void testFindByMeeting() {
         // Setup - Persist dependencies and attendance
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         testMeeting.setProject(savedProject);
-        Meeting savedMeeting = persistAndFlush(testMeeting);
-        TeamMember savedMember = persistAndFlush(testMember);
+        Meeting savedMeeting = entityManager.persistAndFlush(testMeeting);
+        TeamMember savedMember = entityManager.persistAndFlush(testMember);
         
         testAttendance.setMeeting(savedMeeting);
         testAttendance.setMember(savedMember);
@@ -241,10 +229,10 @@ class AttendanceRepositoryIntegrationTest {
     @Test
     void testFindByMember() {
         // Setup - Persist dependencies and attendance
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         testMeeting.setProject(savedProject);
-        Meeting savedMeeting = persistAndFlush(testMeeting);
-        TeamMember savedMember = persistAndFlush(testMember);
+        Meeting savedMeeting = entityManager.persistAndFlush(testMeeting);
+        TeamMember savedMember = entityManager.persistAndFlush(testMember);
         
         testAttendance.setMeeting(savedMeeting);
         testAttendance.setMember(savedMember);
@@ -263,10 +251,10 @@ class AttendanceRepositoryIntegrationTest {
     @Test
     void testFindByMeetingAndMember() {
         // Setup - Persist dependencies and attendance
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         testMeeting.setProject(savedProject);
-        Meeting savedMeeting = persistAndFlush(testMeeting);
-        TeamMember savedMember = persistAndFlush(testMember);
+        Meeting savedMeeting = entityManager.persistAndFlush(testMeeting);
+        TeamMember savedMember = entityManager.persistAndFlush(testMember);
         
         testAttendance.setMeeting(savedMeeting);
         testAttendance.setMember(savedMember);
@@ -291,11 +279,11 @@ class AttendanceRepositoryIntegrationTest {
         differentMember.setFirstName("Different");
         differentMember.setLastName("User");
         differentMember.setEmail("different@example.com");
-        TeamMember savedDifferentMember = persistAndFlush(differentMember);
+        TeamMember savedDifferentMember = entityManager.persistAndFlush(differentMember);
         
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         testMeeting.setProject(savedProject);
-        Meeting savedMeeting = persistAndFlush(testMeeting);
+        Meeting savedMeeting = entityManager.persistAndFlush(testMeeting);
         
         // Execute - Search for non-existent combination
         Optional<Attendance> result = attendanceRepository.findByMeetingAndMember(savedMeeting, savedDifferentMember);
@@ -307,10 +295,10 @@ class AttendanceRepositoryIntegrationTest {
     @Test
     void testFindByPresent() {
         // Setup - Create present and absent attendances
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         testMeeting.setProject(savedProject);
-        Meeting savedMeeting = persistAndFlush(testMeeting);
-        TeamMember savedMember = persistAndFlush(testMember);
+        Meeting savedMeeting = entityManager.persistAndFlush(testMeeting);
+        TeamMember savedMember = entityManager.persistAndFlush(testMember);
         
         // Present attendance
         testAttendance.setMeeting(savedMeeting);
@@ -324,7 +312,7 @@ class AttendanceRepositoryIntegrationTest {
         absentMember.setFirstName("Absent");
         absentMember.setLastName("User");
         absentMember.setEmail("absent@example.com");
-        TeamMember savedAbsentMember = persistAndFlush(absentMember);
+        TeamMember savedAbsentMember = entityManager.persistAndFlush(absentMember);
         
         Attendance absentAttendance = new Attendance(savedMeeting, savedAbsentMember, false);
         attendanceRepository.save(absentAttendance);
@@ -352,10 +340,10 @@ class AttendanceRepositoryIntegrationTest {
     @Test
     void testFindByMeetingId() {
         // Setup - Persist dependencies and attendance
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         testMeeting.setProject(savedProject);
-        Meeting savedMeeting = persistAndFlush(testMeeting);
-        TeamMember savedMember = persistAndFlush(testMember);
+        Meeting savedMeeting = entityManager.persistAndFlush(testMeeting);
+        TeamMember savedMember = entityManager.persistAndFlush(testMember);
         
         testAttendance.setMeeting(savedMeeting);
         testAttendance.setMember(savedMember);
@@ -373,10 +361,10 @@ class AttendanceRepositoryIntegrationTest {
     @Test
     void testFindByMemberId() {
         // Setup - Persist dependencies and attendance
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         testMeeting.setProject(savedProject);
-        Meeting savedMeeting = persistAndFlush(testMeeting);
-        TeamMember savedMember = persistAndFlush(testMember);
+        Meeting savedMeeting = entityManager.persistAndFlush(testMeeting);
+        TeamMember savedMember = entityManager.persistAndFlush(testMember);
         
         testAttendance.setMeeting(savedMeeting);
         testAttendance.setMember(savedMember);
@@ -394,10 +382,10 @@ class AttendanceRepositoryIntegrationTest {
     @Test
     void testFindByMeetingIdAndMemberId() {
         // Setup - Persist dependencies and attendance
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         testMeeting.setProject(savedProject);
-        Meeting savedMeeting = persistAndFlush(testMeeting);
-        TeamMember savedMember = persistAndFlush(testMember);
+        Meeting savedMeeting = entityManager.persistAndFlush(testMeeting);
+        TeamMember savedMember = entityManager.persistAndFlush(testMember);
         
         testAttendance.setMeeting(savedMeeting);
         testAttendance.setMember(savedMember);
@@ -417,7 +405,7 @@ class AttendanceRepositoryIntegrationTest {
     @Test
     void testFindByMeetingDateBetween() {
         // Setup - Create meetings on different dates
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         
         // Meeting 1 - Yesterday
         Meeting yesterdayMeeting = new Meeting();
@@ -425,12 +413,12 @@ class AttendanceRepositoryIntegrationTest {
         yesterdayMeeting.setStartTime(LocalTime.of(9, 0));
         yesterdayMeeting.setEndTime(LocalTime.of(10, 0));
         yesterdayMeeting.setProject(savedProject);
-        Meeting savedYesterdayMeeting = persistAndFlush(yesterdayMeeting);
+        Meeting savedYesterdayMeeting = entityManager.persistAndFlush(yesterdayMeeting);
         
         // Meeting 2 - Today
         testMeeting.setDate(LocalDate.now());
         testMeeting.setProject(savedProject);
-        Meeting savedTodayMeeting = persistAndFlush(testMeeting);
+        Meeting savedTodayMeeting = entityManager.persistAndFlush(testMeeting);
         
         // Meeting 3 - Tomorrow (outside range)
         Meeting tomorrowMeeting = new Meeting();
@@ -438,9 +426,9 @@ class AttendanceRepositoryIntegrationTest {
         tomorrowMeeting.setStartTime(LocalTime.of(11, 0));
         tomorrowMeeting.setEndTime(LocalTime.of(12, 0));
         tomorrowMeeting.setProject(savedProject);
-        Meeting savedTomorrowMeeting = persistAndFlush(tomorrowMeeting);
+        Meeting savedTomorrowMeeting = entityManager.persistAndFlush(tomorrowMeeting);
         
-        TeamMember savedMember = persistAndFlush(testMember);
+        TeamMember savedMember = entityManager.persistAndFlush(testMember);
         
         // Create attendances
         Attendance yesterdayAttendance = new Attendance(savedYesterdayMeeting, savedMember, true);
@@ -465,18 +453,18 @@ class AttendanceRepositoryIntegrationTest {
     @Test
     void testFindByProjectId() {
         // Setup - Create two projects with different attendances
-        Project savedProject1 = persistAndFlush(testProject);
+        Project savedProject1 = entityManager.persistAndFlush(testProject);
         
         Project project2 = new Project();
         project2.setName("Different Project");
         project2.setStartDate(LocalDate.now());
         project2.setGoalEndDate(LocalDate.now().plusWeeks(4));
         project2.setHardDeadline(LocalDate.now().plusWeeks(6));
-        Project savedProject2 = persistAndFlush(project2);
+        Project savedProject2 = entityManager.persistAndFlush(project2);
         
         // Meeting for project 1
         testMeeting.setProject(savedProject1);
-        Meeting savedMeeting1 = persistAndFlush(testMeeting);
+        Meeting savedMeeting1 = entityManager.persistAndFlush(testMeeting);
         
         // Meeting for project 2
         Meeting meeting2 = new Meeting();
@@ -484,9 +472,9 @@ class AttendanceRepositoryIntegrationTest {
         meeting2.setStartTime(LocalTime.of(14, 0));
         meeting2.setEndTime(LocalTime.of(15, 0));
         meeting2.setProject(savedProject2);
-        Meeting savedMeeting2 = persistAndFlush(meeting2);
+        Meeting savedMeeting2 = entityManager.persistAndFlush(meeting2);
         
-        TeamMember savedMember = persistAndFlush(testMember);
+        TeamMember savedMember = entityManager.persistAndFlush(testMember);
         
         // Create attendances for both projects
         Attendance attendance1 = new Attendance(savedMeeting1, savedMember, true);
@@ -508,8 +496,8 @@ class AttendanceRepositoryIntegrationTest {
     @Test
     void testCountByMemberId() {
         // Setup - Persist dependencies and create multiple attendances for same member
-        Project savedProject = persistAndFlush(testProject);
-        TeamMember savedMember = persistAndFlush(testMember);
+        Project savedProject = entityManager.persistAndFlush(testProject);
+        TeamMember savedMember = entityManager.persistAndFlush(testMember);
         
         // Create multiple meetings
         Meeting meeting1 = new Meeting();
@@ -517,14 +505,14 @@ class AttendanceRepositoryIntegrationTest {
         meeting1.setStartTime(LocalTime.of(9, 0));
         meeting1.setEndTime(LocalTime.of(10, 0));
         meeting1.setProject(savedProject);
-        Meeting savedMeeting1 = persistAndFlush(meeting1);
+        Meeting savedMeeting1 = entityManager.persistAndFlush(meeting1);
         
         Meeting meeting2 = new Meeting();
         meeting2.setDate(LocalDate.now().plusDays(1));
         meeting2.setStartTime(LocalTime.of(11, 0));
         meeting2.setEndTime(LocalTime.of(12, 0));
         meeting2.setProject(savedProject);
-        Meeting savedMeeting2 = persistAndFlush(meeting2);
+        Meeting savedMeeting2 = entityManager.persistAndFlush(meeting2);
         
         // Create attendances
         Attendance attendance1 = new Attendance(savedMeeting1, savedMember, true);
@@ -544,8 +532,8 @@ class AttendanceRepositoryIntegrationTest {
     @Test
     void testCountByMemberIdAndPresent() {
         // Setup - Persist dependencies and create attendances with different presence status
-        Project savedProject = persistAndFlush(testProject);
-        TeamMember savedMember = persistAndFlush(testMember);
+        Project savedProject = entityManager.persistAndFlush(testProject);
+        TeamMember savedMember = entityManager.persistAndFlush(testMember);
         
         // Create multiple meetings
         Meeting meeting1 = new Meeting();
@@ -553,21 +541,21 @@ class AttendanceRepositoryIntegrationTest {
         meeting1.setStartTime(LocalTime.of(9, 0));
         meeting1.setEndTime(LocalTime.of(10, 0));
         meeting1.setProject(savedProject);
-        Meeting savedMeeting1 = persistAndFlush(meeting1);
+        Meeting savedMeeting1 = entityManager.persistAndFlush(meeting1);
         
         Meeting meeting2 = new Meeting();
         meeting2.setDate(LocalDate.now().plusDays(1));
         meeting2.setStartTime(LocalTime.of(11, 0));
         meeting2.setEndTime(LocalTime.of(12, 0));
         meeting2.setProject(savedProject);
-        Meeting savedMeeting2 = persistAndFlush(meeting2);
+        Meeting savedMeeting2 = entityManager.persistAndFlush(meeting2);
         
         Meeting meeting3 = new Meeting();
         meeting3.setDate(LocalDate.now().plusDays(2));
         meeting3.setStartTime(LocalTime.of(13, 0));
         meeting3.setEndTime(LocalTime.of(14, 0));
         meeting3.setProject(savedProject);
-        Meeting savedMeeting3 = persistAndFlush(meeting3);
+        Meeting savedMeeting3 = entityManager.persistAndFlush(meeting3);
         
         // Create attendances: 2 present, 1 absent
         Attendance attendance1 = new Attendance(savedMeeting1, savedMember, true);
@@ -595,10 +583,10 @@ class AttendanceRepositoryIntegrationTest {
     @Test
     void testUniqueConstraint() {
         // Setup - Persist dependencies
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         testMeeting.setProject(savedProject);
-        Meeting savedMeeting = persistAndFlush(testMeeting);
-        TeamMember savedMember = persistAndFlush(testMember);
+        Meeting savedMeeting = entityManager.persistAndFlush(testMeeting);
+        TeamMember savedMember = entityManager.persistAndFlush(testMember);
         
         testAttendance.setMeeting(savedMeeting);
         testAttendance.setMember(savedMember);
@@ -630,16 +618,16 @@ class AttendanceRepositoryIntegrationTest {
     @Test
     void testCascadingRelationships() {
         // Setup - Create meeting with attendance
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         testMeeting.setProject(savedProject);
-        TeamMember savedMember = persistAndFlush(testMember);
+        TeamMember savedMember = entityManager.persistAndFlush(testMember);
         
         // Add attendance to meeting using helper method
         testMeeting.addAttendance(testAttendance);
         testAttendance.setMember(savedMember);
         
         // Execute - Save meeting (should cascade to attendance)
-        Meeting savedMeeting = persistAndFlush(testMeeting);
+        Meeting savedMeeting = entityManager.persistAndFlush(testMeeting);
         
         // Verify - Attendance should be persisted through cascade
         assertThat(savedMeeting.getAttendances()).hasSize(1);

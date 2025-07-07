@@ -8,36 +8,34 @@ import org.frcpm.repositories.spring.SubsystemRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Integration test for SubsystemRepository using Spring Boot @SpringBootTest.
- * Uses full Spring context instead of @DataJpaTest to avoid context loading issues.
+ * Integration test for SubsystemRepository using @DataJpaTest.
+ * Uses lightweight JPA slice testing for optimal performance and isolation.
  * 
- * @SpringBootTest loads the complete application context
- * @Transactional ensures each test runs in a transaction that's rolled back
- * @AutoConfigureMockMvc configures MockMvc (though not used in repository tests)
+ * @DataJpaTest loads only JPA repository context
+ * @AutoConfigureTestDatabase ensures test database configuration
+ * @ActiveProfiles("test") uses test profile
  */
-@SpringBootTest
-@Transactional
-@AutoConfigureMockMvc
+@DataJpaTest
 @ActiveProfiles("test")
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class SubsystemRepositoryIntegrationTest {
     
     @Autowired
     private SubsystemRepository subsystemRepository;
     
     @Autowired
-    private EntityManager entityManager;
+    private TestEntityManager entityManager;
     
     private Subsystem testSubsystem;
     private Subsystem drivetrainSubsystem;
@@ -110,22 +108,12 @@ class SubsystemRepositoryIntegrationTest {
         return subsystem;
     }
     
-    /**
-     * Helper method to persist and flush an entity.
-     * Replaces TestEntityManager's persistAndFlush functionality.
-     */
-    private <T> T persistAndFlush(T entity) {
-        entityManager.persist(entity);
-        entityManager.flush();
-        return entity;
-    }
-    
     // ========== BASIC CRUD OPERATIONS ==========
     
     @Test
     void testSaveAndFindById() {
         // Setup - Persist responsible subteam first
-        Subteam savedSubteam = persistAndFlush(testSubteam);
+        Subteam savedSubteam = entityManager.persistAndFlush(testSubteam);
         testSubsystem.setResponsibleSubteam(savedSubteam);
         
         // Execute - Save subsystem
@@ -166,7 +154,7 @@ class SubsystemRepositoryIntegrationTest {
     @Test
     void testDeleteById() {
         // Setup - Persist subsystem
-        Subsystem savedSubsystem = persistAndFlush(testSubsystem);
+        Subsystem savedSubsystem = entityManager.persistAndFlush(testSubsystem);
         
         // Verify exists before deletion
         assertThat(subsystemRepository.existsById(savedSubsystem.getId())).isTrue();
@@ -276,7 +264,7 @@ class SubsystemRepositoryIntegrationTest {
     @Test
     void testFindByResponsibleSubteam() {
         // Setup - Persist subteam and subsystems
-        Subteam savedSubteam = persistAndFlush(testSubteam);
+        Subteam savedSubteam = entityManager.persistAndFlush(testSubteam);
         
         testSubsystem.setResponsibleSubteam(savedSubteam);
         drivetrainSubsystem.setResponsibleSubteam(savedSubteam);
@@ -300,7 +288,7 @@ class SubsystemRepositoryIntegrationTest {
     @Test
     void testFindByResponsibleSubteamIsNull() {
         // Setup - Create subsystems with and without responsible subteams
-        Subteam savedSubteam = persistAndFlush(testSubteam);
+        Subteam savedSubteam = entityManager.persistAndFlush(testSubteam);
         
         testSubsystem.setResponsibleSubteam(savedSubteam);      // Has subteam
         drivetrainSubsystem.setResponsibleSubteam(null);        // No subteam
@@ -324,7 +312,7 @@ class SubsystemRepositoryIntegrationTest {
     @Test
     void testFindByResponsibleSubteamIsNotNull() {
         // Setup - Create subsystems with and without responsible subteams
-        Subteam savedSubteam = persistAndFlush(testSubteam);
+        Subteam savedSubteam = entityManager.persistAndFlush(testSubteam);
         
         testSubsystem.setResponsibleSubteam(savedSubteam);      // Has subteam
         drivetrainSubsystem.setResponsibleSubteam(savedSubteam); // Has subteam
@@ -457,8 +445,8 @@ class SubsystemRepositoryIntegrationTest {
     @Test
     void testCountByResponsibleSubteam() {
         // Setup - Create subteams and subsystems
-        Subteam savedSubteam1 = persistAndFlush(testSubteam);
-        Subteam savedSubteam2 = persistAndFlush(mechanicalSubteam);
+        Subteam savedSubteam1 = entityManager.persistAndFlush(testSubteam);
+        Subteam savedSubteam2 = entityManager.persistAndFlush(mechanicalSubteam);
         
         testSubsystem.setResponsibleSubteam(savedSubteam1);
         drivetrainSubsystem.setResponsibleSubteam(savedSubteam1);
@@ -523,7 +511,7 @@ class SubsystemRepositoryIntegrationTest {
     @Test
     void testFindByStatusAndResponsibleSubteam() {
         // Setup - Create subteam and subsystems
-        Subteam savedSubteam = persistAndFlush(testSubteam);
+        Subteam savedSubteam = entityManager.persistAndFlush(testSubteam);
         
         testSubsystem.setStatus(Subsystem.Status.IN_PROGRESS);
         testSubsystem.setResponsibleSubteam(savedSubteam);
@@ -535,7 +523,7 @@ class SubsystemRepositoryIntegrationTest {
         intakeSubsystem.setResponsibleSubteam(savedSubteam);
         
         // Create subsystem with same status but different subteam
-        Subteam otherSubteam = persistAndFlush(mechanicalSubteam);
+        Subteam otherSubteam = entityManager.persistAndFlush(mechanicalSubteam);
         Subsystem otherSubsystem = new Subsystem();
         otherSubsystem.setName("Other System");
         otherSubsystem.setStatus(Subsystem.Status.IN_PROGRESS);
@@ -554,7 +542,7 @@ class SubsystemRepositoryIntegrationTest {
         // Verify - Should find only IN_PROGRESS subsystems for the specific subteam
         assertThat(results).hasSize(2);
         assertThat(results).extracting(Subsystem::getName)
-            .containsExactlyInAnyOrder("Drivetrain", "Test Subsystem"); // Ordered by name due to @Query ORDER BY
+            .containsExactlyInAnyOrder("Drivetrain", "Test Subsystem");
         assertThat(results).allMatch(s -> s.getStatus() == Subsystem.Status.IN_PROGRESS);
         assertThat(results).allMatch(s -> s.getResponsibleSubteam().getId().equals(savedSubteam.getId()));
     }
@@ -590,7 +578,7 @@ class SubsystemRepositoryIntegrationTest {
     @Test
     void testSubteamRelationship() {
         // Setup - Create subteam with subsystems
-        Subteam savedSubteam = persistAndFlush(testSubteam);
+        Subteam savedSubteam = entityManager.persistAndFlush(testSubteam);
         
         // Add subsystems to subteam
         testSubsystem.setResponsibleSubteam(savedSubteam);
@@ -617,8 +605,8 @@ class SubsystemRepositoryIntegrationTest {
     @Test
     void testSubteamAssignmentChange() {
         // Setup - Create subteams and subsystem
-        Subteam savedSubteam1 = persistAndFlush(testSubteam);
-        Subteam savedSubteam2 = persistAndFlush(mechanicalSubteam);
+        Subteam savedSubteam1 = entityManager.persistAndFlush(testSubteam);
+        Subteam savedSubteam2 = entityManager.persistAndFlush(mechanicalSubteam);
         
         testSubsystem.setResponsibleSubteam(savedSubteam1);
         Subsystem savedSubsystem = subsystemRepository.save(testSubsystem);
@@ -643,7 +631,7 @@ class SubsystemRepositoryIntegrationTest {
     @Test
     void testRemoveSubteamAssignment() {
         // Setup - Create subteam and subsystem
-        Subteam savedSubteam = persistAndFlush(testSubteam);
+        Subteam savedSubteam = entityManager.persistAndFlush(testSubteam);
         testSubsystem.setResponsibleSubteam(savedSubteam);
         Subsystem savedSubsystem = subsystemRepository.save(testSubsystem);
         entityManager.flush();
@@ -750,7 +738,7 @@ class SubsystemRepositoryIntegrationTest {
     @Test
     void testComplexSubsystemScenario() {
         // Setup - Create a complex subsystem scenario with multiple relationships
-        Subteam savedSubteam = persistAndFlush(testSubteam);
+        Subteam savedSubteam = entityManager.persistAndFlush(testSubteam);
         
         // Create subsystem with all properties
         testSubsystem.setName("Complex Subsystem");
@@ -828,7 +816,7 @@ class SubsystemRepositoryIntegrationTest {
     @Test
     void testBulkSubsystemOperations() {
         // Setup - Create subteam
-        Subteam savedSubteam = persistAndFlush(testSubteam);
+        Subteam savedSubteam = entityManager.persistAndFlush(testSubteam);
         
         // Create multiple subsystems
         List<Subsystem> subsystems = new java.util.ArrayList<>();
@@ -870,8 +858,8 @@ class SubsystemRepositoryIntegrationTest {
     @Test
     void testSubsystemQueryPerformance() {
         // Setup - Create larger dataset for performance testing
-        Subteam savedSubteam1 = persistAndFlush(testSubteam);
-        Subteam savedSubteam2 = persistAndFlush(mechanicalSubteam);
+        Subteam savedSubteam1 = entityManager.persistAndFlush(testSubteam);
+        Subteam savedSubteam2 = entityManager.persistAndFlush(mechanicalSubteam);
         
         // Create 30 subsystems across different statuses and subteams
         List<Subsystem> subsystems = new java.util.ArrayList<>();
@@ -996,7 +984,7 @@ class SubsystemRepositoryIntegrationTest {
     void testRepositoryServiceIntegration() {
         // This test verifies that the repository works correctly with service layer patterns
         // Setup - Create realistic subsystem scenario
-        Subteam savedSubteam = persistAndFlush(testSubteam);
+        Subteam savedSubteam = entityManager.persistAndFlush(testSubteam);
         
         // Create subsystem following service layer patterns
         testSubsystem.setName("Service Integration Test");
@@ -1018,7 +1006,7 @@ class SubsystemRepositoryIntegrationTest {
         subsystemRepository.save(savedSubsystem);
         
         // 3. Change responsible subteam (service layer pattern)
-        Subteam newSubteam = persistAndFlush(mechanicalSubteam);
+        Subteam newSubteam = entityManager.persistAndFlush(mechanicalSubteam);
         savedSubsystem.setResponsibleSubteam(newSubteam);
         subsystemRepository.save(savedSubsystem);
         

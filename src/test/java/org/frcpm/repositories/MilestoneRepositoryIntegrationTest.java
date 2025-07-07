@@ -8,12 +8,11 @@ import org.frcpm.repositories.spring.MilestoneRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -21,26 +20,23 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Integration test for MilestoneRepository using Spring Boot @SpringBootTest.
- * Uses full Spring context instead of @DataJpaTest to avoid context loading issues.
+ * Integration test for MilestoneRepository using @DataJpaTest.
+ * Uses lightweight JPA slice testing for optimal performance and isolation.
  * 
- * Tests milestone management with date-based queries and project relationships.
- * 
- * @SpringBootTest loads the complete application context
- * @Transactional ensures each test runs in a transaction that's rolled back
- * @AutoConfigureMockMvc configures MockMvc (though not used in repository tests)
+ * @DataJpaTest loads only JPA repository context
+ * @AutoConfigureTestDatabase ensures test database configuration
+ * @ActiveProfiles("test") uses test profile
  */
-@SpringBootTest
-@Transactional
-@AutoConfigureMockMvc
+@DataJpaTest
 @ActiveProfiles("test")
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class MilestoneRepositoryIntegrationTest {
     
     @Autowired
     private MilestoneRepository milestoneRepository;
     
     @Autowired
-    private EntityManager entityManager;
+    private TestEntityManager entityManager;
     
     private Milestone testMilestone;
     private Milestone futureMilestone;
@@ -128,22 +124,12 @@ class MilestoneRepositoryIntegrationTest {
         return milestone;
     }
     
-    /**
-     * Helper method to persist and flush an entity.
-     * Replaces TestEntityManager's persistAndFlush functionality.
-     */
-    private <T> T persistAndFlush(T entity) {
-        entityManager.persist(entity);
-        entityManager.flush();
-        return entity;
-    }
-    
     // ========== BASIC CRUD OPERATIONS ==========
     
     @Test
     void testSaveAndFindById() {
         // Setup - Persist project first
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         testMilestone.setProject(savedProject);
         
         // Execute - Save milestone
@@ -167,7 +153,7 @@ class MilestoneRepositoryIntegrationTest {
     @Test
     void testFindAll() {
         // Setup - Persist project and milestones
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         
         testMilestone.setProject(savedProject);
         futureMilestone.setProject(savedProject);
@@ -188,7 +174,7 @@ class MilestoneRepositoryIntegrationTest {
     @Test
     void testDeleteById() {
         // Setup - Persist project and milestone
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         testMilestone.setProject(savedProject);
         Milestone savedMilestone = milestoneRepository.save(testMilestone);
         entityManager.flush();
@@ -211,7 +197,7 @@ class MilestoneRepositoryIntegrationTest {
         assertThat(milestoneRepository.count()).isEqualTo(0);
         
         // Setup - Persist project and milestone
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         testMilestone.setProject(savedProject);
         milestoneRepository.save(testMilestone);
         entityManager.flush();
@@ -225,8 +211,8 @@ class MilestoneRepositoryIntegrationTest {
     @Test
     void testFindByProject() {
         // Setup - Create projects with different milestones
-        Project savedProject1 = persistAndFlush(testProject);
-        Project savedProject2 = persistAndFlush(otherProject);
+        Project savedProject1 = entityManager.persistAndFlush(testProject);
+        Project savedProject2 = entityManager.persistAndFlush(otherProject);
         
         testMilestone.setProject(savedProject1);
         futureMilestone.setProject(savedProject1);
@@ -253,7 +239,7 @@ class MilestoneRepositoryIntegrationTest {
     @Test
     void testFindByDateBefore() {
         // Setup - Create milestones with different dates
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         
         testMilestone.setDate(LocalDate.now().plusDays(7));  // Future
         pastMilestone.setDate(LocalDate.now().minusDays(7)); // Past
@@ -287,7 +273,7 @@ class MilestoneRepositoryIntegrationTest {
     @Test
     void testFindByDateAfter() {
         // Setup - Create milestones with different dates
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         
         testMilestone.setDate(LocalDate.now().plusDays(7));  // Future
         pastMilestone.setDate(LocalDate.now().minusDays(7)); // Past
@@ -320,7 +306,7 @@ class MilestoneRepositoryIntegrationTest {
     @Test
     void testFindByDateBetween() {
         // Setup - Create milestones with different dates
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         
         pastMilestone.setDate(LocalDate.now().minusDays(10));    // Outside range (past)
         urgentMilestone.setDate(LocalDate.now().plusDays(3));   // Inside range
@@ -354,7 +340,7 @@ class MilestoneRepositoryIntegrationTest {
     @Test
     void testFindByNameContainingIgnoreCase() {
         // Setup - Create milestones with different names
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         
         testMilestone.setProject(savedProject);      // "Design Review"
         futureMilestone.setProject(savedProject);    // "Competition Ready"
@@ -390,7 +376,7 @@ class MilestoneRepositoryIntegrationTest {
     @Test
     void testFindByNameContainingIgnoreCase_NoMatch() {
         // Setup - Persist milestones
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         testMilestone.setProject(savedProject);
         milestoneRepository.save(testMilestone);
         entityManager.flush();
@@ -407,7 +393,7 @@ class MilestoneRepositoryIntegrationTest {
     @Test
     void testFindUpcomingMilestones() {
         // Setup - Create milestones with different dates
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         
         pastMilestone.setDate(LocalDate.now().minusDays(5));     // Past (should not appear)
         urgentMilestone.setDate(LocalDate.now().plusDays(3));   // Within range
@@ -445,8 +431,8 @@ class MilestoneRepositoryIntegrationTest {
     @Test
     void testFindUpcomingMilestones_DifferentProjects() {
         // Setup - Create milestones for different projects
-        Project savedProject1 = persistAndFlush(testProject);
-        Project savedProject2 = persistAndFlush(otherProject);
+        Project savedProject1 = entityManager.persistAndFlush(testProject);
+        Project savedProject2 = entityManager.persistAndFlush(otherProject);
         
         urgentMilestone.setDate(LocalDate.now().plusDays(3));
         urgentMilestone.setProject(savedProject1);
@@ -473,7 +459,7 @@ class MilestoneRepositoryIntegrationTest {
     @Test
     void testFindOverdueMilestones() {
         // Setup - Create milestones with different dates
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         
         // Past milestones (overdue)
         pastMilestone.setDate(LocalDate.now().minusDays(10));
@@ -511,7 +497,7 @@ class MilestoneRepositoryIntegrationTest {
     @Test
     void testFindOverdueMilestones_NoOverdue() {
         // Setup - Create only future milestones
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         
         urgentMilestone.setDate(LocalDate.now().plusDays(1));
         urgentMilestone.setProject(savedProject);
@@ -536,7 +522,7 @@ class MilestoneRepositoryIntegrationTest {
     @Test
     void testMilestoneProjectRelationship() {
         // Setup - Create project with multiple milestones
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         
         testMilestone.setProject(savedProject);
         futureMilestone.setProject(savedProject);
@@ -564,8 +550,8 @@ class MilestoneRepositoryIntegrationTest {
     @Test
     void testMilestoneProjectChange() {
         // Setup - Create projects and milestone
-        Project savedProject1 = persistAndFlush(testProject);
-        Project savedProject2 = persistAndFlush(otherProject);
+        Project savedProject1 = entityManager.persistAndFlush(testProject);
+        Project savedProject2 = entityManager.persistAndFlush(otherProject);
         
         testMilestone.setProject(savedProject1);
         Milestone savedMilestone = milestoneRepository.save(testMilestone);
@@ -592,7 +578,7 @@ class MilestoneRepositoryIntegrationTest {
     @Test
     void testMilestoneHelperMethods() {
         // Setup - Create milestone with specific date
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         
         // Past milestone
         pastMilestone.setDate(LocalDate.now().minusDays(5));
@@ -617,7 +603,7 @@ class MilestoneRepositoryIntegrationTest {
     @Test
     void testMilestoneToStringMethod() {
         // Setup - Create milestone
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         testMilestone.setProject(savedProject);
         Milestone savedMilestone = milestoneRepository.save(testMilestone);
         entityManager.flush();
@@ -629,7 +615,7 @@ class MilestoneRepositoryIntegrationTest {
     @Test
     void testMilestoneDescriptionHandling() {
         // Setup - Create milestone with null description
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         
         Milestone milestoneWithoutDesc = new Milestone();
         milestoneWithoutDesc.setName("Simple Milestone");
@@ -657,7 +643,7 @@ class MilestoneRepositoryIntegrationTest {
     @Test
     void testMilestoneDateEdgeCases() {
         // Setup - Create milestones on boundary dates
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         
         // Milestone due today
         Milestone todayMilestone = new Milestone();
@@ -696,7 +682,7 @@ class MilestoneRepositoryIntegrationTest {
     @Test
     void testComplexMilestoneScenario() {
         // Setup - Create a complete project milestone scenario
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         
         // Create milestones representing a typical FRC build season
         Milestone kickoff = new Milestone("Season Kickoff", LocalDate.now().minusWeeks(8), savedProject);

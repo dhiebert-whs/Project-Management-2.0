@@ -7,36 +7,34 @@ import org.frcpm.repositories.spring.SubteamRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Integration test for SubteamRepository using Spring Boot @SpringBootTest.
- * Uses full Spring context instead of @DataJpaTest to avoid context loading issues.
+ * Integration test for SubteamRepository using @DataJpaTest.
+ * Uses JPA slice testing for optimized repository testing.
  * 
- * @SpringBootTest loads the complete application context
- * @Transactional ensures each test runs in a transaction that's rolled back
- * @AutoConfigureMockMvc configures MockMvc (though not used in repository tests)
+ * @DataJpaTest loads only JPA components and repositories
+ * @AutoConfigureTestDatabase prevents replacement of configured database
+ * @ActiveProfiles("test") ensures test-specific configuration
  */
-@SpringBootTest
-@Transactional
-@AutoConfigureMockMvc
+@DataJpaTest
 @ActiveProfiles("test")
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class SubteamRepositoryIntegrationTest {
     
     @Autowired
     private SubteamRepository subteamRepository;
     
     @Autowired
-    private EntityManager entityManager;
+    private TestEntityManager entityManager;
     
     private Subteam programmingTeam;
     private Subteam mechanicalTeam;
@@ -96,23 +94,12 @@ class SubteamRepositoryIntegrationTest {
         return subteam;
     }
     
-    /**
-     * Helper method to persist and flush an entity.
-     * Replaces TestEntityManager's persistAndFlush functionality.
-     */
-    private <T> T persistAndFlush(T entity) {
-        entityManager.persist(entity);
-        entityManager.flush();
-        return entity;
-    }
-    
     // ========== BASIC CRUD OPERATIONS ==========
     
     @Test
     void testSaveAndFindById() {
         // Execute - Save subteam
-        Subteam savedSubteam = subteamRepository.save(programmingTeam);
-        entityManager.flush();
+        Subteam savedSubteam = entityManager.persistAndFlush(programmingTeam);
         
         // Verify save
         assertThat(savedSubteam.getId()).isNotNull();
@@ -130,10 +117,9 @@ class SubteamRepositoryIntegrationTest {
     @Test
     void testFindAll() {
         // Setup - Save multiple subteams
-        subteamRepository.save(programmingTeam);
-        subteamRepository.save(mechanicalTeam);
-        subteamRepository.save(businessTeam);
-        entityManager.flush();
+        entityManager.persistAndFlush(programmingTeam);
+        entityManager.persistAndFlush(mechanicalTeam);
+        entityManager.persistAndFlush(businessTeam);
         
         // Execute - Find all
         List<Subteam> allSubteams = subteamRepository.findAll();
@@ -147,7 +133,7 @@ class SubteamRepositoryIntegrationTest {
     @Test
     void testDeleteById() {
         // Setup - Save subteam
-        Subteam savedSubteam = persistAndFlush(programmingTeam);
+        Subteam savedSubteam = entityManager.persistAndFlush(programmingTeam);
         
         // Verify exists before deletion
         assertThat(subteamRepository.existsById(savedSubteam.getId())).isTrue();
@@ -167,9 +153,8 @@ class SubteamRepositoryIntegrationTest {
         assertThat(subteamRepository.count()).isEqualTo(0);
         
         // Setup - Save subteams
-        subteamRepository.save(programmingTeam);
-        subteamRepository.save(mechanicalTeam);
-        entityManager.flush();
+        entityManager.persistAndFlush(programmingTeam);
+        entityManager.persistAndFlush(mechanicalTeam);
         
         // Execute and verify
         assertThat(subteamRepository.count()).isEqualTo(2);
@@ -180,8 +165,7 @@ class SubteamRepositoryIntegrationTest {
     @Test
     void testFindByName() {
         // Setup - Save subteam
-        subteamRepository.save(programmingTeam);
-        entityManager.flush();
+        entityManager.persistAndFlush(programmingTeam);
         
         // Execute
         Optional<Subteam> result = subteamRepository.findByName("Programming Team");
@@ -195,8 +179,7 @@ class SubteamRepositoryIntegrationTest {
     @Test
     void testFindByName_NotFound() {
         // Setup - Save a different subteam
-        subteamRepository.save(programmingTeam);
-        entityManager.flush();
+        entityManager.persistAndFlush(programmingTeam);
         
         // Execute - Search for non-existent name
         Optional<Subteam> result = subteamRepository.findByName("Nonexistent Team");
@@ -208,8 +191,7 @@ class SubteamRepositoryIntegrationTest {
     @Test
     void testFindByNameIgnoreCase() {
         // Setup - Save subteam
-        subteamRepository.save(programmingTeam);
-        entityManager.flush();
+        entityManager.persistAndFlush(programmingTeam);
         
         // Execute - Case insensitive search
         Optional<Subteam> result = subteamRepository.findByNameIgnoreCase("PROGRAMMING TEAM");
@@ -229,10 +211,9 @@ class SubteamRepositoryIntegrationTest {
     @Test
     void testFindByColorCode() {
         // Setup - Save subteams with different colors
-        subteamRepository.save(programmingTeam);    // #007ACC
-        subteamRepository.save(mechanicalTeam);     // #FF6B35
-        subteamRepository.save(businessTeam);       // #28A745
-        entityManager.flush();
+        entityManager.persistAndFlush(programmingTeam);    // #007ACC
+        entityManager.persistAndFlush(mechanicalTeam);     // #FF6B35
+        entityManager.persistAndFlush(businessTeam);       // #28A745
         
         // Execute - Find by programming team color
         List<Subteam> results = subteamRepository.findByColorCode("#007ACC");
@@ -252,10 +233,9 @@ class SubteamRepositoryIntegrationTest {
     @Test
     void testFindAllByOrderByName() {
         // Setup - Save subteams in random order
-        subteamRepository.save(mechanicalTeam);     // "Mechanical Team"
-        subteamRepository.save(businessTeam);       // "Business Team"
-        subteamRepository.save(programmingTeam);    // "Programming Team"
-        entityManager.flush();
+        entityManager.persistAndFlush(mechanicalTeam);     // "Mechanical Team"
+        entityManager.persistAndFlush(businessTeam);       // "Business Team"
+        entityManager.persistAndFlush(programmingTeam);    // "Programming Team"
         
         // Execute
         List<Subteam> results = subteamRepository.findAllByOrderByName();
@@ -269,8 +249,7 @@ class SubteamRepositoryIntegrationTest {
     @Test
     void testExistsByName() {
         // Setup - Save subteam
-        subteamRepository.save(programmingTeam);
-        entityManager.flush();
+        entityManager.persistAndFlush(programmingTeam);
         
         // Execute - Check existing name
         boolean exists = subteamRepository.existsByName("Programming Team");
@@ -288,8 +267,7 @@ class SubteamRepositoryIntegrationTest {
     @Test
     void testExistsByNameIgnoreCase() {
         // Setup - Save subteam
-        subteamRepository.save(programmingTeam);
-        entityManager.flush();
+        entityManager.persistAndFlush(programmingTeam);
         
         // Execute - Check with different case
         boolean exists1 = subteamRepository.existsByNameIgnoreCase("PROGRAMMING TEAM");
@@ -313,10 +291,9 @@ class SubteamRepositoryIntegrationTest {
     @Test
     void testFindBySpecialty() {
         // Setup - Save subteams with different specialties
-        subteamRepository.save(programmingTeam);    // "Java, Python, C++, Robot Control, Autonomous Programming"
-        subteamRepository.save(mechanicalTeam);     // "CAD Design, Manufacturing, Assembly, Welding, Machining"
-        subteamRepository.save(businessTeam);       // "Marketing, Fundraising, Community Outreach, Social Media"
-        entityManager.flush();
+        entityManager.persistAndFlush(programmingTeam);    // "Java, Python, C++, Robot Control, Autonomous Programming"
+        entityManager.persistAndFlush(mechanicalTeam);     // "CAD Design, Manufacturing, Assembly, Welding, Machining"
+        entityManager.persistAndFlush(businessTeam);       // "Marketing, Fundraising, Community Outreach, Social Media"
         
         // Execute - Search for Java specialty
         List<Subteam> javaResults = subteamRepository.findBySpecialty("Java");
@@ -336,9 +313,8 @@ class SubteamRepositoryIntegrationTest {
     @Test
     void testFindBySpecialtyIgnoreCase() {
         // Setup - Save subteams
-        subteamRepository.save(programmingTeam);    // Contains "Java"
-        subteamRepository.save(mechanicalTeam);     // Contains "CAD Design"
-        entityManager.flush();
+        entityManager.persistAndFlush(programmingTeam);    // Contains "Java"
+        entityManager.persistAndFlush(mechanicalTeam);     // Contains "CAD Design"
         
         // Execute - Case insensitive search for "java"
         List<Subteam> javaResults = subteamRepository.findBySpecialtyIgnoreCase("java");
@@ -358,10 +334,9 @@ class SubteamRepositoryIntegrationTest {
     @Test
     void testFindBySpecialtiesContainingIgnoreCase() {
         // Setup - Save subteams with various specialties
-        subteamRepository.save(programmingTeam);    // "Java, Python, C++, Robot Control, Autonomous Programming"
-        subteamRepository.save(mechanicalTeam);     // "CAD Design, Manufacturing, Assembly, Welding, Machining"
-        subteamRepository.save(businessTeam);       // "Marketing, Fundraising, Community Outreach, Social Media"
-        entityManager.flush();
+        entityManager.persistAndFlush(programmingTeam);    // "Java, Python, C++, Robot Control, Autonomous Programming"
+        entityManager.persistAndFlush(mechanicalTeam);     // "CAD Design, Manufacturing, Assembly, Welding, Machining"
+        entityManager.persistAndFlush(businessTeam);       // "Marketing, Fundraising, Community Outreach, Social Media"
         
         // Execute - Search for "Programming" (should match both "Programming Team" and autonomus programming)
         List<Subteam> programmingResults = subteamRepository.findBySpecialtiesContainingIgnoreCase("programming");
@@ -388,9 +363,8 @@ class SubteamRepositoryIntegrationTest {
     @Test
     void testFindBySpecialty_NoMatch() {
         // Setup - Save subteams
-        subteamRepository.save(programmingTeam);
-        subteamRepository.save(mechanicalTeam);
-        entityManager.flush();
+        entityManager.persistAndFlush(programmingTeam);
+        entityManager.persistAndFlush(mechanicalTeam);
         
         // Execute - Search for non-existent specialty
         List<Subteam> results = subteamRepository.findBySpecialty("Quantum Computing");
@@ -404,8 +378,7 @@ class SubteamRepositoryIntegrationTest {
     @Test
     void testSubteamWithEmptySpecialties() {
         // Setup - Save subteam with no specialties
-        Subteam savedSubteam = subteamRepository.save(emptyTeam);
-        entityManager.flush();
+        Subteam savedSubteam = entityManager.persistAndFlush(emptyTeam);
         
         // Verify - Subteam is saved correctly
         assertThat(savedSubteam.getId()).isNotNull();
@@ -425,7 +398,7 @@ class SubteamRepositoryIntegrationTest {
         // (which may not exist yet, but are defined in the entity)
         
         // Setup - Save subteam
-        Subteam savedSubteam = persistAndFlush(programmingTeam);
+        Subteam savedSubteam = entityManager.persistAndFlush(programmingTeam);
         
         // Verify - Subteam is saved correctly
         assertThat(savedSubteam.getId()).isNotNull();
@@ -448,9 +421,8 @@ class SubteamRepositoryIntegrationTest {
         Subteam team2 = new Subteam("Team Beta", "#FF0000");  // Same color
         
         // Execute - Save both teams
-        subteamRepository.save(team1);
-        subteamRepository.save(team2);
-        entityManager.flush();
+        entityManager.persistAndFlush(team1);
+        entityManager.persistAndFlush(team2);
         
         // Verify - Both should be saved successfully
         List<Subteam> sameColorTeams = subteamRepository.findByColorCode("#FF0000");
@@ -467,9 +439,8 @@ class SubteamRepositoryIntegrationTest {
         fullStackTeam.setColorCode("#8B5CF6");
         fullStackTeam.setSpecialties("Java, Python, JavaScript, React, Spring Boot, Database Design");
         
-        subteamRepository.save(programmingTeam);  // Has Java, Python
-        subteamRepository.save(fullStackTeam);    // Also has Java, Python
-        entityManager.flush();
+        entityManager.persistAndFlush(programmingTeam);  // Has Java, Python
+        entityManager.persistAndFlush(fullStackTeam);    // Also has Java, Python
         
         // Execute - Search for Java (should find both)
         List<Subteam> javaTeams = subteamRepository.findBySpecialtyIgnoreCase("java");
@@ -496,8 +467,7 @@ class SubteamRepositoryIntegrationTest {
         specialTeam.setSpecialties("3D Modeling, CAD, CAM, 3D Printing, Prototyping");
         
         // Execute - Save team
-        Subteam savedTeam = subteamRepository.save(specialTeam);
-        entityManager.flush();
+        Subteam savedTeam = entityManager.persistAndFlush(specialTeam);
         
         // Verify - Team is saved correctly
         assertThat(savedTeam.getId()).isNotNull();

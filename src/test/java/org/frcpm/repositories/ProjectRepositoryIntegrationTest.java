@@ -7,12 +7,11 @@ import org.frcpm.repositories.spring.ProjectRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -20,24 +19,23 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Integration test for ProjectRepository using Spring Boot @SpringBootTest.
- * Uses full Spring context instead of @DataJpaTest to avoid context loading issues.
+ * Integration test for ProjectRepository using @DataJpaTest.
+ * Uses JPA slice testing for lightweight, fast repository tests.
  * 
- * @SpringBootTest loads the complete application context
- * @Transactional ensures each test runs in a transaction that's rolled back
- * @AutoConfigureMockMvc configures MockMvc (though not used in repository tests)
+ * @DataJpaTest loads only JPA repository context
+ * Tests run in transaction that's automatically rolled back
+ * Uses TestEntityManager for precise entity management
  */
-@SpringBootTest
-@Transactional
-@AutoConfigureMockMvc
+@DataJpaTest
 @ActiveProfiles("test")
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class ProjectRepositoryIntegrationTest {
     
     @Autowired
     private ProjectRepository projectRepository;
     
     @Autowired
-    private EntityManager entityManager;
+    private TestEntityManager entityManager;
     
     private Project testProject;
     private Project urgentProject;
@@ -105,23 +103,12 @@ class ProjectRepositoryIntegrationTest {
         return project;
     }
     
-    /**
-     * Helper method to persist and flush an entity.
-     * Replaces TestEntityManager's persistAndFlush functionality.
-     */
-    private <T> T persistAndFlush(T entity) {
-        entityManager.persist(entity);
-        entityManager.flush();
-        return entity;
-    }
-    
     // ========== BASIC CRUD OPERATIONS ==========
     
     @Test
     void testSaveAndFindById() {
         // Execute - Save project
-        Project savedProject = projectRepository.save(testProject);
-        entityManager.flush();
+        Project savedProject = entityManager.persistAndFlush(testProject);
         
         // Verify save
         assertThat(savedProject.getId()).isNotNull();
@@ -141,9 +128,8 @@ class ProjectRepositoryIntegrationTest {
     @Test
     void testFindAll() {
         // Setup - Save multiple projects
-        projectRepository.save(testProject);
-        projectRepository.save(urgentProject);
-        entityManager.flush();
+        entityManager.persistAndFlush(testProject);
+        entityManager.persistAndFlush(urgentProject);
         
         // Execute - Find all
         List<Project> allProjects = projectRepository.findAll();
@@ -157,7 +143,7 @@ class ProjectRepositoryIntegrationTest {
     @Test
     void testDeleteById() {
         // Setup - Save project
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         
         // Verify exists before deletion
         assertThat(projectRepository.existsById(savedProject.getId())).isTrue();
@@ -177,10 +163,9 @@ class ProjectRepositoryIntegrationTest {
         assertThat(projectRepository.count()).isEqualTo(0);
         
         // Setup - Save projects
-        projectRepository.save(testProject);
-        projectRepository.save(urgentProject);
-        projectRepository.save(futureProject);
-        entityManager.flush();
+        entityManager.persistAndFlush(testProject);
+        entityManager.persistAndFlush(urgentProject);
+        entityManager.persistAndFlush(futureProject);
         
         // Execute and verify
         assertThat(projectRepository.count()).isEqualTo(3);
@@ -191,10 +176,9 @@ class ProjectRepositoryIntegrationTest {
     @Test
     void testFindByNameContainingIgnoreCase() {
         // Setup - Save projects with different names
-        projectRepository.save(testProject);      // "Robot Chassis"
-        projectRepository.save(urgentProject);    // "Control System"
-        projectRepository.save(futureProject);    // "Drive Train"
-        entityManager.flush();
+        entityManager.persistAndFlush(testProject);      // "Robot Chassis"
+        entityManager.persistAndFlush(urgentProject);    // "Control System"
+        entityManager.persistAndFlush(futureProject);    // "Drive Train"
         
         // Execute - Case insensitive search for "robot"
         List<Project> robotResults = projectRepository.findByNameContainingIgnoreCase("robot");
@@ -221,10 +205,9 @@ class ProjectRepositoryIntegrationTest {
     @Test
     void testFindByHardDeadlineBefore() {
         // Setup - Save projects with different deadlines
-        projectRepository.save(testProject);      // deadline: now + 6 weeks
-        projectRepository.save(urgentProject);    // deadline: now + 5 days
-        projectRepository.save(futureProject);    // deadline: now + 10 weeks
-        entityManager.flush();
+        entityManager.persistAndFlush(testProject);      // deadline: now + 6 weeks
+        entityManager.persistAndFlush(urgentProject);    // deadline: now + 5 days
+        entityManager.persistAndFlush(futureProject);    // deadline: now + 10 weeks
         
         // Execute - Find projects with deadlines before now + 1 week
         LocalDate cutoffDate = LocalDate.now().plusWeeks(1);
@@ -239,10 +222,9 @@ class ProjectRepositoryIntegrationTest {
     @Test
     void testFindByStartDateAfter() {
         // Setup - Save projects with different start dates
-        projectRepository.save(testProject);      // start: now - 7 days (in past)
-        projectRepository.save(urgentProject);    // start: now - 3 days (in past)
-        projectRepository.save(futureProject);    // start: now + 2 weeks (in future)
-        entityManager.flush();
+        entityManager.persistAndFlush(testProject);      // start: now - 7 days (in past)
+        entityManager.persistAndFlush(urgentProject);    // start: now - 3 days (in past)
+        entityManager.persistAndFlush(futureProject);    // start: now + 2 weeks (in future)
         
         // Execute - Find projects starting after now
         LocalDate cutoffDate = LocalDate.now();
@@ -259,9 +241,8 @@ class ProjectRepositoryIntegrationTest {
     @Test
     void testFindByName() {
         // Setup - Save projects
-        projectRepository.save(testProject);      // "Robot Chassis"
-        projectRepository.save(urgentProject);    // "Control System"
-        entityManager.flush();
+        entityManager.persistAndFlush(testProject);      // "Robot Chassis"
+        entityManager.persistAndFlush(urgentProject);    // "Control System"
         
         // Execute - Search for partial name match
         List<Project> results = projectRepository.findByName("Robot");
@@ -274,10 +255,9 @@ class ProjectRepositoryIntegrationTest {
     @Test
     void testFindByDeadlineBefore() {
         // Setup - Save projects with different deadlines
-        projectRepository.save(testProject);      // deadline: now + 6 weeks
-        projectRepository.save(urgentProject);    // deadline: now + 5 days
-        projectRepository.save(futureProject);    // deadline: now + 10 weeks
-        entityManager.flush();
+        entityManager.persistAndFlush(testProject);      // deadline: now + 6 weeks
+        entityManager.persistAndFlush(urgentProject);    // deadline: now + 5 days
+        entityManager.persistAndFlush(futureProject);    // deadline: now + 10 weeks
         
         // Execute - Find projects with deadlines before now + 2 weeks
         LocalDate cutoffDate = LocalDate.now().plusWeeks(2);
@@ -291,11 +271,10 @@ class ProjectRepositoryIntegrationTest {
     @Test
     void testFindActiveProjects() {
         // Setup - Save projects with different date ranges
-        projectRepository.save(testProject);      // active: start in past, goal end in future
-        projectRepository.save(urgentProject);    // active: start in past, goal end soon
-        projectRepository.save(futureProject);    // not active: start in future
-        projectRepository.save(overdueProject);   // not active: goal end in past
-        entityManager.flush();
+        entityManager.persistAndFlush(testProject);      // active: start in past, goal end in future
+        entityManager.persistAndFlush(urgentProject);    // active: start in past, goal end soon
+        entityManager.persistAndFlush(futureProject);    // not active: start in future
+        entityManager.persistAndFlush(overdueProject);   // not active: goal end in past
         
         // Execute - Find active projects
         List<Project> results = projectRepository.findActiveProjects();
@@ -314,11 +293,10 @@ class ProjectRepositoryIntegrationTest {
     @Test
     void testFindOverdueProjects() {
         // Setup - Save projects with different statuses
-        projectRepository.save(testProject);      // not overdue: goal end in future
-        projectRepository.save(urgentProject);    // not overdue: goal end in future
-        projectRepository.save(futureProject);    // not overdue: hasn't started
-        projectRepository.save(overdueProject);   // overdue: goal end in past
-        entityManager.flush();
+        entityManager.persistAndFlush(testProject);      // not overdue: goal end in future
+        entityManager.persistAndFlush(urgentProject);    // not overdue: goal end in future
+        entityManager.persistAndFlush(futureProject);    // not overdue: hasn't started
+        entityManager.persistAndFlush(overdueProject);   // overdue: goal end in past
         
         // Execute - Find overdue projects
         List<Project> results = projectRepository.findOverdueProjects();
@@ -332,11 +310,10 @@ class ProjectRepositoryIntegrationTest {
     @Test
     void testFindProjectsDueSoon() {
         // Setup - Save projects with different goal end dates
-        projectRepository.save(testProject);      // due in 4 weeks
-        projectRepository.save(urgentProject);    // due in 3 days
-        projectRepository.save(futureProject);    // due in 8 weeks
-        projectRepository.save(overdueProject);   // overdue (past due)
-        entityManager.flush();
+        entityManager.persistAndFlush(testProject);      // due in 4 weeks
+        entityManager.persistAndFlush(urgentProject);    // due in 3 days
+        entityManager.persistAndFlush(futureProject);    // due in 8 weeks
+        entityManager.persistAndFlush(overdueProject);   // overdue (past due)
         
         // Execute - Find projects due within 1 week
         LocalDate endDate = LocalDate.now().plusWeeks(1);
@@ -351,11 +328,10 @@ class ProjectRepositoryIntegrationTest {
     @Test
     void testCountActiveProjects() {
         // Setup - Save projects with different statuses
-        projectRepository.save(testProject);      // active
-        projectRepository.save(urgentProject);    // active
-        projectRepository.save(futureProject);    // not active (future)
-        projectRepository.save(overdueProject);   // not active (overdue)
-        entityManager.flush();
+        entityManager.persistAndFlush(testProject);      // active
+        entityManager.persistAndFlush(urgentProject);    // active
+        entityManager.persistAndFlush(futureProject);    // not active (future)
+        entityManager.persistAndFlush(overdueProject);   // not active (overdue)
         
         // Execute - Count active projects
         long activeCount = projectRepository.countActiveProjects();
@@ -373,7 +349,7 @@ class ProjectRepositoryIntegrationTest {
         // (which don't exist yet, but are defined in the entity)
         
         // Setup - Save project
-        Project savedProject = persistAndFlush(testProject);
+        Project savedProject = entityManager.persistAndFlush(testProject);
         
         // Verify - Project is saved correctly
         assertThat(savedProject.getId()).isNotNull();
@@ -397,8 +373,7 @@ class ProjectRepositoryIntegrationTest {
         invalidProject.setHardDeadline(LocalDate.now().plusDays(1));
         
         // Execute - Save should succeed (no database constraints on date logic)
-        Project savedProject = projectRepository.save(invalidProject);
-        entityManager.flush();
+        Project savedProject = entityManager.persistAndFlush(invalidProject);
         
         // Verify - Project is saved (business logic validation would be in service layer)
         assertThat(savedProject.getId()).isNotNull();
@@ -415,10 +390,9 @@ class ProjectRepositoryIntegrationTest {
         Project controlSystem = new Project("Control System", LocalDate.now(), 
             LocalDate.now().plusWeeks(3), LocalDate.now().plusWeeks(5));
         
-        projectRepository.save(chassis1);
-        projectRepository.save(chassis2);
-        projectRepository.save(controlSystem);
-        entityManager.flush();
+        entityManager.persistAndFlush(chassis1);
+        entityManager.persistAndFlush(chassis2);
+        entityManager.persistAndFlush(controlSystem);
         
         // Execute - Search for "chassis"
         List<Project> chassisResults = projectRepository.findByNameContainingIgnoreCase("chassis");
@@ -448,10 +422,9 @@ class ProjectRepositoryIntegrationTest {
         Project futureProjectLong = new Project("Future Project", baseDate.plusMonths(1),
             baseDate.plusMonths(3), baseDate.plusMonths(4));
         
-        projectRepository.save(pastProject);
-        projectRepository.save(currentProject);
-        projectRepository.save(futureProjectLong);
-        entityManager.flush();
+        entityManager.persistAndFlush(pastProject);
+        entityManager.persistAndFlush(currentProject);
+        entityManager.persistAndFlush(futureProjectLong);
         
         // Execute - Find projects starting after base date
         List<Project> futureStarts = projectRepository.findByStartDateAfter(baseDate);

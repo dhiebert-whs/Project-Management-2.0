@@ -88,7 +88,7 @@ class COPPAComplianceServiceImplTest {
         
         // Setup security context
         SecurityContextHolder.setContext(securityContext);
-        when(securityContext.getAuthentication()).thenReturn(authentication);
+        lenient().when(securityContext.getAuthentication()).thenReturn(authentication);
         
         // ✅ FIXED: Manual service creation with proper dependencies
         coppaService = new COPPAComplianceServiceImpl(userService, auditService, emailService);
