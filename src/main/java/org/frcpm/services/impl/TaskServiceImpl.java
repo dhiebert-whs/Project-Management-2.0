@@ -244,8 +244,9 @@ public class TaskServiceImpl implements TaskService {
             return null;
         }
     
-        // Store old progress for WebSocket event
+        // Store old progress and completion state for WebSocket events
         Integer oldProgress = task.getProgress();
+        boolean wasCompleted = task.isCompleted();
     
         // Progress must be between 0 and 100
         progress = Math.max(0, Math.min(100, progress));
@@ -256,16 +257,15 @@ public class TaskServiceImpl implements TaskService {
             task.setProgress(100);
         }
     
-        boolean wasCompleted = task.isCompleted();
         task.setCompleted(completed || progress == 100);
     
-        // Save task
+        // Save task using repository directly to avoid double WebSocket events from save() method
         Task savedTask = taskRepository.save(task);
         
-        // Publish WebSocket events
+        // Get current user for WebSocket events
         User currentUser = getCurrentUser();
         
-        // Publish progress update
+        // Publish WebSocket events manually here to have full control
         webSocketEventPublisher.publishTaskProgressUpdate(savedTask, oldProgress, currentUser);
         
         // Publish completion event if task was just completed

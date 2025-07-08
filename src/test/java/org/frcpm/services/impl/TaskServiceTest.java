@@ -717,9 +717,9 @@ class TaskServiceTest {
         // Verify
         assertTrue(result);
         
-        // ✅ FIXED: Update expected call counts
+        // ✅ FIXED: Update expected call counts for WebSocket integration
         verify(taskRepository, times(2)).findById(1L); // Called in addDependency and in save()
-        verify(taskRepository).findById(2L);
+        verify(taskRepository, times(2)).findById(2L); // Called in addDependency and in save()
         verify(taskRepository, times(2)).save(any(Task.class)); // Both tasks saved
     }
     
@@ -770,9 +770,9 @@ class TaskServiceTest {
         // Verify
         assertTrue(result);
         
-        // ✅ FIXED: Update expected call counts
+        // ✅ FIXED: Update expected call counts for WebSocket integration
         verify(taskRepository, times(2)).findById(1L); // Called in removeDependency and in save()
-        verify(taskRepository).findById(2L);
+        verify(taskRepository, times(2)).findById(2L); // Called in removeDependency and in save()
         verify(taskRepository, times(2)).save(any(Task.class)); // Both tasks saved
     }
     
@@ -876,34 +876,32 @@ class TaskServiceTest {
 
     @Test
     void testUpdateTaskProgress_Completion_PublishesCompletionEvent() {
-        // Setup
-        // ✅ IMPORTANT: Set initial completed state to false so completion event triggers
-        testTask.setCompleted(false);
-        testTask.setProgress(0);
+        // Setup - Reset the test task to ensure clean state
+        testTask.setCompleted(false);  // CRITICAL: Must start as incomplete
+        testTask.setProgress(25);      // Set to a specific starting progress
         
+        // Mock repository to return our test task
         when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
-        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> {
-            Task task = invocation.getArgument(0);
-            // Ensure the task state reflects the completion
-            return task;
-        });
+        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
-        // Execute - complete the task
+        // Verify initial state
+        assertFalse(testTask.isCompleted(), "Task should start incomplete");
+        assertEquals(25, testTask.getProgress(), "Task should start at 25% progress");
+        
+        // Execute - complete the task (this should trigger completion event)
         Task result = taskService.updateTaskProgress(1L, 100, true);
         
-        // Verify
+        // Verify final state
         assertNotNull(result);
-        assertEquals(100, result.getProgress());
-        assertTrue(result.isCompleted());
+        assertEquals(100, result.getProgress(), "Task progress should be 100%");
+        assertTrue(result.isCompleted(), "Task should be completed");
         
         // Verify repository interactions
         verify(taskRepository).findById(1L);
         verify(taskRepository).save(testTask);
         
-        // ✅ FIXED: Verify WebSocket events - progress update should happen
-        verify(webSocketEventPublisher).publishTaskProgressUpdate(eq(testTask), eq(0), any());
-        
-        // ✅ FIXED: Verify completion event - should be triggered when task changes from incomplete to complete
+        // Verify WebSocket events - BOTH progress update AND completion should be called
+        verify(webSocketEventPublisher).publishTaskProgressUpdate(eq(testTask), eq(25), any());
         verify(webSocketEventPublisher).publishTaskCompletion(eq(testTask), any());
     }
 }
