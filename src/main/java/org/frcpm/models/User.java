@@ -110,8 +110,7 @@ public class User {
     private LocalDateTime lastLogin;
     
     // Relationship to TeamMember (one-to-one)
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private TeamMember teamMember;
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY) TeamMember teamMember;
     
     // Constructors
     public User() {}
@@ -380,9 +379,19 @@ public class User {
     }
 
     public void setTeamMember(TeamMember teamMember) {
-        this.teamMember = teamMember;
-        if (teamMember != null) {
-            teamMember.setUser(this);
+        // Prevent circular reference
+        if (this.teamMember != teamMember) {
+            // Clear old relationship if exists
+            if (this.teamMember != null && this.teamMember.getUser() == this) {
+                this.teamMember.user = null; // Direct field access to avoid recursion
+            }
+            
+            this.teamMember = teamMember;
+            
+            // Set reverse relationship only if not already set
+            if (teamMember != null && teamMember.getUser() != this) {
+                teamMember.user = this; // Direct field access to avoid recursion
+            }
         }
     }
     

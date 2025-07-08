@@ -32,8 +32,7 @@ public class TeamMember {
     
     // Authentication relationship (new in Phase 2B)
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", unique = true)
-    private User user;
+    @JoinColumn(name = "user_id", unique = true) User user;
     
     // Core profile information (preserved from Phase 1/2A)
     @Column(name = "username", length = 150, nullable = false, unique = true)
@@ -215,11 +214,19 @@ public class TeamMember {
     }
 
     public void setUser(User user) {
-        this.user = user;
-        if (user != null) {
-            user.setTeamMember(this);
-            // Auto-sync basic data
-            syncFromUser();
+        // Prevent circular reference
+        if (this.user != user) {
+            // Clear old relationship if exists
+            if (this.user != null && this.user.getTeamMember() == this) {
+                this.user.teamMember = null; // Direct field access to avoid recursion
+            }
+            
+            this.user = user;
+            
+            // Set reverse relationship only if not already set
+            if (user != null && user.getTeamMember() != this) {
+                user.teamMember = this; // Direct field access to avoid recursion
+            }
         }
     }
 
