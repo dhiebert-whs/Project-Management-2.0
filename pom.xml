@@ -59,7 +59,7 @@
                 <artifactId>spring-boot-starter-validation</artifactId>
             </dependency>
             
-            <!-- 🔧 FIXED: WebSocket for real-time features - SINGLE ENTRY -->
+            <!-- 🔧 FIXED: WebSocket for real-time features -->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-websocket</artifactId>
@@ -76,7 +76,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-mail</artifactId>
             </dependency>
-
+    
             <!-- ===== DATABASE CONNECTIVITY ===== -->
             
             <!-- H2 for development and testing -->
@@ -104,7 +104,7 @@
                 <groupId>com.zaxxer</groupId>
                 <artifactId>HikariCP</artifactId>
             </dependency>
-
+    
             <!-- ===== SECURITY ENHANCEMENTS (Phase 2B) ===== -->
             
             <!-- TOTP for Multi-Factor Authentication -->
@@ -132,7 +132,7 @@
                 <groupId>org.springframework.security</groupId>
                 <artifactId>spring-security-crypto</artifactId>
             </dependency>
-
+    
             <!-- ===== JPA / HIBERNATE ===== -->
             
             <!-- Hibernate Validator -->
@@ -140,7 +140,7 @@
                 <groupId>org.hibernate.validator</groupId>
                 <artifactId>hibernate-validator</artifactId>
             </dependency>
-
+    
             <!-- ===== TESTING FRAMEWORKS ===== -->
             
             <!-- Spring Boot Test Starter -->
@@ -156,13 +156,6 @@
                 <artifactId>spring-security-test</artifactId>
                 <scope>test</scope>
             </dependency>
-
-            <!-- Spring Boot Test Containers -->
-            <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-testcontainers</artifactId>
-                <scope>test</scope>
-            </dependency>
     
             <!-- ===== PRESERVE EXISTING VALUABLE DEPENDENCIES ===== -->
             
@@ -173,13 +166,13 @@
                 <version>2.0.27</version>
             </dependency>
             
-            <!-- 🔧 FIXED: JSON Processing - Spring Boot manages Jackson versions -->
+            <!-- JSON Processing - Spring Boot manages Jackson versions -->
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
             </dependency>
             
-            <!-- 🔧 FIXED: Jackson JSR310 support for LocalDateTime serialization -->
+            <!-- Jackson JSR310 support for LocalDateTime serialization -->
             <dependency>
                 <groupId>com.fasterxml.jackson.datatype</groupId>
                 <artifactId>jackson-datatype-jsr310</artifactId>
@@ -198,17 +191,6 @@
                 <artifactId>jgrapht-core</artifactId>
                 <version>1.5.2</version>
             </dependency>
-    
-            <!-- 🔧 REMOVED: Duplicate and conflicting WebSocket dependencies -->
-            <!-- 
-            REMOVED DUPLICATES:
-            - Second spring-boot-starter-websocket entry
-            - spring-websocket with test scope (conflicts with starter)
-            - spring-messaging (included in websocket starter)
-            - Duplicate validation starter
-            - Duplicate actuator entries with different scopes
-            - Duplicate test dependencies
-            -->
             
         </dependencies>
     
@@ -236,7 +218,6 @@
                         <source>21</source>
                         <target>21</target>
                         <encoding>UTF-8</encoding>
-                        <!-- ✅ FIXED: Simplified excludes to only exclude JavaFX/MVVMFx -->
                         <excludes>
                             <!-- Exclude JavaFX-dependent files only -->
                             <exclude>**/mvvm/**</exclude>
@@ -350,41 +331,3 @@
             </profile>
         </profiles>
     </project>
-
-<!--
-🔧 FIXES APPLIED:
-
-1. ✅ REMOVED DUPLICATE WEBSOCKET DEPENDENCIES:
-   - Removed duplicate spring-boot-starter-websocket entry
-   - Removed conflicting spring-websocket with test scope
-   - Removed standalone spring-messaging (included in websocket starter)
-
-2. ✅ REMOVED DUPLICATE DEPENDENCIES:
-   - Removed duplicate spring-boot-starter-validation
-   - Removed duplicate spring-boot-starter-actuator entries
-   - Removed duplicate test dependencies
-
-3. ✅ KEPT ESSENTIAL WEBSOCKET SUPPORT:
-   - Single spring-boot-starter-websocket (includes all needed components)
-   - Jackson databind and JSR310 for JSON message serialization
-   - Validation for WebSocket DTOs
-
-4. ✅ SPRING BOOT PARENT MANAGES VERSIONS:
-   - Let Spring Boot 3.2.0 parent manage compatible versions
-   - Removed explicit version numbers for Spring components
-
-🎯 WHAT THIS INCLUDES:
-
-spring-boot-starter-websocket automatically includes:
-- spring-websocket (WebSocket support)
-- spring-messaging (STOMP messaging)
-- spring-webmvc (Web MVC integration)
-- jackson-databind (JSON conversion)
-- tomcat-embed-websocket (Embedded Tomcat WebSocket)
-
-🚀 NEXT STEPS:
-1. Replace your pom.xml with this fixed version
-2. Reload Maven project
-3. Verify WebSocket imports resolve in WebSocketConfig.java
-4. Test compilation - should be clean!
--->

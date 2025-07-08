@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - FRC Project Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .dashboard-header {
+            background: linear-gradient(135deg, #0066cc 0%, #004499 100%);
+            color: white;
+            padding: 2rem 0;
+        }
+        .feature-card {
+            transition: transform 0.2s;
+            height: 100%;
+        }
+        .feature-card:hover {
+            transform: translateY(-2px);
+        }
+        .status-badge {
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="mb-1">FRC Project Management Dashboard</h1>
+                    <p class="mb-0 opacity-75">Welcome back! Ready to build something amazing?</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <span class="badge bg-success status-badge me-2">Phase 2D Ready</span>
+                    <a href="/logout" class="btn btn-outline-light btn-sm">Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard Content -->
+    <div class="container my-5">
+        <!-- Success Message -->
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <strong>🎉 Login Successful!</strong> You're now ready to proceed with Phase 2D AttendanceService WebSocket integration.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h3>Quick Actions</h3>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card feature-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-project-diagram fa-3x text-primary mb-3"></i>
+                        <h5>Projects</h5>
+                        <p class="text-muted">Manage your FRC projects</p>
+                        <a href="/projects" class="btn btn-primary">View Projects</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card feature-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-tasks fa-3x text-success mb-3"></i>
+                        <h5>Tasks</h5>
+                        <p class="text-muted">Track team progress</p>
+                        <a href="/tasks" class="btn btn-success">View Tasks</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card feature-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-users fa-3x text-info mb-3"></i>
+                        <h5>Team</h5>
+                        <p class="text-muted">Manage team members</p>
+                        <a href="/team" class="btn btn-info">View Team</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card feature-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-calendar fa-3x text-warning mb-3"></i>
+                        <h5>Meetings</h5>
+                        <p class="text-muted">Schedule and track meetings</p>
+                        <a href="/meetings" class="btn btn-warning">View Meetings</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Phase 2D Development Status -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-success">
+                    <div class="card-header bg-success text-white">
+                        <h4 class="mb-0">🚀 Phase 2D Development Status</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>✅ Completed Components</h5>
+                                <ul>
+                                    <li><strong>WebSocket Infrastructure</strong> - Phase 2C foundation ready</li>
+                                    <li><strong>Authentication System</strong> - Login working with COPPA compliance</li>
+                                    <li><strong>AttendanceService</strong> - Enhanced with WebSocket events</li>
+                                    <li><strong>WebSocket DTOs</strong> - AttendanceUpdateMessage & TeamPresenceMessage created</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>🎯 Ready for Development</h5>
+                                <ul>
+                                    <li><strong>Real-time Attendance</strong> - Live workshop presence tracking</li>
+                                    <li><strong>Meeting Notifications</strong> - Instant alerts and reminders</li>
+                                    <li><strong>Team Coordination</strong> - Enhanced collaboration features</li>
+                                    <li><strong>Mobile Workshop</strong> - QR codes and offline capabilities</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="alert alert-info mt-3">
+                            <strong>Next Steps:</strong> You can now proceed with testing the AttendanceService WebSocket integration using the proven Phase 2C patterns!
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Development Tools -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Development Tools</h5>
+                    </div>
+                    <div class="card-body">
+                        <a href="/h2-console" class="btn btn-outline-secondary me-2" target="_blank">H2 Database Console</a>
+                        <a href="/actuator/health" class="btn btn-outline-info me-2" target="_blank">Health Check</a>
+                        <a href="/actuator" class="btn btn-outline-warning" target="_blank">Actuator Endpoints</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>WebSocket Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="websocket-status">
+                            <span class="badge bg-warning">Connecting...</span>
+                            <span id="connection-info" class="ms-2 text-muted">Establishing WebSocket connection</span>
+                        </div>
+                        <small class="text-muted d-block mt-2">
+                            WebSocket endpoint: <code>ws://localhost:8080/ws</code>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS and WebSocket Test -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    
+    <script>
+        // Simple WebSocket connection test
+        document.addEventListener('DOMContentLoaded', function() {
+            const statusElement = document.getElementById('websocket-status');
+            const infoElement = document.getElementById('connection-info');
+            
+            try {
+                const ws = new WebSocket('ws://localhost:8080/ws');
+                
+                ws.onopen = function() {
+                    statusElement.innerHTML = '<span class="badge bg-success">Connected</span>';
+                    infoElement.textContent = 'WebSocket connection established successfully';
+                };
+                
+                ws.onerror = function() {
+                    statusElement.innerHTML = '<span class="badge bg-danger">Error</span>';
+                    infoElement.textContent = 'WebSocket connection failed';
+                };
+                
+                ws.onclose = function() {
+                    statusElement.innerHTML = '<span class="badge bg-secondary">Disconnected</span>';
+                    infoElement.textContent = 'WebSocket connection closed';
+                };
+                
+                // Close connection after test
+                setTimeout(() => {
+                    if (ws.readyState === WebSocket.OPEN) {
+                        ws.close();
+                    }
+                }, 5000);
+                
+            } catch (error) {
+                statusElement.innerHTML = '<span class="badge bg-danger">Error</span>';
+                infoElement.textContent = 'WebSocket not available';
+            }
+        });
+    </script>
+</body>
+</html>
