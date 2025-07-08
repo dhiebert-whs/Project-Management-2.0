@@ -110,7 +110,7 @@ public class DashboardController extends BaseController {
                 }
             }
 
-            return view("dashboard/index");
+            return view("dashboard");
             
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error loading dashboard", e);
@@ -283,7 +283,7 @@ public class DashboardController extends BaseController {
             addWarningMessage(model, "No projects found. Create a project to get started.");
         }
         
-        return view("dashboard/welcome");
+        return view("dashboard");
     }
     
     /**
