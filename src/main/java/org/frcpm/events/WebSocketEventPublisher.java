@@ -12,6 +12,7 @@ import org.frcpm.models.Task;
 import org.frcpm.models.Project;
 import org.frcpm.models.User;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.logging.Logger;
@@ -42,12 +43,15 @@ public class WebSocketEventPublisher {
     private static final Logger LOGGER = Logger.getLogger(WebSocketEventPublisher.class.getName());
     
     @Autowired
+    @Lazy
     private TaskUpdateController taskUpdateController;
     
     @Autowired
+    @Lazy
     private NotificationController notificationController;
     
     @Autowired
+    @Lazy
     private ActivityController activityController;
     
     // =========================================================================

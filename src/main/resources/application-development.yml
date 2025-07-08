@@ -143,7 +143,7 @@ spring.security:
     
 # Development Database Initialization
 spring.sql.init:
-  mode: always
+  mode: never
   data-locations: 
     - classpath:data-dev.sql  # Development test data
   schema-locations:
