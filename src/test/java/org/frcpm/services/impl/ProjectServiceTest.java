@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
+import org.frcpm.events.WebSocketEventPublisher;
 
 /**
  * Test class for ProjectService implementation using Spring Boot testing patterns.
@@ -35,6 +36,9 @@ class ProjectServiceTest {
     
     @Mock
     private TaskRepository taskRepository;
+
+    @Mock
+    private WebSocketEventPublisher webSocketEventPublisher;
     
     private ProjectServiceImpl projectService; // ✅ FIXED: Use implementation class
     
@@ -43,14 +47,14 @@ class ProjectServiceTest {
     
     @BeforeEach
     void setUp() {
-        // ✅ FIXED: Create test objects ONLY - NO MOCK STUBBING HERE
+        // Create test objects ONLY - NO MOCK STUBBING HERE
         now = LocalDate.now();
         testProject = createTestProject();
         
-        // Create service with injected mocks
-        projectService = new ProjectServiceImpl(projectRepository, taskRepository);
+        // ✅ FIXED: Create service with WebSocketEventPublisher mock
+        projectService = new ProjectServiceImpl(projectRepository, taskRepository, webSocketEventPublisher);
         
-        // ✅ FIXED: NO mock stubbing in setUp() - move to individual test methods
+        // NO mock stubbing in setUp() - move to individual test methods
     }
     
     /**

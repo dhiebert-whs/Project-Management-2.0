@@ -2,6 +2,7 @@
 
 package org.frcpm.services.impl;
 
+import org.frcpm.events.WebSocketEventPublisher;
 import org.frcpm.models.Project;
 import org.frcpm.models.Subsystem;
 import org.frcpm.models.Task;
@@ -24,7 +25,10 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+
+import org.frcpm.events.WebSocketEventPublisher;
 
 /**
  * Test class for TaskService implementation using Spring Boot testing patterns.
@@ -41,6 +45,9 @@ class TaskServiceTest {
     
     @Mock
     private ComponentRepository componentRepository;
+
+    @Mock
+    private WebSocketEventPublisher webSocketEventPublisher;
     
     private TaskServiceImpl taskService; // ✅ Use implementation class, not interface
     
@@ -59,10 +66,10 @@ class TaskServiceTest {
         testMember = createTestMember();
         testTask = createTestTask();
         
-        // Create service with injected mocks
-        taskService = new TaskServiceImpl(taskRepository, projectRepository, componentRepository);
+        // ✅ FIXED: Create service with WebSocketEventPublisher mock
+        taskService = new TaskServiceImpl(taskRepository, projectRepository, componentRepository, webSocketEventPublisher);
         
-        // ✅ NO mock stubbing in setUp() - move to individual test methods
+        // NO mock stubbing in setUp() - move to individual test methods
     }
     
     /**
@@ -645,6 +652,8 @@ class TaskServiceTest {
     void testAssignMembers() {
         // Setup
         Set<TeamMember> members = Set.of(testMember);
+        
+        // ✅ FIXED: Mock for multiple findById calls
         when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
         when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
@@ -654,8 +663,8 @@ class TaskServiceTest {
         // Verify
         assertNotNull(result);
         
-        // Verify repository interactions
-        verify(taskRepository).findById(1L);
+        // ✅ FIXED: Update expected call counts
+        verify(taskRepository, times(2)).findById(1L); // Called in assignMembers and in save()
         verify(taskRepository).save(testTask);
     }
     
@@ -697,6 +706,7 @@ class TaskServiceTest {
         Task dependencyTask = new Task("Dependency Task", testProject, testSubsystem);
         dependencyTask.setId(2L);
         
+        // ✅ FIXED: Mock for multiple findById calls
         when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
         when(taskRepository.findById(2L)).thenReturn(Optional.of(dependencyTask));
         when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -707,10 +717,10 @@ class TaskServiceTest {
         // Verify
         assertTrue(result);
         
-        // Verify repository interactions
-        verify(taskRepository).findById(1L);
+        // ✅ FIXED: Update expected call counts
+        verify(taskRepository, times(2)).findById(1L); // Called in addDependency and in save()
         verify(taskRepository).findById(2L);
-        verify(taskRepository, times(2)).save(any(Task.class));
+        verify(taskRepository, times(2)).save(any(Task.class)); // Both tasks saved
     }
     
     @Test
@@ -749,6 +759,7 @@ class TaskServiceTest {
         Task dependencyTask = new Task("Dependency Task", testProject, testSubsystem);
         dependencyTask.setId(2L);
         
+        // ✅ FIXED: Mock for multiple findById calls
         when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
         when(taskRepository.findById(2L)).thenReturn(Optional.of(dependencyTask));
         when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -759,10 +770,10 @@ class TaskServiceTest {
         // Verify
         assertTrue(result);
         
-        // Verify repository interactions
-        verify(taskRepository).findById(1L);
+        // ✅ FIXED: Update expected call counts
+        verify(taskRepository, times(2)).findById(1L); // Called in removeDependency and in save()
         verify(taskRepository).findById(2L);
-        verify(taskRepository, times(2)).save(any(Task.class));
+        verify(taskRepository, times(2)).save(any(Task.class)); // Both tasks saved
     }
     
     @Test
@@ -772,6 +783,7 @@ class TaskServiceTest {
         component.setId(1L);
         component.setName("Test Component");
         
+        // ✅ FIXED: Mock findById to be called multiple times (once in updateRequiredComponents, once in save via WebSocket)
         when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
         when(componentRepository.findById(1L)).thenReturn(Optional.of(component));
         when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -782,8 +794,8 @@ class TaskServiceTest {
         // Verify
         assertNotNull(result);
         
-        // Verify repository interactions
-        verify(taskRepository).findById(1L);
+        // ✅ FIXED: Verify repository interactions with correct expected call counts
+        verify(taskRepository, times(2)).findById(1L); // Called twice: once in method, once in save()
         verify(componentRepository).findById(1L);
         verify(taskRepository).save(testTask);
     }
@@ -819,5 +831,79 @@ class TaskServiceTest {
         verify(taskRepository, never()).findById(any());
         verify(componentRepository, never()).findById(any());
         verify(taskRepository, never()).save(any());
+    }
+
+    @Test
+    void testSave_NewTask_PublishesCreationEvent() {
+        // Setup
+        Task newTask = new Task("New Task", testProject, testSubsystem);
+        when(taskRepository.save(newTask)).thenReturn(newTask);
+        
+        // Execute
+        Task result = taskService.save(newTask);
+        
+        // Verify
+        assertNotNull(result);
+        assertEquals("New Task", result.getTitle());
+        
+        // Verify repository interaction
+        verify(taskRepository).save(newTask);
+        
+        // Verify WebSocket event was published (new task)
+        verify(webSocketEventPublisher).publishTaskCreation(eq(newTask), any());
+    }
+
+    @Test
+    void testUpdateTaskProgress_PublishesProgressEvent() {
+        // Setup
+        when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
+        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        
+        // Execute
+        Task result = taskService.updateTaskProgress(1L, 75, false);
+        
+        // Verify
+        assertNotNull(result);
+        assertEquals(75, result.getProgress());
+        
+        // Verify repository interactions
+        verify(taskRepository).findById(1L);
+        verify(taskRepository).save(testTask);
+        
+        // Verify WebSocket progress event was published
+        verify(webSocketEventPublisher).publishTaskProgressUpdate(eq(testTask), eq(0), any());
+    }
+
+    @Test
+    void testUpdateTaskProgress_Completion_PublishesCompletionEvent() {
+        // Setup
+        // ✅ IMPORTANT: Set initial completed state to false so completion event triggers
+        testTask.setCompleted(false);
+        testTask.setProgress(0);
+        
+        when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
+        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> {
+            Task task = invocation.getArgument(0);
+            // Ensure the task state reflects the completion
+            return task;
+        });
+        
+        // Execute - complete the task
+        Task result = taskService.updateTaskProgress(1L, 100, true);
+        
+        // Verify
+        assertNotNull(result);
+        assertEquals(100, result.getProgress());
+        assertTrue(result.isCompleted());
+        
+        // Verify repository interactions
+        verify(taskRepository).findById(1L);
+        verify(taskRepository).save(testTask);
+        
+        // ✅ FIXED: Verify WebSocket events - progress update should happen
+        verify(webSocketEventPublisher).publishTaskProgressUpdate(eq(testTask), eq(0), any());
+        
+        // ✅ FIXED: Verify completion event - should be triggered when task changes from incomplete to complete
+        verify(webSocketEventPublisher).publishTaskCompletion(eq(testTask), any());
     }
 }
