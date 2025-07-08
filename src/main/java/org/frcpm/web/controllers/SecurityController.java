@@ -14,6 +14,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * Controller for security-related operations including MFA and COPPA compliance.
+ * 
+ * ✅ FIXED: Removed conflicting /login mapping - handled by AuthController
  */
 @Controller
 public class SecurityController extends BaseController {
@@ -25,42 +27,8 @@ public class SecurityController extends BaseController {
     private COPPAComplianceService coppaService;
     
     // =========================================================================
-    // AUTHENTICATION PAGES
+    // ✅ REMOVED: /login mapping (now handled by AuthController)
     // =========================================================================
-    
-    /**
-     * Display login page.
-     */
-    @GetMapping("/login")
-    public String loginPage(@RequestParam(value = "error", required = false) String error,
-                           @RequestParam(value = "logout", required = false) String logout,
-                           Model model) {
-        
-        if (error != null) {
-            switch (error) {
-                case "coppa":
-                    addErrorMessage(model, "Your account requires parental consent before you can log in.");
-                    break;
-                case "locked":
-                    addErrorMessage(model, "Your account has been locked. Please contact an administrator.");
-                    break;
-                case "disabled":
-                    addErrorMessage(model, "Your account has been disabled. Please contact an administrator.");
-                    break;
-                default:
-                    addErrorMessage(model, "Invalid username or password.");
-                    break;
-            }
-        }
-        
-        if (logout != null) {
-            addSuccessMessage(model, "You have been logged out successfully.");
-        }
-        
-        model.addAttribute("showCoppaNotice", true);
-        
-        return view("auth/login");
-    }
     
     // =========================================================================
     // MFA SETUP AND VERIFICATION
