@@ -73,11 +73,13 @@ C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\fr
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\web\controllers\SecurityController.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\repositories\spring\TaskRepository.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\GanttDataService.java
+C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\web\dto\AttendanceUpdateMessage.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\TaskService.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\models\Task.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\security\UserDetailsServiceImpl.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\web\websocket\ActivityController.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\config\WebSocketConfig.java
+C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\web\dto\TeamPresenceMessage.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\config\SecurityConfig.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\SubteamService.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\impl\VisualizationServiceImpl.java
