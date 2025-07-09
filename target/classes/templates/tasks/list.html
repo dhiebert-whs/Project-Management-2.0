@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tasks - FRC Project Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://kit.fontawesome.com/a076d05399.js" rel="stylesheet">
+    <style>
+        /* Task List Specific Styles - Following dashboard.html patterns */
+        .task-header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 2rem 0;
+        }
+        
+        .task-item {
+            transition: all 0.3s ease;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border-left: 4px solid transparent;
+        }
+        
+        .task-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .task-item.priority-critical {
+            border-left-color: #dc3545;
+        }
+        
+        .task-item.priority-high {
+            border-left-color: #fd7e14;
+        }
+        
+        .task-item.priority-medium {
+            border-left-color: #ffc107;
+        }
+        
+        .task-item.priority-low {
+            border-left-color: #6c757d;
+        }
+        
+        .task-item.completed {
+            opacity: 0.8;
+            background-color: #f8f9fa;
+        }
+        
+        .task-item.updated {
+            border-left-color: #0066cc;
+            background-color: #e7f3ff;
+            animation: highlight 3s ease-out;
+        }
+        
+        @keyframes highlight {
+            0% { background-color: #cce7ff; }
+            100% { background-color: inherit; }
+        }
+        
+        .progress-bar {
+            transition: width 0.6s ease;
+        }
+        
+        .real-time-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: #28a745;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        
+        .real-time-indicator.disconnected {
+            background-color: #dc3545;
+            animation: none;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .filter-badge {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .filter-badge:hover {
+            transform: scale(1.05);
+        }
+        
+        .filter-badge.active {
+            background-color: #0066cc !important;
+            color: white !important;
+        }
+        
+        .task-assignees {
+            max-width: 150px;
+        }
+        
+        .task-assignee-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: #0066cc;
+            color: white;
+            font-size: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 4px;
+        }
+        
+        .quick-action-btn {
+            border: none;
+            background: none;
+            color: #6c757d;
+            font-size: 16px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+        
+        .quick-action-btn:hover {
+            background-color: #f8f9fa;
+            color: #0066cc;
+        }
+        
+        .bulk-actions {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: white;
+            border-bottom: 1px solid #dee2e6;
+            padding: 1rem 0;
+            margin: -1rem 0 1rem 0;
+        }
+        
+        .view-toggle {
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .kanban-placeholder {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <!-- Task Management Header -->
+    <div class="task-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="mb-1">
+                        <i class="fas fa-tasks me-3"></i>Task Management
+                    </h1>
+                    <p class="mb-0 opacity-75">
+                        Track progress, assign work, and coordinate your FRC project tasks
+                        <span class="real-time-indicator" id="realtime-status"></span>
+                        <small>Real-time updates active</small>
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="/tasks/new" class="btn btn-light me-2">
+                        <i class="fas fa-plus me-2"></i>New Task
+                    </a>
+                    <a href="/dashboard" class="btn btn-outline-light">
+                        <i class="fas fa-arrow-left me-2"></i>Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container my-4">
+        <!-- Real-time Status Banner -->
+        <div id="realtime-banner" class="alert alert-success alert-dismissible fade show" role="alert">
+            <strong>🚀 Real-time Task Updates Active!</strong> Progress changes sync instantly across all team devices.
+            <span id="connection-status" class="badge bg-success ms-2">Connected</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- Task Filters and Quick Stats -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <h5 class="mb-3">Filter Tasks</h5>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <span class="badge bg-secondary filter-badge" 
+                                          data-filter="all" 
+                                          th:classappend="${currentStatus == 'all'} ? 'active' : ''">
+                                        All (<span th:text="${totalTasks}">0</span>)
+                                    </span>
+                                    <span class="badge bg-warning filter-badge" 
+                                          data-filter="pending"
+                                          th:classappend="${currentStatus == 'pending'} ? 'active' : ''">
+                                        Pending (<span th:text="${pendingCount}">0</span>)
+                                    </span>
+                                    <span class="badge bg-success filter-badge" 
+                                          data-filter="completed"
+                                          th:classappend="${currentStatus == 'completed'} ? 'active' : ''">
+                                        Completed (<span th:text="${completedCount}">0</span>)
+                                    </span>
+                                    <span class="badge bg-danger filter-badge" 
+                                          data-filter="overdue"
+                                          th:classappend="${currentStatus == 'overdue'} ? 'active' : ''">
+                                        Overdue (<span th:text="${overdueCount}">0</span>)
+                                    </span>
+                                    <span class="badge bg-info filter-badge" 
+                                          data-filter="due-soon"
+                                          th:classappend="${currentStatus == 'due-soon'} ? 'active' : ''">
+                                        Due Soon (<span th:text="${dueSoonCount}">0</span>)
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <div class="btn-group view-toggle" role="group">
+                                    <input type="radio" class="btn-check" name="viewToggle" id="listView" checked>
+                                    <label class="btn btn-outline-primary" for="listView">
+                                        <i class="fas fa-list me-2"></i>List
+                                    </label>
+                                    <input type="radio" class="btn-check" name="viewToggle" id="kanbanView">
+                                    <label class="btn btn-outline-primary" for="kanbanView">
+                                        <i class="fas fa-columns me-2"></i>Kanban
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Advanced Filters -->
+                        <div class="row mt-3">
+                            <div class="col-md-3">
+                                <select class="form-select form-select-sm" id="projectFilter">
+                                    <option value="">All Projects</option>
+                                    <option th:each="project : ${projectOptions}" 
+                                            th:value="${project.id}" 
+                                            th:text="${project.name}"
+                                            th:selected="${currentProjectId == project.id}">
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select form-select-sm" id="subsystemFilter">
+                                    <option value="">All Subsystems</option>
+                                    <option th:each="subsystem : ${subsystemOptions}" 
+                                            th:value="${subsystem.id}" 
+                                            th:text="${subsystem.name}"
+                                            th:selected="${currentSubsystemId == subsystem.id}">
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select form-select-sm" id="priorityFilter">
+                                    <option value="">All Priorities</option>
+                                    <option th:each="priority : ${priorityOptions}" 
+                                            th:value="${priority.name()}" 
+                                            th:text="${priority.displayName}"
+                                            th:selected="${currentPriority == priority.name()}">
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="text" class="form-control form-control-sm" 
+                                       id="searchInput" placeholder="Search tasks...">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bulk Actions Bar -->
+        <div class="bulk-actions" id="bulkActions" style="display: none;">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <span id="selectedCount">0</span> tasks selected
+                </div>
+                <div class="col-md-4 text-end">
+                    <button class="btn btn-success btn-sm me-2" id="bulkComplete">
+                        <i class="fas fa-check me-1"></i>Complete
+                    </button>
+                    <button class="btn btn-warning btn-sm me-2" id="bulkAssign">
+                        <i class="fas fa-user-plus me-1"></i>Assign
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" id="clearSelection">
+                        <i class="fas fa-times me-1"></i>Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Task List View -->
+        <div id="taskListView">
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Tasks</h5>
+                            <div>
+                                <select class="form-select form-select-sm" id="sortBy">
+                                    <option value="priority">Sort by Priority</option>
+                                    <option value="duedate">Sort by Due Date</option>
+                                    <option value="progress">Sort by Progress</option>
+                                    <option value="title">Sort by Title</option>
+                                    <option value="project">Sort by Project</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div id="taskList">
+                                <!-- Task items will be populated here -->
+                                <div th:if="${tasks.empty}" class="text-center py-5">
+                                    <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
+                                    <h4 class="text-muted">No tasks found</h4>
+                                    <p class="text-muted">Create your first task to get started!</p>
+                                    <a href="/tasks/new" class="btn btn-primary">
+                                        <i class="fas fa-plus me-2"></i>Create Task
+                                    </a>
+                                </div>
+                                
+                                <!-- Task List Items -->
+                                <div th:each="task : ${tasks}" 
+                                     class="task-item p-3 border-bottom"
+                                     th:classappend="${task.priority.name().toLowerCase()} + ' ' + ${task.completed ? 'completed' : ''}"
+                                     th:data-task-id="${task.id}"
+                                     th:data-project-id="${task.project.id}"
+                                     th:data-priority="${task.priority.name()}"
+                                     th:data-status="${task.completed ? 'completed' : 'pending'}">
+                                    
+                                    <div class="row align-items-center">
+                                        <!-- Selection Checkbox -->
+                                        <div class="col-auto">
+                                            <input type="checkbox" class="form-check-input task-select" 
+                                                   th:value="${task.id}">
+                                        </div>
+                                        
+                                        <!-- Task Info -->
+                                        <div class="col">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div class="flex-grow-1">
+                                                    <h6 class="mb-1">
+                                                        <a th:href="@{/tasks/{id}(id=${task.id})}" 
+                                                           class="text-decoration-none" 
+                                                           th:text="${task.title}">Task Title</a>
+                                                        <span class="badge badge-sm ms-2"
+                                                              th:classappend="${task.priority.name() == 'CRITICAL'} ? 'bg-danger' : 
+                                                                           ${task.priority.name() == 'HIGH'} ? 'bg-warning' : 
+                                                                           ${task.priority.name() == 'MEDIUM'} ? 'bg-info' : 'bg-secondary'"
+                                                              th:text="${task.priority.displayName}">Priority</span>
+                                                    </h6>
+                                                    <div class="small text-muted mb-2">
+                                                        <span class="me-3">
+                                                            <i class="fas fa-project-diagram me-1"></i>
+                                                            <span th:text="${task.project.name}">Project</span>
+                                                        </span>
+                                                        <span class="me-3">
+                                                            <i class="fas fa-cogs me-1"></i>
+                                                            <span th:text="${task.subsystem.name}">Subsystem</span>
+                                                        </span>
+                                                        <span th:if="${task.endDate}" class="me-3">
+                                                            <i class="fas fa-calendar me-1"></i>
+                                                            Due: <span th:text="${#temporals.format(task.endDate, 'MMM dd')}">Date</span>
+                                                        </span>
+                                                    </div>
+                                                    
+                                                    <!-- Progress Bar -->
+                                                    <div class="progress mb-2" style="height: 6px;">
+                                                        <div class="progress-bar task-progress-bar" 
+                                                             role="progressbar" 
+                                                             th:style="'width: ' + ${task.progress} + '%'"
+                                                             th:classappend="${task.completed} ? 'bg-success' : 
+                                                                           ${task.progress >= 75} ? 'bg-info' : 
+                                                                           ${task.progress >= 50} ? 'bg-warning' : 'bg-danger'"
+                                                             th:attr="aria-valuenow=${task.progress}">
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <!-- Assignees -->
+                                                    <div class="task-assignees" th:if="${!task.assignedTo.empty}">
+                                                        <small class="text-muted me-2">Assigned to:</small>
+                                                        <span th:each="member : ${task.assignedTo}" class="task-assignee-avatar"
+                                                              th:title="${member.fullName}"
+                                                              th:text="${member.firstName.substring(0,1) + member.lastName.substring(0,1)}">
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Progress Indicator -->
+                                                <div class="text-center">
+                                                    <div class="h4 mb-0 task-progress-text" th:text="${task.progress + '%'}">0%</div>
+                                                    <small class="text-muted">Progress</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Quick Actions -->
+                                        <div class="col-auto">
+                                            <div class="btn-group" role="group">
+                                                <!-- Progress Update Buttons -->
+                                                <button type="button" class="quick-action-btn progress-btn" 
+                                                        th:data-task-id="${task.id}"
+                                                        th:data-current-progress="${task.progress}"
+                                                        title="Quick progress update">
+                                                    <i class="fas fa-plus-circle"></i>
+                                                </button>
+                                                
+                                                <!-- Complete Toggle -->
+                                                <button type="button" class="quick-action-btn complete-btn"
+                                                        th:data-task-id="${task.id}"
+                                                        th:data-completed="${task.completed}"
+                                                        th:title="${task.completed ? 'Mark incomplete' : 'Mark complete'}">
+                                                    <i th:class="${task.completed ? 'fas fa-undo' : 'fas fa-check'}" 
+                                                       th:style="${task.completed ? 'color: #ffc107' : 'color: #28a745'}"></i>
+                                                </button>
+                                                
+                                                <!-- Edit Task -->
+                                                <a th:href="@{/tasks/{id}/edit(id=${task.id})}" 
+                                                   class="quick-action-btn" title="Edit task">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                
+                                                <!-- Task Detail -->
+                                                <a th:href="@{/tasks/{id}(id=${task.id})}" 
+                                                   class="quick-action-btn" title="View details">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kanban Board View -->
+        <div id="kanbanView" style="display: none;">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header bg-secondary text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-clock me-2"></i>To Do
+                                <span class="badge bg-light text-dark ms-2" id="todoCount">0</span>
+                            </h6>
+                        </div>
+                        <div class="card-body" id="todoColumn">
+                            <div class="kanban-placeholder">
+                                <i class="fas fa-tasks fa-2x mb-2"></i>
+                                <p>No pending tasks</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header bg-warning text-dark">
+                            <h6 class="mb-0">
+                                <i class="fas fa-play me-2"></i>In Progress
+                                <span class="badge bg-light text-dark ms-2" id="inProgressCount">0</span>
+                            </h6>
+                        </div>
+                        <div class="card-body" id="inProgressColumn">
+                            <div class="kanban-placeholder">
+                                <i class="fas fa-spinner fa-2x mb-2"></i>
+                                <p>No tasks in progress</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-check me-2"></i>Done
+                                <span class="badge bg-light text-dark ms-2" id="doneCount">0</span>
+                            </h6>
+                        </div>
+                        <div class="card-body" id="doneColumn">
+                            <div class="kanban-placeholder">
+                                <i class="fas fa-check-circle fa-2x mb-2"></i>
+                                <p>No completed tasks</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Progress Update Modal -->
+        <div class="modal fade" id="progressModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Update Task Progress</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="progressSlider" class="form-label">
+                                Progress: <span id="progressValue">0</span>%
+                            </label>
+                            <input type="range" class="form-range" min="0" max="100" step="5" 
+                                   id="progressSlider" value="0">
+                        </div>
+                        <div class="progress mb-3" style="height: 20px;">
+                            <div class="progress-bar" id="progressPreview" role="progressbar" 
+                                 style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                0%
+                            </div>
+                        </div>
+                        <div id="progressFeedback" class="alert" style="display: none;"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="saveProgress">
+                            <i class="fas fa-save me-2"></i>Update Progress
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+    
+    <script>
+        // Real-time Task Management System - Following Phase 2D patterns
+        let stompClient = null;
+        let isConnected = false;
+        let currentTaskId = null;
+        let selectedTasks = new Set();
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            connectToTaskWebSocket();
+            setupTaskListEvents();
+            setupFilters();
+            setupBulkActions();
+            setupProgressModal();
+            setupViewToggle();
+        });
+        
+        // Connect to WebSocket for real-time task updates
+        function connectToTaskWebSocket() {
+            const statusIndicator = document.getElementById('realtime-status');
+            const connectionStatus = document.getElementById('connection-status');
+            
+            try {
+                const socket = new SockJS('/ws');
+                stompClient = new StompJs.Client({
+                    webSocketFactory: () => socket,
+                    reconnectDelay: 5000,
+                    heartbeatIncoming: 4000,
+                    heartbeatOutgoing: 4000
+                });
+                
+                stompClient.onConnect = function(frame) {
+                    console.log('Connected to Task WebSocket:', frame);
+                    isConnected = true;
+                    statusIndicator.classList.remove('disconnected');
+                    connectionStatus.textContent = 'Connected';
+                    connectionStatus.className = 'badge bg-success ms-2';
+                    
+                    // Subscribe to all project task updates
+                    stompClient.subscribe('/topic/project/+', function(message) {
+                        const taskUpdate = JSON.parse(message.body);
+                        handleTaskUpdate(taskUpdate);
+                    });
+                    
+                    // Subscribe to general task notifications
+                    stompClient.subscribe('/topic/tasks/updates', function(message) {
+                        const notification = JSON.parse(message.body);
+                        showTaskNotification(notification);
+                    });
+                };
+                
+                stompClient.onStompError = function(frame) {
+                    console.error('STOMP error:', frame);
+                    isConnected = false;
+                    statusIndicator.classList.add('disconnected');
+                    connectionStatus.textContent = 'Error';
+                    connectionStatus.className = 'badge bg-danger ms-2';
+                };
+                
+                stompClient.onWebSocketClose = function(event) {
+                    console.log('WebSocket connection closed');
+                    isConnected = false;
+                    statusIndicator.classList.add('disconnected');
+                    connectionStatus.textContent = 'Disconnected';
+                    connectionStatus.className = 'badge bg-warning ms-2';
+                };
+                
+                stompClient.activate();
+                
+            } catch (error) {
+                console.error('Error connecting to WebSocket:', error);
+                statusIndicator.classList.add('disconnected');
+                connectionStatus.textContent = 'Error';
+                connectionStatus.className = 'badge bg-danger ms-2';
+            }
+        }
+        
+        // Handle real-time task updates
+        function handleTaskUpdate(update) {
+            console.log('Task update received:', update);
+            
+            const taskElement = document.querySelector(`[data-task-id="${update.taskId}"]`);
+            if (taskElement) {
+                // Update progress bar
+                const progressBar = taskElement.querySelector('.task-progress-bar');
+                const progressText = taskElement.querySelector('.task-progress-text');
+                
+                if (progressBar && update.progress !== undefined) {
+                    progressBar.style.width = update.progress + '%';
+                    progressBar.setAttribute('aria-valuenow', update.progress);
+                    
+                    // Update progress bar color
+                    progressBar.className = 'progress-bar task-progress-bar ' + getProgressBarClass(update.progress);
+                }
+                
+                if (progressText) {
+                    progressText.textContent = update.progress + '%';
+                }
+                
+                // Update completion status
+                if (update.completed !== undefined) {
+                    const completeBtn = taskElement.querySelector('.complete-btn');
+                    const icon = completeBtn.querySelector('i');
+                    
+                    if (update.completed) {
+                        taskElement.classList.add('completed');
+                        icon.className = 'fas fa-undo';
+                        icon.style.color = '#ffc107';
+                        completeBtn.title = 'Mark incomplete';
+                    } else {
+                        taskElement.classList.remove('completed');
+                        icon.className = 'fas fa-check';
+                        icon.style.color = '#28a745';
+                        completeBtn.title = 'Mark complete';
+                    }
+                }
+                
+                // Add visual feedback for update
+                taskElement.classList.add('updated');
+                setTimeout(() => {
+                    taskElement.classList.remove('updated');
+                }, 3000);
+                
+                // Show notification
+                if (update.changeType === 'COMPLETED') {
+                    showTaskNotification({
+                        title: 'Task Completed! 🎉',
+                        message: `${update.updatedBy} completed "${update.taskTitle}"`,
+                        type: 'success'
+                    });
+                } else if (update.changeType === 'PROGRESS_CHANGED') {
+                    showTaskNotification({
+                        title: 'Progress Updated',
+                        message: `${update.taskTitle} is now ${update.progress}% complete`,
+                        type: 'info'
+                    });
+                }
+            }
+        }
+        
+        // Get progress bar CSS class based on percentage
+        function getProgressBarClass(progress) {
+            if (progress >= 100) return 'bg-success';
+            if (progress >= 75) return 'bg-info';
+            if (progress >= 50) return 'bg-warning';
+            return 'bg-danger';
+        }
+        
+        // Setup task list event handlers
+        function setupTaskListEvents() {
+            // Quick progress buttons
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('.progress-btn')) {
+                    const btn = e.target.closest('.progress-btn');
+                    const taskId = btn.dataset.taskId;
+                    const currentProgress = parseInt(btn.dataset.currentProgress);
+                    showProgressModal(taskId, currentProgress);
+                }
+                
+                if (e.target.closest('.complete-btn')) {
+                    const btn = e.target.closest('.complete-btn');
+                    const taskId = btn.dataset.taskId;
+                    const isCompleted = btn.dataset.completed === 'true';
+                    toggleTaskCompletion(taskId, !isCompleted);
+                }
+            });
+            
+            // Task selection checkboxes
+            document.addEventListener('change', function(e) {
+                if (e.target.classList.contains('task-select')) {
+                    const taskId = e.target.value;
+                    if (e.target.checked) {
+                        selectedTasks.add(taskId);
+                    } else {
+                        selectedTasks.delete(taskId);
+                    }
+                    updateBulkActions();
+                }
+            });
+        }
+        
+        // Setup filter functionality
+        function setupFilters() {
+            // Status filter badges
+            document.querySelectorAll('.filter-badge').forEach(badge => {
+                badge.addEventListener('click', function() {
+                    const filter = this.dataset.filter;
+                    
+                    // Update active state
+                    document.querySelectorAll('.filter-badge').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Apply filter
+                    applyStatusFilter(filter);
+                });
+            });
+            
+            // Dropdown filters
+            ['projectFilter', 'subsystemFilter', 'priorityFilter'].forEach(filterId => {
+                document.getElementById(filterId)?.addEventListener('change', applyFilters);
+            });
+            
+            // Search input
+            document.getElementById('searchInput')?.addEventListener('input', debounce(function() {
+                applyFilters();
+            }, 300));
+            
+            // Sort dropdown
+            document.getElementById('sortBy')?.addEventListener('change', function() {
+                sortTasks(this.value);
+            });
+        }
+        
+        // Apply status filter
+        function applyStatusFilter(status) {
+            const tasks = document.querySelectorAll('.task-item');
+            
+            tasks.forEach(task => {
+                const taskStatus = task.dataset.status;
+                const isOverdue = checkIfOverdue(task);
+                const isDueSoon = checkIfDueSoon(task);
+                
+                let show = false;
+                
+                switch (status) {
+                    case 'all':
+                        show = true;
+                        break;
+                    case 'pending':
+                        show = taskStatus === 'pending';
+                        break;
+                    case 'completed':
+                        show = taskStatus === 'completed';
+                        break;
+                    case 'overdue':
+                        show = isOverdue;
+                        break;
+                    case 'due-soon':
+                        show = isDueSoon;
+                        break;
+                }
+                
+                task.style.display = show ? 'block' : 'none';
+            });
+            
+            updateFilterCounts();
+        }
+        
+        // Apply all filters
+        function applyFilters() {
+            const projectFilter = document.getElementById('projectFilter')?.value;
+            const subsystemFilter = document.getElementById('subsystemFilter')?.value;
+            const priorityFilter = document.getElementById('priorityFilter')?.value;
+            const searchQuery = document.getElementById('searchInput')?.value.toLowerCase();
+            
+            const tasks = document.querySelectorAll('.task-item');
+            
+            tasks.forEach(task => {
+                let show = true;
+                
+                // Project filter
+                if (projectFilter && task.dataset.projectId !== projectFilter) {
+                    show = false;
+                }
+                
+                // Priority filter
+                if (priorityFilter && task.dataset.priority !== priorityFilter) {
+                    show = false;
+                }
+                
+                // Search filter
+                if (searchQuery) {
+                    const taskText = task.textContent.toLowerCase();
+                    if (!taskText.includes(searchQuery)) {
+                        show = false;
+                    }
+                }
+                
+                task.style.display = show ? 'block' : 'none';
+            });
+            
+            updateFilterCounts();
+        }
+        
+        // Setup bulk actions
+        function setupBulkActions() {
+            document.getElementById('bulkComplete')?.addEventListener('click', function() {
+                if (selectedTasks.size > 0) {
+                    bulkCompleteTasksRealtime();
+                }
+            });
+            
+            document.getElementById('clearSelection')?.addEventListener('click', function() {
+                selectedTasks.clear();
+                document.querySelectorAll('.task-select').forEach(cb => cb.checked = false);
+                updateBulkActions();
+            });
+        }
+        
+        // Update bulk actions visibility
+        function updateBulkActions() {
+            const bulkActions = document.getElementById('bulkActions');
+            const selectedCount = document.getElementById('selectedCount');
+            
+            if (selectedTasks.size > 0) {
+                bulkActions.style.display = 'block';
+                selectedCount.textContent = selectedTasks.size;
+            } else {
+                bulkActions.style.display = 'none';
+            }
+        }
+        
+        // Setup progress modal
+        function setupProgressModal() {
+            const progressSlider = document.getElementById('progressSlider');
+            const progressValue = document.getElementById('progressValue');
+            const progressPreview = document.getElementById('progressPreview');
+            const saveButton = document.getElementById('saveProgress');
+            
+            progressSlider?.addEventListener('input', function() {
+                const value = this.value;
+                progressValue.textContent = value;
+                progressPreview.style.width = value + '%';
+                progressPreview.textContent = value + '%';
+                progressPreview.setAttribute('aria-valuenow', value);
+                progressPreview.className = 'progress-bar ' + getProgressBarClass(parseInt(value));
+            });
+            
+            saveButton?.addEventListener('click', function() {
+                if (currentTaskId) {
+                    const progress = parseInt(progressSlider.value);
+                    updateTaskProgressRealtime(currentTaskId, progress);
+                }
+            });
+        }
+        
+        // Show progress modal
+        function showProgressModal(taskId, currentProgress) {
+            currentTaskId = taskId;
+            const progressSlider = document.getElementById('progressSlider');
+            const progressValue = document.getElementById('progressValue');
+            const progressPreview = document.getElementById('progressPreview');
+            
+            progressSlider.value = currentProgress;
+            progressValue.textContent = currentProgress;
+            progressPreview.style.width = currentProgress + '%';
+            progressPreview.textContent = currentProgress + '%';
+            progressPreview.className = 'progress-bar ' + getProgressBarClass(currentProgress);
+            
+            const modal = new bootstrap.Modal(document.getElementById('progressModal'));
+            modal.show();
+        }
+        
+        // Update task progress with real-time sync
+        function updateTaskProgressRealtime(taskId, progress) {
+            fetch(`/tasks/${taskId}/progress/realtime`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: `progress=${progress}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('progressModal'));
+                    modal.hide();
+                    
+                    // Show success feedback
+                    showTaskNotification({
+                        title: 'Progress Updated',
+                        message: data.message,
+                        type: 'success'
+                    });
+                    
+                    // WebSocket will handle UI updates automatically
+                } else {
+                    showProgressFeedback(data.message, 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error updating progress:', error);
+                showProgressFeedback('Error updating progress', 'danger');
+            });
+        }
+        
+        // Toggle task completion
+        function toggleTaskCompletion(taskId, completed) {
+            const progress = completed ? 100 : 0;
+            updateTaskProgressRealtime(taskId, progress);
+        }
+        
+        // Bulk complete tasks with real-time sync
+        function bulkCompleteTasksRealtime() {
+            const taskIds = Array.from(selectedTasks);
+            
+            fetch('/tasks/complete-multiple/realtime', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: `taskIds=${taskIds.join('&taskIds=')}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showTaskNotification({
+                        title: 'Bulk Operation Complete',
+                        message: data.message,
+                        type: 'success'
+                    });
+                    
+                    // Clear selection
+                    selectedTasks.clear();
+                    document.querySelectorAll('.task-select').forEach(cb => cb.checked = false);
+                    updateBulkActions();
+                    
+                    // WebSocket will handle UI updates automatically
+                } else {
+                    showTaskNotification({
+                        title: 'Error',
+                        message: data.message,
+                        type: 'danger'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error in bulk operation:', error);
+                showTaskNotification({
+                    title: 'Error',
+                    message: 'Error completing tasks',
+                    type: 'danger'
+                });
+            });
+        }
+        
+        // Setup view toggle
+        function setupViewToggle() {
+            document.getElementById('listView')?.addEventListener('change', function() {
+                if (this.checked) {
+                    document.getElementById('taskListView').style.display = 'block';
+                    document.getElementById('kanbanView').style.display = 'none';
+                }
+            });
+            
+            document.getElementById('kanbanView')?.addEventListener('change', function() {
+                if (this.checked) {
+                    document.getElementById('taskListView').style.display = 'none';
+                    document.getElementById('kanbanView').style.display = 'block';
+                    organizeKanbanBoard();
+                }
+            });
+        }
+        
+        // Organize tasks in kanban board
+        function organizeKanbanBoard() {
+            const todoColumn = document.getElementById('todoColumn');
+            const inProgressColumn = document.getElementById('inProgressColumn');
+            const doneColumn = document.getElementById('doneColumn');
+            
+            // Clear columns
+            [todoColumn, inProgressColumn, doneColumn].forEach(col => {
+                col.innerHTML = '<div class="kanban-placeholder"><i class="fas fa-tasks fa-2x mb-2"></i><p>No tasks</p></div>';
+            });
+            
+            // Organize tasks
+            const tasks = document.querySelectorAll('.task-item:not([style*="display: none"])');
+            let todoCount = 0, inProgressCount = 0, doneCount = 0;
+            
+            tasks.forEach(task => {
+                const taskData = extractTaskData(task);
+                const kanbanCard = createKanbanCard(taskData);
+                
+                if (taskData.progress === 0) {
+                    if (todoCount === 0) todoColumn.innerHTML = '';
+                    todoColumn.appendChild(kanbanCard);
+                    todoCount++;
+                } else if (taskData.progress < 100) {
+                    if (inProgressCount === 0) inProgressColumn.innerHTML = '';
+                    inProgressColumn.appendChild(kanbanCard);
+                    inProgressCount++;
+                } else {
+                    if (doneCount === 0) doneColumn.innerHTML = '';
+                    doneColumn.appendChild(kanbanCard);
+                    doneCount++;
+                }
+            });
+            
+            // Update counts
+            document.getElementById('todoCount').textContent = todoCount;
+            document.getElementById('inProgressCount').textContent = inProgressCount;
+            document.getElementById('doneCount').textContent = doneCount;
+        }
+        
+        // Extract task data from DOM element
+        function extractTaskData(taskElement) {
+            return {
+                id: taskElement.dataset.taskId,
+                title: taskElement.querySelector('h6 a').textContent,
+                progress: parseInt(taskElement.querySelector('.task-progress-text').textContent),
+                priority: taskElement.dataset.priority,
+                project: taskElement.querySelector('.fa-project-diagram').nextSibling.textContent.trim(),
+                url: taskElement.querySelector('h6 a').href
+            };
+        }
+        
+        // Create kanban card
+        function createKanbanCard(taskData) {
+            const card = document.createElement('div');
+            card.className = 'card mb-2 kanban-card';
+            card.innerHTML = `
+                <div class="card-body p-2">
+                    <h6 class="card-title mb-1">
+                        <a href="${taskData.url}" class="text-decoration-none">${taskData.title}</a>
+                    </h6>
+                    <small class="text-muted">${taskData.project}</small>
+                    <div class="progress mt-2" style="height: 4px;">
+                        <div class="progress-bar ${getProgressBarClass(taskData.progress)}" 
+                             style="width: ${taskData.progress}%"></div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <span class="badge bg-${getPriorityColor(taskData.priority)}">${taskData.priority}</span>
+                        <small class="text-muted">${taskData.progress}%</small>
+                    </div>
+                </div>
+            `;
+            return card;
+        }
+        
+        // Get priority color
+        function getPriorityColor(priority) {
+            switch (priority.toUpperCase()) {
+                case 'CRITICAL': return 'danger';
+                case 'HIGH': return 'warning';
+                case 'MEDIUM': return 'info';
+                case 'LOW': return 'secondary';
+                default: return 'secondary';
+            }
+        }
+        
+        // Show task notification
+        function showTaskNotification(notification) {
+            const toastContainer = document.getElementById('toast-container') || createToastContainer();
+            
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.setAttribute('role', 'alert');
+            
+            const typeClass = {
+                'success': 'text-bg-success',
+                'info': 'text-bg-info',
+                'warning': 'text-bg-warning',
+                'danger': 'text-bg-danger'
+            }[notification.type] || 'text-bg-info';
+            
+            toast.innerHTML = `
+                <div class="toast-header ${typeClass}">
+                    <i class="fas fa-tasks me-2"></i>
+                    <strong class="me-auto">${notification.title}</strong>
+                    <small>now</small>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+                </div>
+                <div class="toast-body">
+                    ${notification.message}
+                </div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+            
+            toast.addEventListener('hidden.bs.toast', () => {
+                toast.remove();
+            });
+        }
+        
+        // Create toast container
+        function createToastContainer() {
+            const container = document.createElement('div');
+            container.id = 'toast-container';
+            container.className = 'toast-container position-fixed top-0 end-0 p-3';
+            container.style.zIndex = '1100';
+            document.body.appendChild(container);
+            return container;
+        }
+        
+        // Show progress feedback in modal
+        function showProgressFeedback(message, type) {
+            const feedback = document.getElementById('progressFeedback');
+            feedback.className = `alert alert-${type}`;
+            feedback.textContent = message;
+            feedback.style.display = 'block';
+            
+            setTimeout(() => {
+                feedback.style.display = 'none';
+            }, 3000);
+        }
+        
+        // Utility: Debounce function
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+        
+        // Check if task is overdue
+        function checkIfOverdue(taskElement) {
+            // Implementation depends on how due date is stored in DOM
+            return false; // Placeholder
+        }
+        
+        // Check if task is due soon
+        function checkIfDueSoon(taskElement) {
+            // Implementation depends on how due date is stored in DOM
+            return false; // Placeholder
+        }
+        
+        // Update filter counts
+        function updateFilterCounts() {
+            // Count visible tasks by status
+            const visibleTasks = document.querySelectorAll('.task-item:not([style*="display: none"])');
+            
+            // Update badge counts
+            const badges = document.querySelectorAll('.filter-badge');
+            badges.forEach(badge => {
+                const filter = badge.dataset.filter;
+                const count = Array.from(visibleTasks).filter(task => {
+                    switch (filter) {
+                        case 'all': return true;
+                        case 'pending': return task.dataset.status === 'pending';
+                        case '

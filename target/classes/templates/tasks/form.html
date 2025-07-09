@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${isEdit ? 'Edit Task' : 'Create New Task'} + ' - FRC Project Management'">Create Task - FRC Project Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Task Form Styles - Following dashboard.html patterns */
+        .form-header {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            color: white;
+            padding: 2rem 0;
+        }
+        
+        .form-card {
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .form-section {
+            border-left: 4px solid #17a2b8;
+            background-color: #f8f9fa;
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-section h6 {
+            color: #17a2b8;
+            font-weight: 600;
+        }
+        
+        .duration-option {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-radius: 8px;
+            padding: 0.5rem;
+        }
+        
+        .duration-option:hover {
+            background-color: #e7f3ff;
+            transform: translateY(-1px);
+        }
+        
+        .duration-option.selected {
+            background-color: #0066cc;
+            color: white;
+        }
+        
+        .priority-badge {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .priority-badge:hover {
+            transform: scale(1.05);
+            border-color: #0066cc;
+        }
+        
+        .priority-badge.selected {
+            border-color: #0066cc;
+            box-shadow: 0 0 10px rgba(0, 102, 204, 0.3);
+        }
+        
+        .assignee-chip {
+            background-color: #e7f3ff;
+            border: 1px solid #0066cc;
+            border-radius: 20px;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.875rem;
+            margin: 0.25rem;
+            display: inline-flex;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+        
+        .assignee-chip:hover {
+            background-color: #0066cc;
+            color: white;
+        }
+        
+        .assignee-chip .remove-btn {
+            background: none;
+            border: none;
+            color: #dc3545;
+            margin-left: 0.5rem;
+            padding: 0;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .assignee-chip:hover .remove-btn {
+            color: white;
+        }
+        
+        .form-group-enhanced {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-control:focus {
+            border-color: #0066cc;
+            box-shadow: 0 0 0 0.2rem rgba(0, 102, 204, 0.25);
+        }
+        
+        .quick-date-btn {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 0.375rem 0.75rem;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+        
+        .quick-date-btn:hover {
+            background: linear-gradient(135deg, #0066cc 0%, #004499 100%);
+            color: white;
+            border-color: #0066cc;
+        }
+        
+        .validation-feedback {
+            display: block;
+            width: 100%;
+            margin-top: 0.25rem;
+            font-size: 0.875rem;
+        }
+        
+        .validation-feedback.valid-feedback {
+            color: #198754;
+        }
+        
+        .validation-feedback.invalid-feedback {
+            color: #dc3545;
+        }
+        
+        .progress-preview {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            margin-top: 1rem;
+        }
+        
+        .save-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            background-color: #28a745;
+            color: white;
+            font-size: 0.875rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .save-status.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <!-- Form Header -->
+    <div class="form-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="mb-1">
+                        <i class="fas fa-tasks me-3"></i>
+                        <span th:text="${isEdit ? 'Edit Task' : 'Create New Task'}">Create New Task</span>
+                    </h1>
+                    <p class="mb-0 opacity-75" th:if="${isEdit}">
+                        Update task details and assignments
+                    </p>
+                    <p class="mb-0 opacity-75" th:unless="${isEdit}">
+                        Define a new task for your FRC project
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="/tasks" class="btn btn-outline-light me-2">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Tasks
+                    </a>
+                    <a th:if="${isEdit}" th:href="@{/tasks/{id}(id=${task.id})}" class="btn btn-light">
+                        <i class="fas fa-eye me-2"></i>View Task
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container my-4">
+        <!-- Success/Error Messages -->
+        <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            <span th:text="${successMessage}">Success message</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        
+        <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <span th:text="${errorMessage}">Error message</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- Task Form -->
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="form-card card">
+                    <form th:action="${isEdit ? '/tasks/' + task.id + '/edit' : '/tasks/new'}" 
+                          th:object="${task}" method="post" class="needs-validation" novalidate>
+                        
+                        <div class="card-body p-4">
+                            <!-- Basic Information Section -->
+                            <div class="form-section p-3 mb-4">
+                                <h6 class="mb-3">
+                                    <i class="fas fa-info-circle me-2"></i>Basic Information
+                                </h6>
+                                
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="form-group-enhanced">
+                                            <label for="title" class="form-label fw-semibold">
+                                                Task Title <span class="text-danger">*</span>
+                                            </label>
+                                            <input type="text" 
+                                                   class="form-control" 
+                                                   id="title" 
+                                                   th:field="*{title}"
+                                                   placeholder="Enter a clear, descriptive task title"
+                                                   maxlength="255"
+                                                   required>
+                                            <div class="validation-feedback invalid-feedback" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></div>
+                                            <div class="validation-feedback valid-feedback" style="display: none;">Looks good!</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-4">
+                                        <div class="form-group-enhanced">
+                                            <label for="priority" class="form-label fw-semibold">
+                                                Priority <span class="text-danger">*</span>
+                                            </label>
+                                            <div class="row g-2" id="prioritySelector">
+                                                <div class="col-6" th:each="priorityOption : ${priorityOptions}">
+                                                    <div class="priority-badge"
+                                                         th:classappend="${priorityOption.name() == 'CRITICAL'} ? 'bg-danger text-white' :
+                                                                        ${priorityOption.name() == 'HIGH'} ? 'bg-warning' :
+                                                                        ${priorityOption.name() == 'MEDIUM'} ? 'bg-info text-white' : 'bg-secondary text-white'"
+                                                         th:data-priority="${priorityOption.name()}"
+                                                         th:data-description="${priorityDescriptions[priorityOption.name()]}"
+                                                         th:class="${task.priority == priorityOption} ? 'selected' : ''"
+                                                         style="cursor: pointer;">
+                                                        <div class="fw-semibold" th:text="${priorityOption.displayName}">Priority</div>
+                                                        <small th:text="${priorityDescriptions[priorityOption.name()]}">Description</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <input type="hidden" th:field="*{priority}" id="priorityInput" required>
+                                            <div class="validation-feedback invalid-feedback" th:if="${#fields.hasErrors('priority')}" th:errors="*{priority}"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group-enhanced">
+                                    <label for="description" class="form-label fw-semibold">Description</label>
+                                    <textarea class="form-control" 
+                                              id="description" 
+                                              th:field="*{description}"
+                                              rows="3"
+                                              placeholder="Provide detailed information about what needs to be done, requirements, and success criteria..."></textarea>
+                                    <div class="form-text">Tip: Include specific requirements, acceptance criteria, and any important details</div>
+                                </div>
+                            </div>
+
+                            <!-- Project & Subsystem Section -->
+                            <div class="form-section p-3 mb-4">
+                                <h6 class="mb-3">
+                                    <i class="fas fa-project-diagram me-2"></i>Project Assignment
+                                </h6>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group-enhanced">
+                                            <label for="project" class="form-label fw-semibold">
+                                                Project <span class="text-danger">*</span>
+                                            </label>
+                                            <select class="form-select" 
+                                                    th:field="*{project}" 
+                                                    id="projectSelect" 
+                                                    required>
+                                                <option value="">Select a project...</option>
+                                                <option th:each="project : ${projectOptions}" 
+                                                        th:value="${project.id}" 
+                                                        th:text="${project.name}"
+                                                        th:selected="${task.project != null and task.project.id == project.id}">
+                                                </option>
+                                            </select>
+                                            <div class="validation-feedback invalid-feedback" th:if="${#fields.hasErrors('project')}" th:errors="*{project}"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <div class="form-group-enhanced">
+                                            <label for="subsystem" class="form-label fw-semibold">
+                                                Subsystem <span class="text-danger">*</span>
+                                            </label>
+                                            <select class="form-select" 
+                                                    th:field="*{subsystem}" 
+                                                    id="subsystemSelect" 
+                                                    required>
+                                                <option value="">Select a subsystem...</option>
+                                                <option th:each="subsystem : ${subsystemOptions}" 
+                                                        th:value="${subsystem.id}" 
+                                                        th:text="${subsystem.name}"
+                                                        th:selected="${task.subsystem != null and task.subsystem.id == subsystem.id}">
+                                                </option>
+                                            </select>
+                                            <div class="validation-feedback invalid-feedback" th:if="${#fields.hasErrors('subsystem')}" th:errors="*{subsystem}"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Timeline Section -->
+                            <div class="form-section p-3 mb-4">
+                                <h6 class="mb-3">
+                                    <i class="fas fa-calendar me-2"></i>Timeline & Duration
+                                </h6>
+                                
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-group-enhanced">
+                                            <label for="startDate" class="form-label fw-semibold">Start Date</label>
+                                            <input type="date" 
+                                                   class="form-control" 
+                                                   id="startDate" 
+                                                   th:field="*{startDate}">
+                                            <div class="form-text">When should work begin?</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-4">
+                                        <div class="form-group-enhanced">
+                                            <label for="endDate" class="form-label fw-semibold">Due Date</label>
+                                            <input type="date" 
+                                                   class="form-control" 
+                                                   id="endDate" 
+                                                   th:field="*{endDate}">
+                                            <div class="form-text">When must this be completed?</div>
+                                            <div class="validation-feedback invalid-feedback" th:if="${#fields.hasErrors('endDate')}" th:errors="*{endDate}"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-4">
+                                        <div class="form-group-enhanced">
+                                            <label class="form-label fw-semibold">Quick Date Options</label>
+                                            <div class="d-grid gap-2">
+                                                <div class="quick-date-btn" data-days="1">Tomorrow</div>
+                                                <div class="quick-date-btn" data-days="7">Next Week</div>
+                                                <div class="quick-date-btn" data-days="14">Two Weeks</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row mt-3">
+                                    <div class="col-md-6">
+                                        <div class="form-group-enhanced">
+                                            <label class="form-label fw-semibold">Estimated Duration</label>
+                                            <div class="row g-2" id="durationSelector">
+                                                <div class="col-4" th:each="durationOption : ${estimatedDurationOptions}">
+                                                    <div class="duration-option text-center"
+                                                         th:data-hours="${durationOption.hours}"
+                                                         th:text="${durationOption.label}">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <input type="hidden" id="estimatedDurationHours" name="estimatedDurationHours" value="1">
+                                            <div class="form-text">How long do you estimate this task will take?</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <div class="form-group-enhanced">
+                                            <label for="progress" class="form-label fw-semibold">Current Progress</label>
+                                            <div class="d-flex align-items-center">
+                                                <input type="range" 
+                                                       class="form-range me-3" 
+                                                       id="progressSlider" 
+                                                       min="0" max="100" step="5"
+                                                       th:value="${task.progress != null ? task.progress : 0}">
+                                                <span id="progressValue" class="fw-semibold">0%</span>
+                                            </div>
+                                            <input type="hidden" th:field="*{progress}" id="progressInput">
+                                            <div class="progress-preview">
+                                                <div class="progress" style="height: 8px;">
+                                                    <div class="progress-bar" id="progressBar" role="progressbar" style="width: 0%"></div>
+                                                </div>
+                                                <small class="text-muted mt-2 d-block">Drag slider to set initial progress</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Team Assignment Section -->
+                            <div class="form-section p-3 mb-4">
+                                <h6 class="mb-3">
+                                    <i class="fas fa-users me-2"></i>Team Assignment
+                                </h6>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group-enhanced">
+                                            <label class="form-label fw-semibold">Assign Team Members</label>
+                                            <select class="form-select" id="memberSelect" multiple>
+                                                <option th:each="member : ${memberOptions}" 
+                                                        th:value="${member.id}" 
+                                                        th:text="${member.fullName + ' (' + member.subteam.name + ')'}"
+                                                        th:selected="${assignedMemberIds != null and #arrays.contains(assignedMemberIds, member.id)}">
+                                                </option>
+                                            </select>
+                                            <div class="form-text">Hold Ctrl/Cmd to select multiple members</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <div class="form-group-enhanced">
+                                            <label class="form-label fw-semibold">Selected Assignees</label>
+                                            <div id="assigneeChips" class="border rounded p-2" style="min-height: 100px;">
+                                                <div class="text-muted small">No team members assigned yet</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Form Actions -->
+                        <div class="card-footer bg-light p-4">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="notifyTeam" checked>
+                                        <label class="form-check-label" for="notifyTeam">
+                                            Notify assigned team members
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 text-end">
+                                    <a href="/tasks" class="btn btn-outline-secondary me-3">
+                                        <i class="fas fa-times me-2"></i>Cancel
+                                    </a>
+                                    <button type="button" class="btn btn-outline-primary me-2" id="saveDraft">
+                                        <i class="fas fa-save me-2"></i>Save Draft
+                                    </button>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-check me-2"></i>
+                                        <span th:text="${isEdit ? 'Update Task' : 'Create Task'}">Create Task</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Status Indicator -->
+    <div id="saveStatus" class="save-status">
+        <i class="fas fa-check me-2"></i>Draft saved
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            setupFormValidation();
+            setupPrioritySelector();
+            setupDurationSelector();
+            setupProgressSlider();
+            setupQuickDates();
+            setupTeamAssignment();
+            setupAutoSave();
+        });
+        
+        // Setup form validation
+        function setupFormValidation() {
+            const form = document.querySelector('.needs-validation');
+            
+            form.addEventListener('submit', function(event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    
+                    // Scroll to first error
+                    const firstError = form.querySelector('.is-invalid');
+                    if (firstError) {
+                        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+                form.classList.add('was-validated');
+            });
+            
+            // Real-time validation
+            const inputs = form.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => {
+                input.addEventListener('blur', function() {
+                    validateField(this);
+                });
+                
+                input.addEventListener('input', function() {
+                    if (this.classList.contains('is-invalid')) {
+                        validateField(this);
+                    }
+                });
+            });
+        }
+        
+        // Validate individual field
+        function validateField(field) {
+            const isValid = field.checkValidity();
+            field.classList.remove('is-valid', 'is-invalid');
+            field.classList.add(isValid ? 'is-valid' : 'is-invalid');
+            
+            // Update feedback
+            const validFeedback = field.parentElement.querySelector('.valid-feedback');
+            const invalidFeedback = field.parentElement.querySelector('.invalid-feedback');
+            
+            if (validFeedback) {
+                validFeedback.style.display = isValid ? 'block' : 'none';
+            }
+            if (invalidFeedback) {
+                invalidFeedback.style.display = isValid ? 'none' : 'block';
+            }
+        }
+        
+        // Setup priority selector
+        function setupPrioritySelector() {
+            const priorityBadges = document.querySelectorAll('.priority-badge');
+            const priorityInput = document.getElementById('priorityInput');
+            
+            priorityBadges.forEach(badge => {
+                badge.addEventListener('click', function() {
+                    // Remove selected class from all badges
+                    priorityBadges.forEach(b => b.classList.remove('selected'));
+                    
+                    // Add selected class to clicked badge
+                    this.classList.add('selected');
+                    
+                    // Update hidden input
+                    priorityInput.value = this.dataset.priority;
+                    validateField(priorityInput);
+                });
+            });
+        }
+        
+        // Setup duration selector
+        function setupDurationSelector() {
+            const durationOptions = document.querySelectorAll('.duration-option');
+            const durationInput = document.getElementById('estimatedDurationHours');
+            
+            durationOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    // Remove selected class from all options
+                    durationOptions.forEach(o => o.classList.remove('selected'));
+                    
+                    // Add selected class to clicked option
+                    this.classList.add('selected');
+                    
+                    // Update hidden input
+                    durationInput.value = this.dataset.hours;
+                });
+            });
+            
+            // Set initial selection
+            const defaultOption = document.querySelector('[data-hours="1"]');
+            if (defaultOption) {
+                defaultOption.classList.add('selected');
+            }
+        }
+        
+        // Setup progress slider
+        function setupProgressSlider() {
+            const progressSlider = document.getElementById('progressSlider');
+            const progressValue = document.getElementById('progressValue');
+            const progressBar = document.getElementById('progressBar');
+            const progressInput = document.getElementById('progressInput');
+            
+            function updateProgress() {
+                const value = progressSlider.value;
+                progressValue.textContent = value + '%';
+                progressBar.style.width = value + '%';
+                progressBar.setAttribute('aria-valuenow', value);
+                progressInput.value = value;
+                
+                // Update progress bar color
+                progressBar.className = 'progress-bar ' + getProgressBarClass(parseInt(value));
+            }
+            
+            progressSlider.addEventListener('input', updateProgress);
+            
+            // Initialize
+            updateProgress();
+        }
+        
+        // Get progress bar class
+        function getProgressBarClass(progress) {
+            if (progress >= 100) return 'bg-success';
+            if (progress >= 75) return 'bg-info';
+            if (progress >= 50) return 'bg-warning';
+            return 'bg-danger';
+        }
+        
+        // Setup quick date buttons
+        function setupQuickDates() {
+            const quickDateB
