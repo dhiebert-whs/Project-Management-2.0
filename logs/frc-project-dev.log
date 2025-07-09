@@ -15990,3 +15990,25 @@ org.thymeleaf.exceptions.TemplateInputException: Error resolving template [proje
 2025-07-09 15:52:48.128 [http-nio-8080-exec-7] DEBUG o.s.web.servlet.DispatcherServlet - Exiting from "ERROR" dispatch, status 500
 2025-07-09 15:52:48.129 [http-nio-8080-exec-7] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=Development User (dev, ADMIN), Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=939AFA1D2D9E28495D36B08ABE511011], Granted Authorities=[ADMIN]]]
 2025-07-09 15:52:56.600 [MessageBroker-12] DEBUG o.s.w.s.s.t.h.DefaultSockJsService - Closed 1 sessions: [acmthnlb]
+2025-07-09 16:00:00.020 [MessageBroker-1] DEBUG org.hibernate.SQL - 
+    /* <criteria> */ select
+        p1_0.id,
+        p1_0.description,
+        p1_0.goal_end_date,
+        p1_0.hard_deadline,
+        p1_0.name,
+        p1_0.start_date 
+    from
+        projects p1_0
+2025-07-09 16:00:00.022 [MessageBroker-1] INFO  o.h.e.i.StatisticalLoggingSessionEventListener - Session Metrics {
+    146900 nanoseconds spent acquiring 1 JDBC connections;
+    0 nanoseconds spent releasing 0 JDBC connections;
+    70500 nanoseconds spent preparing 1 JDBC statements;
+    133100 nanoseconds spent executing 1 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    0 nanoseconds spent executing 0 flushes (flushing a total of 0 entities and 0 collections);
+    9100 nanoseconds spent executing 1 partial-flushes (flushing a total of 0 entities and 0 collections)
+}
