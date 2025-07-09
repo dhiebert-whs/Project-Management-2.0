@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title th:text="${isEdit ? 'Edit Task' : 'Create New Task'} + ' - FRC Project Management'">Create Task - FRC Project Management</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<div layout:fragment="styles">
     <style>
         /* Task Form Styles - Following dashboard.html patterns */
         .form-header {
@@ -165,8 +167,10 @@
             opacity: 1;
         }
     </style>
-</head>
+</div>
+
 <body>
+<div layout:fragment="content">
     <!-- Form Header -->
     <div class="form-header">
         <div class="container">
@@ -196,19 +200,6 @@
     </div>
 
     <div class="container my-4">
-        <!-- Success/Error Messages -->
-        <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="fas fa-check-circle me-2"></i>
-            <span th:text="${successMessage}">Success message</span>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        
-        <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            <span th:text="${errorMessage}">Error message</span>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-
         <!-- Task Form -->
         <div class="row justify-content-center">
             <div class="col-lg-10">
@@ -291,8 +282,8 @@
                                                 Project <span class="text-danger">*</span>
                                             </label>
                                             <select class="form-select" 
-                                                    th:field="*{project}" 
                                                     id="projectSelect" 
+                                                    name="projectId"
                                                     required>
                                                 <option value="">Select a project...</option>
                                                 <option th:each="project : ${projectOptions}" 
@@ -301,7 +292,7 @@
                                                         th:selected="${task.project != null and task.project.id == project.id}">
                                                 </option>
                                             </select>
-                                            <div class="validation-feedback invalid-feedback" th:if="${#fields.hasErrors('project')}" th:errors="*{project}"></div>
+                                            <div class="validation-feedback invalid-feedback">Please select a project</div>
                                         </div>
                                     </div>
                                     
@@ -311,8 +302,8 @@
                                                 Subsystem <span class="text-danger">*</span>
                                             </label>
                                             <select class="form-select" 
-                                                    th:field="*{subsystem}" 
                                                     id="subsystemSelect" 
+                                                    name="subsystemId"
                                                     required>
                                                 <option value="">Select a subsystem...</option>
                                                 <option th:each="subsystem : ${subsystemOptions}" 
@@ -321,7 +312,7 @@
                                                         th:selected="${task.subsystem != null and task.subsystem.id == subsystem.id}">
                                                 </option>
                                             </select>
-                                            <div class="validation-feedback invalid-feedback" th:if="${#fields.hasErrors('subsystem')}" th:errors="*{subsystem}"></div>
+                                            <div class="validation-feedback invalid-feedback">Please select a subsystem</div>
                                         </div>
                                     </div>
                                 </div>
@@ -419,10 +410,10 @@
                                     <div class="col-md-6">
                                         <div class="form-group-enhanced">
                                             <label class="form-label fw-semibold">Assign Team Members</label>
-                                            <select class="form-select" id="memberSelect" multiple>
+                                            <select class="form-select" id="memberSelect" name="assignedMemberIds" multiple>
                                                 <option th:each="member : ${memberOptions}" 
                                                         th:value="${member.id}" 
-                                                        th:text="${member.fullName + ' (' + member.subteam.name + ')'}"
+                                                        th:text="${member.fullName + ' (' + (member.subteam?.name ?: 'No Subteam') + ')'}"
                                                         th:selected="${assignedMemberIds != null and #arrays.contains(assignedMemberIds, member.id)}">
                                                 </option>
                                             </select>
@@ -477,11 +468,9 @@
     <div id="saveStatus" class="save-status">
         <i class="fas fa-check me-2"></i>Draft saved
     </div>
+</div>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
-    
+<div layout:fragment="scripts">
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             setupFormValidation();
@@ -491,6 +480,7 @@
             setupQuickDates();
             setupTeamAssignment();
             setupAutoSave();
+            setupEnhancedValidation();
         });
         
         // Setup form validation
@@ -623,4 +613,225 @@
         
         // Setup quick date buttons
         function setupQuickDates() {
-            const quickDateB
+            const quickDateBtns = document.querySelectorAll('.quick-date-btn');
+            const endDateInput = document.getElementById('endDate');
+            
+            quickDateBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const days = parseInt(this.dataset.days);
+                    const targetDate = new Date();
+                    targetDate.setDate(targetDate.getDate() + days);
+                    
+                    const dateString = targetDate.toISOString().split('T')[0];
+                    endDateInput.value = dateString;
+                    
+                    // Add visual feedback
+                    this.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+                    this.style.color = 'white';
+                    setTimeout(() => {
+                        this.style.background = '';
+                        this.style.color = '';
+                    }, 1000);
+                });
+            });
+        }
+        
+        // Setup team assignment
+        function setupTeamAssignment() {
+            const memberSelect = document.getElementById('memberSelect');
+            const assigneeChips = document.getElementById('assigneeChips');
+            
+            if (!memberSelect) return;
+            
+            memberSelect.addEventListener('change', function() {
+                updateAssigneeChips();
+            });
+            
+            function updateAssigneeChips() {
+                const selectedOptions = Array.from(memberSelect.selectedOptions);
+                
+                if (selectedOptions.length === 0) {
+                    assigneeChips.innerHTML = '<div class="text-muted small">No team members assigned yet</div>';
+                    return;
+                }
+                
+                assigneeChips.innerHTML = '';
+                
+                selectedOptions.forEach(option => {
+                    const chip = document.createElement('span');
+                    chip.className = 'assignee-chip';
+                    chip.innerHTML = `
+                        ${option.text}
+                        <button type="button" class="remove-btn" data-member-id="${option.value}">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    `;
+                    
+                    // Add remove functionality
+                    chip.querySelector('.remove-btn').addEventListener('click', function() {
+                        option.selected = false;
+                        updateAssigneeChips();
+                    });
+                    
+                    assigneeChips.appendChild(chip);
+                });
+            }
+            
+            // Initialize if there are pre-selected members
+            updateAssigneeChips();
+        }
+        
+        // Setup auto-save functionality
+        function setupAutoSave() {
+            const form = document.querySelector('.needs-validation');
+            const saveStatus = document.getElementById('saveStatus');
+            let autoSaveTimeout;
+            
+            // Auto-save on input changes (debounced)
+            form.addEventListener('input', function() {
+                clearTimeout(autoSaveTimeout);
+                autoSaveTimeout = setTimeout(() => {
+                    saveFormDraft();
+                }, 2000); // 2 seconds after user stops typing
+            });
+            
+            function saveFormDraft() {
+                // Phase 2E-A: Basic auto-save (localStorage)
+                // Phase 2E-B TODO: Save to server with WebSocket sync
+                try {
+                    const formData = new FormData(form);
+                    const draftData = {};
+                    
+                    formData.forEach((value, key) => {
+                        draftData[key] = value;
+                    });
+                    
+                    localStorage.setItem('taskFormDraft', JSON.stringify(draftData));
+                    
+                    // Show save status
+                    saveStatus.classList.add('show');
+                    setTimeout(() => {
+                        saveStatus.classList.remove('show');
+                    }, 2000);
+                    
+                } catch (error) {
+                    console.warn('Auto-save failed:', error);
+                }
+            }
+            
+            // Load draft on page load
+            function loadFormDraft() {
+                try {
+                    const draftData = localStorage.getItem('taskFormDraft');
+                    if (draftData) {
+                        const data = JSON.parse(draftData);
+                        
+                        Object.keys(data).forEach(key => {
+                            const field = form.querySelector(`[name="${key}"]`);
+                            if (field && !field.value) {
+                                field.value = data[key];
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.warn('Failed to load draft:', error);
+                }
+            }
+            
+            // Clear draft on successful submit
+            form.addEventListener('submit', function() {
+                localStorage.removeItem('taskFormDraft');
+            });
+            
+            // Load draft if available
+            loadFormDraft();
+        }
+        
+        // Initialize enhanced form validation
+        function setupEnhancedValidation() {
+            const form = document.querySelector('.needs-validation');
+            
+            // Real-time validation feedback
+            const inputs = form.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => {
+                input.addEventListener('blur', function() {
+                    validateFieldEnhanced(this);
+                });
+                
+                input.addEventListener('input', debounce(function() {
+                    if (this.classList.contains('is-invalid')) {
+                        validateFieldEnhanced(this);
+                    }
+                }, 300));
+            });
+        }
+        
+        // Enhanced field validation
+        function validateFieldEnhanced(field) {
+            const isValid = field.checkValidity();
+            field.classList.remove('is-valid', 'is-invalid');
+            
+            // Custom validation rules
+            let customValid = true;
+            
+            // Title length check
+            if (field.name === 'title' && field.value.length > 0 && field.value.length < 5) {
+                customValid = false;
+                field.setCustomValidity('Title should be at least 5 characters long');
+            } else if (field.name === 'title') {
+                field.setCustomValidity('');
+            }
+            
+            // Date validation
+            if (field.name === 'endDate' && field.value) {
+                const startDate = document.getElementById('startDate').value;
+                if (startDate && new Date(field.value) < new Date(startDate)) {
+                    customValid = false;
+                    field.setCustomValidity('End date cannot be before start date');
+                } else {
+                    field.setCustomValidity('');
+                }
+            }
+            
+            const finalValid = isValid && customValid;
+            field.classList.add(finalValid ? 'is-valid' : 'is-invalid');
+            
+            // Update feedback
+            const validFeedback = field.parentElement.querySelector('.valid-feedback');
+            const invalidFeedback = field.parentElement.querySelector('.invalid-feedback');
+            
+            if (validFeedback) {
+                validFeedback.style.display = finalValid ? 'block' : 'none';
+            }
+            if (invalidFeedback) {
+                invalidFeedback.style.display = finalValid ? 'none' : 'block';
+                if (!finalValid && field.validationMessage) {
+                    invalidFeedback.textContent = field.validationMessage;
+                }
+            }
+        }
+        
+        // Utility: Debounce function
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+        
+        // Phase 2E-A completion notification
+        console.log('✅ Phase 2E-A Task Form: Fully operational with enhanced features');
+        console.log('🚀 Phase 2E-B Enhancement Points Ready:');
+        console.log('   - Component selection');
+        console.log('   - Dependency management');
+        console.log('   - Real-time collaboration');
+        console.log('   - Advanced validation');
+    </script>
+</div>
+</body>
+</html
