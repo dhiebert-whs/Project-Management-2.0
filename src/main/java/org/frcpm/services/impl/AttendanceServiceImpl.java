@@ -2,6 +2,8 @@
 
 package org.frcpm.services.impl;
 
+import org.frcpm.web.websocket.AttendanceController;
+
 import org.frcpm.models.Attendance;
 import org.frcpm.models.Meeting;
 import org.frcpm.models.TeamMember;
@@ -56,6 +58,7 @@ public class AttendanceServiceImpl implements AttendanceService {
     private final MeetingRepository meetingRepository;
     private final TeamMemberRepository teamMemberRepository;
     private final WebSocketEventPublisher webSocketEventPublisher;
+    private final AttendanceController attendanceController;
     
     /**
      * Constructor injection with @Lazy for WebSocketEventPublisher to avoid circular dependencies.
@@ -64,11 +67,13 @@ public class AttendanceServiceImpl implements AttendanceService {
     public AttendanceServiceImpl(AttendanceRepository attendanceRepository,
                                 MeetingRepository meetingRepository,
                                 TeamMemberRepository teamMemberRepository,
-                                @Lazy WebSocketEventPublisher webSocketEventPublisher) {
+                                @Lazy WebSocketEventPublisher webSocketEventPublisher,
+                                @Lazy AttendanceController attendanceController) {
         this.attendanceRepository = attendanceRepository;
         this.meetingRepository = meetingRepository;
         this.teamMemberRepository = teamMemberRepository;
         this.webSocketEventPublisher = webSocketEventPublisher;
+        this.attendanceController = attendanceController;
     }
     
     // ========================================
@@ -269,6 +274,9 @@ public class AttendanceServiceImpl implements AttendanceService {
         // Publish real-time check-out event
         User currentUser = getCurrentUser();
         publishCheckOutEvent(savedAttendance, currentUser);
+        
+        // FIX: Also publish workshop presence update after check-out
+        publishWorkshopPresenceUpdate(savedAttendance.getMeeting());
         
         return savedAttendance;
     }
@@ -545,28 +553,38 @@ public class AttendanceServiceImpl implements AttendanceService {
     }
     
     private void broadcastAttendanceUpdate(AttendanceUpdateMessage message) {
-        // Broadcast to meeting-specific channel
-        webSocketEventPublisher.publishSystemAlert(
-            String.format("%s: %s", message.getEventType(), message.getMemberName()),
-            "INFO"
-        );
-        
-        // TODO: Add direct WebSocket broadcasting once AttendanceController is created
-        // attendanceController.broadcastAttendanceUpdate(message);
+        try {
+            // Use the dedicated AttendanceController for broadcasting
+            attendanceController.broadcastAttendanceUpdate(message);
+            
+            // Also publish to general activity stream via WebSocketEventPublisher
+            webSocketEventPublisher.publishSystemAlert(
+                String.format("%s: %s", message.getEventType(), message.getMemberName()),
+                "INFO"
+            );
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error broadcasting attendance update", e);
+        }
     }
     
     private void broadcastPresenceUpdate(TeamPresenceMessage message) {
-        // Broadcast workshop presence summary
-        webSocketEventPublisher.publishSystemAlert(
-            String.format("Workshop Update: %d/%d present (%d%%)", 
-                         message.getTotalPresent(), 
-                         message.getTotalExpected(),
-                         message.getAttendancePercentage().intValue()),
-            "INFO"
-        );
-        
-        // TODO: Add direct WebSocket broadcasting once AttendanceController is created
-        // attendanceController.broadcastPresenceUpdate(message);
+        try {
+            // Use the dedicated AttendanceController for broadcasting
+            attendanceController.broadcastPresenceUpdate(message);
+            
+            // Also publish summary to activity stream
+            webSocketEventPublisher.publishSystemAlert(
+                String.format("Workshop Update: %d/%d present (%d%%)", 
+                             message.getTotalPresent(), 
+                             message.getTotalExpected(),
+                             message.getAttendancePercentage().intValue()),
+                "INFO"
+            );
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error broadcasting presence update", e);
+        }
     }
     
     // ========================================
@@ -640,5 +658,57 @@ public class AttendanceServiceImpl implements AttendanceService {
     @Async
     public CompletableFuture<Map<String, Object>> getAttendanceStatisticsAsync(Long memberId) {
         return CompletableFuture.completedFuture(getAttendanceStatistics(memberId));
+    }
+
+    private void publishCheckInEventEnhanced(Attendance attendance, User updatedByUser) {
+        try {
+            String updatedBy = updatedByUser != null ? updatedByUser.getFullName() : "System";
+            
+            // Check if this is a late arrival
+            LocalTime scheduledStart = attendance.getMeeting().getStartTime();
+            LocalTime actualArrival = attendance.getArrivalTime();
+            boolean isLate = actualArrival != null && scheduledStart != null && 
+                           actualArrival.isAfter(scheduledStart.plusMinutes(15)); // 15 min grace period
+            
+            AttendanceUpdateMessage message;
+            if (isLate) {
+                message = AttendanceUpdateMessage.lateArrival(
+                    attendance.getId(),
+                    attendance.getMeeting().getId(),
+                    attendance.getMember().getId(),
+                    attendance.getMember().getDisplayName(),
+                    actualArrival,
+                    updatedBy
+                );
+                
+                // Use special late arrival broadcasting
+                attendanceController.broadcastLateArrival(message);
+            } else {
+                message = AttendanceUpdateMessage.checkIn(
+                    attendance.getId(),
+                    attendance.getMeeting().getId(),
+                    attendance.getMember().getId(),
+                    attendance.getMember().getDisplayName(),
+                    attendance.getMember().getUsername(),
+                    actualArrival,
+                    updatedBy
+                );
+                
+                // Standard check-in broadcasting
+                broadcastAttendanceUpdate(message);
+            }
+            
+            // Add context information
+            if (attendance.getMember().getSubteam() != null) {
+                message.setSubteamName(attendance.getMember().getSubteam().getName());
+                message.setSubteamColorCode(attendance.getMember().getSubteam().getColorCode());
+            }
+            
+            message.setSessionInfo("Workshop Session");
+            message.setCurrentLocation("Main Workshop");
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error publishing enhanced check-in event", e);
+        }
     }
 }
