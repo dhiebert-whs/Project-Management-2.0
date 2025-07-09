@@ -16012,3 +16012,44 @@ org.thymeleaf.exceptions.TemplateInputException: Error resolving template [proje
     0 nanoseconds spent executing 0 flushes (flushing a total of 0 entities and 0 collections);
     9100 nanoseconds spent executing 1 partial-flushes (flushing a total of 0 entities and 0 collections)
 }
+2025-07-09 16:21:53.217 [MessageBroker-2] INFO  o.s.w.s.c.WebSocketMessageBrokerStats - WebSocketSession[0 current WS(0)-HttpStream(0)-HttpPoll(0), 3 total, 0 closed abnormally (0 connect failure, 0 send limit, 0 transport error)], stompSubProtocol[processed CONNECT(3)-CONNECTED(3)-DISCONNECT(3)], stompBrokerRelay[null], inboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 54], outboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 9], sockJsScheduler[pool size = 12, active threads = 1, queued tasks = 2, completed tasks = 372]
+2025-07-09 16:41:46.623 [SpringApplicationShutdownHook] DEBUG org.springframework.web.SimpLogging - clientOutboundChannel removed SubProtocolWebSocketHandler[StompSubProtocolHandler[v10.stomp, v11.stomp, v12.stomp]]
+2025-07-09 16:41:46.625 [SpringApplicationShutdownHook] DEBUG org.springframework.web.SimpLogging - clientInboundChannel removed WebSocketAnnotationMethodMessageHandler[prefixes=[/app/]]
+2025-07-09 16:41:46.626 [SpringApplicationShutdownHook] INFO  o.s.m.s.b.SimpleBrokerMessageHandler - Stopping...
+2025-07-09 16:41:46.627 [SpringApplicationShutdownHook] INFO  o.s.m.s.b.SimpleBrokerMessageHandler - BrokerAvailabilityEvent[available=false, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@2c188e57]]
+2025-07-09 16:41:46.629 [SpringApplicationShutdownHook] DEBUG org.springframework.web.SimpLogging - clientInboundChannel removed SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@2c188e57]
+2025-07-09 16:41:46.631 [SpringApplicationShutdownHook] DEBUG org.springframework.web.SimpLogging - brokerChannel removed SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@2c188e57]
+2025-07-09 16:41:46.632 [SpringApplicationShutdownHook] INFO  o.s.m.s.b.SimpleBrokerMessageHandler - Stopped.
+2025-07-09 16:41:46.634 [SpringApplicationShutdownHook] DEBUG org.springframework.web.SimpLogging - clientInboundChannel removed UserDestinationMessageHandler[DefaultUserDestinationResolver[prefix=/user/]]
+2025-07-09 16:41:46.636 [SpringApplicationShutdownHook] DEBUG org.springframework.web.SimpLogging - brokerChannel removed UserDestinationMessageHandler[DefaultUserDestinationResolver[prefix=/user/]]
+2025-07-09 16:41:46.678 [SpringApplicationShutdownHook] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-07-09 16:41:46.681 [SpringApplicationShutdownHook] DEBUG org.hibernate.SQL - 
+    drop table if exists attendances cascade 
+2025-07-09 16:41:46.689 [SpringApplicationShutdownHook] DEBUG org.hibernate.SQL - 
+    drop table if exists audit_logs cascade 
+2025-07-09 16:41:46.694 [SpringApplicationShutdownHook] DEBUG org.hibernate.SQL - 
+    drop table if exists components cascade 
+2025-07-09 16:41:46.698 [SpringApplicationShutdownHook] DEBUG org.hibernate.SQL - 
+    drop table if exists meetings cascade 
+2025-07-09 16:41:46.702 [SpringApplicationShutdownHook] DEBUG org.hibernate.SQL - 
+    drop table if exists milestones cascade 
+2025-07-09 16:41:46.705 [SpringApplicationShutdownHook] DEBUG org.hibernate.SQL - 
+    drop table if exists projects cascade 
+2025-07-09 16:41:46.713 [SpringApplicationShutdownHook] DEBUG org.hibernate.SQL - 
+    drop table if exists subsystems cascade 
+2025-07-09 16:41:46.717 [SpringApplicationShutdownHook] DEBUG org.hibernate.SQL - 
+    drop table if exists subteams cascade 
+2025-07-09 16:41:46.720 [SpringApplicationShutdownHook] DEBUG org.hibernate.SQL - 
+    drop table if exists task_assignments cascade 
+2025-07-09 16:41:46.723 [SpringApplicationShutdownHook] DEBUG org.hibernate.SQL - 
+    drop table if exists task_components cascade 
+2025-07-09 16:41:46.726 [SpringApplicationShutdownHook] DEBUG org.hibernate.SQL - 
+    drop table if exists task_dependencies cascade 
+2025-07-09 16:41:46.730 [SpringApplicationShutdownHook] DEBUG org.hibernate.SQL - 
+    drop table if exists tasks cascade 
+2025-07-09 16:41:46.733 [SpringApplicationShutdownHook] DEBUG org.hibernate.SQL - 
+    drop table if exists team_members cascade 
+2025-07-09 16:41:46.736 [SpringApplicationShutdownHook] DEBUG org.hibernate.SQL - 
+    drop table if exists users cascade 
+2025-07-09 16:41:46.746 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2025-07-09 16:41:46.749 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.
