@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>FRC Competition Dashboard</title>
+    <meta name="description" content="FIRST Robotics Competition events, rankings, and schedule integration">
+</head>
+<body>
+    <div layout:fragment="content">
+        <!-- Page Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="h2">🏆 Competition Dashboard</h1>
+                        <p class="text-muted mb-0">
+                            FRC <span th:text="${currentSeason}">2025</span> Season
+                            <span th:if="${teamNumber > 0}" class="ms-2">
+                                | Team <strong th:text="${teamNumber}">1234</strong>
+                            </span>
+                        </p>
+                    </div>
+                    <div>
+                        <!-- API Status Indicator -->
+                        <span th:if="${apiConfigured}" class="badge bg-success me-2">
+                            <i class="fas fa-wifi"></i> API Connected
+                        </span>
+                        <span th:unless="${apiConfigured}" class="badge bg-warning me-2">
+                            <i class="fas fa-exclamation-triangle"></i> API Disconnected
+                        </span>
+                        
+                        <!-- Manual Sync Button (Admin Only) -->
+                        <button id="syncButton" class="btn btn-outline-primary btn-sm" 
+                                onclick="triggerSync()" 
+                                th:if="${#authorization.expression('hasRole(''ADMIN'')')}">
+                            <i class="fas fa-sync-alt"></i> Sync Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Message -->
+        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle"></i>
+            <span th:text="${error}">Error message</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- API Configuration Warning -->
+        <div th:unless="${apiConfigured}" class="alert alert-warning" role="alert">
+            <h6 class="alert-heading">
+                <i class="fas fa-cog"></i> FRC API Configuration Required
+            </h6>
+            <p class="mb-2">
+                To access live competition data, configure your FRC API credentials in the application settings.
+            </p>
+            <small class="text-muted">
+                Get API access at 
+                <a href="https://frc-events.firstinspires.org/services/API" target="_blank" rel="noopener">
+                    frc-events.firstinspires.org/services/API
+                </a>
+            </small>
+        </div>
+
+        <!-- Dashboard Overview Cards -->
+        <div class="row mb-4">
+            <!-- Events This Week -->
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <div class="display-6 text-primary mb-2">
+                            <span th:text="${#lists.size(eventsThisWeek)}">0</span>
+                        </div>
+                        <h6 class="card-title text-muted">Events This Week</h6>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upcoming Events -->
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <div class="display-6 text-info mb-2">
+                            <span th:text="${#lists.size(upcomingEvents)}">0</span>
+                        </div>
+                        <h6 class="card-title text-muted">Upcoming Events</h6>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Team Events -->
+            <div class="col-md-3" th:if="${teamNumber > 0}">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <div class="display-6 text-success mb-2">
+                            <span th:text="${#lists.size(teamEvents)}">0</span>
+                        </div>
+                        <h6 class="card-title text-muted">Team Events</h6>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Linked Projects -->
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <div class="display-6 text-warning mb-2">
+                            <span th:text="${#lists.size(linkedEvents)}">0</span>
+                        </div>
+                        <h6 class="card-title text-muted">Linked Projects</h6>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Dashboard Content -->
+        <div class="row">
+            <!-- Left Column: Events -->
+            <div class="col-lg-8">
+                <!-- Events This Week -->
+                <div class="card mb-4" th:if="${!#lists.isEmpty(eventsThisWeek)}">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-calendar-week text-primary"></i>
+                            Events This Week
+                        </h5>
+                        <a th:href="@{/frc/events}" class="btn btn-sm btn-outline-primary">View All</a>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group list-group-flush">
+                            <div th:each="event : ${eventsThisWeek}" 
+                                 class="list-group-item d-flex justify-content-between align-items-start">
+                                <div class="me-auto">
+                                    <h6 class="mb-1">
+                                        <a th:href="@{/frc/events/{id}(id=${event.id})}" 
+                                           th:text="${event.eventName}" 
+                                           class="text-decoration-none">Event Name</a>
+                                    </h6>
+                                    <p class="mb-1 text-muted">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        <span th:text="${event.city + ', ' + event.stateProvince}">Location</span>
+                                    </p>
+                                    <small th:text="${#temporals.format(event.startDate, 'MMM dd')} + 
+                                                   ' - ' + ${#temporals.format(event.endDate, 'MMM dd')}">
+                                        Mar 15 - Mar 17
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    <span th:text="${event.eventType.displayName}" 
+                                          class="badge bg-secondary">Regional</span>
+                                    <div th:if="${event.linkedProject}" class="mt-1">
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-link"></i> Linked
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upcoming Events -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-calendar-alt text-info"></i>
+                            Upcoming Events
+                        </h5>
+                        <a th:href="@{/frc/events}" class="btn btn-sm btn-outline-primary">View All</a>
+                    </div>
+                    <div class="card-body">
+                        <div th:if="${#lists.isEmpty(upcomingEvents)}" class="text-center text-muted py-4">
+                            <i class="fas fa-calendar-times fa-2x mb-2"></i>
+                            <p>No upcoming events found</p>
+                            <small>Events will appear here when available from the FRC API</small>
+                        </div>
+                        
+                        <div th:unless="${#lists.isEmpty(upcomingEvents)}" class="list-group list-group-flush">
+                            <div th:each="event, iterStat : ${upcomingEvents}" 
+                                 th:if="${iterStat.index < 5}"
+                                 class="list-group-item d-flex justify-content-between align-items-start">
+                                <div class="me-auto">
+                                    <h6 class="mb-1">
+                                        <a th:href="@{/frc/events/{id}(id=${event.id})}" 
+                                           th:text="${event.eventName}" 
+                                           class="text-decoration-none">Event Name</a>
+                                    </h6>
+                                    <p class="mb-1 text-muted">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        <span th:text="${event.fullDisplayName}">Location</span>
+                                    </p>
+                                    <small class="text-muted">
+                                        <span th:text="${event.daysUntilStart}">30</span> days away
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    <span th:text="${event.eventType.displayName}" 
+                                          class="badge bg-secondary">Regional</span>
+                                    <div class="mt-1">
+                                        <small th:text="${#temporals.format(event.startDate, 'MMM dd')}">
+                                            Mar 15
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Team Status & Project Links -->
+            <div class="col-lg-4">
+                <!-- Team Rankings (if team configured) -->
+                <div class="card mb-4" th:if="${teamNumber > 0 && !#maps.isEmpty(teamRankings)}">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-trophy text-warning"></i>
+                            Team <span th:text="${teamNumber}">1234</span> Rankings
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div th:each="entry : ${teamRankings}" class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1" th:text="${entry.value.frcEvent.eventName}">Event Name</h6>
+                                    <small class="text-muted" th:text="${entry.value.record}">5-2-0</small>
+                                </div>
+                                <div class="text-end">
+                                    <div class="display-6 text-primary" th:text="${entry.value.rank}">8</div>
+                                    <small class="text-muted">rank</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Project Integration -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-project-diagram text-success"></i>
+                            Project Integration
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Linked Events -->
+                        <div th:if="${!#lists.isEmpty(linkedEvents)}">
+                            <h6 class="text-success">
+                                <i class="fas fa-link"></i> Linked Events
+                            </h6>
+                            <div th:each="event : ${linkedEvents}" class="mb-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong th:text="${event.eventName}">Event</strong>
+                                        <br>
+                                        <small class="text-muted" 
+                                               th:text="${event.linkedProject.name}">Project Name</small>
+                                    </div>
+                                    <span class="badge bg-success">Linked</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Available for Linking -->
+                        <div th:if="${!#lists.isEmpty(unlinkableEvents)}" class="mt-3">
+                            <h6 class="text-warning">
+                                <i class="fas fa-exclamation-triangle"></i> Available for Linking
+                            </h6>
+                            <p class="small text-muted">
+                                These events could be linked to projects for deadline management:
+                            </p>
+                            <div th:each="event : ${unlinkableEvents}" class="mb-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong th:text="${event.eventName}">Event</strong>
+                                        <br>
+                                        <small class="text-muted" 
+                                               th:text="${#temporals.format(event.startDate, 'MMM dd, yyyy')}">Mar 15, 2025</small>
+                                    </div>
+                                    <a th:href="@{/frc/events/{id}(id=${event.id})}" 
+                                       class="btn btn-sm btn-outline-primary">Link</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- No Events Message -->
+                        <div th:if="${#lists.isEmpty(linkedEvents) && #lists.isEmpty(unlinkableEvents)}" 
+                             class="text-center text-muted py-3">
+                            <i class="fas fa-link fa-2x mb-2"></i>
+                            <p>No events available for project linking</p>
+                            <small>Events will appear here when loaded from FRC API</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-bolt text-primary"></i>
+                            Quick Actions
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a th:href="@{/frc/events}" class="btn btn-outline-primary">
+                                <i class="fas fa-calendar"></i> View All Events
+                            </a>
+                            <a th:href="@{/projects}" class="btn btn-outline-success">
+                                <i class="fas fa-project-diagram"></i> Manage Projects
+                            </a>
+                            <a th:href="@{/tasks/kanban}" class="btn btn-outline-info">
+                                <i class="fas fa-tasks"></i> Task Board
+                            </a>
+                            <button class="btn btn-outline-secondary" onclick="refreshDashboard()">
+                                <i class="fas fa-refresh"></i> Refresh Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Season Information -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-md-3">
+                                <h6 class="text-muted">Current Season</h6>
+                                <div class="h4 text-primary" th:text="${currentSeason}">2025</div>
+                            </div>
+                            <div class="col-md-3" th:if="${teamNumber > 0}">
+                                <h6 class="text-muted">Team Number</h6>
+                                <div class="h4 text-success" th:text="${teamNumber}">1234</div>
+                            </div>
+                            <div class="col-md-3">
+                                <h6 class="text-muted">API Status</h6>
+                                <div class="h4" th:class="${apiConfigured} ? 'text-success' : 'text-warning'">
+                                    <i th:class="${apiConfigured} ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle'"></i>
+                                    <span th:text="${apiConfigured} ? 'Connected' : 'Disconnected'">Connected</span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <h6 class="text-muted">Total Events</h6>
+                                <div class="h4 text-info" th:text="${#lists.size(upcomingEvents)}">12</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts Fragment -->
+    <div layout:fragment="scripts">
+        <script>
+            // Global dashboard functions
+            function refreshDashboard() {
+                showToast('Refreshing dashboard data...', 'info');
+                window.location.reload();
+            }
+
+            // Manual sync function (admin only)
+            function triggerSync() {
+                const button = document.getElementById('syncButton');
+                const originalText = button.innerHTML;
+                
+                // Show loading state
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
+                
+                fetch('/frc/sync', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('FRC API sync started successfully', 'success');
+                        
+                        // Refresh page after 3 seconds to show updated data
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 3000);
+                    } else {
+                        showToast('Sync failed: ' + data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Sync error:', error);
+                    showToast('Sync failed: Network error', 'error');
+                })
+                .finally(() => {
+                    // Restore button state
+                    button.disabled = false;
+                    button.innerHTML = originalText;
+                });
+            }
+
+            // Toast notification function
+            function showToast(message, type = 'info') {
+                // Create toast container if it doesn't exist
+                let toastContainer = document.getElementById('toast-container');
+                if (!toastContainer) {
+                    toastContainer = document.createElement('div');
+                    toastContainer.id = 'toast-container';
+                    toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+                    toastContainer.style.zIndex = '1100';
+                    document.body.appendChild(toastContainer);
+                }
+
+                // Determine toast style based on type
+                let bgClass = 'bg-primary';
+                let icon = 'fas fa-info-circle';
+                
+                switch (type) {
+                    case 'success':
+                        bgClass = 'bg-success';
+                        icon = 'fas fa-check-circle';
+                        break;
+                    case 'error':
+                        bgClass = 'bg-danger';
+                        icon = 'fas fa-exclamation-circle';
+                        break;
+                    case 'warning':
+                        bgClass = 'bg-warning';
+                        icon = 'fas fa-exclamation-triangle';
+                        break;
+                }
+
+                // Create toast element
+                const toast = document.createElement('div');
+                toast.className = `toast ${bgClass} text-white`;
+                toast.setAttribute('role', 'alert');
+                toast.innerHTML = `
+                    <div class="toast-header ${bgClass} text-white border-0">
+                        <i class="${icon} me-2"></i>
+                        <strong class="me-auto">FRC Dashboard</strong>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                `;
+
+                toastContainer.appendChild(toast);
+
+                // Initialize and show toast
+                const bsToast = new bootstrap.Toast(toast, {
+                    autohide: true,
+                    delay: type === 'error' ? 8000 : 5000
+                });
+                bsToast.show();
+
+                // Remove toast element after hiding
+                toast.addEventListener('hidden.bs.toast', () => {
+                    toast.remove();
+                });
+            }
+
+            // Auto-refresh dashboard every 5 minutes if API is connected
+            if (/*[[${apiConfigured}]]*/ false) {
+                setInterval(() => {
+                    console.log('Auto-refreshing FRC dashboard data...');
+                    // Could implement partial refresh via AJAX here
+                }, 300000); // 5 minutes
+            }
+
+            // Initialize dashboard
+            document.addEventListener('DOMContentLoaded', function() {
+                console.log('FRC Competition Dashboard loaded');
+                
+                // Show welcome message for new users
+                const hasSeenWelcome = localStorage.getItem('frc-dashboard-welcome');
+                if (!hasSeenWelcome && /*[[${apiConfigured}]]*/ false) {
+                    showToast('Welcome to the FRC Competition Dashboard! Live data is now available.', 'success');
+                    localStorage.setItem('frc-dashboard-welcome', 'true');
+                }
+            });
+        </script>
+    </div>
+</body>
+</html>
