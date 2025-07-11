@@ -1,9 +1,8 @@
-# FRC Project Management System - Enhanced Application Configuration
-# Version 2.0.0 - Phase 2B: COPPA Compliance & Security
+# FRC Project Management System - Enhanced with FRC API Integration
+# Version 2.0.0 - Phase 3A: FRC API Integration
 #
-# This configuration adds comprehensive security features including
-# COPPA compliance for users under 13, multi-factor authentication
-# for mentors, and enhanced audit logging capabilities.
+# This configuration adds FIRST Robotics Competition API integration
+# for real-time event data, team information, and competition schedules.
 
 spring:
   application:
@@ -121,6 +120,7 @@ logging:
   level:
     org.frcpm: INFO
     org.frcpm.security: DEBUG
+    org.frcpm.integration.frc: DEBUG  # FRC API integration logging
     org.springframework.security: WARN
     org.hibernate.SQL: WARN
     org.hibernate.type.descriptor.sql.BasicBinder: WARN
@@ -159,16 +159,18 @@ info:
   migration:
     from: JavaFX MVVM Application
     to: Spring Boot Web Application
-    phase: "Phase 2B - COPPA Compliance & Security"
-  security:
+    phase: "Phase 3A - FRC API Integration"
+  frc:
+    api:
+      version: "3.0"
+      integration: "Real-time event data and team synchronization"
     features:
-      - "COPPA Compliance for users under 13"
-      - "Multi-factor authentication for mentors"
-      - "Role-based access control"
-      - "Comprehensive audit logging"
-      - "Session security"
+      - "Live competition schedules"
+      - "Team rankings and match results"
+      - "Event timeline integration"
+      - "Automated deadline management"
     
-# FRC-Specific Application Properties (Enhanced)
+# FRC-Specific Application Properties (Enhanced for API Integration)
 app:
   name: FRC Project Management System
   version: 2.0.0
@@ -273,7 +275,73 @@ app:
     metrics-enabled: true
     default-chart-height: 400
 
-# Spring Boot Actuator Health Indicators
+  # 🚀 NEW: FRC API Integration Configuration
+  frc:
+    api:
+      # FIRST API Configuration
+      base-url: ${FRC_API_BASE_URL:https://frc-api.firstinspires.org/v3.0}
+      username: ${FRC_API_USERNAME:}
+      auth-key: ${FRC_API_AUTH_KEY:}
+      
+      # API Rate Limiting
+      rate-limit:
+        requests-per-minute: 20
+        burst-requests: 5
+        retry-delay-seconds: 30
+        max-retries: 3
+      
+      # Data Sync Configuration
+      sync:
+        enabled: ${FRC_SYNC_ENABLED:true}
+        auto-sync-interval: 3600  # 1 hour in seconds
+        team-data-sync: true
+        event-data-sync: true
+        ranking-data-sync: true
+        match-result-sync: true
+      
+      # Cache Configuration
+      cache:
+        enabled: true
+        ttl-seconds: 1800        # 30 minutes cache
+        max-entries: 1000
+        
+      # Competition Season Configuration
+      season:
+        current-year: ${FRC_SEASON_YEAR:2025}
+        kickoff-auto-detection: true
+        competition-buffer-days: 7
+        
+      # Event Types to Sync
+      event-types:
+        - "Regional"
+        - "District"
+        - "Championship"
+        - "Offseason"
+        
+      # Data Mapping Configuration
+      mapping:
+        # Map FRC events to project deadlines
+        events-to-projects: true
+        # Map match schedules to tasks
+        matches-to-tasks: true
+        # Map team roster to team members
+        roster-to-members: false  # Manual only due to COPPA
+        
+      # Notification Configuration
+      notifications:
+        ranking-changes: true
+        match-schedule-updates: true
+        event-announcements: true
+        deadline-alerts: true
+        
+      # Error Handling
+      error-handling:
+        continue-on-api-error: true
+        fallback-to-cache: true
+        log-api-errors: true
+        notify-admins-on-failure: true
+
+# Health Checks (Enhanced with FRC API)
 health:
   database:
     enabled: true
@@ -282,42 +350,37 @@ health:
     threshold: 100MB
   mail:
     enabled: true
+  frc-api:
+    enabled: true
+    timeout: 10s
 
-# Environment Variables Documentation
-# The following environment variables can be set for production deployment:
+# 🎯 Environment Variables for FRC API Integration
+# Add these environment variables for production:
 #
-# Required for Production:
-#   ADMIN_USERNAME - Admin user login name
-#   ADMIN_PASSWORD - Secure admin password
+# Required FRC API:
+#   FRC_API_USERNAME - Your FRC API username
+#   FRC_API_AUTH_KEY - Your FRC API authorization key
+#   
+# Optional FRC Configuration:
+#   FRC_API_BASE_URL - Custom API base URL (default: official FIRST API)
+#   FRC_SYNC_ENABLED - Enable/disable automatic sync (default: true)
+#   FRC_SEASON_YEAR - Current competition season year (default: 2025)
 #   
 # Team Configuration:
 #   TEAM_NAME - FRC team name
-#   TEAM_NUMBER - FRC team number
+#   TEAM_NUMBER - FRC team number (required for API calls)
 #   TEAM_EMAIL - Team contact email
 #   
-# Security Configuration:
-#   COOKIE_SECURE - Set to true if using HTTPS
-#   BASE_URL - Full base URL for the application
-#   
-# Email Configuration:
-#   MAIL_HOST - SMTP server hostname
-#   MAIL_PORT - SMTP server port
-#   MAIL_USERNAME - SMTP username
-#   MAIL_PASSWORD - SMTP password
-#   FROM_EMAIL - Email address for outgoing emails
-#   FROM_NAME - Display name for outgoing emails
-#   SUPPORT_EMAIL - Support contact email
-#
 # Example Production Setup:
-#   export ADMIN_USERNAME=frcadmin
-#   export ADMIN_PASSWORD=$(openssl rand -base64 32)
-#   export TEAM_NAME="Robotics Warriors"
+#   export FRC_API_USERNAME=your-frc-username
+#   export FRC_API_AUTH_KEY=your-frc-auth-key
 #   export TEAM_NUMBER=1234
-#   export TEAM_EMAIL=team1234@frcteam.org
-#   export COOKIE_SECURE=true
-#   export BASE_URL=https://frcpm.yourteam.org
-#   export MAIL_HOST=smtp.gmail.com
-#   export MAIL_USERNAME=noreply@frcteam.org
-#   export MAIL_PASSWORD=your-app-password
-#   export FROM_EMAIL=noreply@frcteam.org
-#   export SUPPORT_EMAIL=support@frcteam.org
+#   export TEAM_NAME="Robotics Warriors"
+#   export FRC_SEASON_YEAR=2025
+#   export FRC_SYNC_ENABLED=true
+#
+# Getting FRC API Credentials:
+# 1. Register at https://frc-events.firstinspires.org/services/API
+# 2. Request API access for your team
+# 3. Obtain username and authorization key
+# 4. Set environment variables before starting application
