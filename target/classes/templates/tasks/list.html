@@ -372,6 +372,76 @@
             }
         }
     </style>
+
+    <style>
+        /* Enhanced view toggle for Kanban integration */
+        .view-toggle {
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background: white;
+        }
+        
+        .view-toggle .btn {
+            border-radius: 0;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .view-toggle .btn-check:checked + .btn {
+            background: linear-gradient(135deg, #0066cc 0%, #004499 100%);
+            color: white;
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0, 102, 204, 0.3);
+        }
+        
+        .view-toggle .btn:hover {
+            background-color: rgba(0, 102, 204, 0.1);
+            transform: translateY(-1px);
+        }
+        
+        .view-toggle .btn-check:checked + .btn:hover {
+            background: linear-gradient(135deg, #0066cc 0%, #004499 100%);
+            transform: scale(1.05) translateY(-1px);
+        }
+        
+        /* Enhanced activity feed for Kanban moves */
+        .activity-item.kanban-move {
+            border-left-color: #6f42c1;
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f0ff 100%);
+        }
+        
+        .activity-item.kanban-move:hover {
+            background: linear-gradient(135deg, #e7f3ff 0%, #cce7ff 100%);
+            border-left-color: #0066cc;
+        }
+        
+        /* Cross-view compatibility indicators */
+        .task-item.kanban-updated {
+            border-left-color: #6f42c1 !important;
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f0ff 100%);
+        }
+        
+        .task-item.kanban-updated::after {
+            content: '';
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            width: 12px;
+            height: 12px;
+            background: #6f42c1;
+            border-radius: 50%;
+            animation: kanbanPulse 2s ease-in-out;
+        }
+        
+        @keyframes kanbanPulse {
+            0% { opacity: 0; transform: scale(0); }
+            50% { opacity: 1; transform: scale(1.2); }
+            100% { opacity: 0; transform: scale(0); }
+        }
+    </style>
 </div>
 
 <body>
@@ -480,11 +550,13 @@
                             </div>
                             <div class="col-md-4 text-end">
                                 <div class="btn-group view-toggle" role="group">
-                                    <input type="radio" class="btn-check" name="viewToggle" id="listView" checked>
+                                    <input type="radio" class="btn-check" name="viewToggle" id="listView" 
+                                           checked th:checked="${currentView == 'list' or currentView == null}">
                                     <label class="btn btn-outline-primary" for="listView">
                                         <i class="fas fa-list me-2"></i>List
                                     </label>
-                                    <input type="radio" class="btn-check" name="viewToggle" id="kanbanView">
+                                    <input type="radio" class="btn-check" name="viewToggle" id="kanbanView"
+                                           th:checked="${currentView == 'kanban'}">
                                     <label class="btn btn-outline-primary" for="kanbanView">
                                         <i class="fas fa-columns me-2"></i>Kanban
                                     </label>
@@ -1950,6 +2022,165 @@
         console.log('   • Advanced filtering and search');
         console.log('   • Mobile-optimized interface');
         console.log('   • Offline resilience with sync');
+    </script>
+
+    <script>
+        // ADD THIS TO THE EXISTING JavaScript in list.html:
+        
+        // Enhanced view switching with real-time integration
+        document.addEventListener('DOMContentLoaded', function() {
+            // Setup view toggle handlers
+            setupViewToggle();
+        });
+        
+        function setupViewToggle() {
+            const listViewToggle = document.getElementById('listView');
+            const kanbanViewToggle = document.getElementById('kanbanView');
+            
+            if (listViewToggle) {
+                listViewToggle.addEventListener('change', function() {
+                    if (this.checked) {
+                        switchToListView();
+                    }
+                });
+            }
+            
+            if (kanbanViewToggle) {
+                kanbanViewToggle.addEventListener('change', function() {
+                    if (this.checked) {
+                        switchToKanbanView();
+                    }
+                });
+            }
+        }
+        
+        function switchToListView() {
+            console.log('🔄 Switching to List view...');
+            
+            // Preserve current filters
+            const currentParams = new URLSearchParams(window.location.search);
+            currentParams.delete('view');
+            
+            const newUrl = '/tasks' + (currentParams.toString() ? '?' + currentParams.toString() : '');
+            window.location.href = newUrl;
+        }
+        
+        function switchToKanbanView() {
+            console.log('🔄 Switching to Kanban view...');
+            
+            // Preserve current filters
+            const currentParams = new URLSearchParams(window.location.search);
+            currentParams.set('view', 'kanban');
+            
+            const newUrl = '/tasks/kanban' + (currentParams.toString() ? '?' + currentParams.toString() : '');
+            window.location.href = newUrl;
+        }
+        
+        // ADD ENHANCED TASK UPDATE HANDLER FOR KANBAN COMPATIBILITY:
+        
+        function handleRealTimeTaskUpdate(taskUpdate) {
+            console.log('📨 Real-time task update received:', taskUpdate);
+            
+            try {
+                // Existing list view update logic
+                const taskElement = document.querySelector(`[data-task-id="${taskUpdate.taskId}"]`);
+                
+                if (taskElement) {
+                    // Show real-time update indicator
+                    showTaskUpdateIndicator(taskUpdate.taskId);
+                    
+                    // Update progress if changed
+                    if (taskUpdate.progress !== null) {
+                        updateTaskProgressInList(taskUpdate.taskId, taskUpdate.progress);
+                    }
+                    
+                    // Handle Kanban-specific updates
+                    if (taskUpdate.changeType === 'KANBAN_MOVED') {
+                        // Show Kanban move notification in list view
+                        addKanbanMoveToActivity(taskUpdate);
+                    }
+                    
+                    // Update completion status
+                    if (taskUpdate.changeType === 'COMPLETED') {
+                        markTaskAsCompleted(taskUpdate.taskId);
+                    }
+                    
+                    // Update task metadata
+                    updateTaskMetadata(taskUpdate.taskId, taskUpdate);
+                    
+                    // Add visual highlight for the update
+                    highlightTaskUpdate(taskUpdate.taskId);
+                    
+                    // Update statistics
+                    updateStatistics();
+                    
+                    // Add to activity feed if not from current user
+                    if (taskUpdate.updatedBy !== getCurrentUsername()) {
+                        addTaskUpdateToActivity(taskUpdate);
+                    }
+                    
+                } else if (taskUpdate.changeType === 'CREATED') {
+                    // Handle new task creation
+                    handleNewTaskCreation(taskUpdate);
+                }
+                
+                // Update filter counts
+                updateFilterCounts();
+                
+            } catch (error) {
+                console.error('❌ Error handling real-time task update:', error);
+            }
+        }
+        
+        function addKanbanMoveToActivity(taskUpdate) {
+            const activity = {
+                userId: null,
+                userName: taskUpdate.updatedBy,
+                action: 'KANBAN_MOVED',
+                description: `moved "${taskUpdate.taskTitle}" to ${getKanbanStatusDisplayName(taskUpdate.newStatus)}`,
+                timestamp: taskUpdate.timestamp || new Date().toISOString(),
+                iconClass: 'fas fa-arrows-alt',
+                severity: 'INFO'
+            };
+            
+            addToActivityFeed(activity);
+        }
+        
+        function getKanbanStatusDisplayName(status) {
+            const statusNames = {
+                'TODO': 'To Do',
+                'IN_PROGRESS': 'In Progress', 
+                'REVIEW': 'Review',
+                'COMPLETED': 'Completed'
+            };
+            return statusNames[status] || status;
+        }
+        
+        // ENHANCED WEBSOCKET SUBSCRIPTION FOR KANBAN COMPATIBILITY:
+        
+        function subscribeToTaskUpdates() {
+            // Subscribe to all task updates (existing)
+            stompClient.subscribe('/topic/tasks/updates', function(message) {
+                const taskUpdate = JSON.parse(message.body);
+                handleRealTimeTaskUpdate(taskUpdate);
+            });
+            
+            // Subscribe to project-specific updates if we have a current project
+            if (currentProjectId) {
+                stompClient.subscribe(`/topic/project/${currentProjectId}`, function(message) {
+                    const taskUpdate = JSON.parse(message.body);
+                    handleRealTimeTaskUpdate(taskUpdate);
+                });
+                
+                // ALSO subscribe to Kanban-specific updates for cross-view compatibility
+                stompClient.subscribe(`/topic/project/${currentProjectId}/kanban`, function(message) {
+                    const taskUpdate = JSON.parse(message.body);
+                    handleRealTimeTaskUpdate(taskUpdate);
+                });
+            }
+            
+            console.log('📡 Subscribed to task updates (List + Kanban compatibility)');
+        }
     </script>
 </div>
 </body>

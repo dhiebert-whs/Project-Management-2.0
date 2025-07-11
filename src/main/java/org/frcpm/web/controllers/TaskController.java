@@ -11,6 +11,7 @@ import org.frcpm.models.Project;
 import org.frcpm.models.Subsystem;
 import org.frcpm.services.TaskService;
 import org.frcpm.services.TeamMemberService;
+import org.frcpm.web.dto.TaskUpdateMessage;
 import org.frcpm.services.ProjectService;
 import org.frcpm.services.SubsystemService;
 import org.frcpm.events.WebSocketEventPublisher;
@@ -23,15 +24,21 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.handler.annotation.SendTo;
+import org.springframework.messaging.simp.annotation.SubscribeMapping;
 
 import jakarta.validation.Valid;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.stream.Collectors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -1545,5 +1552,475 @@ public class TaskController extends BaseController {
             Map.of("label", "Next Week", "date", today.plusDays(14)),
             Map.of("label", "End of Month", "date", today.withDayOfMonth(today.lengthOfMonth()))
         ));
+    }
+
+    // src/main/java/org/frcpm/web/controllers/TaskController.java
+    // Phase 2E-C: KANBAN BOARD & ADVANCED TASK OPERATIONS
+    // ✅ ADDING: Drag-and-drop Kanban endpoints with real-time sync
+
+    // ADD THESE METHODS TO THE EXISTING TaskController.java:
+
+    // =========================================================================
+    // KANBAN BOARD OPERATIONS - ✅ PHASE 2E-C NEW FEATURES
+    // =========================================================================
+
+    /**
+     * Display Kanban board view for tasks.
+     * 
+     * ✅ NEW: Full Kanban board implementation with drag-and-drop
+     */
+    @GetMapping("/kanban")
+    public String kanbanView(Model model,
+                            @RequestParam(value = "projectId", required = false) Long projectId,
+                            @AuthenticationPrincipal UserPrincipal user) {
+        try {
+            LOGGER.info("Loading Kanban board - Phase 2E-C implementation");
+            
+            addNavigationData(model);
+            addBreadcrumbs(model, "Tasks", "/tasks", "Kanban Board", "/tasks/kanban");
+            
+            // Get tasks for Kanban organization
+            List<Task> allTasks = projectId != null ? 
+                taskService.findByProject(projectService.findById(projectId).orElse(null)) :
+                taskService.findAll();
+            
+            // Organize tasks by status columns
+            Map<String, List<Task>> kanbanColumns = organizeTasksForKanban(allTasks);
+            
+            // Add to model
+            model.addAttribute("kanbanColumns", kanbanColumns);
+            model.addAttribute("allTasks", allTasks);
+            model.addAttribute("currentProjectId", projectId);
+            model.addAttribute("currentView", "kanban");
+            
+            // Load filter options for Kanban
+            loadRealFilterOptions(model);
+            addUserPermissions(model, user);
+            
+            // Kanban-specific data
+            model.addAttribute("kanbanStatuses", getKanbanStatuses());
+            model.addAttribute("isKanbanView", true);
+            model.addAttribute("webSocketEnabled", true);
+            
+            return "tasks/kanban";
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error loading Kanban board", e);
+            return handleException(e, model);
+        }
+    }
+
+    /**
+     * Handle drag-and-drop status updates via AJAX.
+     * 
+     * ✅ NEW: Real-time Kanban drag-and-drop endpoint
+     */
+    @PostMapping("/{id}/kanban/move")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> moveTaskInKanban(@PathVariable Long id,
+                                                            @RequestParam String newStatus,
+                                                            @RequestParam(required = false) Integer newPosition,
+                                                            @AuthenticationPrincipal UserPrincipal user) {
+        
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            Task task = taskService.findById(id);
+            if (task == null) {
+                response.put("success", false);
+                response.put("message", "Task not found");
+                return ResponseEntity.notFound().build();
+            }
+            
+            // Check permissions
+            if (!canEditTask(task, user)) {
+                response.put("success", false);
+                response.put("message", "Permission denied");
+                return ResponseEntity.status(403).body(response);
+            }
+            
+            // Store old values for WebSocket event
+            String oldStatus = getTaskKanbanStatus(task);
+            Integer oldProgress = task.getProgress();
+            
+            // Update task based on new Kanban status
+            boolean updated = updateTaskFromKanbanMove(task, newStatus, newPosition);
+            
+            if (updated) {
+                // Save the task
+                Task savedTask = taskService.save(task);
+                
+                // REAL-TIME: Publish Kanban move via WebSocket
+                webSocketEventPublisher.publishKanbanMove(savedTask, oldStatus, newStatus, user.getUser());
+                
+                response.put("success", true);
+                response.put("message", "Task moved successfully");
+                response.put("taskId", savedTask.getId());
+                response.put("newStatus", newStatus);
+                response.put("newProgress", savedTask.getProgress());
+                response.put("completed", savedTask.isCompleted());
+                
+            } else {
+                response.put("success", false);
+                response.put("message", "Failed to update task");
+            }
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error in Kanban move operation", e);
+            response.put("success", false);
+            response.put("message", "Server error: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    /**
+     * Get Kanban board data as JSON for dynamic updates.
+     * 
+     * ✅ NEW: API endpoint for Kanban board refresh
+     */
+    @GetMapping("/kanban/data")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getKanbanData(@RequestParam(value = "projectId", required = false) Long projectId,
+                                                            @AuthenticationPrincipal UserPrincipal user) {
+        
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            // Get tasks
+            List<Task> allTasks = projectId != null ? 
+                taskService.findByProject(projectService.findById(projectId).orElse(null)) :
+                taskService.findAll();
+            
+            // Organize for Kanban
+            Map<String, List<Task>> kanbanColumns = organizeTasksForKanban(allTasks);
+            
+            // Convert to DTOs for JSON response
+            Map<String, List<Map<String, Object>>> kanbanData = new HashMap<>();
+            
+            for (Map.Entry<String, List<Task>> entry : kanbanColumns.entrySet()) {
+                List<Map<String, Object>> taskDtos = entry.getValue().stream()
+                    .map(this::taskToKanbanDto)
+                    .collect(Collectors.toList());
+                kanbanData.put(entry.getKey(), taskDtos);
+            }
+            
+            response.put("success", true);
+            response.put("columns", kanbanData);
+            response.put("totalTasks", allTasks.size());
+            response.put("lastUpdated", LocalDateTime.now());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error loading Kanban data", e);
+            response.put("success", false);
+            response.put("message", "Failed to load Kanban data");
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    // =========================================================================
+    // KANBAN HELPER METHODS - ✅ PHASE 2E-C IMPLEMENTATION
+    // =========================================================================
+
+    /**
+     * Organize tasks into Kanban columns based on status.
+     */
+    private Map<String, List<Task>> organizeTasksForKanban(List<Task> tasks) {
+        Map<String, List<Task>> columns = new LinkedHashMap<>();
+        
+        // Initialize columns
+        columns.put("TODO", new ArrayList<>());
+        columns.put("IN_PROGRESS", new ArrayList<>());
+        columns.put("REVIEW", new ArrayList<>());
+        columns.put("COMPLETED", new ArrayList<>());
+        
+        // Organize tasks into columns
+        for (Task task : tasks) {
+            String status = getTaskKanbanStatus(task);
+            columns.get(status).add(task);
+        }
+        
+        return columns;
+    }
+
+    /**
+     * Determine Kanban status for a task.
+     */
+    private String getTaskKanbanStatus(Task task) {
+        if (task.isCompleted()) {
+            return "COMPLETED";
+        } else if (task.getProgress() >= 75) {
+            return "REVIEW";
+        } else if (task.getProgress() > 0) {
+            return "IN_PROGRESS";
+        } else {
+            return "TODO";
+        }
+    }
+
+    /**
+     * Update task based on Kanban column move.
+     */
+    private boolean updateTaskFromKanbanMove(Task task, String newStatus, Integer newPosition) {
+        try {
+            switch (newStatus) {
+                case "TODO":
+                    task.setProgress(0);
+                    task.setCompleted(false);
+                    break;
+                    
+                case "IN_PROGRESS":
+                    if (task.getProgress() == 0) {
+                        task.setProgress(25); // Default progress when starting
+                    }
+                    task.setCompleted(false);
+                    break;
+                    
+                case "REVIEW":
+                    if (task.getProgress() < 75) {
+                        task.setProgress(75); // Minimum progress for review
+                    }
+                    task.setCompleted(false);
+                    break;
+                    
+                case "COMPLETED":
+                    task.setProgress(100);
+                    task.setCompleted(true);
+                    break;
+                    
+                default:
+                    return false;
+            }
+            
+            // TODO: Handle position updates within column
+            // This would require adding a position field to Task model
+            
+            return true;
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error updating task from Kanban move", e);
+            return false;
+        }
+    }
+
+    /**
+     * Get available Kanban statuses.
+     */
+    private List<Map<String, Object>> getKanbanStatuses() {
+        return List.of(
+            Map.of("id", "TODO", "name", "To Do", "color", "#6c757d", "icon", "fas fa-clipboard-list"),
+            Map.of("id", "IN_PROGRESS", "name", "In Progress", "color", "#ffc107", "icon", "fas fa-play-circle"),
+            Map.of("id", "REVIEW", "name", "Review", "color", "#17a2b8", "icon", "fas fa-eye"),
+            Map.of("id", "COMPLETED", "name", "Completed", "color", "#28a745", "icon", "fas fa-check-circle")
+        );
+    }
+
+    /**
+     * Convert task to Kanban DTO for JSON response.
+     */
+    private Map<String, Object> taskToKanbanDto(Task task) {
+        Map<String, Object> dto = new HashMap<>();
+        
+        dto.put("id", task.getId());
+        dto.put("title", task.getTitle());
+        dto.put("description", task.getDescription());
+        dto.put("progress", task.getProgress());
+        dto.put("completed", task.isCompleted());
+        dto.put("priority", task.getPriority().name());
+        dto.put("priorityDisplay", task.getPriority().getDisplayName());
+        dto.put("priorityClass", getPriorityClass(task.getPriority()));
+        dto.put("projectName", task.getProject().getName());
+        dto.put("subsystemName", task.getSubsystem().getName());
+        dto.put("kanbanStatus", getTaskKanbanStatus(task));
+        
+        // Due date information
+        if (task.getEndDate() != null) {
+            dto.put("endDate", task.getEndDate().toString());
+            dto.put("endDateFormatted", task.getEndDate().format(DATE_FORMATTER));
+            dto.put("daysUntilDue", java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), task.getEndDate()));
+        }
+        
+        // Assignee information
+        List<Map<String, Object>> assignees = task.getAssignedTo().stream()
+            .map(member -> Map.of(
+                "id", member.getId(),
+                "name", member.getFullName(),
+                "initials", member.getFirstName().substring(0,1) + member.getLastName().substring(0,1)
+            ))
+            .collect(Collectors.toList());
+        dto.put("assignees", assignees);
+        
+        return dto;
+    }
+
+
+    // ADD THESE NEW WEBSOCKET HANDLERS FOR KANBAN OPERATIONS:
+
+    /**
+     * Handle Kanban drag-and-drop moves from clients.
+     * 
+     * ✅ NEW: Real-time Kanban board synchronization
+     */
+    @MessageMapping("/kanban/move")
+    @SendTo("/topic/project/{projectId}/kanban")
+    public TaskUpdateMessage handleKanbanMove(@Payload TaskUpdateMessage message,
+                                            @AuthenticationPrincipal UserPrincipal user) {
+        
+        try {
+            LOGGER.info(String.format("Received Kanban move: Task %d from %s to %s, User: %s", 
+                                    message.getTaskId(), message.getOldStatus(), message.getNewStatus(),
+                                    user != null ? user.getUsername() : "anonymous"));
+            
+            // Set the user who made the move
+            if (user != null) {
+                message.setUpdatedBy(user.getFullName());
+            }
+            
+            // Validate and process the Kanban move
+            if (message.getTaskId() != null && message.getNewStatus() != null) {
+                try {
+                    // The actual database update is handled by the REST endpoint
+                    // This WebSocket handler just broadcasts the change to all connected clients
+                    
+                    message.setChangeType("KANBAN_MOVED");
+                    message.setTimestamp(LocalDateTime.now());
+                    
+                    LOGGER.info(String.format("Kanban move broadcasted: Task %d moved to %s by %s", 
+                                            message.getTaskId(), message.getNewStatus(), message.getUpdatedBy()));
+                    
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Failed to process Kanban move: " + e.getMessage(), e);
+                    message.setChangeType("KANBAN_MOVE_FAILED");
+                }
+            }
+            
+            // Broadcast to all Kanban board subscribers
+            return message;
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error processing Kanban move message", e);
+            
+            // Return error message for client handling
+            TaskUpdateMessage errorMessage = new TaskUpdateMessage();
+            errorMessage.setTaskId(message.getTaskId());
+            errorMessage.setProjectId(message.getProjectId());
+            errorMessage.setChangeType("KANBAN_ERROR");
+            errorMessage.setUpdatedBy("System");
+            errorMessage.setTaskTitle("Error processing Kanban move");
+            return errorMessage;
+        }
+    }
+
+    /**
+     * Handle bulk operations on Kanban tasks.
+     * 
+     * ✅ NEW: Bulk Kanban operations with real-time sync
+     */
+    @MessageMapping("/kanban/bulk")
+    @SendTo("/topic/project/{projectId}/kanban")
+    public TaskUpdateMessage handleKanbanBulkOperation(@Payload TaskUpdateMessage message,
+                                                    @AuthenticationPrincipal UserPrincipal user) {
+        
+        try {
+            LOGGER.info(String.format("Received Kanban bulk operation: %s, User: %s", 
+                                    message.getChangeType(), user != null ? user.getUsername() : "anonymous"));
+            
+            // Set the user who performed the bulk operation
+            if (user != null) {
+                message.setUpdatedBy(user.getFullName());
+            }
+            
+            message.setTimestamp(LocalDateTime.now());
+            
+            // Broadcast to all Kanban board subscribers
+            return message;
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error processing Kanban bulk operation", e);
+            
+            TaskUpdateMessage errorMessage = new TaskUpdateMessage();
+            errorMessage.setChangeType("BULK_ERROR");
+            errorMessage.setUpdatedBy("System");
+            errorMessage.setTaskTitle("Error processing bulk operation");
+            return errorMessage;
+        }
+    }
+
+    /**
+     * Subscribe to Kanban board updates for a specific project.
+     * 
+     * ✅ NEW: Kanban-specific subscription handling
+     */
+    @SubscribeMapping("/topic/project/{projectId}/kanban")
+    public TaskUpdateMessage onKanbanSubscribe(@AuthenticationPrincipal UserPrincipal user) {
+        
+        try {
+            if (user != null) {
+                LOGGER.info(String.format("User %s subscribed to Kanban updates", user.getUsername()));
+                
+                // Send welcome message for Kanban board
+                TaskUpdateMessage welcomeMessage = new TaskUpdateMessage();
+                welcomeMessage.setChangeType("KANBAN_USER_JOINED");
+                welcomeMessage.setUpdatedBy(user.getFullName());
+                welcomeMessage.setTaskTitle("User joined Kanban board");
+                welcomeMessage.setTimestamp(LocalDateTime.now());
+                
+                return welcomeMessage;
+            }
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error handling Kanban subscription", e);
+        }
+        
+        return null;
+    }
+
+    /**
+     * Broadcast Kanban update to specific project board.
+     * 
+     * ✅ NEW: Server-side Kanban update broadcasting
+     */
+    public void broadcastKanbanUpdate(TaskUpdateMessage message) {
+        try {
+            if (message.getProjectId() != null) {
+                String destination = "/topic/project/" + message.getProjectId() + "/kanban";
+                messagingTemplate.convertAndSend(destination, message);
+                
+                LOGGER.info(String.format("Broadcasted Kanban update to %s: Task %d, Type: %s", 
+                                        destination, message.getTaskId(), message.getChangeType()));
+                
+                // Also send to general task updates for list view compatibility
+                broadcastTaskUpdate(message);
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error broadcasting Kanban update", e);
+        }
+    }
+
+    /**
+     * Send Kanban refresh signal to all board subscribers.
+     * 
+     * ✅ NEW: Force Kanban board refresh
+     */
+    public void broadcastKanbanRefresh(Long projectId, String reason) {
+        try {
+            TaskUpdateMessage refreshMessage = new TaskUpdateMessage();
+            refreshMessage.setProjectId(projectId);
+            refreshMessage.setChangeType("KANBAN_REFRESH");
+            refreshMessage.setUpdatedBy("System");
+            refreshMessage.setTaskTitle("Kanban board refresh: " + reason);
+            refreshMessage.setTimestamp(LocalDateTime.now());
+            
+            String destination = "/topic/project/" + projectId + "/kanban";
+            messagingTemplate.convertAndSend(destination, refreshMessage);
+            
+            LOGGER.info(String.format("Broadcasted Kanban refresh to %s: %s", destination, reason));
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error broadcasting Kanban refresh", e);
+        }
     }
 }
