@@ -455,4 +455,140 @@ public class WebSocketEventPublisher {
         
         return true;
     }
+
+    /**
+     * Publish Kanban board move notification.
+     * 
+     * ✅ NEW: Phase 2E-C Kanban drag-and-drop support
+     * 
+     * @param task Task that was moved
+     * @param oldStatus Previous Kanban status
+     * @param newStatus New Kanban status
+     * @param movedByUser User who moved the task
+     */
+    public void publishKanbanMove(Task task, String oldStatus, String newStatus, User movedByUser) {
+        try {
+            // Create Kanban move message
+            TaskUpdateMessage message = new TaskUpdateMessage();
+            message.setTaskId(task.getId());
+            message.setProjectId(task.getProject().getId());
+            message.setTaskTitle(task.getTitle());
+            message.setProgress(task.getProgress());
+            message.setStatus(task.isCompleted() ? "COMPLETED" : "IN_PROGRESS");
+            message.setUpdatedBy(movedByUser != null ? movedByUser.getFullName() : "System");
+            message.setChangeType("KANBAN_MOVED");
+            message.setTimestamp(java.time.LocalDateTime.now());
+            
+            // Add Kanban-specific fields (these require the enhanced TaskUpdateMessage)
+            message.setOldStatus(oldStatus);
+            message.setNewStatus(newStatus);
+            message.setPriority(task.getPriority().name());
+            message.setSubsystemName(task.getSubsystem().getName());
+            
+            // Broadcast via WebSocket controller
+            taskUpdateController.broadcastTaskUpdate(message);
+            
+            // Create activity message for Kanban move
+            if (movedByUser != null) {
+                ActivityMessage activity = ActivityMessage.kanbanMove(
+                    movedByUser.getId(),
+                    movedByUser.getFullName(),
+                    task.getId(),
+                    task.getTitle(),
+                    oldStatus,
+                    newStatus
+                );
+                
+                // Add user context
+                if (movedByUser.getTeamMember() != null && movedByUser.getTeamMember().getSubteam() != null) {
+                    activity.setSubteamName(movedByUser.getTeamMember().getSubteam().getName());
+                }
+                activity.setUserRole(movedByUser.getRole().name());
+                
+                activityController.broadcastProjectActivity(task.getProject().getId(), activity);
+            }
+            
+            LOGGER.info(String.format("Published Kanban move: Task %d from %s to %s by %s", 
+                                    task.getId(), oldStatus, newStatus, 
+                                    movedByUser != null ? movedByUser.getFullName() : "System"));
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error publishing Kanban move", e);
+        }
+    }
+
+    /**
+     * Publish bulk Kanban operation notification.
+     * 
+     * ✅ NEW: Phase 2E-C bulk operations support
+     * 
+     * @param operationType Type of bulk operation (COMPLETE, ASSIGN, etc.)
+     * @param taskCount Number of tasks affected
+     * @param projectId Project ID
+     * @param performedByUser User who performed the operation
+     */
+    public void publishBulkKanbanOperation(String operationType, int taskCount, Long projectId, User performedByUser) {
+        try {
+            // Create bulk operation message
+            TaskUpdateMessage message = new TaskUpdateMessage();
+            message.setProjectId(projectId);
+            message.setTaskTitle(String.format("Bulk %s operation on %d tasks", operationType, taskCount));
+            message.setUpdatedBy(performedByUser != null ? performedByUser.getFullName() : "System");
+            message.setChangeType("BULK_KANBAN_OPERATION");
+            message.setStatus("BULK_" + operationType.toUpperCase());
+            message.setTimestamp(java.time.LocalDateTime.now());
+            
+            // Broadcast to project subscribers
+            taskUpdateController.broadcastTaskUpdate(message);
+            
+            // Create activity message for bulk operation
+            if (performedByUser != null) {
+                ActivityMessage activity = ActivityMessage.bulkOperation(
+                    performedByUser.getId(),
+                    performedByUser.getFullName(),
+                    operationType,
+                    taskCount
+                );
+                
+                if (performedByUser.getTeamMember() != null && performedByUser.getTeamMember().getSubteam() != null) {
+                    activity.setSubteamName(performedByUser.getTeamMember().getSubteam().getName());
+                }
+                activity.setUserRole(performedByUser.getRole().name());
+                
+                activityController.broadcastProjectActivity(projectId, activity);
+            }
+            
+            LOGGER.info(String.format("Published bulk Kanban operation: %s on %d tasks in project %d", 
+                                    operationType, taskCount, projectId));
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error publishing bulk Kanban operation", e);
+        }
+    }
+
+    /**
+     * Publish Kanban board refresh notification.
+     * 
+     * ✅ NEW: Force refresh of Kanban boards
+     * 
+     * @param projectId Project ID to refresh
+     * @param reason Reason for refresh
+     */
+    public void publishKanbanRefresh(Long projectId, String reason) {
+        try {
+            TaskUpdateMessage refreshMessage = new TaskUpdateMessage();
+            refreshMessage.setProjectId(projectId);
+            refreshMessage.setChangeType("KANBAN_REFRESH");
+            refreshMessage.setUpdatedBy("System");
+            refreshMessage.setTaskTitle("Kanban board refresh: " + reason);
+            refreshMessage.setTimestamp(java.time.LocalDateTime.now());
+            
+            taskUpdateController.broadcastTaskUpdate(refreshMessage);
+            
+            LOGGER.info(String.format("Published Kanban refresh for project %d: %s", projectId, reason));
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error publishing Kanban refresh", e);
+        }
+    }
 }

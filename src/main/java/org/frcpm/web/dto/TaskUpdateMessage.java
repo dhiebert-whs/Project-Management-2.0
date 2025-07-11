@@ -60,6 +60,7 @@ public class TaskUpdateMessage {
     private Integer oldPosition; // Previous position in column
     private Integer newPosition; // New position in column
     private String kanbanColumn; // Current Kanban column
+
     
     // Default constructor
     public TaskUpdateMessage() {
@@ -98,41 +99,45 @@ public class TaskUpdateMessage {
     // ADD THESE NEW FACTORY METHODS FOR KANBAN OPERATIONS:
 
     /**
-     * Factory method for Kanban drag-and-drop moves.
-     */
+    * Factory method for Kanban drag-and-drop moves.
+    * 
+    * ✅ NEW: Phase 2E-C Kanban support
+    */
     public static TaskUpdateMessage kanbanMove(Long taskId, Long projectId, String taskTitle,
-        String oldStatus, String newStatus, 
-        Integer newProgress, String updatedBy) {
+                                            String oldStatus, String newStatus, 
+                                            Integer newProgress, String updatedBy) {
         TaskUpdateMessage message = new TaskUpdateMessage(taskId, projectId, taskTitle, 
-                newProgress, "KANBAN_MOVED", updatedBy, "KANBAN_MOVED");
+                                                        newProgress, "KANBAN_MOVED", updatedBy, "KANBAN_MOVED");
         message.setOldStatus(oldStatus);
         message.setNewStatus(newStatus);
         message.setKanbanColumn(newStatus);
         return message;
     }
 
+
     /**
-    * Factory method for task status changes.
-    */
+     * Factory method for task status changes.
+     */
     public static TaskUpdateMessage statusChanged(Long taskId, Long projectId, String taskTitle,
-        String newStatus, Integer progress, String updatedBy) {
+                                                String newStatus, Integer progress, String updatedBy) {
         String changeType = "COMPLETED".equals(newStatus) ? "COMPLETED" : "STATUS_CHANGED";
         TaskUpdateMessage message = new TaskUpdateMessage(taskId, projectId, taskTitle, 
-                progress, newStatus, updatedBy, changeType);
+                                                        progress, newStatus, updatedBy, changeType);
         message.setNewStatus(newStatus);
         message.setKanbanColumn(newStatus);
         return message;
     }
 
     /**
-    * Factory method for bulk operations.
-    */
+     * Factory method for bulk operations.
+     */
     public static TaskUpdateMessage bulkOperation(String operation, int taskCount, String updatedBy) {
         TaskUpdateMessage message = new TaskUpdateMessage();
         message.setChangeType("BULK_OPERATION");
         message.setUpdatedBy(updatedBy);
         message.setTaskTitle(String.format("Bulk %s on %d tasks", operation, taskCount));
         message.setStatus("BULK_" + operation.toUpperCase());
+        message.setTimestamp(java.time.LocalDateTime.now());
         return message;
     }
     
@@ -187,12 +192,14 @@ public class TaskUpdateMessage {
     
     public String getKanbanColumn() { return kanbanColumn; }
     public void setKanbanColumn(String kanbanColumn) { this.kanbanColumn = kanbanColumn; }
+
+        
     
     
     @Override
     public String toString() {
         return String.format("TaskUpdateMessage{taskId=%d, changeType='%s', status='%s', " +
-                            "kanbanColumn='%s', updatedBy='%s', timestamp=%s}", 
-                           taskId, changeType, status, kanbanColumn, updatedBy, timestamp);
+                            "kanbanColumn='%s', progress=%d, updatedBy='%s', timestamp=%s}", 
+                           taskId, changeType, status, kanbanColumn, progress, updatedBy, timestamp);
     }
 }

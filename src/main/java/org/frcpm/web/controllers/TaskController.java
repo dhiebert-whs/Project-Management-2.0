@@ -43,6 +43,10 @@ import java.util.stream.Collectors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import java.util.Optional;
+import java.util.LinkedHashMap;
+
 /**
  * TaskController - Phase 2E-B COMPLETE Implementation
  * 
@@ -82,6 +86,9 @@ public class TaskController extends BaseController {
     
     @Autowired
     private WebSocketEventPublisher webSocketEventPublisher;
+
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
     
     // =========================================================================
     // TASK LIST AND OVERVIEW - ✅ ENHANCED WITH REAL SERVICES
@@ -1554,11 +1561,6 @@ public class TaskController extends BaseController {
         ));
     }
 
-    // src/main/java/org/frcpm/web/controllers/TaskController.java
-    // Phase 2E-C: KANBAN BOARD & ADVANCED TASK OPERATIONS
-    // ✅ ADDING: Drag-and-drop Kanban endpoints with real-time sync
-
-    // ADD THESE METHODS TO THE EXISTING TaskController.java:
 
     // =========================================================================
     // KANBAN BOARD OPERATIONS - ✅ PHASE 2E-C NEW FEATURES
@@ -1567,7 +1569,7 @@ public class TaskController extends BaseController {
     /**
      * Display Kanban board view for tasks.
      * 
-     * ✅ NEW: Full Kanban board implementation with drag-and-drop
+     * ✅ FIXED: All service call and type issues resolved
      */
     @GetMapping("/kanban")
     public String kanbanView(Model model,
@@ -1580,9 +1582,16 @@ public class TaskController extends BaseController {
             addBreadcrumbs(model, "Tasks", "/tasks", "Kanban Board", "/tasks/kanban");
             
             // Get tasks for Kanban organization
-            List<Task> allTasks = projectId != null ? 
-                taskService.findByProject(projectService.findById(projectId).orElse(null)) :
-                taskService.findAll();
+            List<Task> allTasks = new ArrayList<>();
+            if (projectId != null) {
+                // FIXED: Use Optional.ofNullable instead of orElse(null)
+                Optional<Project> projectOpt = Optional.ofNullable(projectService.findById(projectId));
+                if (projectOpt.isPresent()) {
+                    allTasks = taskService.findByProject(projectOpt.get());
+                }
+            } else {
+                allTasks = taskService.findAll();
+            }
             
             // Organize tasks by status columns
             Map<String, List<Task>> kanbanColumns = organizeTasksForKanban(allTasks);
@@ -1613,7 +1622,7 @@ public class TaskController extends BaseController {
     /**
      * Handle drag-and-drop status updates via AJAX.
      * 
-     * ✅ NEW: Real-time Kanban drag-and-drop endpoint
+     * ✅ FIXED: All WebSocket integration issues resolved
      */
     @PostMapping("/{id}/kanban/move")
     @ResponseBody
@@ -1650,8 +1659,11 @@ public class TaskController extends BaseController {
                 // Save the task
                 Task savedTask = taskService.save(task);
                 
-                // REAL-TIME: Publish Kanban move via WebSocket
-                webSocketEventPublisher.publishKanbanMove(savedTask, oldStatus, newStatus, user.getUser());
+                // FIXED: Use webSocketEventPublisher method that exists
+                webSocketEventPublisher.publishTaskProgressUpdate(savedTask, oldProgress, user.getUser());
+                
+                // FIXED: Also broadcast via messagingTemplate directly for Kanban
+                broadcastKanbanMoveUpdate(savedTask, oldStatus, newStatus, user.getUser());
                 
                 response.put("success", true);
                 response.put("message", "Task moved successfully");
@@ -1678,7 +1690,7 @@ public class TaskController extends BaseController {
     /**
      * Get Kanban board data as JSON for dynamic updates.
      * 
-     * ✅ NEW: API endpoint for Kanban board refresh
+     * ✅ FIXED: Map type conversion issues resolved
      */
     @GetMapping("/kanban/data")
     @ResponseBody
@@ -1689,20 +1701,27 @@ public class TaskController extends BaseController {
         
         try {
             // Get tasks
-            List<Task> allTasks = projectId != null ? 
-                taskService.findByProject(projectService.findById(projectId).orElse(null)) :
-                taskService.findAll();
+            List<Task> allTasks = new ArrayList<>();
+            if (projectId != null) {
+                Optional<Project> projectOpt = Optional.ofNullable(projectService.findById(projectId));
+                if (projectOpt.isPresent()) {
+                    allTasks = taskService.findByProject(projectOpt.get());
+                }
+            } else {
+                allTasks = taskService.findAll();
+            }
             
             // Organize for Kanban
             Map<String, List<Task>> kanbanColumns = organizeTasksForKanban(allTasks);
             
-            // Convert to DTOs for JSON response
-            Map<String, List<Map<String, Object>>> kanbanData = new HashMap<>();
+            // FIXED: Convert to proper DTOs for JSON response
+            Map<String, Object> kanbanData = new HashMap<>();
             
             for (Map.Entry<String, List<Task>> entry : kanbanColumns.entrySet()) {
-                List<Map<String, Object>> taskDtos = entry.getValue().stream()
-                    .map(this::taskToKanbanDto)
-                    .collect(Collectors.toList());
+                List<Map<String, Object>> taskDtos = new ArrayList<>();
+                for (Task task : entry.getValue()) {
+                    taskDtos.add(taskToKanbanDto(task));
+                }
                 kanbanData.put(entry.getKey(), taskDtos);
             }
             
@@ -1721,6 +1740,98 @@ public class TaskController extends BaseController {
         }
     }
 
+    /**
+     * Convert task to Kanban DTO for JSON response.
+     * 
+     * ✅ FIXED: Handle Set<TeamMember> properly
+     */
+    private Map<String, Object> taskToKanbanDto(Task task) {
+        Map<String, Object> dto = new HashMap<>();
+        
+        dto.put("id", task.getId());
+        dto.put("title", task.getTitle());
+        dto.put("description", task.getDescription());
+        dto.put("progress", task.getProgress());
+        dto.put("completed", task.isCompleted());
+        dto.put("priority", task.getPriority().name());
+        dto.put("priorityDisplay", task.getPriority().getDisplayName());
+        dto.put("priorityClass", getPriorityClass(task.getPriority()));
+        dto.put("projectName", task.getProject().getName());
+        dto.put("subsystemName", task.getSubsystem().getName());
+        dto.put("kanbanStatus", getTaskKanbanStatus(task));
+        
+        // Due date information
+        if (task.getEndDate() != null) {
+            dto.put("endDate", task.getEndDate().toString());
+            dto.put("endDateFormatted", task.getEndDate().format(DATE_FORMATTER));
+            dto.put("daysUntilDue", java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), task.getEndDate()));
+        }
+        
+        // FIXED: Handle Set<TeamMember> assignees properly
+        List<Map<String, Object>> assignees = new ArrayList<>();
+        for (TeamMember member : task.getAssignedTo()) {
+            Map<String, Object> assigneeDto = new HashMap<>();
+            assigneeDto.put("id", member.getId());
+            assigneeDto.put("name", member.getFullName());
+            
+            // Handle name initials safely
+            String firstName = member.getFirstName();
+            String lastName = member.getLastName();
+            String initials = "";
+            if (firstName != null && !firstName.isEmpty()) {
+                initials += firstName.substring(0, 1).toUpperCase();
+            }
+            if (lastName != null && !lastName.isEmpty()) {
+                initials += lastName.substring(0, 1).toUpperCase();
+            }
+            if (initials.isEmpty()) {
+                initials = "?";
+            }
+            assigneeDto.put("initials", initials);
+            
+            assignees.add(assigneeDto);
+        }
+        dto.put("assignees", assignees);
+        
+        return dto;
+    }
+
+    /**
+     * Broadcast Kanban move update via WebSocket.
+     * 
+     * ✅ FIXED: Direct messagingTemplate usage
+     */
+    private void broadcastKanbanMoveUpdate(Task task, String oldStatus, String newStatus, User user) {
+        try {
+            // Create Kanban move message
+            TaskUpdateMessage message = new TaskUpdateMessage();
+            message.setTaskId(task.getId());
+            message.setProjectId(task.getProject().getId());
+            message.setTaskTitle(task.getTitle());
+            message.setProgress(task.getProgress());
+            message.setStatus(task.isCompleted() ? "COMPLETED" : "IN_PROGRESS");
+            message.setUpdatedBy(user != null ? user.getFullName() : "System");
+            message.setChangeType("KANBAN_MOVED");
+            message.setTimestamp(LocalDateTime.now());
+            
+            // Add Kanban-specific fields
+            message.setOldStatus(oldStatus);
+            message.setNewStatus(newStatus);
+            message.setPriority(task.getPriority().name());
+            message.setSubsystemName(task.getSubsystem().getName());
+            
+            // Broadcast to project-specific Kanban channel
+            String destination = "/topic/project/" + task.getProject().getId() + "/kanban";
+            messagingTemplate.convertAndSend(destination, message);
+            
+            LOGGER.info(String.format("Broadcasted Kanban move: Task %d from %s to %s", 
+                                    task.getId(), oldStatus, newStatus));
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error broadcasting Kanban move update", e);
+        }
+    }
+
     // =========================================================================
     // KANBAN HELPER METHODS - ✅ PHASE 2E-C IMPLEMENTATION
     // =========================================================================
@@ -1731,7 +1842,7 @@ public class TaskController extends BaseController {
     private Map<String, List<Task>> organizeTasksForKanban(List<Task> tasks) {
         Map<String, List<Task>> columns = new LinkedHashMap<>();
         
-        // Initialize columns
+        // Initialize columns in specific order
         columns.put("TODO", new ArrayList<>());
         columns.put("IN_PROGRESS", new ArrayList<>());
         columns.put("REVIEW", new ArrayList<>());
@@ -1808,52 +1919,41 @@ public class TaskController extends BaseController {
 
     /**
      * Get available Kanban statuses.
+     * 
+     * ✅ FIXED: Return proper List<Map<String, Object>>
      */
     private List<Map<String, Object>> getKanbanStatuses() {
-        return List.of(
-            Map.of("id", "TODO", "name", "To Do", "color", "#6c757d", "icon", "fas fa-clipboard-list"),
-            Map.of("id", "IN_PROGRESS", "name", "In Progress", "color", "#ffc107", "icon", "fas fa-play-circle"),
-            Map.of("id", "REVIEW", "name", "Review", "color", "#17a2b8", "icon", "fas fa-eye"),
-            Map.of("id", "COMPLETED", "name", "Completed", "color", "#28a745", "icon", "fas fa-check-circle")
-        );
-    }
-
-    /**
-     * Convert task to Kanban DTO for JSON response.
-     */
-    private Map<String, Object> taskToKanbanDto(Task task) {
-        Map<String, Object> dto = new HashMap<>();
+        List<Map<String, Object>> statuses = new ArrayList<>();
         
-        dto.put("id", task.getId());
-        dto.put("title", task.getTitle());
-        dto.put("description", task.getDescription());
-        dto.put("progress", task.getProgress());
-        dto.put("completed", task.isCompleted());
-        dto.put("priority", task.getPriority().name());
-        dto.put("priorityDisplay", task.getPriority().getDisplayName());
-        dto.put("priorityClass", getPriorityClass(task.getPriority()));
-        dto.put("projectName", task.getProject().getName());
-        dto.put("subsystemName", task.getSubsystem().getName());
-        dto.put("kanbanStatus", getTaskKanbanStatus(task));
+        Map<String, Object> todo = new HashMap<>();
+        todo.put("id", "TODO");
+        todo.put("name", "To Do");
+        todo.put("color", "#6c757d");
+        todo.put("icon", "fas fa-clipboard-list");
+        statuses.add(todo);
         
-        // Due date information
-        if (task.getEndDate() != null) {
-            dto.put("endDate", task.getEndDate().toString());
-            dto.put("endDateFormatted", task.getEndDate().format(DATE_FORMATTER));
-            dto.put("daysUntilDue", java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), task.getEndDate()));
-        }
+        Map<String, Object> inProgress = new HashMap<>();
+        inProgress.put("id", "IN_PROGRESS");
+        inProgress.put("name", "In Progress");
+        inProgress.put("color", "#ffc107");
+        inProgress.put("icon", "fas fa-play-circle");
+        statuses.add(inProgress);
         
-        // Assignee information
-        List<Map<String, Object>> assignees = task.getAssignedTo().stream()
-            .map(member -> Map.of(
-                "id", member.getId(),
-                "name", member.getFullName(),
-                "initials", member.getFirstName().substring(0,1) + member.getLastName().substring(0,1)
-            ))
-            .collect(Collectors.toList());
-        dto.put("assignees", assignees);
+        Map<String, Object> review = new HashMap<>();
+        review.put("id", "REVIEW");
+        review.put("name", "Review");
+        review.put("color", "#17a2b8");
+        review.put("icon", "fas fa-eye");
+        statuses.add(review);
         
-        return dto;
+        Map<String, Object> completed = new HashMap<>();
+        completed.put("id", "COMPLETED");
+        completed.put("name", "Completed");
+        completed.put("color", "#28a745");
+        completed.put("icon", "fas fa-check-circle");
+        statuses.add(completed);
+        
+        return statuses;
     }
 
 

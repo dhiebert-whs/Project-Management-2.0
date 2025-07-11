@@ -67,18 +67,7 @@ public class ActivityMessage {
     }
     
     // Factory methods for common activities
-    public static ActivityMessage userLogin(Long userId, String userName, String userRole) {
-        ActivityMessage activity = new ActivityMessage(
-            userId, 
-            userName, 
-            "LOGGED_IN", 
-            userName + " joined the session"
-        );
-        activity.setUserRole(userRole);
-        activity.setIconClass("fas fa-sign-in-alt");
-        activity.setSeverity("SUCCESS");
-        return activity;
-    }
+
     
     public static ActivityMessage taskProgressUpdate(Long userId, String userName, 
                                                    Long taskId, String taskName, int progress) {
@@ -96,53 +85,9 @@ public class ActivityMessage {
         return activity;
     }
     
-    public static ActivityMessage taskCompleted(Long userId, String userName, 
-                                              Long taskId, String taskName) {
-        ActivityMessage activity = new ActivityMessage(
-            userId,
-            userName,
-            "TASK_COMPLETED",
-            String.format("%s completed task '%s'", userName, taskName)
-        );
-        activity.setRelatedEntityId(taskId);
-        activity.setRelatedEntityType("TASK");
-        activity.setRelatedEntityName(taskName);
-        activity.setIconClass("fas fa-check-circle");
-        activity.setSeverity("SUCCESS");
-        return activity;
-    }
+
     
-    public static ActivityMessage projectJoined(Long userId, String userName, 
-                                               Long projectId, String projectName) {
-        ActivityMessage activity = new ActivityMessage(
-            userId,
-            userName,
-            "PROJECT_JOINED",
-            String.format("%s joined project '%s'", userName, projectName)
-        );
-        activity.setRelatedEntityId(projectId);
-        activity.setRelatedEntityType("PROJECT");
-        activity.setRelatedEntityName(projectName);
-        activity.setIconClass("fas fa-project-diagram");
-        activity.setSeverity("INFO");
-        return activity;
-    }
-    
-    public static ActivityMessage meetingStarted(Long userId, String userName, 
-                                                Long meetingId, String meetingTitle) {
-        ActivityMessage activity = new ActivityMessage(
-            userId,
-            userName,
-            "MEETING_STARTED",
-            String.format("Meeting '%s' started by %s", meetingTitle, userName)
-        );
-        activity.setRelatedEntityId(meetingId);
-        activity.setRelatedEntityType("MEETING");
-        activity.setRelatedEntityName(meetingTitle);
-        activity.setIconClass("fas fa-video");
-        activity.setSeverity("INFO");
-        return activity;
-    }
+ 
     
     // Getters and setters
     public Long getUserId() { return userId; }
@@ -185,5 +130,169 @@ public class ActivityMessage {
     public String toString() {
         return String.format("ActivityMessage{userId=%d, action='%s', description='%s', timestamp=%s}", 
                            userId, action, description, timestamp);
+    }
+
+    /**
+     * Factory method for Kanban board moves.
+     * 
+     * ✅ NEW: Phase 2E-C Kanban support
+     */
+    public static ActivityMessage kanbanMove(Long userId, String userName, Long taskId, String taskTitle,
+    String oldStatus, String newStatus) {
+    ActivityMessage message = new ActivityMessage();
+    message.setUserId(userId);
+    message.setUserName(userName);
+    message.setAction("KANBAN_MOVED");
+    message.setDescription(String.format("moved \"%s\" from %s to %s", taskTitle, 
+    getStatusDisplayName(oldStatus), getStatusDisplayName(newStatus)));
+    message.setIconClass("fas fa-arrows-alt");
+    message.setSeverity("INFO");
+    message.setTimestamp(java.time.LocalDateTime.now());
+
+    // Add additional context
+    message.setResourceType("TASK");
+    message.setResourceId(taskId);
+    message.setResourceName(taskTitle);
+
+    return message;
+    }
+
+    /**
+    * Factory method for bulk operations.
+    * 
+    * ✅ NEW: Phase 2E-C bulk operations support
+    */
+    public static ActivityMessage bulkOperation(Long userId, String userName, String operationType, int taskCount) {
+    ActivityMessage message = new ActivityMessage();
+    message.setUserId(userId);
+    message.setUserName(userName);
+    message.setAction("BULK_OPERATION");
+    message.setDescription(String.format("performed bulk %s on %d task%s", 
+    operationType.toLowerCase(), taskCount, taskCount == 1 ? "" : "s"));
+    message.setIconClass("fas fa-layer-group");
+    message.setSeverity("INFO");
+    message.setTimestamp(java.time.LocalDateTime.now());
+
+    // Add additional context
+    message.setResourceType("TASKS");
+    message.setResourceId(null); // Multiple tasks
+    message.setResourceName(taskCount + " tasks");
+
+    return message;
+    }
+
+    /**
+    * Helper method to get display names for Kanban statuses.
+    */
+    private static String getStatusDisplayName(String status) {
+    switch (status) {
+    case "TODO": return "To Do";
+    case "IN_PROGRESS": return "In Progress";
+    case "REVIEW": return "Review";
+    case "COMPLETED": return "Completed";
+    default: return status;
+    }
+    }
+
+    // ADD THESE ADDITIONAL FACTORY METHODS IF ActivityMessage DOESN'T HAVE THEM:
+
+    /**
+    * Factory method for task progress updates.
+    */
+    public static ActivityMessage taskProgressUpdate(Long userId, String userName, Long taskId, String taskTitle, Integer progress) {
+    ActivityMessage message = new ActivityMessage();
+    message.setUserId(userId);
+    message.setUserName(userName);
+    message.setAction("PROGRESS_UPDATE");
+    message.setDescription(String.format("updated progress on \"%s\" to %d%%", taskTitle, progress));
+    message.setIconClass("fas fa-chart-line");
+    message.setSeverity(progress >= 100 ? "SUCCESS" : "INFO");
+    message.setTimestamp(java.time.LocalDateTime.now());
+
+    message.setResourceType("TASK");
+    message.setResourceId(taskId);
+    message.setResourceName(taskTitle);
+
+    return message;
+    }
+
+    /**
+    * Factory method for task completion.
+    */
+    public static ActivityMessage taskCompleted(Long userId, String userName, Long taskId, String taskTitle) {
+    ActivityMessage message = new ActivityMessage();
+    message.setUserId(userId);
+    message.setUserName(userName);
+    message.setAction("TASK_COMPLETED");
+    message.setDescription(String.format("completed task \"%s\"", taskTitle));
+    message.setIconClass("fas fa-check-circle");
+    message.setSeverity("SUCCESS");
+    message.setTimestamp(java.time.LocalDateTime.now());
+
+    message.setResourceType("TASK");
+    message.setResourceId(taskId);
+    message.setResourceName(taskTitle);
+
+    return message;
+    }
+
+    /**
+    * Factory method for user login.
+    */
+    public static ActivityMessage userLogin(Long userId, String userName, String userRole) {
+    ActivityMessage message = new ActivityMessage();
+    message.setUserId(userId);
+    message.setUserName(userName);
+    message.setAction("USER_LOGIN");
+    message.setDescription("joined the session");
+    message.setIconClass("fas fa-sign-in-alt");
+    message.setSeverity("INFO");
+    message.setTimestamp(java.time.LocalDateTime.now());
+
+    message.setResourceType("USER");
+    message.setResourceId(userId);
+    message.setResourceName(userName);
+
+    return message;
+    }
+
+    /**
+    * Factory method for project joined.
+    */
+    public static ActivityMessage projectJoined(Long userId, String userName, Long projectId, String projectName) {
+    ActivityMessage message = new ActivityMessage();
+    message.setUserId(userId);
+    message.setUserName(userName);
+    message.setAction("PROJECT_JOINED");
+    message.setDescription(String.format("joined project \"%s\"", projectName));
+    message.setIconClass("fas fa-project-diagram");
+    message.setSeverity("INFO");
+    message.setTimestamp(java.time.LocalDateTime.now());
+
+    message.setResourceType("PROJECT");
+    message.setResourceId(projectId);
+    message.setResourceName(projectName);
+
+    return message;
+    }
+
+    /**
+    * Factory method for meeting started.
+    */
+    public static ActivityMessage meetingStarted(Long userId, String userName, Long meetingId, String meetingTitle) {
+    ActivityMessage message = new ActivityMessage();
+    message.setUserId(userId);
+    message.setUserName(userName);
+    message.setAction("MEETING_STARTED");
+    message.setDescription(String.format("started meeting \"%s\"", meetingTitle));
+    message.setIconClass("fas fa-video");
+    message.setSeverity("INFO");
+    message.setTimestamp(java.time.LocalDateTime.now());
+
+    message.setResourceType("MEETING");
+    message.setResourceId(meetingId);
+    message.setResourceName(meetingTitle);
+
+    return message;
     }
 }
