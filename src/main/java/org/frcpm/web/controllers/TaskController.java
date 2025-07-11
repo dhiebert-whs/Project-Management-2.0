@@ -1,803 +1,8 @@
-/**
-     * Apply sorting to task list.
-     */
-    private List<Task> applySorting(List<Task> tasks, String sort) {
-        if (sort == null || sort.isEmpty()) {
-            sort = "priority";
-        }
-        
-        switch (sort.toLowerCase()) {
-            case "priority":
-                return tasks.stream()
-                    .sorted((a, b) -> b.getPriority().getValue() - a.getPriority().getValue())
-                    .collect(Collectors.toList());
-                    
-            case "duedate":
-                return tasks.stream()
-                    .sorted((a, b) -> {
-                        if (a.getEndDate() == null && b.getEndDate() == null) return 0;
-                        if (a.getEndDate() == null) return 1;
-                        if (b.getEndDate() == null) return -1;
-                        return a.getEndDate().compareTo(b.getEndDate());
-                    })
-                    .collect(Collectors.toList());
-                    
-            case "progress":
-                return tasks.stream()
-                    .sorted((a, b) -> Integer.compare(a.getProgress(), b.getProgress()))
-                    .collect(Collectors.toList());
-                    
-            case "title":
-                return tasks.stream()
-                    .sorted((a, b) -> a.getTitle().compareToIgnoreCase(b.getTitle()))
-                    .collect(Collectors.toList());
-                    
-            case "project":
-                return tasks.stream()
-                    .sorted((a, b) -> a.getProject().getName().compareToIgnoreCase(b.getProject().getName()))
-                    .collect(Collectors.toList());
-                    
-            default:
-                return tasks;
-        }
-    }
-    
-    /**
-     * Load REAL filter options using actual services.
-     * 
-     * ✅ ENHANCED: Uses real services instead of fallback data
-     */
-    private void loadRealFilterOptions(Model model) {
-        try {
-            // Real projects from ProjectService
-            List<Project> projects = projectService.findAll();
-            model.addAttribute("projectOptions", projects);
-            
-            // Real subsystems from SubsystemService
-            List<Subsystem> subsystems = subsystemService.findAll();
-            model.addAttribute("subsystemOptions", subsystems);
-            
-            // Real team members from TeamMemberService
-            List<TeamMember> members = teamMemberService.findAll();
-            model.addAttribute("memberOptions", members);
-            
-            // Priority options
-            model.addAttribute("priorityOptions", Task.Priority.values());
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to load filter options", e);
-            // Set safe defaults to prevent template errors
-            model.addAttribute("projectOptions", new ArrayList<>());
-            model.addAttribute("subsystemOptions", new ArrayList<>());
-            model.addAttribute("memberOptions", new ArrayList<>());
-            model.addAttribute("priorityOptions", Task.Priority.values());
-        }
-    }
-    
-    /**
-     * Load comprehensive task detail data.
-     * 
-     * ✅ ENHANCED: Full task context with permissions
-     */
-    private void loadTaskDetailData(Model model, Task task, UserPrincipal user) {
-        try {
-            // Basic task information
-            model.addAttribute("project", task.getProject());
-            model.addAttribute("subsystem", task.getSubsystem());
-            model.addAttribute("assignedMembers", task.getAssignedTo());
-            
-            // Dependencies
-            model.addAttribute("preDependencies", task.getPreDependencies());
-            model.addAttribute("postDependencies", task.getPostDependencies());
-            
-            // Required components
-            model.addAttribute("requiredComponents", task.getRequiredComponents());
-            
-            // Time information
-            addTaskTimeInfo(model, task);
-            
-            // User permissions
-            model.addAttribute("canEdit", canEditTask(task, user));
-            model.addAttribute("canDelete", user.getUser().getRole().isMentor() || user.getUser().getRole().equals(org.frcpm.models.UserRole.ADMIN));
-            model.addAttribute("canUpdateProgress", canUpdateProgress(task, user));
-            
-            // Related tasks (same project, same subsystem)
-            addRelatedTasks(model, task);
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to load task detail data", e);
-            // Set safe defaults
-            model.addAttribute("assignedMembers", new HashSet<>());
-            model.addAttribute("preDependencies", new HashSet<>());
-            model.addAttribute("postDependencies", new HashSet<>());
-            model.addAttribute("requiredComponents", new HashSet<>());
-        }
-    }
-    
-    /**
-     * Load REAL task form options using actual services.
-     * 
-     * ✅ ENHANCED: Uses real services for all options
-     */
-    private void loadRealTaskFormOptions(Model model) {
-        try {
-            // Real projects
-            List<Project> projects = projectService.findAll();
-            model.addAttribute("projectOptions", projects);
-            
-            // Real subsystems
-            List<Subsystem> subsystems = subsystemService.findAll();
-            model.addAttribute("subsystemOptions", subsystems);
-            
-            // Real team members
-            List<TeamMember> members = teamMemberService.findAll();
-            model.addAttribute("memberOptions", members);
-            
-            // Priority options
-            model.addAttribute("priorityOptions", Task.Priority.values());
-            
-            // All tasks for dependency selection
-            List<Task> allTasks = taskService.findAll();
-            model.addAttribute("taskOptions", allTasks);
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to load form options", e);
-            // Set safe defaults
-            model.addAttribute("projectOptions", new ArrayList<>());
-            model.addAttribute("subsystemOptions", new ArrayList<>());
-            model.addAttribute("memberOptions", new ArrayList<>());
-            model.addAttribute("priorityOptions", Task.Priority.values());
-            model.addAttribute("taskOptions", new ArrayList<>());
-        }
-    }
-    
-    /**
-     * Add task status counts for filter badges.
-     */
-    private void addTaskStatusCounts(Model model, List<Task> allTasks) {
-        LocalDate today = LocalDate.now();
-        
-        long pendingCount = allTasks.stream().filter(t -> !t.isCompleted()).count();
-        long completedCount = allTasks.stream().filter(Task::isCompleted).count();
-        long overdueCount = allTasks.stream()
-            .filter(t -> !t.isCompleted() && t.getEndDate() != null && t.getEndDate().isBefore(today))
-            .count();
-        long dueSoonCount = allTasks.stream()
-            .filter(t -> !t.isCompleted() && t.getEndDate() != null &&
-                        t.getEndDate().isAfter(today) && t.getEndDate().isBefore(today.plusDays(7)))
-            .count();
-        long inProgressCount = allTasks.stream()
-            .filter(t -> !t.isCompleted() && t.getProgress() > 0)
-            .count();
-        long notStartedCount = allTasks.stream()
-            .filter(t -> !t.isCompleted() && t.getProgress() == 0)
-            .count();
-        
-        model.addAttribute("pendingCount", pendingCount);
-        model.addAttribute("completedCount", completedCount);
-        model.addAttribute("overdueCount", overdueCount);
-        model.addAttribute("dueSoonCount", dueSoonCount);
-        model.addAttribute("inProgressCount", inProgressCount);
-        model.addAttribute("notStartedCount", notStartedCount);
-    }
-    
-    /**
-     * Add user permissions to model.
-     */
-    private void addUserPermissions(Model model, UserPrincipal user) {
-        model.addAttribute("canCreateTasks", user.getUser().getRole().isMentor() || user.getUser().getRole().equals(org.frcpm.models.UserRole.ADMIN));
-        model.addAttribute("canEditAllTasks", user.getUser().getRole().isMentor() || user.getUser().getRole().equals(org.frcpm.models.UserRole.ADMIN));
-        model.addAttribute("canDeleteTasks", user.getUser().getRole().isMentor() || user.getUser().getRole().equals(org.frcpm.models.UserRole.ADMIN));
-        model.addAttribute("canBulkOperations", user.getUser().getRole().isMentor() || user.getUser().getRole().equals(org.frcpm.models.UserRole.ADMIN));
-        model.addAttribute("currentUserId", user.getUser().getId());
-        model.addAttribute("userRole", user.getUser().getRole().name());
-    }
-    
-    /**
-     * Create enhanced task with real service integration.
-     * 
-     * ✅ ENHANCED: Full task creation with all features
-     */
-    private Task createEnhancedTask(Task task, Double estimatedHours, UserPrincipal user) {
-        // Set estimated duration
-        if (estimatedHours != null && estimatedHours > 0) {
-            java.time.Duration duration = java.time.Duration.ofMinutes((long) (estimatedHours * 60));
-            task.setEstimatedDuration(duration);
-        }
-        
-        // Save using TaskService (will trigger WebSocket events)
-        return taskService.save(task);
-    }
-    
-    /**
-     * Assign team members to task.
-     * 
-     * ✅ ENHANCED: Uses real TeamMemberService
-     */
-    private void assignTeamMembers(Task task, Long[] memberIds) {
-        try {
-            Set<TeamMember> assignedMembers = new HashSet<>();
-            
-            for (Long memberId : memberIds) {
-                TeamMember member = teamMemberService.findById(memberId);
-                if (member != null) {
-                    assignedMembers.add(member);
-                }
-            }
-            
-            if (!assignedMembers.isEmpty()) {
-                taskService.assignMembers(task.getId(), assignedMembers);
-            }
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Error assigning team members", e);
-        }
-    }
-    
-    /**
-     * Add task dependencies.
-     * 
-     * ✅ NEW: Real dependency management
-     */
-    private void addTaskDependencies(Task task, Long[] dependencyIds) {
-        try {
-            for (Long dependencyId : dependencyIds) {
-                if (!dependencyId.equals(task.getId())) { // Prevent self-dependency
-                    taskService.addDependency(task.getId(), dependencyId);
-                }
-            }
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Error adding task dependencies", e);
-        }
-    }
-    
-    /**
-     * Add required components to task.
-     * 
-     * ✅ NEW: Component integration
-     */
-    private void addRequiredComponents(Task task, Long[] componentIds) {
-        try {
-            Set<Long> componentIdSet = Set.of(componentIds);
-            taskService.updateRequiredComponents(task.getId(), componentIdSet);
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Error adding required components", e);
-        }
-    }
-    
-    /**
-     * Clone task for duplication.
-     * 
-     * ✅ NEW: Task cloning functionality
-     */
-    private Task cloneTask(Task source) {
-        Task cloned = new Task();
-        cloned.setTitle("Copy of " + source.getTitle());
-        cloned.setDescription(source.getDescription());
-        cloned.setPriority(source.getPriority());
-        cloned.setProject(source.getProject());
-        cloned.setSubsystem(source.getSubsystem());
-        cloned.setEstimatedDuration(source.getEstimatedDuration());
-        cloned.setProgress(0); // Reset progress
-        cloned.setCompleted(false); // Reset completion
-        
-        // Don't copy dates - let user set new ones
-        // Don't copy assignments - let user assign fresh
-        
-        return cloned;
-    }
-    
-    /**
-     * Validate task data comprehensively.
-     * 
-     * ✅ ENHANCED: Comprehensive validation
-     */
-    private boolean validateTaskData(Task task, BindingResult result) {
-        boolean isValid = true;
-        
-        // Title validation
-        if (task.getTitle() == null || task.getTitle().trim().length() < 3) {
-            result.rejectValue("title", "invalid", "Title must be at least 3 characters long");
-            isValid = false;
-        }
-        
-        // Project validation
-        if (task.getProject() == null || task.getProject().getId() == null) {
-            result.rejectValue("project", "required", "Project is required");
-            isValid = false;
-        }
-        
-        // Subsystem validation
-        if (task.getSubsystem() == null || task.getSubsystem().getId() == null) {
-            result.rejectValue("subsystem", "required", "Subsystem is required");
-            isValid = false;
-        }
-        
-        // Date validation
-        if (task.getStartDate() != null && task.getEndDate() != null) {
-            if (task.getEndDate().isBefore(task.getStartDate())) {
-                result.rejectValue("endDate", "invalid", "End date cannot be before start date");
-                isValid = false;
-            }
-        }
-        
-        // Progress validation
-        if (task.getProgress() < 0 || task.getProgress() > 100) {
-            result.rejectValue("progress", "invalid", "Progress must be between 0 and 100");
-            isValid = false;
-        }
-        
-        return isValid;
-    }
-    
-    /**
-     * Check if user can edit task.
-     * 
-     * ✅ NEW: Comprehensive permission checking
-     */
-    private boolean canEditTask(Task task, UserPrincipal user) {
-        // Admins and mentors can edit all tasks
-        if (user.getUser().getRole().equals(org.frcpm.models.UserRole.ADMIN) || user.getUser().getRole().isMentor()) {
-            return true;
-        }
-        
-        // Students can edit tasks assigned to them
-        if (user.getUser().getRole().isStudent()) {
-            return task.getAssignedTo().stream()
-                .anyMatch(member -> member.getUser() != null && 
-                         member.getUser().getId().equals(user.getUser().getId()));
-        }
-        
-        return false;
-    }
-    
-    /**
-     * Check if user can update progress.
-     * 
-     * ✅ NEW: Progress update permission checking
-     */
-    private boolean canUpdateProgress(Task task, UserPrincipal user) {
-        // Same logic as edit permissions for now
-        return canEditTask(task, user);
-    }
-    
-    /**
-     * Update task fields from form data.
-     * 
-     * ✅ NEW: Comprehensive task field updating
-     */
-    private void updateTaskFields(Task existingTask, Task updatedTask, Double estimatedHours) {
-        existingTask.setTitle(updatedTask.getTitle());
-        existingTask.setDescription(updatedTask.getDescription());
-        existingTask.setPriority(updatedTask.getPriority());
-        existingTask.setProject(updatedTask.getProject());
-        existingTask.setSubsystem(updatedTask.getSubsystem());
-        existingTask.setStartDate(updatedTask.getStartDate());
-        existingTask.setEndDate(updatedTask.getEndDate());
-        existingTask.setProgress(updatedTask.getProgress());
-        existingTask.setCompleted(updatedTask.isCompleted());
-        
-        // Update estimated duration
-        if (estimatedHours != null && estimatedHours > 0) {
-            java.time.Duration duration = java.time.Duration.ofMinutes((long) (estimatedHours * 60));
-            existingTask.setEstimatedDuration(duration);
-        }
-    }
-    
-    /**
-     * Update team assignments for task.
-     * 
-     * ✅ NEW: Assignment management
-     */
-    private void updateTeamAssignments(Task task, Long[] memberIds) {
-        try {
-            Set<TeamMember> newAssignees = new HashSet<>();
-            
-            for (Long memberId : memberIds) {
-                TeamMember member = teamMemberService.findById(memberId);
-                if (member != null) {
-                    newAssignees.add(member);
-                }
-            }
-            
-            taskService.assignMembers(task.getId(), newAssignees);
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Error updating team assignments", e);
-        }
-    }
-    
-    /**
-     * Clean up task dependencies before deletion.
-     * 
-     * ✅ NEW: Dependency cleanup
-     */
-    private void cleanupTaskDependencies(Task task) {
-        try {
-            // Remove this task from all dependencies
-            for (Task dependency : new HashSet<>(task.getPreDependencies())) {
-                taskService.removeDependency(task.getId(), dependency.getId());
-            }
-            
-            // Remove this task as dependency from other tasks
-            for (Task dependent : new HashSet<>(task.getPostDependencies())) {
-                taskService.removeDependency(dependent.getId(), task.getId());
-            }
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Error cleaning up task dependencies", e);
-        }
-    }
-    
-    /**
-     * Add current assignments to model for edit form.
-     * 
-     * ✅ NEW: Form pre-population
-     */
-    private void addCurrentAssignments(Model model, Task task) {
-        Long[] assignedIds = task.getAssignedTo().stream()
-            .map(TeamMember::getId)
-            .toArray(Long[]::new);
-        model.addAttribute("assignedMemberIds", assignedIds);
-        
-        // Add estimated hours for display
-        if (task.getEstimatedDuration() != null) {
-            double hours = task.getEstimatedDuration().toMinutes() / 60.0;
-            model.addAttribute("estimatedDurationHours", hours);
-        }
-    }
-    
-    /**
-     * Add time-related information for task.
-     * 
-     * ✅ ENHANCED: Comprehensive time calculations
-     */
-    private void addTaskTimeInfo(Model model, Task task) {
-        LocalDate today = LocalDate.now();
-        
-        // Days until due date
-        if (task.getEndDate() != null) {
-            long daysUntilDue = java.time.temporal.ChronoUnit.DAYS.between(today, task.getEndDate());
-            model.addAttribute("daysUntilDue", daysUntilDue);
-            
-            if (daysUntilDue < 0) {
-                model.addAttribute("dueStatus", "overdue");
-                model.addAttribute("dueStatusClass", "text-danger");
-            } else if (daysUntilDue <= 1) {
-                model.addAttribute("dueStatus", "critical");
-                model.addAttribute("dueStatusClass", "text-warning");
-            } else if (daysUntilDue <= 3) {
-                model.addAttribute("dueStatus", "warning");
-                model.addAttribute("dueStatusClass", "text-info");
-            } else {
-                model.addAttribute("dueStatus", "normal");
-                model.addAttribute("dueStatusClass", "text-success");
-            }
-        }
-        
-        // Time tracking
-        if (task.getEstimatedDuration() != null) {
-            double estimatedHours = task.getEstimatedDuration().toMinutes() / 60.0;
-            model.addAttribute("estimatedHours", estimatedHours);
-        }
-        
-        if (task.getActualDuration() != null) {
-            double actualHours = task.getActualDuration().toMinutes() / 60.0;
-            model.addAttribute("actualHours", actualHours);
-        }
-    }
-    
-    /**
-     * Add related tasks to model.
-     * 
-     * ✅ NEW: Related task discovery
-     */
-    private void addRelatedTasks(Model model, Task task) {
-        try {
-            // Tasks in same project
-            List<Task> projectTasks = taskService.findByProject(task.getProject())
-                .stream()
-                .filter(t -> !t.getId().equals(task.getId()))
-                .limit(5)
-                .collect(Collectors.toList());
-            model.addAttribute("relatedProjectTasks", projectTasks);
-            
-            // Tasks in same subsystem
-            List<Task> subsystemTasks = taskService.findBySubsystem(task.getSubsystem())
-                .stream()
-                .filter(t -> !t.getId().equals(task.getId()))
-                .limit(5)
-                .collect(Collectors.toList());
-            model.addAttribute("relatedSubsystemTasks", subsystemTasks);
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Error loading related tasks", e);
-            model.addAttribute("relatedProjectTasks", new ArrayList<>());
-            model.addAttribute("relatedSubsystemTasks", new ArrayList<>());
-        }
-    }
-    
-    /**
-     * Convert task to search DTO.
-     * 
-     * ✅ NEW: Search result formatting
-     */
-    private Map<String, Object> taskToSearchDto(Task task) {
-        Map<String, Object> dto = new HashMap<>();
-        dto.put("id", task.getId());
-        dto.put("title", task.getTitle());
-        dto.put("description", task.getDescription());
-        dto.put("progress", task.getProgress());
-        dto.put("completed", task.isCompleted());
-        dto.put("priority", task.getPriority().getDisplayName());
-        dto.put("priorityClass", getPriorityClass(task.getPriority()));
-        dto.put("projectName", task.getProject().getName());
-        dto.put("subsystemName", task.getSubsystem().getName());
-        dto.put("url", "/tasks/" + task.getId());
-        
-        if (task.getEndDate() != null) {
-            dto.put("endDate", task.getEndDate().toString());
-            dto.put("endDateFormatted", task.getEndDate().format(DATE_FORMATTER));
-        }
-        
-        // Assignee names
-        List<String> assigneeNames = task.getAssignedTo().stream()
-            .map(TeamMember::getFullName)
-            .collect(Collectors.toList());
-        dto.put("assignees", assigneeNames);
-        
-        return dto;
-    }
-
-    /**
-     * Convert task to Kanban DTO for JSON response.
-     * 
-     * ✅ FIXED: Handle Set<TeamMember> properly
-     */
-    private Map<String, Object> taskToKanbanDto(Task task) {
-        Map<String, Object> dto = new HashMap<>();
-        
-        dto.put("id", task.getId());
-        dto.put("title", task.getTitle());
-        dto.put("description", task.getDescription());
-        dto.put("progress", task.getProgress());
-        dto.put("completed", task.isCompleted());
-        dto.put("priority", task.getPriority().name());
-        dto.put("priorityDisplay", task.getPriority().getDisplayName());
-        dto.put("priorityClass", getPriorityClass(task.getPriority()));
-        dto.put("projectName", task.getProject().getName());
-        dto.put("subsystemName", task.getSubsystem().getName());
-        dto.put("kanbanStatus", getTaskKanbanStatus(task));
-        
-        // Due date information
-        if (task.getEndDate() != null) {
-            dto.put("endDate", task.getEndDate().toString());
-            dto.put("endDateFormatted", task.getEndDate().format(DATE_FORMATTER));
-            dto.put("daysUntilDue", java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), task.getEndDate()));
-        }
-        
-        // ✅ FIXED: Handle Set<TeamMember> assignees properly
-        List<Map<String, Object>> assignees = new ArrayList<>();
-        for (TeamMember member : task.getAssignedTo()) {
-            Map<String, Object> assigneeDto = new HashMap<>();
-            assigneeDto.put("id", member.getId());
-            assigneeDto.put("name", member.getFullName());
-            
-            // Handle name initials safely
-            String firstName = member.getFirstName();
-            String lastName = member.getLastName();
-            String initials = "";
-            if (firstName != null && !firstName.isEmpty()) {
-                initials += firstName.substring(0, 1).toUpperCase();
-            }
-            if (lastName != null && !lastName.isEmpty()) {
-                initials += lastName.substring(0, 1).toUpperCase();
-            }
-            if (initials.isEmpty()) {
-                initials = "?";
-            }
-            assigneeDto.put("initials", initials);
-            
-            assignees.add(assigneeDto);
-        }
-        dto.put("assignees", assignees);
-        
-        return dto;
-    }
-    
-    /**
-     * Get CSS class for priority.
-     */
-    private String getPriorityClass(Task.Priority priority) {
-        switch (priority) {
-            case CRITICAL: return "text-danger";
-            case HIGH: return "text-warning";
-            case MEDIUM: return "text-info";
-            case LOW: return "text-secondary";
-            default: return "text-secondary";
-        }
-    }
-    
-    /**
-     * Add helpful defaults and suggestions for task forms.
-     */
-    private void addTaskFormHelpers(Model model) {
-        model.addAttribute("estimatedDurationOptions", List.of(
-            Map.of("hours", 0.5, "label", "30 minutes"),
-            Map.of("hours", 1, "label", "1 hour"),
-            Map.of("hours", 2, "label", "2 hours"),
-            Map.of("hours", 4, "label", "4 hours"),
-            Map.of("hours", 8, "label", "1 day"),
-            Map.of("hours", 16, "label", "2 days"),
-            Map.of("hours", 40, "label", "1 week")
-        ));
-        
-        model.addAttribute("priorityDescriptions", Map.of(
-            "LOW", "Nice to have, can be delayed",
-            "MEDIUM", "Important but not urgent",
-            "HIGH", "Important and time-sensitive",
-            "CRITICAL", "Must be completed immediately"
-        ));
-        
-        // Quick date options
-        LocalDate today = LocalDate.now();
-        model.addAttribute("quickDates", List.of(
-            Map.of("label", "Tomorrow", "date", today.plusDays(1)),
-            Map.of("label", "This Week", "date", today.plusDays(7)),
-            Map.of("label", "Next Week", "date", today.plusDays(14)),
-            Map.of("label", "End of Month", "date", today.withDayOfMonth(today.lengthOfMonth()))
-        ));
-    }
-
-    // =========================================================================
-    // KANBAN HELPER METHODS - ✅ PHASE 2E-C IMPLEMENTATION
-    // =========================================================================
-
-    /**
-     * Organize tasks into Kanban columns based on status.
-     */
-    private Map<String, List<Task>> organizeTasksForKanban(List<Task> tasks) {
-        Map<String, List<Task>> columns = new LinkedHashMap<>();
-        
-        // Initialize columns in specific order
-        columns.put("TODO", new ArrayList<>());
-        columns.put("IN_PROGRESS", new ArrayList<>());
-        columns.put("REVIEW", new ArrayList<>());
-        columns.put("COMPLETED", new ArrayList<>());
-        
-        // Organize tasks into columns
-        for (Task task : tasks) {
-            String status = getTaskKanbanStatus(task);
-            columns.get(status).add(task);
-        }
-        
-        return columns;
-    }
-
-    /**
-     * Determine Kanban status for a task.
-     */
-    private String getTaskKanbanStatus(Task task) {
-        if (task.isCompleted()) {
-            return "COMPLETED";
-        } else if (task.getProgress() >= 75) {
-            return "REVIEW";
-        } else if (task.getProgress() > 0) {
-            return "IN_PROGRESS";
-        } else {
-            return "TODO";
-        }
-    }
-
-    /**
-     * Update task based on Kanban column move.
-     */
-    private boolean updateTaskFromKanbanMove(Task task, String newStatus, Integer newPosition) {
-        try {
-            switch (newStatus) {
-                case "TODO":
-                    task.setProgress(0);
-                    task.setCompleted(false);
-                    break;
-                    
-                case "IN_PROGRESS":
-                    if (task.getProgress() == 0) {
-                        task.setProgress(25); // Default progress when starting
-                    }
-                    task.setCompleted(false);
-                    break;
-                    
-                case "REVIEW":
-                    if (task.getProgress() < 75) {
-                        task.setProgress(75); // Minimum progress for review
-                    }
-                    task.setCompleted(false);
-                    break;
-                    
-                case "COMPLETED":
-                    task.setProgress(100);
-                    task.setCompleted(true);
-                    break;
-                    
-                default:
-                    return false;
-            }
-            
-            // TODO: Handle position updates within column
-            // This would require adding a position field to Task model
-            
-            return true;
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Error updating task from Kanban move", e);
-            return false;
-        }
-    }
-
-    /**
-     * Get available Kanban statuses.
-     * 
-     * ✅ FIXED: Return proper List<Map<String, Object>>
-     */
-    private List<Map<String, Object>> getKanbanStatuses() {
-        List<Map<String, Object>> statuses = new ArrayList<>();
-        
-        Map<String, Object> todo = new HashMap<>();
-        todo.put("id", "TODO");
-        todo.put("name", "To Do");
-        todo.put("color", "#6c757d");
-        todo.put("icon", "fas fa-clipboard-list");
-        statuses.add(todo);
-        
-        Map<String, Object> inProgress = new HashMap<>();
-        inProgress.put("id", "IN_PROGRESS");
-        inProgress.put("name", "In Progress");
-        inProgress.put("color", "#ffc107");
-        inProgress.put("icon", "fas fa-play-circle");
-        statuses.add(inProgress);
-        
-        Map<String, Object> review = new HashMap<>();
-        review.put("id", "REVIEW");
-        review.put("name", "Review");
-        review.put("color", "#17a2b8");
-        review.put("icon", "fas fa-eye");
-        statuses.add(review);
-        
-        Map<String, Object> completed = new HashMap<>();
-        completed.put("id", "COMPLETED");
-        completed.put("name", "Completed");
-        completed.put("color", "#28a745");
-        completed.put("icon", "fas fa-check-circle");
-        statuses.add(completed);
-        
-        return statuses;
-    }
-
-    /**
-     * Broadcast task update to specific project.
-     * 
-     * ✅ NEW: Server-side task update broadcasting
-     */
-    public void broadcastTaskUpdate(TaskUpdateMessage message) {
-        try {
-            if (message.getProjectId() != null) {
-                String destination = "/topic/project/" + message.getProjectId();
-                messagingTemplate.convertAndSend(destination, message);
-                
-                LOGGER.info(String.format("Broadcasted task update to %s: Task %d, Type: %s", 
-                                        destination, message.getTaskId(), message.getChangeType()));
-                
-                // Also send to general task updates for list view compatibility
-                messagingTemplate.convertAndSend("/topic/tasks", message);
-            }
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error broadcasting task update", e);
-        }
-    }
-}// src/main/java/org/frcpm/web/controllers/TaskController.java
-// Phase 2E-C: COMPILATION ISSUES FIXED
-// ✅ COMPLETE: All missing class references resolved
-// ✅ FIXED: WebSocket integration properly implemented
+// src/main/java/org/frcpm/web/controllers/TaskController.java
+// Phase 2E-C: FORMATTED AND CLEANED
+// ✅ COMPILATION FIXED: All missing class references resolved
+// ✅ FORMATTING FIXED: Proper code organization and structure
+// ✅ COMPLETE: Ready for Kanban template integration
 
 package org.frcpm.web.controllers;
 
@@ -807,11 +12,12 @@ import org.frcpm.models.Project;
 import org.frcpm.models.Subsystem;
 import org.frcpm.services.TaskService;
 import org.frcpm.services.TeamMemberService;
-import org.frcpm.web.dto.TaskUpdateMessage;
 import org.frcpm.services.ProjectService;
 import org.frcpm.services.SubsystemService;
+import org.frcpm.web.dto.TaskUpdateMessage;
 import org.frcpm.events.WebSocketEventPublisher;
 import org.frcpm.security.UserPrincipal;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -824,45 +30,41 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.annotation.SubscribeMapping;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.ArrayList;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import java.util.Optional;
-
 /**
- * TaskController - Phase 2E-C COMPILATION FIXED
+ * TaskController - Phase 2E-C Implementation
  * 
- * ✅ FIXED: All missing class references resolved
- * ✅ FIXED: WebSocket integration properly implemented
- * ✅ COMPLETE: Full CRUD operations working
- * ✅ ENHANCED: Real-time updates and Kanban support
+ * Comprehensive task management controller with real-time WebSocket integration,
+ * Kanban board support, and advanced filtering capabilities.
  * 
- * COMPILATION FIXES APPLIED:
- * - Removed references to missing ActivityController
- * - Fixed WebSocket publishing through WebSocketEventPublisher
- * - Added proper base controller inheritance
- * - Fixed all method calls and imports
+ * Features:
+ * - Full CRUD operations for tasks
+ * - Real-time WebSocket updates
+ * - Kanban board drag-and-drop interface
+ * - Advanced search and filtering
+ * - Bulk operations with permissions
+ * - COPPA compliance integration
  * 
- * @author FRC Project Management Team - Phase 2E-C FIXED
- * @version 2.0.0-2E-C-COMPILATION-FIXED
+ * @author FRC Project Management Team
+ * @version 2.0.0-2E-C
  */
 @Controller
 @RequestMapping("/tasks")
 public class TaskController {
+    
+    // =========================================================================
+    // CONSTANTS AND DEPENDENCIES
+    // =========================================================================
     
     private static final Logger LOGGER = Logger.getLogger(TaskController.class.getName());
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("MMM dd, yyyy");
@@ -886,13 +88,23 @@ public class TaskController {
     private SimpMessagingTemplate messagingTemplate;
     
     // =========================================================================
-    // TASK LIST AND OVERVIEW - ✅ ENHANCED WITH REAL SERVICES
+    // TASK LIST AND OVERVIEW
     // =========================================================================
     
     /**
      * Display list of tasks with advanced filtering and real-time integration.
      * 
-     * ✅ ENHANCED: Uses real services instead of fallback data
+     * @param model Spring model for template data
+     * @param projectId Optional project filter
+     * @param subsystemId Optional subsystem filter
+     * @param priority Optional priority filter
+     * @param status Task status filter (default: all)
+     * @param assigneeId Optional assignee filter
+     * @param search Optional search query
+     * @param view View type (list or kanban, default: list)
+     * @param sort Sort order (default: priority)
+     * @param user Current authenticated user
+     * @return Template name for rendering
      */
     @GetMapping
     public String listTasks(Model model,
@@ -937,7 +149,7 @@ public class TaskController {
             model.addAttribute("currentView", view);
             model.addAttribute("currentSort", sort);
             
-            // Load REAL filter options
+            // Load filter options
             loadRealFilterOptions(model);
             
             // Add status counts for filter badges
@@ -966,7 +178,10 @@ public class TaskController {
     /**
      * Display detailed view of a specific task.
      * 
-     * ✅ ENHANCED: Full task details with real-time updates
+     * @param id Task ID
+     * @param model Spring model for template data
+     * @param user Current authenticated user
+     * @return Template name for rendering
      */
     @GetMapping("/{id}")
     public String viewTask(@PathVariable Long id, Model model,
@@ -1000,13 +215,17 @@ public class TaskController {
     }
     
     // =========================================================================
-    // TASK CREATION - ✅ ENHANCED WITH REAL SERVICES
+    // TASK CREATION
     // =========================================================================
     
     /**
      * Show new task creation form.
      * 
-     * ✅ ENHANCED: Uses real services for options
+     * @param model Spring model for template data
+     * @param projectId Optional pre-selected project ID
+     * @param cloneFromId Optional task ID to clone from
+     * @param user Current authenticated user
+     * @return Template name for rendering
      */
     @GetMapping("/new")
     public String newTaskForm(Model model,
@@ -1043,10 +262,8 @@ public class TaskController {
             model.addAttribute("task", task);
             model.addAttribute("isEdit", false);
             
-            // Load REAL form options
+            // Load form options
             loadRealTaskFormOptions(model);
-            
-            // Add form helpers
             addTaskFormHelpers(model);
             
             return "tasks/form";
@@ -1060,7 +277,16 @@ public class TaskController {
     /**
      * Process new task creation.
      * 
-     * ✅ ENHANCED: Real-time WebSocket integration
+     * @param task Task data from form
+     * @param result Validation result
+     * @param model Spring model for template data
+     * @param redirectAttributes Flash attributes for redirect
+     * @param assignedMemberIds Array of assigned member IDs
+     * @param estimatedHours Estimated duration in hours
+     * @param dependencyIds Array of dependency task IDs
+     * @param componentIds Array of required component IDs
+     * @param user Current authenticated user
+     * @return Redirect URL or template name
      */
     @PostMapping("/new")
     public String createTask(@Valid @ModelAttribute Task task,
@@ -1103,9 +329,6 @@ public class TaskController {
                 addRequiredComponents(savedTask, componentIds);
             }
             
-            // ✅ FIXED: Publish task creation via WebSocket (handled automatically by TaskService)
-            // The WebSocketEventPublisher is called from TaskService.save() method
-            
             // Add success message
             redirectAttributes.addFlashAttribute("successMessage", 
                 "Task '" + savedTask.getTitle() + "' created successfully!");
@@ -1126,13 +349,16 @@ public class TaskController {
     }
     
     // =========================================================================
-    // TASK EDITING - ✅ NEWLY IMPLEMENTED
+    // TASK EDITING
     // =========================================================================
     
     /**
      * Show task edit form.
      * 
-     * ✅ NEW: Full task editing implementation
+     * @param id Task ID to edit
+     * @param model Spring model for template data
+     * @param user Current authenticated user
+     * @return Template name for rendering
      */
     @GetMapping("/{id}/edit")
     public String editTaskForm(@PathVariable Long id, Model model,
@@ -1176,7 +402,15 @@ public class TaskController {
     /**
      * Process task update.
      * 
-     * ✅ NEW: Full task update with real-time sync
+     * @param id Task ID to update
+     * @param task Updated task data from form
+     * @param result Validation result
+     * @param model Spring model for template data
+     * @param redirectAttributes Flash attributes for redirect
+     * @param assignedMemberIds Array of assigned member IDs
+     * @param estimatedHours Estimated duration in hours
+     * @param user Current authenticated user
+     * @return Redirect URL or template name
      */
     @PostMapping("/{id}/edit")
     public String updateTask(@PathVariable Long id,
@@ -1211,9 +445,6 @@ public class TaskController {
                 return "tasks/form";
             }
             
-            // Store old progress for WebSocket event
-            Integer oldProgress = existingTask.getProgress();
-            
             // Update task fields
             updateTaskFields(existingTask, task, estimatedHours);
             
@@ -1224,9 +455,6 @@ public class TaskController {
             if (assignedMemberIds != null) {
                 updateTeamAssignments(savedTask, assignedMemberIds);
             }
-            
-            // ✅ FIXED: Real-time update is handled automatically by TaskService.save()
-            // The WebSocketEventPublisher is called from the service layer
             
             redirectAttributes.addFlashAttribute("successMessage", 
                 "Task '" + savedTask.getTitle() + "' updated successfully!");
@@ -1242,13 +470,16 @@ public class TaskController {
     }
     
     // =========================================================================
-    // TASK DELETION - ✅ NEWLY IMPLEMENTED
+    // TASK DELETION
     // =========================================================================
     
     /**
      * Delete task confirmation.
      * 
-     * ✅ NEW: Safe task deletion with confirmation
+     * @param id Task ID to delete
+     * @param model Spring model for template data
+     * @param user Current authenticated user
+     * @return Template name for rendering
      */
     @GetMapping("/{id}/delete")
     public String confirmDeleteTask(@PathVariable Long id, Model model,
@@ -1289,7 +520,11 @@ public class TaskController {
     /**
      * Delete task.
      * 
-     * ✅ NEW: Complete task deletion with cleanup
+     * @param id Task ID to delete
+     * @param confirmed Confirmation flag
+     * @param redirectAttributes Flash attributes for redirect
+     * @param user Current authenticated user
+     * @return Redirect URL
      */
     @PostMapping("/{id}/delete")
     public String deleteTask(@PathVariable Long id,
@@ -1327,8 +562,7 @@ public class TaskController {
             boolean deleted = taskService.deleteById(id);
             
             if (deleted) {
-                // ✅ FIXED: Create and publish task deletion notification manually
-                // since the task object is no longer available after deletion
+                // Publish task deletion event
                 publishTaskDeletionEvent(id, taskTitle, projectId, user.getUser());
                 
                 redirectAttributes.addFlashAttribute("successMessage", 
@@ -1349,13 +583,17 @@ public class TaskController {
     }
     
     // =========================================================================
-    // REAL-TIME PROGRESS UPDATES - ✅ ENHANCED
+    // REAL-TIME PROGRESS UPDATES
     // =========================================================================
     
     /**
      * Quick progress update endpoint with real-time sync.
      * 
-     * ✅ ENHANCED: Real-time WebSocket integration
+     * @param id Task ID
+     * @param progress New progress value (0-100)
+     * @param redirectAttributes Flash attributes for redirect
+     * @param user Current authenticated user
+     * @return Redirect URL
      */
     @PostMapping("/{id}/progress")
     public String updateTaskProgress(@PathVariable Long id,
@@ -1377,9 +615,6 @@ public class TaskController {
                 return "redirect:/tasks/" + id;
             }
             
-            // Store old progress for WebSocket event
-            Integer oldProgress = task.getProgress();
-            
             // Update progress using enhanced service method
             boolean completed = progress >= 100;
             Task updatedTask = taskService.updateTaskProgress(id, progress, completed);
@@ -1388,10 +623,6 @@ public class TaskController {
                 String statusMessage = completed ? "Task completed! 🎉" : 
                     "Progress updated to " + progress + "%";
                 redirectAttributes.addFlashAttribute("successMessage", statusMessage);
-                
-                // ✅ FIXED: WebSocket event is automatically published by TaskService
-                // due to the integration in TaskServiceImpl.updateTaskProgress()
-                
             } else {
                 redirectAttributes.addFlashAttribute("errorMessage", "Failed to update progress");
             }
@@ -1408,7 +639,10 @@ public class TaskController {
     /**
      * AJAX progress update for real-time interface.
      * 
-     * ✅ NEW: Real-time AJAX progress updates
+     * @param id Task ID
+     * @param progress New progress value (0-100)
+     * @param user Current authenticated user
+     * @return JSON response with update result
      */
     @PostMapping("/{id}/progress/ajax")
     @ResponseBody
@@ -1443,9 +677,6 @@ public class TaskController {
                 response.put("progress", updatedTask.getProgress());
                 response.put("completed", updatedTask.isCompleted());
                 response.put("taskId", updatedTask.getId());
-                
-                // ✅ FIXED: WebSocket event automatically published by TaskService
-                
             } else {
                 response.put("success", false);
                 response.put("message", "Failed to update progress");
@@ -1462,13 +693,19 @@ public class TaskController {
     }
     
     // =========================================================================
-    // BULK OPERATIONS - ✅ NEWLY IMPLEMENTED
+    // BULK OPERATIONS
     // =========================================================================
     
     /**
      * Bulk task operations.
      * 
-     * ✅ NEW: Complete bulk operations implementation
+     * @param action Operation to perform (complete, progress, assign, unassign, delete)
+     * @param taskIds Array of task IDs to operate on
+     * @param bulkProgress Progress value for bulk progress updates
+     * @param bulkAssigneeId Assignee ID for bulk assignment
+     * @param redirectAttributes Flash attributes for redirect
+     * @param user Current authenticated user
+     * @return Redirect URL
      */
     @PostMapping("/bulk")
     public String bulkTaskOperation(@RequestParam String action,
@@ -1559,7 +796,7 @@ public class TaskController {
                 }
             }
             
-            // ✅ FIXED: Publish bulk operation event via WebSocketEventPublisher
+            // Publish bulk operation event via WebSocketEventPublisher
             if (projectId != null && successCount > 0) {
                 webSocketEventPublisher.publishBulkKanbanOperation(action, successCount, projectId, user.getUser());
             }
@@ -1584,13 +821,17 @@ public class TaskController {
     }
     
     // =========================================================================
-    // ADVANCED SEARCH AND FILTERING - ✅ NEWLY IMPLEMENTED  
+    // ADVANCED SEARCH AND FILTERING
     // =========================================================================
     
     /**
      * Advanced task search endpoint.
      * 
-     * ✅ NEW: Comprehensive search implementation
+     * @param query Search query string
+     * @param projectId Optional project filter
+     * @param limit Maximum number of results to return
+     * @param user Current authenticated user
+     * @return JSON response with search results
      */
     @GetMapping("/search")
     @ResponseBody
@@ -1639,13 +880,16 @@ public class TaskController {
     }
     
     // =========================================================================
-    // KANBAN BOARD OPERATIONS - ✅ PHASE 2E-C NEW FEATURES
+    // KANBAN BOARD OPERATIONS
     // =========================================================================
 
     /**
      * Display Kanban board view for tasks.
      * 
-     * ✅ FIXED: All service call and type issues resolved
+     * @param model Spring model for template data
+     * @param projectId Optional project filter
+     * @param user Current authenticated user
+     * @return Template name for rendering
      */
     @GetMapping("/kanban")
     public String kanbanView(Model model,
@@ -1660,7 +904,6 @@ public class TaskController {
             // Get tasks for Kanban organization
             List<Task> allTasks = new ArrayList<>();
             if (projectId != null) {
-                // ✅ FIXED: Use Optional.ofNullable instead of orElse(null)
                 Optional<Project> projectOpt = Optional.ofNullable(projectService.findById(projectId));
                 if (projectOpt.isPresent()) {
                     allTasks = taskService.findByProject(projectOpt.get());
@@ -1698,7 +941,11 @@ public class TaskController {
     /**
      * Handle drag-and-drop status updates via AJAX.
      * 
-     * ✅ FIXED: All WebSocket integration issues resolved
+     * @param id Task ID to move
+     * @param newStatus New Kanban status
+     * @param newPosition New position within column (optional)
+     * @param user Current authenticated user
+     * @return JSON response with operation result
      */
     @PostMapping("/{id}/kanban/move")
     @ResponseBody
@@ -1726,7 +973,6 @@ public class TaskController {
             
             // Store old values for WebSocket event
             String oldStatus = getTaskKanbanStatus(task);
-            Integer oldProgress = task.getProgress();
             
             // Update task based on new Kanban status
             boolean updated = updateTaskFromKanbanMove(task, newStatus, newPosition);
@@ -1735,7 +981,7 @@ public class TaskController {
                 // Save the task
                 Task savedTask = taskService.save(task);
                 
-                // ✅ FIXED: Use webSocketEventPublisher for Kanban moves
+                // Publish Kanban move event
                 webSocketEventPublisher.publishKanbanMove(savedTask, oldStatus, newStatus, user.getUser());
                 
                 response.put("success", true);
@@ -1763,7 +1009,9 @@ public class TaskController {
     /**
      * Get Kanban board data as JSON for dynamic updates.
      * 
-     * ✅ FIXED: Map type conversion issues resolved
+     * @param projectId Optional project filter
+     * @param user Current authenticated user
+     * @return JSON response with Kanban board data
      */
     @GetMapping("/kanban/data")
     @ResponseBody
@@ -1787,7 +1035,7 @@ public class TaskController {
             // Organize for Kanban
             Map<String, List<Task>> kanbanColumns = organizeTasksForKanban(allTasks);
             
-            // ✅ FIXED: Convert to proper DTOs for JSON response
+            // Convert to proper DTOs for JSON response
             Map<String, Object> kanbanData = new HashMap<>();
             
             for (Map.Entry<String, List<Task>> entry : kanbanColumns.entrySet()) {
@@ -1813,10 +1061,16 @@ public class TaskController {
         }
     }
 
+    // =========================================================================
+    // WEBSOCKET MESSAGE HANDLERS
+    // =========================================================================
+
     /**
      * Handle Kanban drag-and-drop moves from clients.
      * 
-     * ✅ NEW: Real-time Kanban board synchronization
+     * @param message Task update message from client
+     * @param user Current authenticated user
+     * @return Broadcast message to all subscribers
      */
     @MessageMapping("/kanban/move")
     @SendTo("/topic/project/{projectId}/kanban")
@@ -1871,7 +1125,9 @@ public class TaskController {
     /**
      * Handle bulk operations on Kanban tasks.
      * 
-     * ✅ NEW: Bulk Kanban operations with real-time sync
+     * @param message Bulk operation message from client
+     * @param user Current authenticated user
+     * @return Broadcast message to all subscribers
      */
     @MessageMapping("/kanban/bulk")
     @SendTo("/topic/project/{projectId}/kanban")
@@ -1906,7 +1162,8 @@ public class TaskController {
     /**
      * Subscribe to Kanban board updates for a specific project.
      * 
-     * ✅ NEW: Kanban-specific subscription handling
+     * @param user Current authenticated user
+     * @return Welcome message for new subscriber
      */
     @SubscribeMapping("/topic/project/{projectId}/kanban")
     public TaskUpdateMessage onKanbanSubscribe(@AuthenticationPrincipal UserPrincipal user) {
@@ -1933,79 +1190,20 @@ public class TaskController {
     }
     
     // =========================================================================
-    // HELPER METHODS - ✅ ENHANCED WITH REAL SERVICES AND BASE CONTROLLER METHODS
+    // HELPER METHODS - DATA LOADING
     // =========================================================================
-    
-    /**
-     * ✅ FIXED: Add navigation data (BaseController equivalent method)
-     */
-    private void addNavigationData(Model model) {
-        // Add basic navigation data - this would normally come from BaseController
-        model.addAttribute("navSection", "tasks");
-        model.addAttribute("pageTitle", "Tasks");
-    }
-    
-    /**
-     * ✅ FIXED: Add breadcrumbs (BaseController equivalent method)
-     */
-    private void addBreadcrumbs(Model model, String... breadcrumbs) {
-        List<Map<String, String>> breadcrumbList = new ArrayList<>();
-        for (int i = 0; i < breadcrumbs.length; i += 2) {
-            if (i + 1 < breadcrumbs.length) {
-                Map<String, String> crumb = new HashMap<>();
-                crumb.put("name", breadcrumbs[i]);
-                crumb.put("url", breadcrumbs[i + 1]);
-                breadcrumbList.add(crumb);
-            }
-        }
-        model.addAttribute("breadcrumbs", breadcrumbList);
-    }
-    
-    /**
-     * ✅ FIXED: Add error message (BaseController equivalent method)
-     */
-    private void addErrorMessage(Model model, String message) {
-        model.addAttribute("errorMessage", message);
-    }
-    
-    /**
-     * ✅ FIXED: Handle exception (BaseController equivalent method)
-     */
-    private String handleException(Exception e, Model model) {
-        LOGGER.log(Level.SEVERE, "Controller exception", e);
-        addErrorMessage(model, "An error occurred: " + e.getMessage());
-        return "error/general";
-    }
-    
-    /**
-     * ✅ FIXED: Publish task deletion event manually
-     */
-    private void publishTaskDeletionEvent(Long taskId, String taskTitle, Long projectId, org.frcpm.models.User user) {
-        try {
-            // Create a simple deletion message since we can't use the deleted task object
-            TaskUpdateMessage deleteMessage = new TaskUpdateMessage();
-            deleteMessage.setTaskId(taskId);
-            deleteMessage.setProjectId(projectId);
-            deleteMessage.setTaskTitle(taskTitle);
-            deleteMessage.setChangeType("DELETED");
-            deleteMessage.setStatus("DELETED");
-            deleteMessage.setUpdatedBy(user.getFullName());
-            deleteMessage.setTimestamp(LocalDateTime.now());
-            
-            // Broadcast the deletion
-            messagingTemplate.convertAndSend("/topic/project/" + projectId, deleteMessage);
-            
-            LOGGER.info(String.format("Published task deletion: Task %d '%s'", taskId, taskTitle));
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Error publishing task deletion event", e);
-        }
-    }
     
     /**
      * Apply advanced filtering to task list.
      * 
-     * ✅ NEW: Comprehensive filtering implementation
+     * @param tasks List of tasks to filter
+     * @param projectId Project filter
+     * @param subsystemId Subsystem filter
+     * @param priority Priority filter
+     * @param status Status filter
+     * @param assigneeId Assignee filter
+     * @param search Search query
+     * @return Filtered list of tasks
      */
     private List<Task> applyAdvancedFiltering(List<Task> tasks, Long projectId, Long subsystemId,
                                             String priority, String status, Long assigneeId, String search) {
@@ -2055,7 +1253,222 @@ public class TaskController {
     }
     
     /**
+     * Apply sorting to task list.
+     * 
+     * @param tasks List of tasks to sort
+     * @param sort Sort criteria
+     * @return Sorted list of tasks
+     */
+    private List<Task> applySorting(List<Task> tasks, String sort) {
+        if (sort == null || sort.isEmpty()) {
+            sort = "priority";
+        }
+        
+        switch (sort.toLowerCase()) {
+            case "priority":
+                return tasks.stream()
+                    .sorted((a, b) -> b.getPriority().getValue() - a.getPriority().getValue())
+                    .collect(Collectors.toList());
+                    
+            case "duedate":
+                return tasks.stream()
+                    .sorted((a, b) -> {
+                        if (a.getEndDate() == null && b.getEndDate() == null) return 0;
+                        if (a.getEndDate() == null) return 1;
+                        if (b.getEndDate() == null) return -1;
+                        return a.getEndDate().compareTo(b.getEndDate());
+                    })
+                    .collect(Collectors.toList());
+                    
+            case "progress":
+                return tasks.stream()
+                    .sorted((a, b) -> Integer.compare(a.getProgress(), b.getProgress()))
+                    .collect(Collectors.toList());
+                    
+            case "title":
+                return tasks.stream()
+                    .sorted((a, b) -> a.getTitle().compareToIgnoreCase(b.getTitle()))
+                    .collect(Collectors.toList());
+                    
+            case "project":
+                return tasks.stream()
+                    .sorted((a, b) -> a.getProject().getName().compareToIgnoreCase(b.getProject().getName()))
+                    .collect(Collectors.toList());
+                    
+            default:
+                return tasks;
+        }
+    }
+    
+    /**
+     * Load real filter options using actual services.
+     * 
+     * @param model Spring model to add attributes to
+     */
+    private void loadRealFilterOptions(Model model) {
+        try {
+            // Real projects from ProjectService
+            List<Project> projects = projectService.findAll();
+            model.addAttribute("projectOptions", projects);
+            
+            // Real subsystems from SubsystemService
+            List<Subsystem> subsystems = subsystemService.findAll();
+            model.addAttribute("subsystemOptions", subsystems);
+            
+            // Real team members from TeamMemberService
+            List<TeamMember> members = teamMemberService.findAll();
+            model.addAttribute("memberOptions", members);
+            
+            // Priority options
+            model.addAttribute("priorityOptions", Task.Priority.values());
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Failed to load filter options", e);
+            // Set safe defaults to prevent template errors
+            model.addAttribute("projectOptions", new ArrayList<>());
+            model.addAttribute("subsystemOptions", new ArrayList<>());
+            model.addAttribute("memberOptions", new ArrayList<>());
+            model.addAttribute("priorityOptions", Task.Priority.values());
+        }
+    }
+    
+    /**
+     * Load comprehensive task detail data.
+     * 
+     * @param model Spring model to add attributes to
+     * @param task Task to load details for
+     * @param user Current authenticated user
+     */
+    private void loadTaskDetailData(Model model, Task task, UserPrincipal user) {
+        try {
+            // Basic task information
+            model.addAttribute("project", task.getProject());
+            model.addAttribute("subsystem", task.getSubsystem());
+            model.addAttribute("assignedMembers", task.getAssignedTo());
+            
+            // Dependencies
+            model.addAttribute("preDependencies", task.getPreDependencies());
+            model.addAttribute("postDependencies", task.getPostDependencies());
+            
+            // Required components
+            model.addAttribute("requiredComponents", task.getRequiredComponents());
+            
+            // Time information
+            addTaskTimeInfo(model, task);
+            
+            // User permissions
+            model.addAttribute("canEdit", canEditTask(task, user));
+            model.addAttribute("canDelete", user.getUser().getRole().isMentor() || user.getUser().getRole().equals(org.frcpm.models.UserRole.ADMIN));
+            model.addAttribute("canUpdateProgress", canUpdateProgress(task, user));
+            
+            // Related tasks (same project, same subsystem)
+            addRelatedTasks(model, task);
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Failed to load task detail data", e);
+            // Set safe defaults
+            model.addAttribute("assignedMembers", new HashSet<>());
+            model.addAttribute("preDependencies", new HashSet<>());
+            model.addAttribute("postDependencies", new HashSet<>());
+            model.addAttribute("requiredComponents", new HashSet<>());
+        }
+    }
+    
+    /**
+     * Load real task form options using actual services.
+     * 
+     * @param model Spring model to add attributes to
+     */
+    private void loadRealTaskFormOptions(Model model) {
+        try {
+            // Real projects
+            List<Project> projects = projectService.findAll();
+            model.addAttribute("projectOptions", projects);
+            
+            // Real subsystems
+            List<Subsystem> subsystems = subsystemService.findAll();
+            model.addAttribute("subsystemOptions", subsystems);
+            
+            // Real team members
+            List<TeamMember> members = teamMemberService.findAll();
+            model.addAttribute("memberOptions", members);
+            
+            // Priority options
+            model.addAttribute("priorityOptions", Task.Priority.values());
+            
+            // All tasks for dependency selection
+            List<Task> allTasks = taskService.findAll();
+            model.addAttribute("taskOptions", allTasks);
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Failed to load form options", e);
+            // Set safe defaults
+            model.addAttribute("projectOptions", new ArrayList<>());
+            model.addAttribute("subsystemOptions", new ArrayList<>());
+            model.addAttribute("memberOptions", new ArrayList<>());
+            model.addAttribute("priorityOptions", Task.Priority.values());
+            model.addAttribute("taskOptions", new ArrayList<>());
+        }
+    }
+    
+    // =========================================================================
+    // HELPER METHODS - TASK STATUS AND COUNTS
+    // =========================================================================
+    
+    /**
+     * Add task status counts for filter badges.
+     * 
+     * @param model Spring model to add attributes to
+     * @param allTasks All tasks to calculate counts from
+     */
+    private void addTaskStatusCounts(Model model, List<Task> allTasks) {
+        LocalDate today = LocalDate.now();
+        
+        long pendingCount = allTasks.stream().filter(t -> !t.isCompleted()).count();
+        long completedCount = allTasks.stream().filter(Task::isCompleted).count();
+        long overdueCount = allTasks.stream()
+            .filter(t -> !t.isCompleted() && t.getEndDate() != null && t.getEndDate().isBefore(today))
+            .count();
+        long dueSoonCount = allTasks.stream()
+            .filter(t -> !t.isCompleted() && t.getEndDate() != null &&
+                        t.getEndDate().isAfter(today) && t.getEndDate().isBefore(today.plusDays(7)))
+            .count();
+        long inProgressCount = allTasks.stream()
+            .filter(t -> !t.isCompleted() && t.getProgress() > 0)
+            .count();
+        long notStartedCount = allTasks.stream()
+            .filter(t -> !t.isCompleted() && t.getProgress() == 0)
+            .count();
+        
+        model.addAttribute("pendingCount", pendingCount);
+        model.addAttribute("completedCount", completedCount);
+        model.addAttribute("overdueCount", overdueCount);
+        model.addAttribute("dueSoonCount", dueSoonCount);
+        model.addAttribute("inProgressCount", inProgressCount);
+        model.addAttribute("notStartedCount", notStartedCount);
+    }
+    
+    /**
+     * Add user permissions to model.
+     * 
+     * @param model Spring model to add attributes to
+     * @param user Current authenticated user
+     */
+    private void addUserPermissions(Model model, UserPrincipal user) {
+        model.addAttribute("canCreateTasks", user.getUser().getRole().isMentor() || user.getUser().getRole().equals(org.frcpm.models.UserRole.ADMIN));
+        model.addAttribute("canEditAllTasks", user.getUser().getRole().isMentor() || user.getUser().getRole().equals(org.frcpm.models.UserRole.ADMIN));
+        model.addAttribute("canDeleteTasks", user.getUser().getRole().isMentor() || user.getUser().getRole().equals(org.frcpm.models.UserRole.ADMIN));
+        model.addAttribute("canBulkOperations", user.getUser().getRole().isMentor() || user.getUser().getRole().equals(org.frcpm.models.UserRole.ADMIN));
+        model.addAttribute("currentUserId", user.getUser().getId());
+        model.addAttribute("userRole", user.getUser().getRole().name());
+    }
+    
+    /**
      * Check if task matches status filter.
+     * 
+     * @param task Task to check
+     * @param status Status filter to match against
+     * @return True if task matches the status filter
      */
     private boolean matchesStatusFilter(Task task, String status) {
         if (status == null || "all".equals(status)) {
@@ -2087,6 +1500,10 @@ public class TaskController {
     
     /**
      * Check if task matches search query.
+     * 
+     * @param task Task to check
+     * @param query Search query to match against
+     * @return True if task matches the search query
      */
     private boolean matchesSearchQuery(Task task, String query) {
         if (query == null || query.trim().isEmpty()) {
@@ -2125,3 +1542,738 @@ public class TaskController {
         
         return false;
     }
+    
+    // =========================================================================
+    // HELPER METHODS - TASK OPERATIONS
+    // =========================================================================
+    
+    /**
+     * Create enhanced task with real service integration.
+     * 
+     * @param task Task to create
+     * @param estimatedHours Estimated duration in hours
+     * @param user Current authenticated user
+     * @return Created task
+     */
+    private Task createEnhancedTask(Task task, Double estimatedHours, UserPrincipal user) {
+        // Set estimated duration
+        if (estimatedHours != null && estimatedHours > 0) {
+            java.time.Duration duration = java.time.Duration.ofMinutes((long) (estimatedHours * 60));
+            task.setEstimatedDuration(duration);
+        }
+        
+        // Save using TaskService (will trigger WebSocket events)
+        return taskService.save(task);
+    }
+    
+    /**
+     * Assign team members to task.
+     * 
+     * @param task Task to assign members to
+     * @param memberIds Array of member IDs to assign
+     */
+    private void assignTeamMembers(Task task, Long[] memberIds) {
+        try {
+            Set<TeamMember> assignedMembers = new HashSet<>();
+            
+            for (Long memberId : memberIds) {
+                TeamMember member = teamMemberService.findById(memberId);
+                if (member != null) {
+                    assignedMembers.add(member);
+                }
+            }
+            
+            if (!assignedMembers.isEmpty()) {
+                taskService.assignMembers(task.getId(), assignedMembers);
+            }
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error assigning team members", e);
+        }
+    }
+    
+    /**
+     * Add task dependencies.
+     * 
+     * @param task Task to add dependencies to
+     * @param dependencyIds Array of dependency task IDs
+     */
+    private void addTaskDependencies(Task task, Long[] dependencyIds) {
+        try {
+            for (Long dependencyId : dependencyIds) {
+                if (!dependencyId.equals(task.getId())) { // Prevent self-dependency
+                    taskService.addDependency(task.getId(), dependencyId);
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error adding task dependencies", e);
+        }
+    }
+    
+    /**
+     * Add required components to task.
+     * 
+     * @param task Task to add components to
+     * @param componentIds Array of component IDs
+     */
+    private void addRequiredComponents(Task task, Long[] componentIds) {
+        try {
+            Set<Long> componentIdSet = Set.of(componentIds);
+            taskService.updateRequiredComponents(task.getId(), componentIdSet);
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error adding required components", e);
+        }
+    }
+    
+    /**
+     * Clone task for duplication.
+     * 
+     * @param source Source task to clone
+     * @return Cloned task
+     */
+    private Task cloneTask(Task source) {
+        Task cloned = new Task();
+        cloned.setTitle("Copy of " + source.getTitle());
+        cloned.setDescription(source.getDescription());
+        cloned.setPriority(source.getPriority());
+        cloned.setProject(source.getProject());
+        cloned.setSubsystem(source.getSubsystem());
+        cloned.setEstimatedDuration(source.getEstimatedDuration());
+        cloned.setProgress(0); // Reset progress
+        cloned.setCompleted(false); // Reset completion
+        
+        // Don't copy dates - let user set new ones
+        // Don't copy assignments - let user assign fresh
+        
+        return cloned;
+    }
+    
+    /**
+     * Validate task data comprehensively.
+     * 
+     * @param task Task to validate
+     * @param result Binding result to add errors to
+     * @return True if task is valid
+     */
+    private boolean validateTaskData(Task task, BindingResult result) {
+        boolean isValid = true;
+        
+        // Title validation
+        if (task.getTitle() == null || task.getTitle().trim().length() < 3) {
+            result.rejectValue("title", "invalid", "Title must be at least 3 characters long");
+            isValid = false;
+        }
+        
+        // Project validation
+        if (task.getProject() == null || task.getProject().getId() == null) {
+            result.rejectValue("project", "required", "Project is required");
+            isValid = false;
+        }
+        
+        // Subsystem validation
+        if (task.getSubsystem() == null || task.getSubsystem().getId() == null) {
+            result.rejectValue("subsystem", "required", "Subsystem is required");
+            isValid = false;
+        }
+        
+        // Date validation
+        if (task.getStartDate() != null && task.getEndDate() != null) {
+            if (task.getEndDate().isBefore(task.getStartDate())) {
+                result.rejectValue("endDate", "invalid", "End date cannot be before start date");
+                isValid = false;
+            }
+        }
+        
+        // Progress validation
+        if (task.getProgress() < 0 || task.getProgress() > 100) {
+            result.rejectValue("progress", "invalid", "Progress must be between 0 and 100");
+            isValid = false;
+        }
+        
+        return isValid;
+    }
+    
+    /**
+     * Check if user can edit task.
+     * 
+     * @param task Task to check permissions for
+     * @param user Current authenticated user
+     * @return True if user can edit the task
+     */
+    private boolean canEditTask(Task task, UserPrincipal user) {
+        // Admins and mentors can edit all tasks
+        if (user.getUser().getRole().equals(org.frcpm.models.UserRole.ADMIN) || user.getUser().getRole().isMentor()) {
+            return true;
+        }
+        
+        // Students can edit tasks assigned to them
+        if (user.getUser().getRole().isStudent()) {
+            return task.getAssignedTo().stream()
+                .anyMatch(member -> member.getUser() != null && 
+                         member.getUser().getId().equals(user.getUser().getId()));
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Check if user can update progress.
+     * 
+     * @param task Task to check permissions for
+     * @param user Current authenticated user
+     * @return True if user can update progress
+     */
+    private boolean canUpdateProgress(Task task, UserPrincipal user) {
+        // Same logic as edit permissions for now
+        return canEditTask(task, user);
+    }
+    
+    /**
+     * Update task fields from form data.
+     * 
+     * @param existingTask Existing task to update
+     * @param updatedTask Updated task data from form
+     * @param estimatedHours Estimated duration in hours
+     */
+    private void updateTaskFields(Task existingTask, Task updatedTask, Double estimatedHours) {
+        existingTask.setTitle(updatedTask.getTitle());
+        existingTask.setDescription(updatedTask.getDescription());
+        existingTask.setPriority(updatedTask.getPriority());
+        existingTask.setProject(updatedTask.getProject());
+        existingTask.setSubsystem(updatedTask.getSubsystem());
+        existingTask.setStartDate(updatedTask.getStartDate());
+        existingTask.setEndDate(updatedTask.getEndDate());
+        existingTask.setProgress(updatedTask.getProgress());
+        existingTask.setCompleted(updatedTask.isCompleted());
+        
+        // Update estimated duration
+        if (estimatedHours != null && estimatedHours > 0) {
+            java.time.Duration duration = java.time.Duration.ofMinutes((long) (estimatedHours * 60));
+            existingTask.setEstimatedDuration(duration);
+        }
+    }
+    
+    /**
+     * Update team assignments for task.
+     * 
+     * @param task Task to update assignments for
+     * @param memberIds Array of member IDs to assign
+     */
+    private void updateTeamAssignments(Task task, Long[] memberIds) {
+        try {
+            Set<TeamMember> newAssignees = new HashSet<>();
+            
+            for (Long memberId : memberIds) {
+                TeamMember member = teamMemberService.findById(memberId);
+                if (member != null) {
+                    newAssignees.add(member);
+                }
+            }
+            
+            taskService.assignMembers(task.getId(), newAssignees);
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error updating team assignments", e);
+        }
+    }
+    
+    /**
+     * Clean up task dependencies before deletion.
+     * 
+     * @param task Task to clean up dependencies for
+     */
+    private void cleanupTaskDependencies(Task task) {
+        try {
+            // Remove this task from all dependencies
+            for (Task dependency : new HashSet<>(task.getPreDependencies())) {
+                taskService.removeDependency(task.getId(), dependency.getId());
+            }
+            
+            // Remove this task as dependency from other tasks
+            for (Task dependent : new HashSet<>(task.getPostDependencies())) {
+                taskService.removeDependency(dependent.getId(), task.getId());
+            }
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error cleaning up task dependencies", e);
+        }
+    }
+    
+    /**
+     * Add current assignments to model for edit form.
+     * 
+     * @param model Spring model to add attributes to
+     * @param task Task to get current assignments from
+     */
+    private void addCurrentAssignments(Model model, Task task) {
+        Long[] assignedIds = task.getAssignedTo().stream()
+            .map(TeamMember::getId)
+            .toArray(Long[]::new);
+        model.addAttribute("assignedMemberIds", assignedIds);
+        
+        // Add estimated hours for display
+        if (task.getEstimatedDuration() != null) {
+            double hours = task.getEstimatedDuration().toMinutes() / 60.0;
+            model.addAttribute("estimatedDurationHours", hours);
+        }
+    }
+    
+    /**
+     * Add time-related information for task.
+     * 
+     * @param model Spring model to add attributes to
+     * @param task Task to add time information for
+     */
+    private void addTaskTimeInfo(Model model, Task task) {
+        LocalDate today = LocalDate.now();
+        
+        // Days until due date
+        if (task.getEndDate() != null) {
+            long daysUntilDue = java.time.temporal.ChronoUnit.DAYS.between(today, task.getEndDate());
+            model.addAttribute("daysUntilDue", daysUntilDue);
+            
+            if (daysUntilDue < 0) {
+                model.addAttribute("dueStatus", "overdue");
+                model.addAttribute("dueStatusClass", "text-danger");
+            } else if (daysUntilDue <= 1) {
+                model.addAttribute("dueStatus", "critical");
+                model.addAttribute("dueStatusClass", "text-warning");
+            } else if (daysUntilDue <= 3) {
+                model.addAttribute("dueStatus", "warning");
+                model.addAttribute("dueStatusClass", "text-info");
+            } else {
+                model.addAttribute("dueStatus", "normal");
+                model.addAttribute("dueStatusClass", "text-success");
+            }
+        }
+        
+        // Time tracking
+        if (task.getEstimatedDuration() != null) {
+            double estimatedHours = task.getEstimatedDuration().toMinutes() / 60.0;
+            model.addAttribute("estimatedHours", estimatedHours);
+        }
+        
+        if (task.getActualDuration() != null) {
+            double actualHours = task.getActualDuration().toMinutes() / 60.0;
+            model.addAttribute("actualHours", actualHours);
+        }
+    }
+    
+    /**
+     * Add related tasks to model.
+     * 
+     * @param model Spring model to add attributes to
+     * @param task Task to find related tasks for
+     */
+    private void addRelatedTasks(Model model, Task task) {
+        try {
+            // Tasks in same project
+            List<Task> projectTasks = taskService.findByProject(task.getProject())
+                .stream()
+                .filter(t -> !t.getId().equals(task.getId()))
+                .limit(5)
+                .collect(Collectors.toList());
+            model.addAttribute("relatedProjectTasks", projectTasks);
+            
+            // Tasks in same subsystem
+            List<Task> subsystemTasks = taskService.findBySubsystem(task.getSubsystem())
+                .stream()
+                .filter(t -> !t.getId().equals(task.getId()))
+                .limit(5)
+                .collect(Collectors.toList());
+            model.addAttribute("relatedSubsystemTasks", subsystemTasks);
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error loading related tasks", e);
+            model.addAttribute("relatedProjectTasks", new ArrayList<>());
+            model.addAttribute("relatedSubsystemTasks", new ArrayList<>());
+        }
+    }
+    
+    /**
+     * Add helpful defaults and suggestions for task forms.
+     * 
+     * @param model Spring model to add attributes to
+     */
+    private void addTaskFormHelpers(Model model) {
+        model.addAttribute("estimatedDurationOptions", List.of(
+            Map.of("hours", 0.5, "label", "30 minutes"),
+            Map.of("hours", 1, "label", "1 hour"),
+            Map.of("hours", 2, "label", "2 hours"),
+            Map.of("hours", 4, "label", "4 hours"),
+            Map.of("hours", 8, "label", "1 day"),
+            Map.of("hours", 16, "label", "2 days"),
+            Map.of("hours", 40, "label", "1 week")
+        ));
+        
+        model.addAttribute("priorityDescriptions", Map.of(
+            "LOW", "Nice to have, can be delayed",
+            "MEDIUM", "Important but not urgent",
+            "HIGH", "Important and time-sensitive",
+            "CRITICAL", "Must be completed immediately"
+        ));
+        
+        // Quick date options
+        LocalDate today = LocalDate.now();
+        model.addAttribute("quickDates", List.of(
+            Map.of("label", "Tomorrow", "date", today.plusDays(1)),
+            Map.of("label", "This Week", "date", today.plusDays(7)),
+            Map.of("label", "Next Week", "date", today.plusDays(14)),
+            Map.of("label", "End of Month", "date", today.withDayOfMonth(today.lengthOfMonth()))
+        ));
+    }
+
+    // =========================================================================
+    // HELPER METHODS - KANBAN BOARD
+    // =========================================================================
+
+    /**
+     * Organize tasks into Kanban columns based on status.
+     * 
+     * @param tasks List of tasks to organize
+     * @return Map of column names to task lists
+     */
+    private Map<String, List<Task>> organizeTasksForKanban(List<Task> tasks) {
+        Map<String, List<Task>> columns = new LinkedHashMap<>();
+        
+        // Initialize columns in specific order
+        columns.put("TODO", new ArrayList<>());
+        columns.put("IN_PROGRESS", new ArrayList<>());
+        columns.put("REVIEW", new ArrayList<>());
+        columns.put("COMPLETED", new ArrayList<>());
+        
+        // Organize tasks into columns
+        for (Task task : tasks) {
+            String status = getTaskKanbanStatus(task);
+            columns.get(status).add(task);
+        }
+        
+        return columns;
+    }
+
+    /**
+     * Determine Kanban status for a task.
+     * 
+     * @param task Task to determine status for
+     * @return Kanban status string
+     */
+    private String getTaskKanbanStatus(Task task) {
+        if (task.isCompleted()) {
+            return "COMPLETED";
+        } else if (task.getProgress() >= 75) {
+            return "REVIEW";
+        } else if (task.getProgress() > 0) {
+            return "IN_PROGRESS";
+        } else {
+            return "TODO";
+        }
+    }
+
+    /**
+     * Update task based on Kanban column move.
+     * 
+     * @param task Task to update
+     * @param newStatus New Kanban status
+     * @param newPosition New position within column
+     * @return True if update was successful
+     */
+    private boolean updateTaskFromKanbanMove(Task task, String newStatus, Integer newPosition) {
+        try {
+            switch (newStatus) {
+                case "TODO":
+                    task.setProgress(0);
+                    task.setCompleted(false);
+                    break;
+                    
+                case "IN_PROGRESS":
+                    if (task.getProgress() == 0) {
+                        task.setProgress(25); // Default progress when starting
+                    }
+                    task.setCompleted(false);
+                    break;
+                    
+                case "REVIEW":
+                    if (task.getProgress() < 75) {
+                        task.setProgress(75); // Minimum progress for review
+                    }
+                    task.setCompleted(false);
+                    break;
+                    
+                case "COMPLETED":
+                    task.setProgress(100);
+                    task.setCompleted(true);
+                    break;
+                    
+                default:
+                    return false;
+            }
+            
+            // TODO: Handle position updates within column
+            // This would require adding a position field to Task model
+            
+            return true;
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error updating task from Kanban move", e);
+            return false;
+        }
+    }
+
+    /**
+     * Get available Kanban statuses.
+     * 
+     * @return List of Kanban status definitions
+     */
+    private List<Map<String, Object>> getKanbanStatuses() {
+        List<Map<String, Object>> statuses = new ArrayList<>();
+        
+        Map<String, Object> todo = new HashMap<>();
+        todo.put("id", "TODO");
+        todo.put("name", "To Do");
+        todo.put("color", "#6c757d");
+        todo.put("icon", "fas fa-clipboard-list");
+        statuses.add(todo);
+        
+        Map<String, Object> inProgress = new HashMap<>();
+        inProgress.put("id", "IN_PROGRESS");
+        inProgress.put("name", "In Progress");
+        inProgress.put("color", "#ffc107");
+        inProgress.put("icon", "fas fa-play-circle");
+        statuses.add(inProgress);
+        
+        Map<String, Object> review = new HashMap<>();
+        review.put("id", "REVIEW");
+        review.put("name", "Review");
+        review.put("color", "#17a2b8");
+        review.put("icon", "fas fa-eye");
+        statuses.add(review);
+        
+        Map<String, Object> completed = new HashMap<>();
+        completed.put("id", "COMPLETED");
+        completed.put("name", "Completed");
+        completed.put("color", "#28a745");
+        completed.put("icon", "fas fa-check-circle");
+        statuses.add(completed);
+        
+        return statuses;
+    }
+
+    // =========================================================================
+    // HELPER METHODS - DATA CONVERSION
+    // =========================================================================
+    
+    /**
+     * Convert task to search DTO.
+     * 
+     * @param task Task to convert
+     * @return Search DTO map
+     */
+    private Map<String, Object> taskToSearchDto(Task task) {
+        Map<String, Object> dto = new HashMap<>();
+        dto.put("id", task.getId());
+        dto.put("title", task.getTitle());
+        dto.put("description", task.getDescription());
+        dto.put("progress", task.getProgress());
+        dto.put("completed", task.isCompleted());
+        dto.put("priority", task.getPriority().getDisplayName());
+        dto.put("priorityClass", getPriorityClass(task.getPriority()));
+        dto.put("projectName", task.getProject().getName());
+        dto.put("subsystemName", task.getSubsystem().getName());
+        dto.put("url", "/tasks/" + task.getId());
+        
+        if (task.getEndDate() != null) {
+            dto.put("endDate", task.getEndDate().toString());
+            dto.put("endDateFormatted", task.getEndDate().format(DATE_FORMATTER));
+        }
+        
+        // Assignee names
+        List<String> assigneeNames = task.getAssignedTo().stream()
+            .map(TeamMember::getFullName)
+            .collect(Collectors.toList());
+        dto.put("assignees", assigneeNames);
+        
+        return dto;
+    }
+
+    /**
+     * Convert task to Kanban DTO for JSON response.
+     * 
+     * @param task Task to convert
+     * @return Kanban DTO map
+     */
+    private Map<String, Object> taskToKanbanDto(Task task) {
+        Map<String, Object> dto = new HashMap<>();
+        
+        dto.put("id", task.getId());
+        dto.put("title", task.getTitle());
+        dto.put("description", task.getDescription());
+        dto.put("progress", task.getProgress());
+        dto.put("completed", task.isCompleted());
+        dto.put("priority", task.getPriority().name());
+        dto.put("priorityDisplay", task.getPriority().getDisplayName());
+        dto.put("priorityClass", getPriorityClass(task.getPriority()));
+        dto.put("projectName", task.getProject().getName());
+        dto.put("subsystemName", task.getSubsystem().getName());
+        dto.put("kanbanStatus", getTaskKanbanStatus(task));
+        
+        // Due date information
+        if (task.getEndDate() != null) {
+            dto.put("endDate", task.getEndDate().toString());
+            dto.put("endDateFormatted", task.getEndDate().format(DATE_FORMATTER));
+            dto.put("daysUntilDue", java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), task.getEndDate()));
+        }
+        
+        // Handle Set<TeamMember> assignees properly
+        List<Map<String, Object>> assignees = new ArrayList<>();
+        for (TeamMember member : task.getAssignedTo()) {
+            Map<String, Object> assigneeDto = new HashMap<>();
+            assigneeDto.put("id", member.getId());
+            assigneeDto.put("name", member.getFullName());
+            
+            // Handle name initials safely
+            String firstName = member.getFirstName();
+            String lastName = member.getLastName();
+            String initials = "";
+            if (firstName != null && !firstName.isEmpty()) {
+                initials += firstName.substring(0, 1).toUpperCase();
+            }
+            if (lastName != null && !lastName.isEmpty()) {
+                initials += lastName.substring(0, 1).toUpperCase();
+            }
+            if (initials.isEmpty()) {
+                initials = "?";
+            }
+            assigneeDto.put("initials", initials);
+            
+            assignees.add(assigneeDto);
+        }
+        dto.put("assignees", assignees);
+        
+        return dto;
+    }
+    
+    /**
+     * Get CSS class for priority.
+     * 
+     * @param priority Task priority
+     * @return CSS class string
+     */
+    private String getPriorityClass(Task.Priority priority) {
+        switch (priority) {
+            case CRITICAL: return "text-danger";
+            case HIGH: return "text-warning";
+            case MEDIUM: return "text-info";
+            case LOW: return "text-secondary";
+            default: return "text-secondary";
+        }
+    }
+
+    // =========================================================================
+    // HELPER METHODS - NAVIGATION AND UI
+    // =========================================================================
+    
+    /**
+     * Add navigation data (BaseController equivalent method).
+     * 
+     * @param model Spring model to add attributes to
+     */
+    private void addNavigationData(Model model) {
+        // Add basic navigation data - this would normally come from BaseController
+        model.addAttribute("navSection", "tasks");
+        model.addAttribute("pageTitle", "Tasks");
+    }
+    
+    /**
+     * Add breadcrumbs (BaseController equivalent method).
+     * 
+     * @param model Spring model to add attributes to
+     * @param breadcrumbs Breadcrumb data (name, url pairs)
+     */
+    private void addBreadcrumbs(Model model, String... breadcrumbs) {
+        List<Map<String, String>> breadcrumbList = new ArrayList<>();
+        for (int i = 0; i < breadcrumbs.length; i += 2) {
+            if (i + 1 < breadcrumbs.length) {
+                Map<String, String> crumb = new HashMap<>();
+                crumb.put("name", breadcrumbs[i]);
+                crumb.put("url", breadcrumbs[i + 1]);
+                breadcrumbList.add(crumb);
+            }
+        }
+        model.addAttribute("breadcrumbs", breadcrumbList);
+    }
+    
+    /**
+     * Add error message (BaseController equivalent method).
+     * 
+     * @param model Spring model to add attributes to
+     * @param message Error message to display
+     */
+    private void addErrorMessage(Model model, String message) {
+        model.addAttribute("errorMessage", message);
+    }
+    
+    /**
+     * Handle exception (BaseController equivalent method).
+     * 
+     * @param e Exception that occurred
+     * @param model Spring model to add attributes to
+     * @return Error page template name
+     */
+    private String handleException(Exception e, Model model) {
+        LOGGER.log(Level.SEVERE, "Controller exception", e);
+        addErrorMessage(model, "An error occurred: " + e.getMessage());
+        return "error/general";
+    }
+    
+    /**
+     * Publish task deletion event manually.
+     * 
+     * @param taskId ID of deleted task
+     * @param taskTitle Title of deleted task
+     * @param projectId Project ID for WebSocket routing
+     * @param user User who deleted the task
+     */
+    private void publishTaskDeletionEvent(Long taskId, String taskTitle, Long projectId, org.frcpm.models.User user) {
+        try {
+            // Create a simple deletion message since we can't use the deleted task object
+            TaskUpdateMessage deleteMessage = new TaskUpdateMessage();
+            deleteMessage.setTaskId(taskId);
+            deleteMessage.setProjectId(projectId);
+            deleteMessage.setTaskTitle(taskTitle);
+            deleteMessage.setChangeType("DELETED");
+            deleteMessage.setStatus("DELETED");
+            deleteMessage.setUpdatedBy(user.getFullName());
+            deleteMessage.setTimestamp(LocalDateTime.now());
+            
+            // Broadcast the deletion
+            messagingTemplate.convertAndSend("/topic/project/" + projectId, deleteMessage);
+            
+            LOGGER.info(String.format("Published task deletion: Task %d '%s'", taskId, taskTitle));
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error publishing task deletion event", e);
+        }
+    }
+
+    /**
+     * Broadcast task update to specific project.
+     * 
+     * @param message Task update message to broadcast
+     */
+    public void broadcastTaskUpdate(TaskUpdateMessage message) {
+        try {
+            if (message.getProjectId() != null) {
+                String destination = "/topic/project/" + message.getProjectId();
+                messagingTemplate.convertAndSend(destination, message);
+                
+                LOGGER.info(String.format("Broadcasted task update to %s: Task %d, Type: %s", 
+                                        destination, message.getTaskId(), message.getChangeType()));
+                
+                // Also send to general task updates for list view compatibility
+                messagingTemplate.convertAndSend("/topic/tasks", message);
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error broadcasting task update", e);
+        }
+    }
+}
