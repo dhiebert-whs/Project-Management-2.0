@@ -69,3 +69,4 @@
     0 nanoseconds spent executing 0 flushes (flushing a total of 0 entities and 0 collections);
     63700 nanoseconds spent executing 1 partial-flushes (flushing a total of 0 entities and 0 collections)
 }
+2025-07-11 11:14:17.334 [MessageBroker-5] INFO  o.s.w.s.c.WebSocketMessageBrokerStats - WebSocketSession[0 current WS(0)-HttpStream(0)-HttpPoll(0), 2 total, 0 closed abnormally (0 connect failure, 0 send limit, 0 transport error)], stompSubProtocol[processed CONNECT(2)-CONNECTED(2)-DISCONNECT(2)], stompBrokerRelay[null], inboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 36], outboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 6], sockJsScheduler[pool size = 12, active threads = 1, queued tasks = 2, completed tasks = 30632]
