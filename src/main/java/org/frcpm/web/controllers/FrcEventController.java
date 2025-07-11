@@ -232,16 +232,16 @@ public class FrcEventController extends BaseController {
             }
             
             Optional<FrcEvent> eventOpt = frcEventRepository.findById(eventId);
-            Optional<Project> projectOpt = projectService.findById(projectId);
+            Project project = projectService.findById(projectId); // Returns Project directly, not Optional
             
-            if (eventOpt.isEmpty() || projectOpt.isEmpty()) {
+            if (eventOpt.isEmpty() || project == null) { // Check for null instead of isEmpty()
                 response.put("success", false);
                 response.put("message", "Event or project not found");
                 return ResponseEntity.badRequest().body(response);
             }
             
             FrcEvent event = eventOpt.get();
-            Project project = projectOpt.get();
+            // project is already the Project object, no need to call get()
             
             // Link the event to the project
             event.setLinkedProject(project);
