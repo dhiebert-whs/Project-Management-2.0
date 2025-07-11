@@ -12,13 +12,15 @@ import java.time.LocalDateTime;
 /**
  * WebSocket message for real-time task updates.
  * 
- * ✅ PHASE 2C: PWA Development - Real-time Task Communication
+ * ✅ PHASE 2E-C: Enhanced with Kanban Board Support
+ * ✅ FIXED: Added missing Kanban fields for drag-and-drop operations
  * 
  * This DTO carries task update information across WebSocket connections
  * to provide instant feedback for team collaboration during build season.
+ * Now includes comprehensive Kanban board support for real-time updates.
  * 
- * @author FRC Project Management Team
- * @version 2.0.0
+ * @author FRC Project Management Team - Phase 2E-C Enhanced
+ * @version 2.0.0-2E-C-KANBAN
  * @since Phase 2C - Progressive Web App Development
  */
 public class TaskUpdateMessage {
@@ -53,14 +55,17 @@ public class TaskUpdateMessage {
     
     private String assigneeName; // For display purposes
 
-    // ADD THESE NEW FIELDS FOR KANBAN SUPPORT:
-
-    private String oldStatus; // Previous Kanban status
-    private String newStatus; // New Kanban status  
+    // ✅ NEW: KANBAN BOARD SUPPORT FIELDS - Phase 2E-C
+    private String oldStatus; // Previous Kanban status (TODO, IN_PROGRESS, REVIEW, COMPLETED)
+    private String newStatus; // New Kanban status after move
     private Integer oldPosition; // Previous position in column
     private Integer newPosition; // New position in column
-    private String kanbanColumn; // Current Kanban column
-
+    private String kanbanColumn; // Current Kanban column for UI updates
+    
+    // Additional Kanban context fields
+    private String kanbanAction; // MOVE, REORDER, STATUS_CHANGE for detailed tracking
+    private String sourceColumn; // Source column for cross-column moves
+    private String targetColumn; // Target column for cross-column moves
     
     // Default constructor
     public TaskUpdateMessage() {
@@ -80,7 +85,10 @@ public class TaskUpdateMessage {
         this.changeType = changeType;
     }
     
-    // Factory methods for common scenarios
+    // =========================================================================
+    // FACTORY METHODS - Enhanced with Kanban Support
+    // =========================================================================
+    
     public static TaskUpdateMessage progressUpdate(Long taskId, Long projectId, String taskTitle,
                                                   Integer progress, String updatedBy) {
         return new TaskUpdateMessage(taskId, projectId, taskTitle, progress, 
@@ -96,27 +104,73 @@ public class TaskUpdateMessage {
         return new TaskUpdateMessage(taskId, projectId, taskTitle, 100, "COMPLETED", updatedBy, "COMPLETED");
     }
 
-    // ADD THESE NEW FACTORY METHODS FOR KANBAN OPERATIONS:
-
     /**
-    * Factory method for Kanban drag-and-drop moves.
-    * 
-    * ✅ NEW: Phase 2E-C Kanban support
-    */
+     * ✅ NEW: Factory method for Kanban drag-and-drop moves.
+     * 
+     * Creates a comprehensive Kanban move message with all necessary context
+     * for real-time board synchronization across connected clients.
+     * 
+     * @param taskId Task being moved
+     * @param projectId Project containing the task
+     * @param taskTitle Task title for display
+     * @param oldStatus Previous Kanban status
+     * @param newStatus New Kanban status
+     * @param newProgress Updated progress based on status
+     * @param updatedBy User performing the move
+     * @return Configured TaskUpdateMessage for Kanban move
+     */
     public static TaskUpdateMessage kanbanMove(Long taskId, Long projectId, String taskTitle,
-                                            String oldStatus, String newStatus, 
-                                            Integer newProgress, String updatedBy) {
+                                             String oldStatus, String newStatus, 
+                                             Integer newProgress, String updatedBy) {
         TaskUpdateMessage message = new TaskUpdateMessage(taskId, projectId, taskTitle, 
                                                         newProgress, "KANBAN_MOVED", updatedBy, "KANBAN_MOVED");
         message.setOldStatus(oldStatus);
         message.setNewStatus(newStatus);
         message.setKanbanColumn(newStatus);
+        message.setKanbanAction("MOVE");
+        message.setSourceColumn(oldStatus);
+        message.setTargetColumn(newStatus);
         return message;
     }
 
+    /**
+     * ✅ NEW: Factory method for Kanban position reordering within same column.
+     * 
+     * @param taskId Task being reordered
+     * @param projectId Project containing the task
+     * @param taskTitle Task title
+     * @param kanbanStatus Current Kanban status (unchanged)
+     * @param oldPosition Previous position in column
+     * @param newPosition New position in column
+     * @param updatedBy User performing the reorder
+     * @return Configured TaskUpdateMessage for position change
+     */
+    public static TaskUpdateMessage kanbanReorder(Long taskId, Long projectId, String taskTitle,
+                                                 String kanbanStatus, Integer oldPosition, 
+                                                 Integer newPosition, String updatedBy) {
+        TaskUpdateMessage message = new TaskUpdateMessage(taskId, projectId, taskTitle, 
+                                                        null, "KANBAN_REORDERED", updatedBy, "KANBAN_REORDERED");
+        message.setOldStatus(kanbanStatus);
+        message.setNewStatus(kanbanStatus);
+        message.setKanbanColumn(kanbanStatus);
+        message.setOldPosition(oldPosition);
+        message.setNewPosition(newPosition);
+        message.setKanbanAction("REORDER");
+        message.setSourceColumn(kanbanStatus);
+        message.setTargetColumn(kanbanStatus);
+        return message;
+    }
 
     /**
-     * Factory method for task status changes.
+     * ✅ NEW: Factory method for task status changes (non-Kanban).
+     * 
+     * @param taskId Task with status change
+     * @param projectId Project containing the task
+     * @param taskTitle Task title
+     * @param newStatus New task status
+     * @param progress Current progress
+     * @param updatedBy User making the change
+     * @return Configured TaskUpdateMessage for status change
      */
     public static TaskUpdateMessage statusChanged(Long taskId, Long projectId, String taskTitle,
                                                 String newStatus, Integer progress, String updatedBy) {
@@ -129,19 +183,49 @@ public class TaskUpdateMessage {
     }
 
     /**
-     * Factory method for bulk operations.
+     * ✅ NEW: Factory method for bulk operations.
+     * 
+     * @param operation Type of bulk operation (COMPLETE, ASSIGN, DELETE, etc.)
+     * @param taskCount Number of tasks affected
+     * @param projectId Project containing the tasks
+     * @param updatedBy User performing the bulk operation
+     * @return Configured TaskUpdateMessage for bulk operation
      */
-    public static TaskUpdateMessage bulkOperation(String operation, int taskCount, String updatedBy) {
+    public static TaskUpdateMessage bulkOperation(String operation, int taskCount, Long projectId, String updatedBy) {
         TaskUpdateMessage message = new TaskUpdateMessage();
+        message.setProjectId(projectId);
         message.setChangeType("BULK_OPERATION");
         message.setUpdatedBy(updatedBy);
-        message.setTaskTitle(String.format("Bulk %s on %d tasks", operation, taskCount));
+        message.setTaskTitle(String.format("Bulk %s on %d task%s", operation, taskCount, taskCount == 1 ? "" : "s"));
         message.setStatus("BULK_" + operation.toUpperCase());
-        message.setTimestamp(java.time.LocalDateTime.now());
+        message.setKanbanAction("BULK");
+        message.setTimestamp(LocalDateTime.now());
+        return message;
+    }
+
+    /**
+     * ✅ NEW: Factory method for Kanban board refresh signals.
+     * 
+     * @param projectId Project to refresh
+     * @param reason Reason for refresh
+     * @return Configured TaskUpdateMessage for board refresh
+     */
+    public static TaskUpdateMessage kanbanRefresh(Long projectId, String reason) {
+        TaskUpdateMessage message = new TaskUpdateMessage();
+        message.setProjectId(projectId);
+        message.setChangeType("KANBAN_REFRESH");
+        message.setUpdatedBy("System");
+        message.setTaskTitle("Kanban board refresh: " + reason);
+        message.setStatus("REFRESH");
+        message.setKanbanAction("REFRESH");
+        message.setTimestamp(LocalDateTime.now());
         return message;
     }
     
-    // Getters and setters
+    // =========================================================================
+    // GETTERS AND SETTERS - Complete set including new Kanban fields
+    // =========================================================================
+    
     public Long getTaskId() { return taskId; }
     public void setTaskId(Long taskId) { this.taskId = taskId; }
     
@@ -178,6 +262,7 @@ public class TaskUpdateMessage {
     public String getAssigneeName() { return assigneeName; }
     public void setAssigneeName(String assigneeName) { this.assigneeName = assigneeName; }
 
+    // ✅ NEW: Kanban-specific getters and setters
     public String getOldStatus() { return oldStatus; }
     public void setOldStatus(String oldStatus) { this.oldStatus = oldStatus; }
     
@@ -192,14 +277,57 @@ public class TaskUpdateMessage {
     
     public String getKanbanColumn() { return kanbanColumn; }
     public void setKanbanColumn(String kanbanColumn) { this.kanbanColumn = kanbanColumn; }
-
-        
     
+    public String getKanbanAction() { return kanbanAction; }
+    public void setKanbanAction(String kanbanAction) { this.kanbanAction = kanbanAction; }
+    
+    public String getSourceColumn() { return sourceColumn; }
+    public void setSourceColumn(String sourceColumn) { this.sourceColumn = sourceColumn; }
+    
+    public String getTargetColumn() { return targetColumn; }
+    public void setTargetColumn(String targetColumn) { this.targetColumn = targetColumn; }
+
+    // =========================================================================
+    // UTILITY METHODS
+    // =========================================================================
+    
+    /**
+     * Check if this is a Kanban-related update.
+     * 
+     * @return true if this message represents a Kanban operation
+     */
+    public boolean isKanbanUpdate() {
+        return "KANBAN_MOVED".equals(changeType) || 
+               "KANBAN_REORDERED".equals(changeType) || 
+               "KANBAN_REFRESH".equals(changeType) ||
+               kanbanAction != null;
+    }
+    
+    /**
+     * Check if this is a cross-column Kanban move.
+     * 
+     * @return true if task moved between different Kanban columns
+     */
+    public boolean isCrossColumnMove() {
+        return oldStatus != null && newStatus != null && !oldStatus.equals(newStatus);
+    }
+    
+    /**
+     * Check if this is a same-column reorder.
+     * 
+     * @return true if task was reordered within the same column
+     */
+    public boolean isSameColumnReorder() {
+        return oldStatus != null && newStatus != null && oldStatus.equals(newStatus) &&
+               oldPosition != null && newPosition != null && !oldPosition.equals(newPosition);
+    }
     
     @Override
     public String toString() {
         return String.format("TaskUpdateMessage{taskId=%d, changeType='%s', status='%s', " +
-                            "kanbanColumn='%s', progress=%d, updatedBy='%s', timestamp=%s}", 
-                           taskId, changeType, status, kanbanColumn, progress, updatedBy, timestamp);
+                           "kanbanColumn='%s', oldStatus='%s', newStatus='%s', " +
+                           "progress=%d, updatedBy='%s', timestamp=%s}", 
+                          taskId, changeType, status, kanbanColumn, oldStatus, newStatus, 
+                          progress, updatedBy, timestamp);
     }
 }

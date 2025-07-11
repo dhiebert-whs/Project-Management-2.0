@@ -21,7 +21,8 @@ import java.util.logging.Level;
 /**
  * Service for publishing real-time events to WebSocket subscribers.
  * 
- * ✅ PHASE 2C: PWA Development - Event Integration Bridge
+ * ✅ PHASE 2E-C: Enhanced WebSocket Integration - COMPILATION FIXED
+ * ✅ FIXED: All DTO method calls aligned with enhanced classes
  * 
  * This service bridges the existing Phase 2B service layer with the new
  * WebSocket real-time communication system, ensuring that all data changes
@@ -32,9 +33,10 @@ import java.util.logging.Level;
  * - ProjectService changes -> Live project notifications  
  * - User activities -> Team collaboration feeds
  * - COPPA compliance -> Age-appropriate real-time features
+ * - Kanban operations -> Real-time board synchronization ✅ NEW
  * 
- * @author FRC Project Management Team
- * @version 2.0.0
+ * @author FRC Project Management Team - Phase 2E-C Fixed
+ * @version 2.0.0-2E-C-FIXED
  * @since Phase 2C - Progressive Web App Development
  */
 @Service
@@ -55,14 +57,13 @@ public class WebSocketEventPublisher {
     private ActivityController activityController;
     
     // =========================================================================
-    // TASK EVENT PUBLISHING
+    // TASK EVENT PUBLISHING - ✅ ENHANCED WITH FIXED DTO CALLS
     // =========================================================================
     
     /**
      * Publish task progress update to all project subscribers.
      * 
-     * Called from TaskService when task progress is updated through any channel
-     * (Web UI, mobile app, API, etc.) to ensure real-time synchronization.
+     * ✅ FIXED: Uses enhanced TaskUpdateMessage.progressUpdate() factory method
      * 
      * @param task Updated task
      * @param oldProgress Previous progress value
@@ -101,7 +102,7 @@ public class WebSocketEventPublisher {
                 }
             });
             
-            // Create activity message for task progress
+            // ✅ FIXED: Create activity message using correct factory method
             if (updatedByUser != null) {
                 ActivityMessage activity = ActivityMessage.taskProgressUpdate(
                     updatedByUser.getId(),
@@ -120,8 +121,8 @@ public class WebSocketEventPublisher {
                 activityController.broadcastProjectActivity(task.getProject().getId(), activity);
             }
             
-            LOGGER.info(String.format("Published task progress update: Task %d from %d%% to %d%%", 
-                                    task.getId(), oldProgress, task.getProgress()));
+            LOGGER.info(String.format("Published task progress update: Task %d from %s%% to %d%%", 
+                                    task.getId(), oldProgress != null ? oldProgress : "?", task.getProgress()));
             
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error publishing task progress update", e);
@@ -131,14 +132,14 @@ public class WebSocketEventPublisher {
     /**
      * Publish task completion notification.
      * 
-     * Celebrates task completion with enhanced notifications and activity updates.
+     * ✅ FIXED: Uses enhanced TaskUpdateMessage.taskCompleted() factory method
      * 
      * @param task Completed task
      * @param completedByUser User who completed the task
      */
     public void publishTaskCompletion(Task task, User completedByUser) {
         try {
-            // Create completion message
+            // ✅ FIXED: Use correct factory method
             TaskUpdateMessage message = TaskUpdateMessage.taskCompleted(
                 task.getId(),
                 task.getProject().getId(),
@@ -167,7 +168,7 @@ public class WebSocketEventPublisher {
             
             notificationController.broadcastNotification(celebration);
             
-            // Create activity message
+            // ✅ FIXED: Create activity message using correct factory method
             if (completedByUser != null) {
                 ActivityMessage activity = ActivityMessage.taskCompleted(
                     completedByUser.getId(),
@@ -194,11 +195,14 @@ public class WebSocketEventPublisher {
     /**
      * Publish new task creation notification.
      * 
+     * ✅ FIXED: Uses enhanced TaskUpdateMessage.taskCreated() factory method
+     * 
      * @param task Newly created task
      * @param createdByUser User who created the task
      */
     public void publishTaskCreation(Task task, User createdByUser) {
         try {
+            // ✅ FIXED: Use correct factory method
             TaskUpdateMessage message = TaskUpdateMessage.taskCreated(
                 task.getId(),
                 task.getProject().getId(),
@@ -229,6 +233,23 @@ public class WebSocketEventPublisher {
                 }
             });
             
+            // ✅ FIXED: Create activity message using correct factory method
+            if (createdByUser != null) {
+                ActivityMessage activity = ActivityMessage.taskCreated(
+                    createdByUser.getId(),
+                    createdByUser.getFullName(),
+                    task.getId(),
+                    task.getTitle()
+                );
+                
+                if (createdByUser.getTeamMember() != null && createdByUser.getTeamMember().getSubteam() != null) {
+                    activity.setSubteamName(createdByUser.getTeamMember().getSubteam().getName());
+                }
+                activity.setUserRole(createdByUser.getRole().name());
+                
+                activityController.broadcastProjectActivity(task.getProject().getId(), activity);
+            }
+            
             LOGGER.info(String.format("Published task creation: Task %d '%s'", task.getId(), task.getTitle()));
             
         } catch (Exception e) {
@@ -237,7 +258,7 @@ public class WebSocketEventPublisher {
     }
     
     // =========================================================================
-    // PROJECT EVENT PUBLISHING
+    // PROJECT EVENT PUBLISHING - ✅ ENHANCED
     // =========================================================================
     
     /**
@@ -290,6 +311,24 @@ public class WebSocketEventPublisher {
             
             notificationController.broadcastNotification(celebration);
             
+            // ✅ FIXED: Create activity message using correct factory method
+            if (achievedByUser != null) {
+                ActivityMessage activity = ActivityMessage.milestoneAchieved(
+                    achievedByUser.getId(),
+                    achievedByUser.getFullName(),
+                    project.getId(),
+                    project.getName(),
+                    milestoneName
+                );
+                
+                if (achievedByUser.getTeamMember() != null && achievedByUser.getTeamMember().getSubteam() != null) {
+                    activity.setSubteamName(achievedByUser.getTeamMember().getSubteam().getName());
+                }
+                activity.setUserRole(achievedByUser.getRole().name());
+                
+                activityController.broadcastProjectActivity(project.getId(), activity);
+            }
+            
             LOGGER.info(String.format("Published milestone achievement: Project %d, Milestone '%s'", 
                                     project.getId(), milestoneName));
             
@@ -299,11 +338,13 @@ public class WebSocketEventPublisher {
     }
     
     // =========================================================================
-    // USER ACTIVITY PUBLISHING
+    // USER ACTIVITY PUBLISHING - ✅ ENHANCED
     // =========================================================================
     
     /**
      * Publish user login activity.
+     * 
+     * ✅ FIXED: Uses correct ActivityMessage.userLogin() factory method
      * 
      * @param user User who logged in
      */
@@ -330,6 +371,8 @@ public class WebSocketEventPublisher {
     
     /**
      * Publish user joining project activity.
+     * 
+     * ✅ FIXED: Uses correct ActivityMessage.projectJoined() factory method
      * 
      * @param user User joining project
      * @param project Project being joined
@@ -359,11 +402,13 @@ public class WebSocketEventPublisher {
     }
     
     // =========================================================================
-    // MEETING EVENT PUBLISHING
+    // MEETING EVENT PUBLISHING - ✅ ENHANCED
     // =========================================================================
     
     /**
      * Publish meeting start notification.
+     * 
+     * ✅ FIXED: Uses correct ActivityMessage.meetingStarted() factory method
      * 
      * @param meetingId Meeting ID
      * @param meetingTitle Meeting title
@@ -372,7 +417,7 @@ public class WebSocketEventPublisher {
      */
     public void publishMeetingStart(Long meetingId, String meetingTitle, User startedByUser, Long projectId) {
         try {
-            // Create activity message
+            // ✅ FIXED: Create activity message using correct factory method
             ActivityMessage activity = ActivityMessage.meetingStarted(
                 startedByUser.getId(),
                 startedByUser.getFullName(),
@@ -404,11 +449,13 @@ public class WebSocketEventPublisher {
     }
     
     // =========================================================================
-    // SYSTEM EVENT PUBLISHING
+    // SYSTEM EVENT PUBLISHING - ✅ ENHANCED
     // =========================================================================
     
     /**
      * Publish system alert to all users.
+     * 
+     * ✅ FIXED: Uses correct ActivityMessage.systemAlert() factory method
      * 
      * @param alertMessage Alert message
      * @param priority Alert priority (LOW, MEDIUM, HIGH, CRITICAL)
@@ -428,6 +475,10 @@ public class WebSocketEventPublisher {
             
             notificationController.broadcastSystemAlert(alert);
             
+            // ✅ FIXED: Create activity message using correct factory method
+            ActivityMessage activity = ActivityMessage.systemAlert(alertMessage, priority);
+            activityController.broadcastActivity(activity);
+            
             LOGGER.info(String.format("Published system alert: %s (Priority: %s)", alertMessage, priority));
             
         } catch (Exception e) {
@@ -435,31 +486,15 @@ public class WebSocketEventPublisher {
         }
     }
     
-    /**
-     * Check if real-time features are enabled for user (COPPA compliance).
-     * 
-     * Users under 13 may have restricted real-time features per COPPA requirements.
-     * 
-     * @param user User to check
-     * @return true if real-time features are enabled
-     */
-    private boolean isRealTimeFeaturesEnabled(User user) {
-        if (user == null) {
-            return false;
-        }
-        
-        // Check COPPA compliance - users under 13 may have restrictions
-        if (user.requiresCOPPACompliance() && !user.hasParentalConsent()) {
-            return false; // No real-time features without parental consent
-        }
-        
-        return true;
-    }
+    // =========================================================================
+    // KANBAN BOARD OPERATIONS - ✅ NEW PHASE 2E-C FEATURES
+    // =========================================================================
 
     /**
      * Publish Kanban board move notification.
      * 
      * ✅ NEW: Phase 2E-C Kanban drag-and-drop support
+     * ✅ FIXED: Uses enhanced TaskUpdateMessage.kanbanMove() factory method
      * 
      * @param task Task that was moved
      * @param oldStatus Previous Kanban status
@@ -468,27 +503,28 @@ public class WebSocketEventPublisher {
      */
     public void publishKanbanMove(Task task, String oldStatus, String newStatus, User movedByUser) {
         try {
-            // Create Kanban move message
-            TaskUpdateMessage message = new TaskUpdateMessage();
-            message.setTaskId(task.getId());
-            message.setProjectId(task.getProject().getId());
-            message.setTaskTitle(task.getTitle());
-            message.setProgress(task.getProgress());
-            message.setStatus(task.isCompleted() ? "COMPLETED" : "IN_PROGRESS");
-            message.setUpdatedBy(movedByUser != null ? movedByUser.getFullName() : "System");
-            message.setChangeType("KANBAN_MOVED");
-            message.setTimestamp(java.time.LocalDateTime.now());
+            // Determine new progress based on Kanban status
+            Integer newProgress = getProgressFromKanbanStatus(newStatus, task.getProgress());
             
-            // Add Kanban-specific fields (these require the enhanced TaskUpdateMessage)
-            message.setOldStatus(oldStatus);
-            message.setNewStatus(newStatus);
+            // ✅ FIXED: Create Kanban move message using enhanced factory method
+            TaskUpdateMessage message = TaskUpdateMessage.kanbanMove(
+                task.getId(),
+                task.getProject().getId(),
+                task.getTitle(),
+                oldStatus,
+                newStatus,
+                newProgress,
+                movedByUser != null ? movedByUser.getFullName() : "System"
+            );
+            
+            // Add additional context
             message.setPriority(task.getPriority().name());
             message.setSubsystemName(task.getSubsystem().getName());
             
             // Broadcast via WebSocket controller
             taskUpdateController.broadcastTaskUpdate(message);
             
-            // Create activity message for Kanban move
+            // ✅ FIXED: Create activity message using correct factory method
             if (movedByUser != null) {
                 ActivityMessage activity = ActivityMessage.kanbanMove(
                     movedByUser.getId(),
@@ -521,6 +557,7 @@ public class WebSocketEventPublisher {
      * Publish bulk Kanban operation notification.
      * 
      * ✅ NEW: Phase 2E-C bulk operations support
+     * ✅ FIXED: Uses enhanced TaskUpdateMessage.bulkOperation() factory method
      * 
      * @param operationType Type of bulk operation (COMPLETE, ASSIGN, etc.)
      * @param taskCount Number of tasks affected
@@ -529,19 +566,18 @@ public class WebSocketEventPublisher {
      */
     public void publishBulkKanbanOperation(String operationType, int taskCount, Long projectId, User performedByUser) {
         try {
-            // Create bulk operation message
-            TaskUpdateMessage message = new TaskUpdateMessage();
-            message.setProjectId(projectId);
-            message.setTaskTitle(String.format("Bulk %s operation on %d tasks", operationType, taskCount));
-            message.setUpdatedBy(performedByUser != null ? performedByUser.getFullName() : "System");
-            message.setChangeType("BULK_KANBAN_OPERATION");
-            message.setStatus("BULK_" + operationType.toUpperCase());
-            message.setTimestamp(java.time.LocalDateTime.now());
+            // ✅ FIXED: Create bulk operation message using enhanced factory method
+            TaskUpdateMessage message = TaskUpdateMessage.bulkOperation(
+                operationType,
+                taskCount,
+                projectId,
+                performedByUser != null ? performedByUser.getFullName() : "System"
+            );
             
             // Broadcast to project subscribers
             taskUpdateController.broadcastTaskUpdate(message);
             
-            // Create activity message for bulk operation
+            // ✅ FIXED: Create activity message using correct factory method
             if (performedByUser != null) {
                 ActivityMessage activity = ActivityMessage.bulkOperation(
                     performedByUser.getId(),
@@ -570,18 +606,15 @@ public class WebSocketEventPublisher {
      * Publish Kanban board refresh notification.
      * 
      * ✅ NEW: Force refresh of Kanban boards
+     * ✅ FIXED: Uses enhanced TaskUpdateMessage.kanbanRefresh() factory method
      * 
      * @param projectId Project ID to refresh
      * @param reason Reason for refresh
      */
     public void publishKanbanRefresh(Long projectId, String reason) {
         try {
-            TaskUpdateMessage refreshMessage = new TaskUpdateMessage();
-            refreshMessage.setProjectId(projectId);
-            refreshMessage.setChangeType("KANBAN_REFRESH");
-            refreshMessage.setUpdatedBy("System");
-            refreshMessage.setTaskTitle("Kanban board refresh: " + reason);
-            refreshMessage.setTimestamp(java.time.LocalDateTime.now());
+            // ✅ FIXED: Create refresh message using enhanced factory method
+            TaskUpdateMessage refreshMessage = TaskUpdateMessage.kanbanRefresh(projectId, reason);
             
             taskUpdateController.broadcastTaskUpdate(refreshMessage);
             
@@ -590,5 +623,91 @@ public class WebSocketEventPublisher {
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error publishing Kanban refresh", e);
         }
+    }
+    
+    // =========================================================================
+    // UTILITY METHODS - ✅ NEW HELPER METHODS
+    // =========================================================================
+    
+    /**
+     * Check if real-time features are enabled for user (COPPA compliance).
+     * 
+     * Users under 13 may have restricted real-time features per COPPA requirements.
+     * 
+     * @param user User to check
+     * @return true if real-time features are enabled
+     */
+    private boolean isRealTimeFeaturesEnabled(User user) {
+        if (user == null) {
+            return false;
+        }
+        
+        // Check COPPA compliance - users under 13 may have restrictions
+        if (user.requiresCOPPACompliance() && !user.hasParentalConsent()) {
+            return false; // No real-time features without parental consent
+        }
+        
+        return true;
+    }
+    
+    /**
+     * ✅ NEW: Determine progress value based on Kanban status.
+     * 
+     * @param kanbanStatus New Kanban status
+     * @param currentProgress Current task progress
+     * @return Appropriate progress value for the status
+     */
+    private Integer getProgressFromKanbanStatus(String kanbanStatus, Integer currentProgress) {
+        if (kanbanStatus == null) {
+            return currentProgress != null ? currentProgress : 0;
+        }
+        
+        switch (kanbanStatus.toUpperCase()) {
+            case "TODO":
+                return 0;
+            case "IN_PROGRESS":
+                // Keep current progress if it's reasonable, otherwise set to 25%
+                return (currentProgress != null && currentProgress > 0 && currentProgress < 75) ? 
+                       currentProgress : 25;
+            case "REVIEW":
+                // Set to 75% minimum for review status
+                return (currentProgress != null && currentProgress >= 75) ? currentProgress : 75;
+            case "COMPLETED":
+                return 100;
+            default:
+                return currentProgress != null ? currentProgress : 0;
+        }
+    }
+    
+    /**
+     * ✅ NEW: Validate that user can perform real-time operations on task.
+     * 
+     * @param task Task being modified
+     * @param user User attempting the operation
+     * @return true if operation is allowed
+     */
+    private boolean canPerformRealtimeOperation(Task task, User user) {
+        if (user == null || task == null) {
+            return false;
+        }
+        
+        // Check COPPA compliance
+        if (!isRealTimeFeaturesEnabled(user)) {
+            return false;
+        }
+        
+        // Admins and mentors can always perform operations
+        if (user.getRole().isMentor() || user.getRole() == org.frcpm.models.UserRole.ADMIN) {
+            return true;
+        }
+        
+        // Students can only operate on tasks assigned to them
+        if (user.getRole().isStudent()) {
+            return task.getAssignedTo().stream()
+                .anyMatch(member -> member.getUser() != null && 
+                         member.getUser().getId().equals(user.getId()));
+        }
+        
+        return false;
     }
 }
