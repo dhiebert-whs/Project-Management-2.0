@@ -15,6 +15,7 @@ org\frcpm\security\TOTPService.class
 org\frcpm\web\controllers\TaskController$1.class
 org\frcpm\repositories\spring\UserRepository.class
 org\frcpm\web\dto\AttendanceUpdateMessage.class
+org\frcpm\models\TaskDependency$1.class
 org\frcpm\web\controllers\ProjectController.class
 org\frcpm\integration\frc\FrcApiService$FrcRankingDto.class
 org\frcpm\services\impl\GanttChartTransformationServiceImpl.class
