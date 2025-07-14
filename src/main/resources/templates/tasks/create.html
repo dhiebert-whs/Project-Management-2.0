@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>Create Task - FRC Project Management</title>
+    <meta http-equiv="refresh" th:content="'0; url=' + @{/tasks/new}">
+</head>
+
+<div layout:fragment="content">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6 text-center">
+                <div class="card">
+                    <div class="card-body py-5">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <h4 class="mb-3">Redirecting to Task Creation...</h4>
+                        <p class="text-muted mb-3">
+                            You will be redirected to the task creation form automatically.
+                        </p>
+                        <a th:href="@{/tasks/new}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Continue to Create Task
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div layout:fragment="scripts">
+    <script>
+        // Immediate redirect as backup to meta refresh
+        setTimeout(function() {
+            window.location.href = '/tasks/new';
+        }, 100);
+    </script>
+</div>
+</html>
