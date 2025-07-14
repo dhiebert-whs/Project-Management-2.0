@@ -12,6 +12,7 @@ import org.frcpm.services.ProjectService;
 import org.frcpm.security.UserPrincipal;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -35,6 +36,8 @@ import java.util.logging.Logger;
  * @version 2.0.0
  * @since Phase 3A - FRC API Integration
  */
+
+@ConditionalOnProperty(name = "frc.api.enabled", havingValue = "true", matchIfMissing = false)
 @Controller
 @RequestMapping("/frc")
 public class FrcEventController extends BaseController {
