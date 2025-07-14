@@ -7,6 +7,7 @@ import org.frcpm.models.FrcMatch;
 import org.frcpm.models.FrcTeamRanking;
 import org.frcpm.repositories.spring.FrcEventRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.RestClientException;
@@ -38,6 +39,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * @version 2.0.0
  * @since Phase 3A - FRC API Integration
  */
+
+ @ConditionalOnProperty(
+    name = "app.frc.api.enabled", 
+    havingValue = "true", 
+    matchIfMissing = false
+)
 @Service
 @Transactional
 public class FrcApiService {

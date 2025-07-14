@@ -1,4 +1,44 @@
-2025-07-08 08:19:51 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - Unique index or primary key violation: "PUBLIC.CONSTRAINT_INDEX_4D ON PUBLIC.USERS(USERNAME NULLS FIRST) VALUES ( /* 87 */ 'student1' )"; SQL statement:
-insert into users (account_non_expired,account_non_locked,age,created_at,credentials_non_expired,email,enabled,first_name,last_login,last_name,mfa_enabled,parent_email,parental_consent_date,parental_consent_token,password,requires_parental_consent,role,totp_secret,updated_at,username,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,default) [23505-224]
-2025-07-08 08:19:51 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - Unique index or primary key violation: "PUBLIC.CONSTRAINT_INDEX_4 ON PUBLIC.USERS(EMAIL NULLS FIRST) VALUES ( /* 98 */ 'student@frcteam.org' )"; SQL statement:
-insert into users (account_non_expired,account_non_locked,age,created_at,credentials_non_expired,email,enabled,first_name,last_login,last_name,mfa_enabled,parent_email,parental_consent_date,parental_consent_token,password,requires_parental_consent,role,totp_secret,updated_at,username,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,default) [23505-224]
+2025-07-14 13:44:46 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - NULL not allowed for column "ID"; SQL statement:
+insert into task_dependencies (is_active,created_at,is_critical_path,dependency_type,dependent_task_id,lag_hours,notes,prerequisite_task_id,project_id,updated_at,id) values (?,?,?,?,?,?,?,?,?,?,default) [23502-224]
+2025-07-14 13:44:47 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - NULL not allowed for column "ID"; SQL statement:
+insert into task_dependencies (is_active,created_at,is_critical_path,dependency_type,dependent_task_id,lag_hours,notes,prerequisite_task_id,project_id,updated_at,id) values (?,?,?,?,?,?,?,?,?,?,default) [23502-224]
+2025-07-14 13:44:47 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - NULL not allowed for column "ID"; SQL statement:
+insert into task_dependencies (is_active,created_at,is_critical_path,dependency_type,dependent_task_id,lag_hours,notes,prerequisite_task_id,project_id,updated_at,id) values (?,?,?,?,?,?,?,?,?,?,default) [23502-224]
+2025-07-14 13:44:47 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - NULL not allowed for column "ID"; SQL statement:
+insert into task_dependencies (is_active,created_at,is_critical_path,dependency_type,dependent_task_id,lag_hours,notes,prerequisite_task_id,project_id,updated_at,id) values (?,?,?,?,?,?,?,?,?,?,default) [23502-224]
+2025-07-14 13:44:47 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - NULL not allowed for column "ID"; SQL statement:
+insert into task_dependencies (is_active,created_at,is_critical_path,dependency_type,dependent_task_id,lag_hours,notes,prerequisite_task_id,project_id,updated_at,id) values (?,?,?,?,?,?,?,?,?,?,default) [23502-224]
+2025-07-14 13:44:47 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - NULL not allowed for column "ID"; SQL statement:
+insert into task_dependencies (is_active,created_at,is_critical_path,dependency_type,dependent_task_id,lag_hours,notes,prerequisite_task_id,project_id,updated_at,id) values (?,?,?,?,?,?,?,?,?,?,default) [23502-224]
+2025-07-14 13:44:47 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - NULL not allowed for column "ID"; SQL statement:
+insert into task_dependencies (is_active,created_at,is_critical_path,dependency_type,dependent_task_id,lag_hours,notes,prerequisite_task_id,project_id,updated_at,id) values (?,?,?,?,?,?,?,?,?,?,default) [23502-224]
+2025-07-14 13:44:47 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - NULL not allowed for column "ID"; SQL statement:
+insert into task_dependencies (is_active,created_at,is_critical_path,dependency_type,dependent_task_id,lag_hours,notes,prerequisite_task_id,project_id,updated_at,id) values (?,?,?,?,?,?,?,?,?,?,default) [23502-224]
+2025-07-14 13:44:47 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - NULL not allowed for column "ID"; SQL statement:
+insert into task_dependencies (is_active,created_at,is_critical_path,dependency_type,dependent_task_id,lag_hours,notes,prerequisite_task_id,project_id,updated_at,id) values (?,?,?,?,?,?,?,?,?,?,default) [23502-224]
+2025-07-14 13:44:47 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - NULL not allowed for column "ID"; SQL statement:
+insert into task_dependencies (is_active,created_at,is_critical_path,dependency_type,dependent_task_id,lag_hours,notes,prerequisite_task_id,project_id,updated_at,id) values (?,?,?,?,?,?,?,?,?,?,default) [23502-224]
+2025-07-14 13:44:47 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - NULL not allowed for column "ID"; SQL statement:
+insert into task_dependencies (is_active,created_at,is_critical_path,dependency_type,dependent_task_id,lag_hours,notes,prerequisite_task_id,project_id,updated_at,id) values (?,?,?,?,?,?,?,?,?,?,default) [23502-224]
+2025-07-14 13:44:47 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - NULL not allowed for column "ID"; SQL statement:
+insert into task_dependencies (is_active,created_at,is_critical_path,dependency_type,dependent_task_id,lag_hours,notes,prerequisite_task_id,project_id,updated_at,id) values (?,?,?,?,?,?,?,?,?,?,default) [23502-224]
+2025-07-14 13:44:47 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - NULL not allowed for column "ID"; SQL statement:
+insert into task_dependencies (is_active,created_at,is_critical_path,dependency_type,dependent_task_id,lag_hours,notes,prerequisite_task_id,project_id,updated_at,id) values (?,?,?,?,?,?,?,?,?,?,default) [23502-224]
+2025-07-14 13:44:47 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - NULL not allowed for column "ID"; SQL statement:
+insert into task_dependencies (is_active,created_at,is_critical_path,dependency_type,dependent_task_id,lag_hours,notes,prerequisite_task_id,project_id,updated_at,id) values (?,?,?,?,?,?,?,?,?,?,default) [23502-224]
+2025-07-14 13:44:47 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - NULL not allowed for column "ID"; SQL statement:
+insert into task_dependencies (is_active,created_at,is_critical_path,dependency_type,dependent_task_id,lag_hours,notes,prerequisite_task_id,project_id,updated_at,id) values (?,?,?,?,?,?,?,?,?,?,default) [23502-224]
+2025-07-14 13:44:47 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - NULL not allowed for column "ID"; SQL statement:
+insert into task_dependencies (is_active,created_at,is_critical_path,dependency_type,dependent_task_id,lag_hours,notes,prerequisite_task_id,project_id,updated_at,id) values (?,?,?,?,?,?,?,?,?,?,default) [23502-224]
+2025-07-14 13:44:47 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - NULL not allowed for column "ID"; SQL statement:
+insert into task_dependencies (is_active,created_at,is_critical_path,dependency_type,dependent_task_id,lag_hours,notes,prerequisite_task_id,project_id,updated_at,id) values (?,?,?,?,?,?,?,?,?,?,default) [23502-224]
+2025-07-14 13:44:47 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - NULL not allowed for column "ID"; SQL statement:
+insert into task_dependencies (is_active,created_at,is_critical_path,dependency_type,dependent_task_id,lag_hours,notes,prerequisite_task_id,project_id,updated_at,id) values (?,?,?,?,?,?,?,?,?,?,default) [23502-224]
+2025-07-14 13:44:47 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - NULL not allowed for column "ID"; SQL statement:
+insert into task_dependencies (is_active,created_at,is_critical_path,dependency_type,dependent_task_id,lag_hours,notes,prerequisite_task_id,project_id,updated_at,id) values (?,?,?,?,?,?,?,?,?,?,default) [23502-224]
+2025-07-14 13:44:47 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - NULL not allowed for column "ID"; SQL statement:
+insert into task_dependencies (is_active,created_at,is_critical_path,dependency_type,dependent_task_id,lag_hours,notes,prerequisite_task_id,project_id,updated_at,id) values (?,?,?,?,?,?,?,?,?,?,default) [23502-224]
+2025-07-14 13:44:47 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - NULL not allowed for column "ID"; SQL statement:
+insert into task_dependencies (is_active,created_at,is_critical_path,dependency_type,dependent_task_id,lag_hours,notes,prerequisite_task_id,project_id,updated_at,id) values (?,?,?,?,?,?,?,?,?,?,default) [23502-224]
+2025-07-14 13:44:47 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - NULL not allowed for column "ID"; SQL statement:
+insert into task_dependencies (is_active,created_at,is_critical_path,dependency_type,dependent_task_id,lag_hours,notes,prerequisite_task_id,project_id,updated_at,id) values (?,?,?,?,?,?,?,?,?,?,default) [23502-224]
