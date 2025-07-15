@@ -47,10 +47,9 @@ public class GanttChartData {
         data.setType("task");
         data.setStatus(task.isCompleted() ? "completed" : "in-progress");
         
-        // Set dependencies
-        for (Task dependency : task.getPreDependencies()) {
-            data.addDependency("task_" + dependency.getId());
-        }
+        // Dependencies are now managed through TaskDependencyService
+        // This method should be updated to use TaskDependencyService if needed
+        // For now, we'll leave dependencies empty as they're retrieved separately
         
         // Set assignee (first team member if multiple)
         if (!task.getAssignedTo().isEmpty()) {

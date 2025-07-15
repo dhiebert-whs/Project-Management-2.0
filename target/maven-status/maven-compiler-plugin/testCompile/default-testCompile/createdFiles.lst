@@ -51,7 +51,6 @@ org\frcpm\services\impl\AuditServiceImplTest$PerformanceTests.class
 org\frcpm\security\SecurityIntegrationTest$TestSecurityConfig.class
 org\frcpm\repositories\ComponentRepositoryIntegrationTest.class
 org\frcpm\services\impl\ComponentServiceTest.class
-org\frcpm\services\impl\TaskServiceTest.class
 org\frcpm\services\impl\VisualizationServiceTest.class
 org\frcpm\security\TOTPServiceTest$IntegrationTests.class
 org\frcpm\security\MFAServiceTest$ErrorHandlingTests.class
