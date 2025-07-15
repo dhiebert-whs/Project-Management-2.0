@@ -193,6 +193,15 @@ public interface TaskDependencyRepository extends JpaRepository<TaskDependency, 
     List<TaskDependency> findByProjectAndDependencyTypeAndCriticalPath(Project project, DependencyType dependencyType, boolean criticalPath);
     
     /**
+     * Counts critical path dependencies in a project.
+     * 
+     * @param project the project
+     * @param criticalPath whether to count critical path dependencies
+     * @return count of critical path dependencies
+     */
+    long countByProjectAndCriticalPath(Project project, boolean criticalPath);
+    
+    /**
      * Updates critical path status for dependencies in a project.
      * Used by critical path analysis algorithms.
      * 
