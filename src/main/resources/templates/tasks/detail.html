@@ -96,6 +96,104 @@
             padding: 1rem;
             margin-bottom: 1.5rem;
         }
+        
+        /* Task Dependencies Styles */
+        .dependency-item {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .dependency-item:hover {
+            background: #e9ecef;
+            transform: translateX(3px);
+        }
+        
+        .dependency-item.critical {
+            border-left: 4px solid #dc3545;
+            background: linear-gradient(135deg, #fff 0%, #fff5f5 100%);
+        }
+        
+        .dependency-item.blocking {
+            border-left: 4px solid #ffc107;
+            background: linear-gradient(135deg, #fff 0%, #fffcf0 100%);
+        }
+        
+        .dependency-type-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+        
+        .dependency-type-badge.fs { background: #e7f3ff; color: #0066cc; }
+        .dependency-type-badge.ss { background: #d4edda; color: #155724; }
+        .dependency-type-badge.ff { background: #fff3cd; color: #856404; }
+        .dependency-type-badge.sf { background: #f8d7da; color: #721c24; }
+        .dependency-type-badge.blocking { background: #f8d7da; color: #721c24; }
+        .dependency-type-badge.soft { background: #d1ecf1; color: #0c5460; }
+        
+        .lag-indicator {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            background: #e9ecef;
+            color: #6c757d;
+        }
+        
+        .lag-indicator.positive {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .lag-indicator.negative {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .task-float-indicator {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .task-float-indicator.zero {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .dependency-actions {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .dependency-item:hover .dependency-actions {
+            opacity: 1;
+        }
+        
+        .blocking-reason {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 6px;
+            padding: 0.5rem;
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+        }
+        
+        .critical-path-pulse {
+            animation: criticalPulse 2s infinite;
+        }
+        
+        @keyframes criticalPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
     </style>
 </head>
 <body>
@@ -396,18 +494,69 @@
                     </div>
                 </div>
                 
-                <!-- Related Items (Phase 2E-B Preview) -->
-                <div class="task-card card border-info">
-                    <div class="card-header bg-info text-white">
+                <!-- Task Dependencies -->
+                <div class="task-card card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
-                            <i class="fas fa-link me-2"></i>Related Items
-                            <small class="opacity-75">(Phase 2E-B)</small>
+                            <i class="fas fa-project-diagram me-2"></i>Task Dependencies
+                        </h5>
+                        <button class="btn btn-sm btn-outline-primary" onclick="manageDependencies()">
+                            <i class="fas fa-edit me-1"></i>Manage
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <!-- Prerequisites (tasks this task depends on) -->
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-2">
+                                <i class="fas fa-arrow-left me-1"></i>Prerequisites
+                                <small>(tasks that must be completed first)</small>
+                            </h6>
+                            <div id="prerequisitesContainer">
+                                <!-- Prerequisites will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Dependents (tasks that depend on this task) -->
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-2">
+                                <i class="fas fa-arrow-right me-1"></i>Dependents
+                                <small>(tasks waiting for this one)</small>
+                            </h6>
+                            <div id="dependentsContainer">
+                                <!-- Dependents will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Critical Path Indicator -->
+                        <div id="criticalPathIndicator" style="display: none;">
+                            <div class="alert alert-warning mb-0">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Critical Path Task</strong><br>
+                                <small>This task is on the critical path. Delays will impact project completion.</small>
+                            </div>
+                        </div>
+                        
+                        <!-- No Dependencies State -->
+                        <div id="noDependenciesState" class="text-center py-3">
+                            <i class="fas fa-project-diagram fa-2x text-muted mb-2"></i>
+                            <p class="text-muted mb-2">No dependencies configured</p>
+                            <button class="btn btn-sm btn-outline-primary" onclick="addFirstDependency()">
+                                <i class="fas fa-plus me-1"></i>Add Dependency
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Task Blocking Status -->
+                <div class="task-card card" id="blockingStatusCard" style="display: none;">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-ban me-2 text-danger"></i>Blocking Status
                         </h5>
                     </div>
                     <div class="card-body">
-                        <div class="text-center py-3">
-                            <i class="fas fa-project-diagram fa-2x text-muted mb-2"></i>
-                            <p class="text-muted mb-0">Task dependencies and related items will be shown here in Phase 2E-B</p>
+                        <div id="blockingStatusContainer">
+                            <!-- Blocking status will be loaded here -->
                         </div>
                     </div>
                 </div>
@@ -420,7 +569,11 @@
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
     
     <script>
-        // Phase 2E-A: Basic JavaScript functionality
+        // Task dependencies functionality
+        let taskId = /*[[${task.id}]]*/ null;
+        let taskDependencies = null;
+        let wsConnection = null;
+        
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize tooltips
             var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
@@ -428,10 +581,305 @@
                 return new bootstrap.Tooltip(tooltipTriggerEl);
             });
             
-            // Phase 2E-B TODO: Add real-time WebSocket integration
-            console.log('Task detail view loaded - Phase 2E-A');
-            console.log('Real-time features will be available in Phase 2E-B');
+            // Load task dependencies
+            loadTaskDependencies();
+            
+            // Setup WebSocket connection for real-time updates
+            setupWebSocketConnection();
+            
+            console.log('Task detail view loaded with dependency management');
         });
+        
+        // Load task dependencies
+        async function loadTaskDependencies() {
+            if (!taskId) return;
+            
+            try {
+                const response = await fetch(`/api/dependencies/task/${taskId}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        taskDependencies = data;
+                        displayTaskDependencies();
+                        checkBlockingStatus();
+                        checkCriticalPath();
+                    } else {
+                        console.error('Error loading dependencies:', data.message);
+                        showNoDependenciesState();
+                    }
+                } else {
+                    console.error('Failed to load dependencies');
+                    showNoDependenciesState();
+                }
+            } catch (error) {
+                console.error('Error loading task dependencies:', error);
+                showNoDependenciesState();
+            }
+        }
+        
+        // Display task dependencies
+        function displayTaskDependencies() {
+            if (!taskDependencies) return;
+            
+            const hasDependencies = taskDependencies.dependencies.length > 0 || taskDependencies.dependents.length > 0;
+            
+            if (!hasDependencies) {
+                showNoDependenciesState();
+                return;
+            }
+            
+            // Hide no dependencies state
+            document.getElementById('noDependenciesState').style.display = 'none';
+            
+            // Display prerequisites
+            displayPrerequisites(taskDependencies.dependencies);
+            
+            // Display dependents
+            displayDependents(taskDependencies.dependents);
+        }
+        
+        // Display prerequisites (tasks this task depends on)
+        function displayPrerequisites(dependencies) {
+            const container = document.getElementById('prerequisitesContainer');
+            
+            if (dependencies.length === 0) {
+                container.innerHTML = '<p class="text-muted small mb-0">No prerequisites configured</p>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            dependencies.forEach(dep => {
+                const dependencyItem = createDependencyItem(dep, 'prerequisite');
+                container.appendChild(dependencyItem);
+            });
+        }
+        
+        // Display dependents (tasks that depend on this task)
+        function displayDependents(dependencies) {
+            const container = document.getElementById('dependentsContainer');
+            
+            if (dependencies.length === 0) {
+                container.innerHTML = '<p class="text-muted small mb-0">No dependent tasks</p>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            dependencies.forEach(dep => {
+                const dependencyItem = createDependencyItem(dep, 'dependent');
+                container.appendChild(dependencyItem);
+            });
+        }
+        
+        // Create dependency item element
+        function createDependencyItem(dependency, type) {
+            const item = document.createElement('div');
+            item.className = `dependency-item ${dependency.onCriticalPath ? 'critical' : ''}`;
+            
+            const taskInfo = type === 'prerequisite' ? 
+                { id: dependency.predecessorTaskId, title: dependency.predecessorTaskTitle } :
+                { id: dependency.successorTaskId, title: dependency.successorTaskTitle };
+            
+            const typeClass = getDependencyTypeClass(dependency.type);
+            const typeLabel = getDependencyTypeLabel(dependency.type);
+            
+            item.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center mb-1">
+                            <a href="/tasks/${taskInfo.id}" class="text-decoration-none fw-semibold">
+                                ${taskInfo.title}
+                            </a>
+                            ${dependency.onCriticalPath ? '<i class="fas fa-exclamation-triangle text-danger ms-2" title="Critical Path"></i>' : ''}
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="dependency-type-badge ${typeClass}">${typeLabel}</span>
+                            ${dependency.lagDays && dependency.lagDays !== 0 ? 
+                                `<span class="lag-indicator ${dependency.lagDays > 0 ? 'positive' : 'negative'}">
+                                    ${dependency.lagDays > 0 ? '+' : ''}${dependency.lagDays}d
+                                </span>` : ''}
+                        </div>
+                        ${dependency.notes ? `<div class="text-muted small mt-1">${dependency.notes}</div>` : ''}
+                    </div>
+                    <div class="dependency-actions">
+                        <button class="btn btn-sm btn-outline-danger" onclick="removeDependency(${dependency.id})" title="Remove">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            return item;
+        }
+        
+        // Check if task is blocked
+        function checkBlockingStatus() {
+            if (!taskDependencies || !taskDependencies.blockingDependencies) return;
+            
+            const blockingDeps = taskDependencies.blockingDependencies;
+            const blockingCard = document.getElementById('blockingStatusCard');
+            const container = document.getElementById('blockingStatusContainer');
+            
+            if (blockingDeps.length === 0) {
+                blockingCard.style.display = 'none';
+                return;
+            }
+            
+            blockingCard.style.display = 'block';
+            container.innerHTML = '';
+            
+            blockingDeps.forEach(dep => {
+                const blockingItem = document.createElement('div');
+                blockingItem.className = 'blocking-reason';
+                
+                blockingItem.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-ban text-danger me-2"></i>
+                        <div>
+                            <strong>Blocked by:</strong> 
+                            <a href="/tasks/${dep.predecessorTaskId}" class="text-decoration-none">
+                                ${dep.predecessorTaskTitle}
+                            </a>
+                            <div class="small text-muted">
+                                ${dep.type} dependency - Task must be completed first
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(blockingItem);
+            });
+        }
+        
+        // Check if task is on critical path
+        function checkCriticalPath() {
+            if (!taskDependencies) return;
+            
+            const isCritical = taskDependencies.dependencies.some(dep => dep.onCriticalPath) || 
+                              taskDependencies.dependents.some(dep => dep.onCriticalPath);
+            
+            const indicator = document.getElementById('criticalPathIndicator');
+            
+            if (isCritical) {
+                indicator.style.display = 'block';
+                indicator.classList.add('critical-path-pulse');
+            } else {
+                indicator.style.display = 'none';
+            }
+        }
+        
+        // Show no dependencies state
+        function showNoDependenciesState() {
+            document.getElementById('noDependenciesState').style.display = 'block';
+            document.getElementById('prerequisitesContainer').innerHTML = '';
+            document.getElementById('dependentsContainer').innerHTML = '';
+            document.getElementById('criticalPathIndicator').style.display = 'none';
+            document.getElementById('blockingStatusCard').style.display = 'none';
+        }
+        
+        // Manage dependencies (open dependencies page)
+        function manageDependencies() {
+            window.location.href = `/tasks/dependencies?task=${taskId}`;
+        }
+        
+        // Add first dependency
+        function addFirstDependency() {
+            window.location.href = `/tasks/dependencies?task=${taskId}&action=add`;
+        }
+        
+        // Remove dependency
+        async function removeDependency(dependencyId) {
+            if (!confirm('Are you sure you want to remove this dependency?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/dependencies/${dependencyId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success) {
+                        // Reload dependencies
+                        loadTaskDependencies();
+                        showNotification('Dependency removed successfully', 'success');
+                    } else {
+                        showNotification('Error removing dependency: ' + result.message, 'error');
+                    }
+                } else {
+                    showNotification('Failed to remove dependency', 'error');
+                }
+            } catch (error) {
+                console.error('Error removing dependency:', error);
+                showNotification('Error removing dependency', 'error');
+            }
+        }
+        
+        // Helper functions
+        function getDependencyTypeClass(type) {
+            switch(type) {
+                case 'FINISH_TO_START': return 'fs';
+                case 'START_TO_START': return 'ss';
+                case 'FINISH_TO_FINISH': return 'ff';
+                case 'START_TO_FINISH': return 'sf';
+                case 'BLOCKING': return 'blocking';
+                case 'SOFT': return 'soft';
+                default: return 'fs';
+            }
+        }
+        
+        function getDependencyTypeLabel(type) {
+            switch(type) {
+                case 'FINISH_TO_START': return 'FS';
+                case 'START_TO_START': return 'SS';
+                case 'FINISH_TO_FINISH': return 'FF';
+                case 'START_TO_FINISH': return 'SF';
+                case 'BLOCKING': return 'Block';
+                case 'SOFT': return 'Soft';
+                default: return 'FS';
+            }
+        }
+        
+        // Show notification
+        function showNotification(message, type) {
+            // Create or update notification
+            let notification = document.getElementById('notification');
+            if (!notification) {
+                notification = document.createElement('div');
+                notification.id = 'notification';
+                notification.className = 'position-fixed top-0 end-0 m-3';
+                notification.style.zIndex = '1050';
+                document.body.appendChild(notification);
+            }
+            
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+            const icon = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle';
+            
+            notification.innerHTML = `
+                <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                    <i class="${icon} me-2"></i>${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                const alert = notification.querySelector('.alert');
+                if (alert) {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }
+            }, 5000);
+        }
+        
+        // Setup WebSocket connection for real-time updates
+        function setupWebSocketConnection() {
+            // TODO: Implement WebSocket connection for real-time dependency updates
+            console.log('WebSocket connection for task dependencies');
+        }
     </script>
 </body>
 </html>

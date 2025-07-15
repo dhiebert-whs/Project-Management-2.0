@@ -234,18 +234,12 @@ public class GanttChartTransformationServiceImpl implements GanttChartTransforma
     public List<Map<String, Object>> createDependencyData(List<Task> tasks) {
         List<Map<String, Object>> dependencies = new ArrayList<>();
         
-        for (Task task : tasks) {
-            Set<Task> preDependencies = task.getPreDependencies();
-            if (preDependencies != null && !preDependencies.isEmpty()) {
-                for (Task dependency : preDependencies) {
-                    Map<String, Object> dep = new HashMap<>();
-                    dep.put("source", "task_" + dependency.getId());
-                    dep.put("target", "task_" + task.getId());
-                    dep.put("type", "finish-to-start");
-                    dependencies.add(dep);
-                }
-            }
-        }
+        // Note: Dependency data should now be retrieved through TaskDependencyService
+        // This method is maintained for backward compatibility but should be 
+        // updated to use TaskDependencyService when available in the context
+        
+        // For now, return empty list as tasks no longer have direct dependency relationships
+        // Callers should use TaskDependencyService.getDependenciesForProject() instead
         
         return dependencies;
     }

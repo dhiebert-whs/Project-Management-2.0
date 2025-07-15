@@ -62216,3 +62216,27 @@ org.springframework.expression.spel.SpelEvaluationException: EL1007E: Property o
     12600 nanoseconds spent executing 4 partial-flushes (flushing a total of 0 entities and 0 collections)
 }
 2025-07-15 14:10:34.344 [http-nio-8080-exec-5] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-07-15 15:16:01.821 [MessageBroker-7] INFO  o.s.w.s.c.WebSocketMessageBrokerStats - WebSocketSession[0 current WS(0)-HttpStream(0)-HttpPoll(0), 1 total, 0 closed abnormally (0 connect failure, 0 send limit, 0 transport error)], stompSubProtocol[processed CONNECT(1)-CONNECTED(1)-DISCONNECT(1)], stompBrokerRelay[null], inboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 18], outboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 3], sockJsScheduler[pool size = 12, active threads = 3, queued tasks = 0, completed tasks = 180]
+2025-07-15 15:16:01.827 [MessageBroker-6] DEBUG org.hibernate.SQL - 
+    /* <criteria> */ select
+        p1_0.id,
+        p1_0.description,
+        p1_0.goal_end_date,
+        p1_0.hard_deadline,
+        p1_0.name,
+        p1_0.start_date 
+    from
+        projects p1_0
+2025-07-15 15:16:01.828 [MessageBroker-6] INFO  o.h.e.i.StatisticalLoggingSessionEventListener - Session Metrics {
+    105300 nanoseconds spent acquiring 1 JDBC connections;
+    0 nanoseconds spent releasing 0 JDBC connections;
+    93300 nanoseconds spent preparing 1 JDBC statements;
+    198300 nanoseconds spent executing 1 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    0 nanoseconds spent executing 0 flushes (flushing a total of 0 entities and 0 collections);
+    12900 nanoseconds spent executing 1 partial-flushes (flushing a total of 0 entities and 0 collections)
+}
+2025-07-15 15:16:12.058 [HikariPool-1 housekeeper] WARN  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=51m22s128ms469µs700ns).

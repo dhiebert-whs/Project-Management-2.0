@@ -286,6 +286,19 @@
                 <span class="badge badge-notification bg-warning" th:if="${overdueCount > 0}" th:text="${overdueCount}">0</span>
             </a>
             
+            <!-- Task Dependencies (Sub-navigation) -->
+            <div class="ps-3">
+                <a class="nav-link" href="/tasks/dependencies" th:classappend="${currentSection == 'dependencies'} ? 'active' : ''">
+                    <i class="fas fa-project-diagram"></i>
+                    Dependencies
+                </a>
+                
+                <a class="nav-link" href="/tasks/critical-path" th:classappend="${currentSection == 'critical-path'} ? 'active' : ''">
+                    <i class="fas fa-route"></i>
+                    Critical Path
+                </a>
+            </div>
+            
             <!-- Team -->
             <a class="nav-link" href="/team" th:classappend="${currentSection == 'team'} ? 'active' : ''">
                 <i class="fas fa-users"></i>

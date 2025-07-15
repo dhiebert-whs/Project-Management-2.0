@@ -1346,9 +1346,8 @@ public class TaskController {
             model.addAttribute("subsystem", task.getSubsystem());
             model.addAttribute("assignedMembers", task.getAssignedTo());
             
-            // Dependencies
-            model.addAttribute("preDependencies", task.getPreDependencies());
-            model.addAttribute("postDependencies", task.getPostDependencies());
+            // Dependencies are now loaded via JavaScript API calls to TaskDependencyController
+            // instead of being passed directly in the model
             
             // Required components
             model.addAttribute("requiredComponents", task.getRequiredComponents());
@@ -1368,8 +1367,6 @@ public class TaskController {
             LOGGER.log(Level.WARNING, "Failed to load task detail data", e);
             // Set safe defaults
             model.addAttribute("assignedMembers", new HashSet<>());
-            model.addAttribute("preDependencies", new HashSet<>());
-            model.addAttribute("postDependencies", new HashSet<>());
             model.addAttribute("requiredComponents", new HashSet<>());
         }
     }

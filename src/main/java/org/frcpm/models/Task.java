@@ -90,16 +90,8 @@ public class Task {
     @JoinColumn(name = "subsystem_id", nullable = false)
     private Subsystem subsystem;
     
-    @ManyToMany
-    @JoinTable(
-        name = "task_dependencies",
-        joinColumns = @JoinColumn(name = "task_id"),
-        inverseJoinColumns = @JoinColumn(name = "dependency_id")
-    )
-    private Set<Task> preDependencies = new HashSet<>();
-    
-    @ManyToMany(mappedBy = "preDependencies")
-    private Set<Task> postDependencies = new HashSet<>();
+    // Task dependencies are now managed through the TaskDependency entity
+    // instead of direct Many-to-Many relationships
     
     @ManyToMany
     @JoinTable(
@@ -236,21 +228,8 @@ public class Task {
         this.subsystem = subsystem;
     }
 
-    public Set<Task> getPreDependencies() {
-        return preDependencies;
-    }
-
-    public void setPreDependencies(Set<Task> preDependencies) {
-        this.preDependencies = preDependencies;
-    }
-
-    public Set<Task> getPostDependencies() {
-        return postDependencies;
-    }
-
-    public void setPostDependencies(Set<Task> postDependencies) {
-        this.postDependencies = postDependencies;
-    }
+    // Task dependencies are now managed through TaskDependencyService
+    // instead of direct entity relationships
 
     public Set<Component> getRequiredComponents() {
         return requiredComponents;
@@ -287,44 +266,8 @@ public class Task {
         return title;
     }
 
-    /**
-     * Adds a pre-dependency to this task.
-     * 
-     * @param dependency the dependency to add
-     */
-    public void addPreDependency(Task dependency) {
-        if (dependency == null) return;
-        
-        // Check for self-reference
-        if (this.equals(dependency)) {
-            throw new IllegalArgumentException("A task cannot depend on itself");
-        }
-        
-        // Add to this task's dependencies
-        if (!this.preDependencies.contains(dependency)) {
-            this.preDependencies.add(dependency);
-        }
-        
-        // Add this task to dependency's post-dependencies
-        if (!dependency.postDependencies.contains(this)) {
-            dependency.postDependencies.add(this);
-        }
-    }
-
-    /**
-     * Removes a pre-dependency from this task.
-     * 
-     * @param dependency the dependency to remove
-     */
-    public void removePreDependency(Task dependency) {
-        if (dependency == null) return;
-        
-        // Remove from this task's dependencies
-        this.preDependencies.remove(dependency);
-        
-        // Remove this task from dependency's post-dependencies
-        dependency.postDependencies.remove(this);
-    }
+    // Task dependency management is now handled through the TaskDependencyService
+    // and TaskDependency entity instead of direct task-to-task relationships
 
     /**
      * Assigns a team member to this task.

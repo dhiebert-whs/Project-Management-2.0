@@ -169,20 +169,20 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     
     /**
      * Finds tasks with dependencies (tasks that depend on other tasks).
-     * LEGACY: Uses simple Task.preDependencies relationship.
+     * Uses TaskDependency entity for proper dependency management.
      * 
      * @return a list of tasks with dependencies
      */
-    @Query("SELECT t FROM Task t WHERE SIZE(t.preDependencies) > 0")
+    @Query("SELECT DISTINCT td.dependentTask FROM TaskDependency td WHERE td.active = true")
     List<Task> findTasksWithDependencies();
     
     /**
      * Finds tasks that are blocking other tasks (tasks that other tasks depend on).
-     * LEGACY: Uses simple Task.postDependencies relationship.
+     * Uses TaskDependency entity for proper dependency management.
      * 
      * @return a list of blocking tasks
      */
-    @Query("SELECT t FROM Task t WHERE SIZE(t.postDependencies) > 0")
+    @Query("SELECT DISTINCT td.prerequisiteTask FROM TaskDependency td WHERE td.active = true")
     List<Task> findBlockingTasks();
     
     // =========================================================================
@@ -399,9 +399,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
            "    SELECT 1 FROM TaskDependency td " +
            "    WHERE (td.dependentTask = t OR td.prerequisiteTask = t) " +
            "    AND td.active = true" +
-           ") " +
-           "AND SIZE(t.preDependencies) = 0 " +
-           "AND SIZE(t.postDependencies) = 0")
+           ")")
     List<Task> findIndependentTasks(@Param("projectId") Long projectId);
     
     /**
