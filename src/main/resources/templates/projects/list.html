@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>Projects - FRC Project Management</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="container-fluid">
+            <!-- Page Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-1">Projects</h1>
+                    <p class="text-muted">Manage your FRC team projects and deadlines</p>
+                </div>
+                <div>
+                    <a href="/projects/new" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> New Project
+                    </a>
+                </div>
+            </div>
+
+            <!-- Filters and Search -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="btn-group" role="group">
+                        <a th:href="@{/projects}" 
+                           th:class="'btn btn-outline-secondary' + (${currentStatus} == 'all' ? ' active' : '')"
+                           th:text="'All (' + ${totalProjects} + ')'">All</a>
+                        <a th:href="@{/projects(status='active')}" 
+                           th:class="'btn btn-outline-secondary' + (${currentStatus} == 'active' ? ' active' : '')"
+                           th:text="'Active (' + ${activeCount} + ')'">Active</a>
+                        <a th:href="@{/projects(status='completed')}" 
+                           th:class="'btn btn-outline-secondary' + (${currentStatus} == 'completed' ? ' active' : '')"
+                           th:text="'Completed (' + ${completedCount} + ')'">Completed</a>
+                        <a th:href="@{/projects(status='overdue')}" 
+                           th:class="'btn btn-outline-danger' + (${currentStatus} == 'overdue' ? ' active' : '')"
+                           th:text="'Overdue (' + ${overdueCount} + ')'">Overdue</a>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex">
+                        <select class="form-select me-2" onchange="window.location.href='/projects?sort=' + this.value">
+                            <option value="name" th:selected="${currentSort == 'name'}">Sort by Name</option>
+                            <option value="startdate" th:selected="${currentSort == 'startdate'}">Sort by Start Date</option>
+                            <option value="deadline" th:selected="${currentSort == 'deadline'}">Sort by Deadline</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Projects Grid -->
+            <div class="row">
+                <div th:each="project : ${projects}" class="col-lg-4 col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">
+                                <a th:href="@{/projects/{id}(id=${project.id})}" 
+                                   th:text="${project.name}" 
+                                   class="text-decoration-none">Project Name</a>
+                            </h5>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                        type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" th:href="@{/projects/{id}(id=${project.id})}">
+                                        <i class="fas fa-eye"></i> View Details</a></li>
+                                    <li><a class="dropdown-item" th:href="@{/projects/{id}/edit(id=${project.id})}">
+                                        <i class="fas fa-edit"></i> Edit</a></li>
+                                    <li><a class="dropdown-item" th:href="@{/tasks(projectId=${project.id})}">
+                                        <i class="fas fa-tasks"></i> View Tasks</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" th:href="@{/projects/{id}/delete(id=${project.id})}">
+                                        <i class="fas fa-trash"></i> Delete</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text text-muted" th:text="${project.description}">Project description...</p>
+                            
+                            <!-- Project Dates -->
+                            <div class="mb-3">
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar-alt"></i> 
+                                    <span th:text="${#temporals.format(project.startDate, 'MMM dd, yyyy')}">Start Date</span>
+                                    -
+                                    <span th:text="${#temporals.format(project.goalEndDate, 'MMM dd, yyyy')}">Goal Date</span>
+                                </small>
+                                <br>
+                                <small class="text-danger" th:if="${project.hardDeadline}">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    Hard deadline: <span th:text="${#temporals.format(project.hardDeadline, 'MMM dd, yyyy')}">Deadline</span>
+                                </small>
+                            </div>
+
+                            <!-- Project Status Badge -->
+                            <div class="mb-3">
+                                <span th:if="${#temporals.createNow().isAfter(project.hardDeadline)}" 
+                                      class="badge bg-danger">Overdue</span>
+                                <span th:if="${!#temporals.createNow().isAfter(project.hardDeadline) && #temporals.createNow().isAfter(project.goalEndDate)}" 
+                                      class="badge bg-warning">Past Goal Date</span>
+                                <span th:if="${#temporals.createNow().isBefore(project.startDate)}" 
+                                      class="badge bg-info">Upcoming</span>
+                                <span th:if="${!#temporals.createNow().isBefore(project.startDate) && !#temporals.createNow().isAfter(project.goalEndDate)}" 
+                                      class="badge bg-success">Active</span>
+                            </div>
+                        </div>
+                        <div class="card-footer text-muted">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small>
+                                    <i class="fas fa-tasks"></i> 
+                                    <span>Tasks</span>
+                                </small>
+                                <div>
+                                    <a th:href="@{/projects/{id}(id=${project.id})}" class="btn btn-sm btn-outline-primary">
+                                        View Details
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div th:if="${#lists.isEmpty(projects)}" class="text-center py-5">
+                <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No Projects Found</h4>
+                <p class="text-muted">Get started by creating your first project.</p>
+                <a href="/projects/new" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Create Project
+                </a>
+            </div>
+
+            <!-- Quick Stats -->
+            <div th:if="${!#lists.isEmpty(projects)}" class="row mt-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body text-center">
+                            <h4 th:text="${totalProjects}">0</h4>
+                            <p class="mb-0">Total Projects</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body text-center">
+                            <h4 th:text="${projectsOnTrack}">0</h4>
+                            <p class="mb-0">On Track</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body text-center">
+                            <h4 th:text="${avgCompletionRate + '%'}">0%</h4>
+                            <p class="mb-0">Avg Completion</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body text-center">
+                            <h4 th:text="${totalTasks}">0</h4>
+                            <p class="mb-0">Total Tasks</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

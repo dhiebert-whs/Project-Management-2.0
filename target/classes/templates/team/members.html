@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>Team Members - FRC Project Management</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="container-fluid">
+            <!-- Page Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-1">Team Members</h1>
+                    <p class="text-muted">Manage your FRC team members and their assignments</p>
+                </div>
+                <div>
+                    <a href="/team/members/new" class="btn btn-primary">
+                        <i class="fas fa-user-plus"></i> Add Member
+                    </a>
+                </div>
+            </div>
+
+            <!-- View Toggle and Filters -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="btn-group" role="group">
+                        <a th:href="@{/team(view='overview')}" class="btn btn-outline-secondary">
+                            <i class="fas fa-chart-pie"></i> Overview
+                        </a>
+                        <a th:href="@{/team(view='members')}" class="btn btn-secondary active">
+                            <i class="fas fa-users"></i> Members (<span th:text="${totalMembers}">0</span>)
+                        </a>
+                        <a th:href="@{/team(view='subteams')}" class="btn btn-outline-secondary">
+                            <i class="fas fa-layer-group"></i> Subteams
+                        </a>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex">
+                        <select class="form-select me-2" onchange="applyFilters()">
+                            <option value="name" th:selected="${currentSort == 'name'}">Sort by Name</option>
+                            <option value="subteam" th:selected="${currentSort == 'subteam'}">Sort by Subteam</option>
+                            <option value="role" th:selected="${currentSort == 'role'}">Sort by Role</option>
+                        </select>
+                        <a href="/team/members/export/csv" class="btn btn-outline-secondary">
+                            <i class="fas fa-download"></i> Export
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Role Filter Badges -->
+            <div class="row mb-4">
+                <div class="col">
+                    <div class="btn-group" role="group">
+                        <a th:href="@{/team(view='members')}" 
+                           th:class="'btn btn-outline-secondary' + (${currentRole} == 'all' ? ' active' : '')"
+                           th:text="'All (' + ${totalMembers} + ')'">All</a>
+                        <a th:href="@{/team(view='members', role='leader')}" 
+                           th:class="'btn btn-outline-warning' + (${currentRole} == 'leader' ? ' active' : '')"
+                           th:text="'Leaders (' + ${leaderFilterCount} + ')'">Leaders</a>
+                        <a th:href="@{/team(view='members', role='student')}" 
+                           th:class="'btn btn-outline-info' + (${currentRole} == 'student' ? ' active' : '')"
+                           th:text="'Students (' + ${studentFilterCount} + ')'">Students</a>
+                        <a th:href="@{/team(view='members', role='unassigned')}" 
+                           th:class="'btn btn-outline-danger' + (${currentRole} == 'unassigned' ? ' active' : '')"
+                           th:text="'Unassigned (' + ${unassignedFilterCount} + ')'">Unassigned</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subteam Filter -->
+            <div th:if="${subteams && !#lists.isEmpty(subteams)}" class="row mb-4">
+                <div class="col">
+                    <div class="btn-group flex-wrap" role="group">
+                        <a th:href="@{/team(view='members', role=${currentRole})}" 
+                           th:class="'btn btn-sm btn-outline-secondary' + (${currentSubteamId} == null ? ' active' : '')">
+                            All Subteams
+                        </a>
+                        <a th:each="subteam : ${subteams}"
+                           th:href="@{/team(view='members', subteamId=${subteam.id}, role=${currentRole})}" 
+                           th:class="'btn btn-sm btn-outline-secondary' + (${currentSubteamId} == ${subteam.id} ? ' active' : '')"
+                           th:style="'border-color: ' + ${subteam.colorCode} + '; ' + (${currentSubteamId} == ${subteam.id} ? 'background-color: ' + ${subteam.colorCode} + '; color: white;' : 'color: ' + ${subteam.colorCode} + ';')"
+                           th:text="${subteam.name}">Subteam</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Members Grid -->
+            <div class="row">
+                <div th:each="member : ${teamMembers}" class="col-lg-4 col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start mb-3">
+                                <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                     style="width: 48px; height: 48px;">
+                                    <span th:text="${member.firstName != null ? member.firstName.substring(0,1) : '?'}">A</span>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="card-title mb-1">
+                                        <a th:href="@{/team/members/{id}(id=${member.id})}" 
+                                           th:text="${member.fullName}" class="text-decoration-none">Member Name</a>
+                                    </h6>
+                                    <p class="card-text text-muted mb-1">
+                                        <small>@<span th:text="${member.username}">username</span></small>
+                                    </p>
+                                    <div class="mb-2">
+                                        <span th:if="${member.leader}" class="badge bg-warning">
+                                            <i class="fas fa-crown"></i> Leader
+                                        </span>
+                                        <span th:if="${!member.leader}" class="badge bg-info">Student</span>
+                                    </div>
+                                </div>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" th:href="@{/team/members/{id}(id=${member.id})}">
+                                            <i class="fas fa-eye"></i> View Profile</a></li>
+                                        <li><a class="dropdown-item" th:href="@{/team/members/{id}/edit(id=${member.id})}">
+                                            <i class="fas fa-edit"></i> Edit</a></li>
+                                        <li><a class="dropdown-item" th:href="@{/tasks(assigneeId=${member.id})}">
+                                            <i class="fas fa-tasks"></i> View Tasks</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item" th:href="@{/team/members/{id}/toggle-leadership(id=${member.id})}" 
+                                               onclick="return confirm('Toggle leadership status?')">
+                                            <i th:class="${member.leader ? 'fas fa-user-minus' : 'fas fa-user-plus'}"></i> 
+                                            <span th:text="${member.leader ? 'Remove Leadership' : 'Make Leader'}">Toggle</span>
+                                        </a></li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Subteam Info -->
+                            <div class="mb-3">
+                                <div th:if="${member.subteam}" class="d-flex align-items-center">
+                                    <div class="rounded-circle me-2" 
+                                         th:style="'width: 20px; height: 20px; background-color: ' + ${member.subteam.colorCode}"></div>
+                                    <a th:href="@{/team/subteams/{id}(id=${member.subteam.id})}" 
+                                       th:text="${member.subteam.name}" class="text-decoration-none text-muted">Subteam</a>
+                                </div>
+                                <div th:if="${!member.subteam}" class="text-muted">
+                                    <i class="fas fa-exclamation-triangle text-warning"></i> Unassigned
+                                </div>
+                            </div>
+
+                            <!-- Contact Info -->
+                            <div class="mb-3">
+                                <small class="text-muted">
+                                    <div th:if="${member.email}">
+                                        <i class="fas fa-envelope"></i> 
+                                        <a th:href="'mailto:' + ${member.email}" th:text="${member.email}">email</a>
+                                    </div>
+                                    <div th:if="${member.phone}">
+                                        <i class="fas fa-phone"></i> 
+                                        <span th:text="${member.phone}">phone</span>
+                                    </div>
+                                </small>
+                            </div>
+
+                            <!-- Skills -->
+                            <div th:if="${member.skills}" class="mb-3">
+                                <small class="text-muted">Skills:</small>
+                                <div class="mt-1">
+                                    <span th:each="skill, iterStat : ${#strings.listSplit(member.skills, ',')}" 
+                                          th:if="${!#strings.isEmpty(skill)}"
+                                          class="badge bg-light text-dark me-1 mb-1" 
+                                          th:text="${#strings.trim(skill)}">Skill</span>
+                                </div>
+                            </div>
+
+                            <!-- Quick Actions -->
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <a th:href="@{/team/members/{id}(id=${member.id})}" class="btn btn-sm btn-outline-primary">
+                                        View Profile
+                                    </a>
+                                </div>
+                                <div>
+                                    <!-- Subteam Assignment Dropdown -->
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                            Assign
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><h6 class="dropdown-header">Assign to Subteam</h6></li>
+                                            <li><a class="dropdown-item" href="#" 
+                                                   onclick="assignToSubteam([[${member.id}]], null)">
+                                                <i class="fas fa-times"></i> Unassign
+                                            </a></li>
+                                            <li th:each="subteam : ${subteams}">
+                                                <a class="dropdown-item" href="#" 
+                                                   th:onclick="'assignToSubteam(' + ${member.id} + ', ' + ${subteam.id} + ')'"
+                                                   th:class="${member.subteam != null && member.subteam.id == subteam.id} ? 'dropdown-item active' : 'dropdown-item'">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="rounded-circle me-2" 
+                                                             th:style="'width: 12px; height: 12px; background-color: ' + ${subteam.colorCode}"></div>
+                                                        <span th:text="${subteam.name}">Subteam</span>
+                                                    </div>
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div th:if="${#lists.isEmpty(teamMembers)}" class="text-center py-5">
+                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No Team Members Found</h4>
+                <p class="text-muted">
+                    <span th:if="${currentRole != 'all'}">No members match the current filter. </span>
+                    Get started by adding your first team member.
+                </p>
+                <div>
+                    <a href="/team/members/new" class="btn btn-primary">
+                        <i class="fas fa-user-plus"></i> Add Team Member
+                    </a>
+                    <a th:if="${currentRole != 'all'}" href="/team?view=members" class="btn btn-outline-secondary ms-2">
+                        <i class="fas fa-filter"></i> Clear Filters
+                    </a>
+                </div>
+            </div>
+
+            <!-- Summary Footer -->
+            <div th:if="${!#lists.isEmpty(teamMembers)}" class="row mt-4">
+                <div class="col">
+                    <div class="alert alert-info">
+                        <div class="row text-center">
+                            <div class="col-md-3">
+                                <strong th:text="${filteredCount}">0</strong><br>
+                                <small class="text-muted">Showing</small>
+                            </div>
+                            <div class="col-md-3">
+                                <strong th:text="${totalMembers}">0</strong><br>
+                                <small class="text-muted">Total Members</small>
+                            </div>
+                            <div class="col-md-3">
+                                <strong th:text="${leaderFilterCount}">0</strong><br>
+                                <small class="text-muted">Leaders</small>
+                            </div>
+                            <div class="col-md-3">
+                                <strong th:text="${unassignedFilterCount}">0</strong><br>
+                                <small class="text-muted">Unassigned</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div layout:fragment="scripts">
+        <script>
+            // Apply filters function
+            function applyFilters() {
+                const sortValue = document.querySelector('select').value;
+                const currentUrl = new URL(window.location);
+                currentUrl.searchParams.set('sort', sortValue);
+                window.location.href = currentUrl.toString();
+            }
+
+            // Assign member to subteam
+            function assignToSubteam(memberId, subteamId) {
+                fetch(`/team/members/${memberId}/assign`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `subteamId=${subteamId || ''}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Show success message and refresh page
+                        showToast(data.message, 'success');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        showToast(data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error updating assignment', 'error');
+                });
+            }
+
+            // Simple toast notification
+            function showToast(message, type) {
+                const toast = document.createElement('div');
+                toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed`;
+                toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+                toast.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                        <span>${message}</span>
+                        <button type="button" class="btn-close ms-auto" onclick="this.parentElement.parentElement.remove()"></button>
+                    </div>
+                `;
+                document.body.appendChild(toast);
+                
+                // Auto-remove after 3 seconds
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.remove();
+                    }
+                }, 3000);
+            }
+        </script>
+    </div>
+</body>
+</html>

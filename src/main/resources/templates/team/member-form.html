@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <title th:text="${isEdit ? 'Edit Team Member' : 'Add Team Member'} + ' - FRC Project Management'">Member Form</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="container-fluid">
+            <!-- Page Header -->
+            <div class="row mb-4">
+                <div class="col">
+                    <h1 class="h3 mb-1" th:text="${isEdit ? 'Edit Team Member' : 'Add New Team Member'}">Member Form</h1>
+                    <p class="text-muted" th:text="${isEdit ? 'Update team member information and assignments' : 'Add a new member to your FRC team'}">Form description</p>
+                </div>
+            </div>
+
+            <!-- Form -->
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-body">
+                            <form th:action="${isEdit ? '/team/members/' + member.id + '/edit' : '/team/members/new'}" 
+                                  th:object="${member}" method="post" class="needs-validation" novalidate>
+                                
+                                <!-- Basic Information -->
+                                <h5 class="mb-3">
+                                    <i class="fas fa-user"></i> Basic Information
+                                </h5>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="firstName" class="form-label">First Name *</label>
+                                            <input type="text" class="form-control" id="firstName" th:field="*{firstName}" 
+                                                   placeholder="Enter first name" required>
+                                            <div class="invalid-feedback" th:if="${#fields.hasErrors('firstName')}" th:errors="*{firstName}">
+                                                First name error
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="lastName" class="form-label">Last Name *</label>
+                                            <input type="text" class="form-control" id="lastName" th:field="*{lastName}" 
+                                                   placeholder="Enter last name" required>
+                                            <div class="invalid-feedback" th:if="${#fields.hasErrors('lastName')}" th:errors="*{lastName}">
+                                                Last name error
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="username" class="form-label">Username *</label>
+                                    <input type="text" class="form-control" id="username" th:field="*{username}" 
+                                           placeholder="Enter unique username" required th:readonly="${isEdit}">
+                                    <div class="invalid-feedback" th:if="${#fields.hasErrors('username')}" th:errors="*{username}">
+                                        Username error
+                                    </div>
+                                    <div class="form-text" th:text="${usernameHelp}">Username should be unique and easy to remember</div>
+                                </div>
+
+                                <!-- Contact Information -->
+                                <h5 class="mb-3 mt-4">
+                                    <i class="fas fa-address-book"></i> Contact Information
+                                </h5>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="email" class="form-label">Email Address</label>
+                                            <input type="email" class="form-control" id="email" th:field="*{email}" 
+                                                   placeholder="member@example.com">
+                                            <div class="invalid-feedback" th:if="${#fields.hasErrors('email')}" th:errors="*{email}">
+                                                Email error
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="phone" class="form-label">Phone Number</label>
+                                            <input type="tel" class="form-control" id="phone" th:field="*{phone}" 
+                                                   placeholder="(555) 123-4567">
+                                            <div class="invalid-feedback" th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}">
+                                                Phone error
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Team Assignment -->
+                                <h5 class="mb-3 mt-4">
+                                    <i class="fas fa-users"></i> Team Assignment
+                                </h5>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="subteam" class="form-label">Subteam Assignment</label>
+                                            <select class="form-select" id="subteam" th:field="*{subteam.id}">
+                                                <option value="">No subteam assignment</option>
+                                                <option th:each="subteam : ${subteamOptions}" 
+                                                        th:value="${subteam.id}" 
+                                                        th:text="${subteam.name}"
+                                                        th:selected="${member.subteam != null && member.subteam.id == subteam.id}">Subteam</option>
+                                            </select>
+                                            <div class="form-text">Assign member to a subteam for better organization</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Role</label>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="isLeader" th:field="*{leader}">
+                                                <label class="form-check-label" for="isLeader">
+                                                    <i class="fas fa-crown text-warning"></i> Team Leader
+                                                </label>
+                                            </div>
+                                            <div class="form-text">Leaders have additional responsibilities and permissions</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Skills -->
+                                <h5 class="mb-3 mt-4">
+                                    <i class="fas fa-cogs"></i> Skills & Expertise
+                                </h5>
+
+                                <div class="mb-3">
+                                    <label for="skills" class="form-label">Skills</label>
+                                    <textarea class="form-control" id="skills" th:field="*{skills}" rows="3" 
+                                              placeholder="Enter skills separated by commas (e.g., Programming, CAD, Electronics)"></textarea>
+                                    <div class="invalid-feedback" th:if="${#fields.hasErrors('skills')}" th:errors="*{skills}">
+                                        Skills error
+                                    </div>
+                                    <div class="form-text" th:text="${skillsHelp}">Enter skills separated by commas</div>
+                                </div>
+
+                                <!-- Form Actions -->
+                                <div class="d-flex justify-content-between pt-3 border-top">
+                                    <div>
+                                        <a href="/team" class="btn btn-secondary">
+                                            <i class="fas fa-arrow-left"></i> Cancel
+                                        </a>
+                                    </div>
+                                    <div>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save"></i> 
+                                            <span th:text="${isEdit ? 'Update Member' : 'Add Member'}">Save</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar with Help -->
+                <div class="col-lg-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-lightbulb"></i> Member Management Tips
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Common Skills -->
+                            <div th:if="${commonSkills}" class="mb-3">
+                                <h6>Common Skills:</h6>
+                                <div class="d-flex flex-wrap gap-1">
+                                    <span th:each="skill : ${commonSkills}" 
+                                          class="badge bg-light text-dark skill-suggestion" 
+                                          style="cursor: pointer;"
+                                          th:text="${skill}"
+                                          onclick="addSkill(this.textContent)">Skill</span>
+                                </div>
+                                <small class="text-muted">Click a skill to add it to the member's profile</small>
+                            </div>
+
+                            <!-- Tips -->
+                            <div class="mb-3">
+                                <h6>Best Practices:</h6>
+                                <ul class="small text-muted">
+                                    <li>Use consistent naming for usernames</li>
+                                    <li>Assign members to appropriate subteams</li>
+                                    <li>Keep contact information up to date</li>
+                                    <li>Document specific skills and expertise</li>
+                                    <li>Designate leaders for each subteam</li>
+                                </ul>
+                            </div>
+
+                            <!-- Edit Warnings -->
+                            <div th:if="${isEdit && hasAssignedTasks}" class="alert alert-warning">
+                                <h6><i class="fas fa-exclamation-triangle"></i> Warning</h6>
+                                <p class="mb-1">This member has <strong th:text="${assignedTaskCount}">0</strong> assigned tasks.</p>
+                                <small>Changes to assignments may affect project schedules.</small>
+                            </div>
+
+                            <div th:if="${isEdit && member.leader}" class="alert alert-info">
+                                <h6><i class="fas fa-crown"></i> Leadership Role</h6>
+                                <small>This member is currently designated as a team leader with additional responsibilities.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Subteam Info (if available) -->
+                    <div th:if="${subteamOptions && !#lists.isEmpty(subteamOptions)}" class="card mt-3">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">
+                                <i class="fas fa-layer-group"></i> Available Subteams
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div th:each="subteam : ${subteamOptions}" class="d-flex align-items-center mb-2">
+                                <div class="rounded-circle me-2" 
+                                     th:style="'width: 16px; height: 16px; background-color: ' + ${subteam.colorCode}"></div>
+                                <div>
+                                    <strong th:text="${subteam.name}">Subteam Name</strong>
+                                    <br><small class="text-muted" th:text="${subteam.specialties}">Specialties</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div layout:fragment="scripts">
+        <script>
+            // Form validation
+            (function() {
+                'use strict';
+                window.addEventListener('load', function() {
+                    var forms = document.getElementsByClassName('needs-validation');
+                    var validation = Array.prototype.filter.call(forms, function(form) {
+                        form.addEventListener('submit', function(event) {
+                            if (form.checkValidity() === false) {
+                                event.preventDefault();
+                                event.stopPropagation();
+                            }
+                            form.classList.add('was-validated');
+                        }, false);
+                    });
+                }, false);
+            })();
+
+            // Add skill to the skills textarea
+            function addSkill(skillName) {
+                const skillsTextarea = document.getElementById('skills');
+                let currentSkills = skillsTextarea.value.trim();
+                
+                // Check if skill is already present
+                const skillsList = currentSkills.split(',').map(s => s.trim().toLowerCase());
+                if (skillsList.includes(skillName.toLowerCase())) {
+                    return; // Skill already exists
+                }
+                
+                // Add the skill
+                if (currentSkills === '') {
+                    skillsTextarea.value = skillName;
+                } else {
+                    skillsTextarea.value = currentSkills + ', ' + skillName;
+                }
+                
+                // Visual feedback
+                const skillBadge = event.target;
+                skillBadge.classList.remove('bg-light', 'text-dark');
+                skillBadge.classList.add('bg-success', 'text-white');
+                setTimeout(() => {
+                    skillBadge.classList.remove('bg-success', 'text-white');
+                    skillBadge.classList.add('bg-light', 'text-dark');
+                }, 1000);
+            }
+
+            // Username validation
+            document.getElementById('username').addEventListener('input', function(e) {
+                const username = e.target.value;
+                
+                // Basic validation - alphanumeric and underscore only
+                const validPattern = /^[a-zA-Z0-9_]+$/;
+                if (username && !validPattern.test(username)) {
+                    e.target.setCustomValidity('Username can only contain letters, numbers, and underscores');
+                } else {
+                    e.target.setCustomValidity('');
+                }
+            });
+
+            // Phone number formatting
+            document.getElementById('phone').addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length >= 6) {
+                    value = value.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3');
+                } else if (value.length >= 3) {
+                    value = value.replace(/(\d{3})(\d{0,3})/, '($1) $2');
+                }
+                e.target.value = value;
+            });
+
+            // Skills textarea enhancements
+            document.getElementById('skills').addEventListener('input', function(e) {
+                // Auto-capitalize first letter of each skill
+                let value = e.target.value;
+                let skills = value.split(',');
+                skills = skills.map(skill => {
+                    skill = skill.trim();
+                    if (skill.length > 0) {
+                        return skill.charAt(0).toUpperCase() + skill.slice(1).toLowerCase();
+                    }
+                    return skill;
+                });
+                
+                // Only update if different to avoid cursor jumping
+                const newValue = skills.join(', ');
+                if (newValue !== value && e.target.selectionStart === value.length) {
+                    e.target.value = newValue;
+                }
+            });
+
+            // Subteam selection enhancement
+            document.getElementById('subteam').addEventListener('change', function(e) {
+                const selectedOption = e.target.selectedOptions[0];
+                if (selectedOption && selectedOption.value) {
+                    // Visual feedback for subteam selection
+                    console.log('Selected subteam:', selectedOption.text);
+                }
+            });
+        </script>
+    </div>
+</body>
+</html>

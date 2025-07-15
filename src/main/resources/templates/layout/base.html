@@ -376,8 +376,8 @@
                 <ol class="breadcrumb mb-0">
                     <li class="breadcrumb-item" th:each="crumb, iterStat : ${breadcrumbs}" 
                         th:classappend="${iterStat.last} ? 'active' : ''">
-                        <a th:if="${!iterStat.last}" th:href="${crumb.url}" th:text="${crumb.title}">Link</a>
-                        <span th:if="${iterStat.last}" th:text="${crumb.title}">Current</span>
+                        <a th:if="${!iterStat.last}" th:href="${crumb.url}" th:text="${crumb.name}">Link</a>
+                        <span th:if="${iterStat.last}" th:text="${crumb.name}">Current</span>
                     </li>
                 </ol>
             </nav>

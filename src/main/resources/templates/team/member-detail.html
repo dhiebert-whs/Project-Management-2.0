@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <title th:text="${member.fullName} + ' - Team Member Profile'">Member Profile</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="container-fluid">
+            <!-- Member Header -->
+            <div class="row mb-4">
+                <div class="col">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                 style="width: 64px; height: 64px; font-size: 1.5rem;">
+                                <span th:text="${member.firstName != null ? member.firstName.substring(0,1) : '?'}">A</span>
+                            </div>
+                            <div>
+                                <h1 class="h3 mb-1" th:text="${member.fullName}">Member Name</h1>
+                                <p class="text-muted mb-0">
+                                    @<span th:text="${member.username}">username</span>
+                                    <span th:if="${member.leader}" class="badge bg-warning ms-2">
+                                        <i class="fas fa-crown"></i> Leader
+                                    </span>
+                                </p>
+                                <div class="mt-2">
+                                    <div th:if="${member.subteam}" class="d-flex align-items-center">
+                                        <div class="rounded-circle me-2" 
+                                             th:style="'width: 16px; height: 16px; background-color: ' + ${member.subteam.colorCode}"></div>
+                                        <a th:href="@{/team/subteams/{id}(id=${member.subteam.id})}" 
+                                           th:text="${member.subteam.name}" class="text-decoration-none">Subteam</a>
+                                    </div>
+                                    <div th:if="${!member.subteam}" class="text-warning">
+                                        <i class="fas fa-exclamation-triangle"></i> Not assigned to subteam
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-cog"></i> Actions
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li th:if="${canEdit}">
+                                    <a class="dropdown-item" th:href="@{/team/members/{id}/edit(id=${member.id})}">
+                                        <i class="fas fa-edit"></i> Edit Profile
+                                    </a>
+                                </li>
+                                <li><a class="dropdown-item" th:href="@{/tasks(assigneeId=${member.id})}">
+                                    <i class="fas fa-tasks"></i> View All Tasks
+                                </a></li>
+                                <li><a class="dropdown-item" th:href="@{/tasks/new(assigneeId=${member.id})}">
+                                    <i class="fas fa-plus"></i> Assign New Task
+                                </a></li>
+                                <li th:if="${availableSubteams && canAssign}"><hr class="dropdown-divider"></li>
+                                <li th:if="${availableSubteams && canAssign}">
+                                    <h6 class="dropdown-header">Assign to Subteam</h6>
+                                </li>
+                                <li th:if="${canAssign}">
+                                    <a class="dropdown-item" href="#" onclick="assignToSubteam(null)">
+                                        <i class="fas fa-times"></i> Unassign from Subteam
+                                    </a>
+                                </li>
+                                <li th:each="subteam : ${availableSubteams}" th:if="${canAssign}">
+                                    <a class="dropdown-item" href="#" 
+                                       th:onclick="'assignToSubteam(' + ${subteam.id} + ')'"
+                                       th:class="${member.subteam != null && member.subteam.id == subteam.id} ? 'dropdown-item active' : 'dropdown-item'">
+                                        <div class="d-flex align-items-center">
+                                            <div class="rounded-circle me-2" 
+                                                 th:style="'width: 12px; height: 12px; background-color: ' + ${subteam.colorCode}"></div>
+                                            <span th:text="${subteam.name}">Subteam</span>
+                                        </div>
+                                    </a>
+                                </li>
+                                <li th:if="${canChangeLeadership}"><hr class="dropdown-divider"></li>
+                                <li th:if="${canChangeLeadership}">
+                                    <a class="dropdown-item" th:href="@{/team/members/{id}/toggle-leadership(id=${member.id})}" 
+                                       onclick="return confirm('Toggle leadership status?')">
+                                        <i th:class="${member.leader ? 'fas fa-user-minus' : 'fas fa-user-plus'}"></i> 
+                                        <span th:text="${member.leader ? 'Remove Leadership' : 'Make Leader'}">Toggle Leadership</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Stats -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h3 class="text-primary" th:text="${totalTasks ?: 0}">0</h3>
+                            <p class="card-text text-muted mb-0">Assigned Tasks</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h3 class="text-success" th:text="${completedTasks ?: 0}">0</h3>
+                            <p class="card-text text-muted mb-0">Completed</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h3 th:class="${(overdueTasks ?: 0) > 0 ? 'text-danger' : 'text-muted'}" 
+                                th:text="${overdueTasks ?: 0}">0</h3>
+                            <p class="card-text text-muted mb-0">Overdue</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h3 class="text-info" th:text="${completionRate ?: 0} + '%'">0%</h3>
+                            <p class="card-text text-muted mb-0">Completion Rate</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="row">
+                <!-- Contact and Details -->
+                <div class="col-lg-4 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-id-card"></i> Contact Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div th:if="${member.email}" class="mb-3">
+                                <label class="form-label text-muted">Email</label>
+                                <div>
+                                    <i class="fas fa-envelope text-primary me-2"></i>
+                                    <a th:href="'mailto:' + ${member.email}" th:text="${member.email}">email@example.com</a>
+                                </div>
+                            </div>
+                            
+                            <div th:if="${member.phone}" class="mb-3">
+                                <label class="form-label text-muted">Phone</label>
+                                <div>
+                                    <i class="fas fa-phone text-primary me-2"></i>
+                                    <a th:href="'tel:' + ${member.phone}" th:text="${member.phone}">phone</a>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Username</label>
+                                <div>
+                                    <i class="fas fa-at text-primary me-2"></i>
+                                    <span th:text="${member.username}">username</span>
+                                </div>
+                            </div>
+
+                            <div th:if="${member.subteam}" class="mb-3">
+                                <label class="form-label text-muted">Subteam</label>
+                                <div class="d-flex align-items-center">
+                                    <div class="rounded-circle me-2" 
+                                         th:style="'width: 16px; height: 16px; background-color: ' + ${member.subteam.colorCode}"></div>
+                                    <a th:href="@{/team/subteams/{id}(id=${member.subteam.id})}" 
+                                       th:text="${member.subteam.name}" class="text-decoration-none">Subteam</a>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Role</label>
+                                <div>
+                                    <span th:if="${member.leader}" class="badge bg-warning">
+                                        <i class="fas fa-crown"></i> Team Leader
+                                    </span>
+                                    <span th:if="${!member.leader}" class="badge bg-info">
+                                        <i class="fas fa-user"></i> Team Member
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Skills -->
+                    <div th:if="${skillList && !#lists.isEmpty(skillList)}" class="card mt-3">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-cogs"></i> Skills & Expertise
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex flex-wrap gap-1">
+                                <span th:each="skill : ${skillList}" 
+                                      class="badge bg-primary" th:text="${skill}">Skill</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tasks and Activity -->
+                <div class="col-lg-8">
+                    <!-- Current Tasks -->
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-tasks"></i> Assigned Tasks
+                            </h5>
+                            <div>
+                                <a th:href="@{/tasks/new(assigneeId=${member.id})}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-plus"></i> Assign Task
+                                </a>
+                                <a th:href="@{/tasks(assigneeId=${member.id})}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-external-link-alt"></i> View All
+                                </a>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div th:if="${assignedTasks && !#lists.isEmpty(assignedTasks)}">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Task</th>
+                                                <th>Project</th>
+                                                <th>Priority</th>
+                                                <th>Progress</th>
+                                                <th>Due Date</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr th:each="task : ${assignedTasks}">
+                                                <td>
+                                                    <a th:href="@{/tasks/{id}(id=${task.id})}" 
+                                                       th:text="${task.title}" class="text-decoration-none">Task Title</a>
+                                                </td>
+                                                <td>
+                                                    <a th:href="@{/projects/{id}(id=${task.project.id})}" 
+                                                       th:text="${task.project.name}" class="text-decoration-none text-muted">Project</a>
+                                                </td>
+                                                <td>
+                                                    <span th:class="'badge ' + (${task.priority.name() == 'HIGH'} ? 'bg-warning' : ${task.priority.name() == 'MEDIUM'} ? 'bg-info' : 'bg-secondary')"
+                                                          th:text="${task.priority.displayName}">Priority</span>
+                                                </td>
+                                                <td>
+                                                    <div class="progress" style="height: 20px; min-width: 80px;">
+                                                        <div class="progress-bar" 
+                                                             th:style="'width: ' + ${task.progress} + '%'"
+                                                             th:text="${task.progress} + '%'">0%</div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <span th:if="${task.endDate}" th:text="${#temporals.format(task.endDate, 'MMM dd, yyyy')}">Due Date</span>
+                                                    <span th:if="${!task.endDate}" class="text-muted">No due date</span>
+                                                </td>
+                                                <td>
+                                                    <span th:if="${task.completed}" class="badge bg-success">Completed</span>
+                                                    <span th:if="${!task.completed && task.progress > 0}" class="badge bg-info">In Progress</span>
+                                                    <span th:if="${!task.completed && task.progress == 0}" class="badge bg-secondary">Not Started</span>
+                                                    <span th:if="${!task.completed && task.endDate != null && task.endDate.isBefore(#temporals.createNow())}" 
+                                                          class="badge bg-danger ms-1">Overdue</span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div th:if="${!assignedTasks || #lists.isEmpty(assignedTasks)}" class="text-center py-4">
+                                <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No Tasks Assigned</h5>
+                                <p class="text-muted">This member has no tasks assigned yet.</p>
+                                <a th:href="@{/tasks/new(assigneeId=${member.id})}" class="btn btn-primary">
+                                    <i class="fas fa-plus"></i> Assign First Task
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-history"></i> Recent Activity
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div th:if="${recentCompletedTasks && !#lists.isEmpty(recentCompletedTasks)}">
+                                <div th:each="task : ${recentCompletedTasks}" class="d-flex align-items-center mb-3">
+                                    <div class="me-3">
+                                        <i class="fas fa-check-circle text-success"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-0">
+                                            <a th:href="@{/tasks/{id}(id=${task.id})}" 
+                                               th:text="${task.title}" class="text-decoration-none">Task Title</a>
+                                        </h6>
+                                        <small class="text-muted">
+                                            Completed • <span th:text="${task.project.name}">Project</span>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div th:if="${!recentCompletedTasks || #lists.isEmpty(recentCompletedTasks)}" class="text-center py-4">
+                                <i class="fas fa-clock fa-2x text-muted mb-2"></i>
+                                <p class="text-muted">No recent activity</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div layout:fragment="scripts">
+        <script>
+            // Assign member to subteam
+            function assignToSubteam(subteamId) {
+                const memberId = /*[[${member.id}]]*/ 0;
+                
+                fetch(`/team/members/${memberId}/assign`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `subteamId=${subteamId || ''}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Show success message and refresh page
+                        showToast(data.message, 'success');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        showToast(data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error updating assignment', 'error');
+                });
+            }
+
+            // Simple toast notification
+            function showToast(message, type) {
+                const toast = document.createElement('div');
+                toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed`;
+                toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+                toast.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                        <span>${message}</span>
+                        <button type="button" class="btn-close ms-auto" onclick="this.parentElement.parentElement.remove()"></button>
+                    </div>
+                `;
+                document.body.appendChild(toast);
+                
+                // Auto-remove after 3 seconds
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.remove();
+                    }
+                }, 3000);
+            }
+        </script>
+    </div>
+</body>
+</html>

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>Team Overview - FRC Project Management</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="container-fluid">
+            <!-- Page Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-1">Team Overview</h1>
+                    <p class="text-muted">Manage your FRC team members and subteams</p>
+                </div>
+                <div>
+                    <div class="btn-group" role="group">
+                        <a href="/team/members/new" class="btn btn-primary">
+                            <i class="fas fa-user-plus"></i> Add Member
+                        </a>
+                        <a href="/team/subteams/new" class="btn btn-outline-primary">
+                            <i class="fas fa-plus"></i> Add Subteam
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h3 class="text-primary" th:text="${totalMembers ?: 0}">0</h3>
+                            <p class="card-text text-muted mb-0">Total Members</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h3 class="text-warning" th:text="${leaderCount ?: 0}">0</h3>
+                            <p class="card-text text-muted mb-0">Leaders</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h3 class="text-info" th:text="${totalSubteams ?: 0}">0</h3>
+                            <p class="card-text text-muted mb-0">Subteams</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h3 th:text="${avgMembersPerSubteam ?: 0}" 
+                                th:class="${unassignedCount > 0 ? 'text-warning' : 'text-success'}">0</h3>
+                            <p class="card-text text-muted mb-0">Avg per Subteam</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- View Toggle -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="btn-group" role="group">
+                        <a th:href="@{/team(view='overview')}" 
+                           th:class="'btn btn-outline-secondary' + (${currentView} == 'overview' ? ' active' : '')">
+                            <i class="fas fa-chart-pie"></i> Overview
+                        </a>
+                        <a th:href="@{/team(view='members')}" 
+                           th:class="'btn btn-outline-secondary' + (${currentView} == 'members' ? ' active' : '')">
+                            <i class="fas fa-users"></i> Members (<span th:text="${totalMembers}">0</span>)
+                        </a>
+                        <a th:href="@{/team(view='subteams')}" 
+                           th:class="'btn btn-outline-secondary' + (${currentView} == 'subteams' ? ' active' : '')">
+                            <i class="fas fa-layer-group"></i> Subteams (<span th:text="${totalSubteams}">0</span>)
+                        </a>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="Search team members..." 
+                               id="memberSearchInput">
+                        <button class="btn btn-outline-secondary" type="button" onclick="searchMembers()">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="row">
+                <!-- Recent Members -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-user-clock"></i> Recent Members
+                            </h5>
+                            <a href="/team?view=members" class="btn btn-sm btn-outline-primary">View All</a>
+                        </div>
+                        <div class="card-body">
+                            <div th:if="${recentMembers && !#lists.isEmpty(recentMembers)}">
+                                <div th:each="member : ${recentMembers}" class="d-flex align-items-center mb-3">
+                                    <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                         style="width: 40px; height: 40px;">
+                                        <span th:text="${member.firstName != null ? member.firstName.substring(0,1) : '?'}">A</span>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-0">
+                                            <a th:href="@{/team/members/{id}(id=${member.id})}" 
+                                               th:text="${member.fullName}" class="text-decoration-none">Member Name</a>
+                                        </h6>
+                                        <small class="text-muted">
+                                            <span th:text="${member.subteam != null ? member.subteam.name : 'Unassigned'}">Subteam</span>
+                                            <span th:if="${member.leader}" class="badge bg-warning ms-1">Leader</span>
+                                        </small>
+                                    </div>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" th:href="@{/team/members/{id}(id=${member.id})}">
+                                                <i class="fas fa-eye"></i> View Profile</a></li>
+                                            <li><a class="dropdown-item" th:href="@{/team/members/{id}/edit(id=${member.id})}">
+                                                <i class="fas fa-edit"></i> Edit</a></li>
+                                            <li><a class="dropdown-item" th:href="@{/tasks(assigneeId=${member.id})}">
+                                                <i class="fas fa-tasks"></i> View Tasks</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div th:if="${!recentMembers || #lists.isEmpty(recentMembers)}" class="text-center py-3">
+                                <i class="fas fa-user-plus fa-2x text-muted mb-2"></i>
+                                <p class="text-muted mb-1">No team members yet</p>
+                                <a href="/team/members/new" class="btn btn-sm btn-primary">Add First Member</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Subteam Summary -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-layer-group"></i> Subteam Summary
+                            </h5>
+                            <a href="/team?view=subteams" class="btn btn-sm btn-outline-primary">View All</a>
+                        </div>
+                        <div class="card-body">
+                            <div th:if="${subteamSummary && !#lists.isEmpty(subteamSummary)}">
+                                <div th:each="summary : ${subteamSummary}" class="d-flex align-items-center mb-3">
+                                    <div class="rounded-circle me-3" 
+                                         th:style="'width: 40px; height: 40px; background-color: ' + ${summary.subteam.colorCode} + '; display: flex; align-items: center; justify-content: center;'">
+                                        <span class="text-white fw-bold" th:text="${summary.subteam.name.substring(0,1)}">S</span>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-0">
+                                            <a th:href="@{/team/subteams/{id}(id=${summary.subteam.id})}" 
+                                               th:text="${summary.subteam.name}" class="text-decoration-none">Subteam Name</a>
+                                        </h6>
+                                        <small class="text-muted">
+                                            <span th:text="${summary.memberCount}">0</span> members
+                                            <span th:if="${summary.leaderCount > 0}">
+                                                • <span th:text="${summary.leaderCount}">0</span> leader<span th:if="${summary.leaderCount > 1}">s</span>
+                                            </span>
+                                        </small>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="badge bg-light text-dark" th:text="${summary.memberCount}">0</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div th:if="${!subteamSummary || #lists.isEmpty(subteamSummary)}" class="text-center py-3">
+                                <i class="fas fa-layer-group fa-2x text-muted mb-2"></i>
+                                <p class="text-muted mb-1">No subteams created</p>
+                                <a href="/team/subteams/new" class="btn btn-sm btn-primary">Create First Subteam</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Skills Overview and Top Performers -->
+            <div class="row">
+                <!-- Skills Distribution -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-cogs"></i> Top Skills
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div th:if="${topSkills && !#lists.isEmpty(topSkills)}">
+                                <div th:each="skill : ${topSkills}" class="d-flex justify-content-between align-items-center mb-2">
+                                    <span th:text="${#strings.capitalize(skill.key)}">Skill Name</span>
+                                    <div class="d-flex align-items-center">
+                                        <div class="progress me-2" style="width: 100px; height: 8px;">
+                                            <div class="progress-bar" role="progressbar" 
+                                                 th:style="'width: ' + (${skill.value} * 100 / ${totalMembers}) + '%'"></div>
+                                        </div>
+                                        <small class="text-muted" th:text="${skill.value}">0</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div th:if="${!topSkills || #lists.isEmpty(topSkills)}" class="text-center py-3">
+                                <i class="fas fa-tools fa-2x text-muted mb-2"></i>
+                                <p class="text-muted">No skills data available</p>
+                                <small class="text-muted">Members can add skills to their profiles</small>
+                            </div>
+                            <div th:if="${totalUniqueSkills}" class="mt-3 pt-2 border-top">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle"></i>
+                                    Total of <strong th:text="${totalUniqueSkills}">0</strong> unique skills across the team
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Performers -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-trophy"></i> Top Performers
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div th:if="${topPerformers && !#lists.isEmpty(topPerformers)}">
+                                <div th:each="performer, iterStat : ${topPerformers}" class="d-flex align-items-center mb-3">
+                                    <div class="position-relative me-3">
+                                        <div class="avatar bg-success text-white rounded-circle d-flex align-items-center justify-content-center" 
+                                             style="width: 40px; height: 40px;">
+                                            <span th:text="${performer.member.firstName != null ? performer.member.firstName.substring(0,1) : '?'}">A</span>
+                                        </div>
+                                        <span th:if="${iterStat.index == 0}" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning">
+                                            <i class="fas fa-crown"></i>
+                                        </span>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-0">
+                                            <a th:href="@{/team/members/{id}(id=${performer.member.id})}" 
+                                               th:text="${performer.member.fullName}" class="text-decoration-none">Member Name</a>
+                                        </h6>
+                                        <small class="text-muted">
+                                            <span th:text="${performer.taskCount}">0</span> tasks assigned
+                                            • <span th:text="${performer.completedCount}">0</span> completed
+                                        </small>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="badge bg-success" 
+                                             th:text="${performer.taskCount > 0 ? #numbers.formatDecimal(performer.completedCount * 100.0 / performer.taskCount, 0, 0) + '%' : '0%'}">0%</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div th:if="${!topPerformers || #lists.isEmpty(topPerformers)}" class="text-center py-3">
+                                <i class="fas fa-chart-line fa-2x text-muted mb-2"></i>
+                                <p class="text-muted">No performance data yet</p>
+                                <small class="text-muted">Assign tasks to see performance metrics</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Unassigned Members Alert -->
+            <div th:if="${unassignedCount > 0}" class="alert alert-warning">
+                <h6><i class="fas fa-exclamation-triangle"></i> Unassigned Members</h6>
+                <p class="mb-2">
+                    You have <strong th:text="${unassignedCount}">0</strong> team member<span th:if="${unassignedCount > 1}">s</span> 
+                    not assigned to any subteam.
+                </p>
+                <a href="/team?view=members&role=unassigned" class="btn btn-sm btn-warning">
+                    <i class="fas fa-users"></i> View Unassigned Members
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div layout:fragment="scripts">
+        <script>
+            // Member search functionality
+            function searchMembers() {
+                const query = document.getElementById('memberSearchInput').value;
+                if (query.length >= 2) {
+                    fetch(`/team/members/search?query=${encodeURIComponent(query)}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                displaySearchResults(data.results);
+                            }
+                        })
+                        .catch(error => console.error('Search error:', error));
+                }
+            }
+
+            function displaySearchResults(results) {
+                // Implementation for displaying search results
+                // This would show a dropdown or modal with search results
+                console.log('Search results:', results);
+            }
+
+            // Enter key search
+            document.getElementById('memberSearchInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchMembers();
+                }
+            });
+
+            // Auto-search after 3 characters
+            document.getElementById('memberSearchInput').addEventListener('input', function(e) {
+                if (e.target.value.length >= 3) {
+                    setTimeout(() => {
+                        if (e.target.value.length >= 3) {
+                            searchMembers();
+                        }
+                    }, 500);
+                }
+            });
+        </script>
+    </div>
+</body>
+</html>

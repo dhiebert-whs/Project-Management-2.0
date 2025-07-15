@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <title th:text="${isEdit ? 'Edit Project' : 'New Project'} + ' - FRC Project Management'">Project Form</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="container-fluid">
+            <!-- Page Header -->
+            <div class="row mb-4">
+                <div class="col">
+                    <h1 class="h3 mb-1" th:text="${isEdit ? 'Edit Project' : 'Create New Project'}">Project Form</h1>
+                    <p class="text-muted" th:text="${isEdit ? 'Update project information and deadlines' : 'Set up a new project with timeline and goals'}">Form description</p>
+                </div>
+            </div>
+
+            <!-- Form -->
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-body">
+                            <form th:action="${isEdit ? '/projects/' + project.id + '/edit' : '/projects/new'}" 
+                                  th:object="${project}" method="post" class="needs-validation" novalidate>
+                                
+                                <!-- Project Name -->
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">Project Name *</label>
+                                    <input type="text" class="form-control" id="name" th:field="*{name}" 
+                                           placeholder="Enter project name" required>
+                                    <div class="invalid-feedback" th:if="${#fields.hasErrors('name')}" th:errors="*{name}">
+                                        Name error
+                                    </div>
+                                    <div class="form-text">Choose a clear, descriptive name for your project</div>
+                                </div>
+
+                                <!-- Project Description -->
+                                <div class="mb-3">
+                                    <label for="description" class="form-label">Description</label>
+                                    <textarea class="form-control" id="description" th:field="*{description}" 
+                                              rows="3" placeholder="Describe the project goals and scope"></textarea>
+                                    <div class="invalid-feedback" th:if="${#fields.hasErrors('description')}" th:errors="*{description}">
+                                        Description error
+                                    </div>
+                                </div>
+
+                                <!-- Date Fields Row -->
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="startDate" class="form-label">Start Date *</label>
+                                            <input type="date" class="form-control" id="startDate" th:field="*{startDate}" required>
+                                            <div class="invalid-feedback" th:if="${#fields.hasErrors('startDate')}" th:errors="*{startDate}">
+                                                Start date error
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="goalEndDate" class="form-label">Goal End Date *</label>
+                                            <input type="date" class="form-control" id="goalEndDate" th:field="*{goalEndDate}" required>
+                                            <div class="invalid-feedback" th:if="${#fields.hasErrors('goalEndDate')}" th:errors="*{goalEndDate}">
+                                                Goal end date error
+                                            </div>
+                                            <div class="form-text">Target completion date</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="hardDeadline" class="form-label">Hard Deadline *</label>
+                                            <input type="date" class="form-control" id="hardDeadline" th:field="*{hardDeadline}" required>
+                                            <div class="invalid-feedback" th:if="${#fields.hasErrors('hardDeadline')}" th:errors="*{hardDeadline}">
+                                                Hard deadline error
+                                            </div>
+                                            <div class="form-text text-danger">Absolute deadline</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Form Actions -->
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <a href="/projects" class="btn btn-secondary">
+                                            <i class="fas fa-arrow-left"></i> Cancel
+                                        </a>
+                                    </div>
+                                    <div>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save"></i> 
+                                            <span th:text="${isEdit ? 'Update Project' : 'Create Project'}">Save</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar with Help -->
+                <div class="col-lg-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-lightbulb"></i> Project Planning Tips
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Suggested Durations -->
+                            <div th:if="${suggestedDurations}" class="mb-3">
+                                <h6>Common Durations:</h6>
+                                <div th:each="duration : ${suggestedDurations}" class="mb-1">
+                                    <small class="text-muted">
+                                        <strong th:text="${duration.name}">Duration Name</strong>
+                                        (<span th:text="${duration.weeks}">0</span> weeks)
+                                    </small>
+                                </div>
+                            </div>
+
+                            <!-- Tips -->
+                            <div class="mb-3">
+                                <h6>Best Practices:</h6>
+                                <ul class="small text-muted">
+                                    <li>Set your goal date 1-2 weeks before the hard deadline</li>
+                                    <li>Consider team availability and competing priorities</li>
+                                    <li>Break large projects into smaller milestones</li>
+                                    <li>Account for testing and iteration time</li>
+                                </ul>
+                            </div>
+
+                            <!-- Edit Warnings -->
+                            <div th:if="${isEdit && hasExistingTasks}" class="alert alert-warning">
+                                <h6><i class="fas fa-exclamation-triangle"></i> Warning</h6>
+                                <p class="mb-1">This project has <strong th:text="${taskCount}">0</strong> existing tasks.</p>
+                                <small>Changing dates may affect task schedules and dependencies.</small>
+                            </div>
+
+                            <div th:if="${isEdit && hasCompletedTasks}" class="alert alert-info">
+                                <h6><i class="fas fa-info-circle"></i> Note</h6>
+                                <small>This project has completed tasks. Changes may affect historical reporting.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Date Helpers (if available) -->
+                    <div th:if="${!isEdit}" class="card mt-3">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">
+                                <i class="fas fa-calendar-plus"></i> Quick Setup
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="small text-muted mb-2">Click to auto-fill dates:</p>
+                            <div class="d-grid gap-1">
+                                <button type="button" class="btn btn-sm btn-outline-primary" 
+                                        onclick="setProjectDates(2)">2-Week Sprint</button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" 
+                                        onclick="setProjectDates(6)">6-Week Build Season</button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" 
+                                        onclick="setProjectDates(8)">8-Week Competition Prep</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div layout:fragment="scripts">
+        <script>
+            // Form validation
+            (function() {
+                'use strict';
+                window.addEventListener('load', function() {
+                    var forms = document.getElementsByClassName('needs-validation');
+                    var validation = Array.prototype.filter.call(forms, function(form) {
+                        form.addEventListener('submit', function(event) {
+                            if (form.checkValidity() === false) {
+                                event.preventDefault();
+                                event.stopPropagation();
+                            }
+                            form.classList.add('was-validated');
+                        }, false);
+                    });
+                }, false);
+            })();
+
+            // Quick date setup helper
+            function setProjectDates(weeks) {
+                var today = new Date();
+                var startDate = new Date(today);
+                var goalDate = new Date(today);
+                var hardDeadline = new Date(today);
+                
+                goalDate.setDate(today.getDate() + (weeks * 7));
+                hardDeadline.setDate(today.getDate() + (weeks * 7) + 14); // 2 weeks buffer
+                
+                document.getElementById('startDate').value = formatDateForInput(startDate);
+                document.getElementById('goalEndDate').value = formatDateForInput(goalDate);
+                document.getElementById('hardDeadline').value = formatDateForInput(hardDeadline);
+            }
+
+            function formatDateForInput(date) {
+                var year = date.getFullYear();
+                var month = String(date.getMonth() + 1).padStart(2, '0');
+                var day = String(date.getDate()).padStart(2, '0');
+                return year + '-' + month + '-' + day;
+            }
+
+            // Date validation
+            document.addEventListener('DOMContentLoaded', function() {
+                var startDate = document.getElementById('startDate');
+                var goalDate = document.getElementById('goalEndDate');
+                var hardDeadline = document.getElementById('hardDeadline');
+
+                function validateDates() {
+                    var start = new Date(startDate.value);
+                    var goal = new Date(goalDate.value);
+                    var deadline = new Date(hardDeadline.value);
+
+                    // Goal date should be after start date
+                    if (goal <= start) {
+                        goalDate.setCustomValidity('Goal date must be after start date');
+                    } else {
+                        goalDate.setCustomValidity('');
+                    }
+
+                    // Hard deadline should be after goal date
+                    if (deadline <= goal) {
+                        hardDeadline.setCustomValidity('Hard deadline must be after goal date');
+                    } else {
+                        hardDeadline.setCustomValidity('');
+                    }
+                }
+
+                startDate.addEventListener('change', validateDates);
+                goalDate.addEventListener('change', validateDates);
+                hardDeadline.addEventListener('change', validateDates);
+            });
+        </script>
+    </div>
+</body>
+</html>

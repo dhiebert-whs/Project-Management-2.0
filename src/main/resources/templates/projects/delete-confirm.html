@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <title th:text="'Delete ' + ${project.name} + ' - Confirm Action'">Delete Project</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="container-fluid">
+            <div class="row justify-content-center">
+                <div class="col-lg-6">
+                    <div class="card border-danger">
+                        <div class="card-header bg-danger text-white">
+                            <h4 class="card-title mb-0">
+                                <i class="fas fa-exclamation-triangle"></i> Confirm Project Deletion
+                            </h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-danger">
+                                <h5><i class="fas fa-warning"></i> This action cannot be undone!</h5>
+                                <p class="mb-0">You are about to permanently delete this project and all associated data.</p>
+                            </div>
+
+                            <!-- Project Information -->
+                            <h5>Project to Delete:</h5>
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h6 class="card-title" th:text="${project.name}">Project Name</h6>
+                                    <p class="card-text text-muted" th:text="${project.description}">Project description</p>
+                                    <div class="row text-center">
+                                        <div class="col">
+                                            <small class="text-muted">Start Date</small><br>
+                                            <span th:text="${#temporals.format(project.startDate, 'MMM dd, yyyy')}">Start Date</span>
+                                        </div>
+                                        <div class="col">
+                                            <small class="text-muted">Goal Date</small><br>
+                                            <span th:text="${#temporals.format(project.goalEndDate, 'MMM dd, yyyy')}">Goal Date</span>
+                                        </div>
+                                        <div class="col">
+                                            <small class="text-muted">Deadline</small><br>
+                                            <span th:text="${#temporals.format(project.hardDeadline, 'MMM dd, yyyy')}">Deadline</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Impact Information -->
+                            <h5>Deletion Impact:</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-4 text-center">
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <h4 class="text-danger" th:text="${taskCount ?: 0}">0</h4>
+                                            <small class="text-muted">Tasks will be deleted</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 text-center">
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <h4 class="text-warning" th:text="${completedTaskCount ?: 0}">0</h4>
+                                            <small class="text-muted">Completed tasks lost</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 text-center">
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <h4 class="text-info" th:text="${milestoneCount ?: 0}">0</h4>
+                                            <small class="text-muted">Milestones affected</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Warnings -->
+                            <div th:if="${taskCount > 0}" class="alert alert-warning">
+                                <h6><i class="fas fa-exclamation-triangle"></i> Data Loss Warning</h6>
+                                <ul class="mb-0">
+                                    <li th:if="${taskCount > 0}">
+                                        <strong th:text="${taskCount}">0</strong> tasks will be permanently deleted
+                                    </li>
+                                    <li th:if="${completedTaskCount > 0}">
+                                        <strong th:text="${completedTaskCount}">0</strong> completed tasks and their history will be lost
+                                    </li>
+                                    <li th:if="${milestoneCount > 0}">
+                                        <strong th:text="${milestoneCount}">0</strong> milestones will be removed
+                                    </li>
+                                    <li>All project reports and analytics will be lost</li>
+                                    <li>Team assignments and progress tracking will be deleted</li>
+                                </ul>
+                            </div>
+
+                            <!-- Alternatives -->
+                            <div class="alert alert-info">
+                                <h6><i class="fas fa-lightbulb"></i> Consider These Alternatives</h6>
+                                <ul class="mb-0">
+                                    <li><strong>Archive:</strong> Mark project as completed instead of deleting</li>
+                                    <li><strong>Export:</strong> Save project data before deletion (coming soon)</li>
+                                    <li><strong>Edit:</strong> Update project details if information is incorrect</li>
+                                </ul>
+                            </div>
+
+                            <!-- Confirmation -->
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="confirmDeletion" required>
+                                <label class="form-check-label" for="confirmDeletion">
+                                    I understand that this action is <strong>permanent and irreversible</strong>
+                                </label>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <a th:href="@{/projects/{id}(id=${project.id})}" class="btn btn-secondary">
+                                        <i class="fas fa-arrow-left"></i> Cancel
+                                    </a>
+                                    <a th:href="@{/projects/{id}/edit(id=${project.id})}" class="btn btn-outline-primary">
+                                        <i class="fas fa-edit"></i> Edit Instead
+                                    </a>
+                                </div>
+                                <div>
+                                    <form th:action="@{/projects/{id}/delete(id=${project.id})}" method="post" style="display: inline;">
+                                        <input type="hidden" name="confirmed" value="true">
+                                        <button type="submit" class="btn btn-danger" id="deleteButton" disabled>
+                                            <i class="fas fa-trash"></i> Delete Project Permanently
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Warning Box -->
+                    <div class="alert alert-danger mt-3">
+                        <div class="row align-items-center">
+                            <div class="col-auto">
+                                <i class="fas fa-shield-alt fa-2x"></i>
+                            </div>
+                            <div class="col">
+                                <h6 class="mb-1">Data Protection Notice</h6>
+                                <small>Once deleted, this project data cannot be recovered. All associated tasks, progress tracking, and team assignments will be permanently removed from the system.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div layout:fragment="scripts">
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const confirmCheckbox = document.getElementById('confirmDeletion');
+                const deleteButton = document.getElementById('deleteButton');
+
+                confirmCheckbox.addEventListener('change', function() {
+                    deleteButton.disabled = !this.checked;
+                    
+                    if (this.checked) {
+                        deleteButton.classList.remove('btn-danger');
+                        deleteButton.classList.add('btn-outline-danger');
+                    } else {
+                        deleteButton.classList.remove('btn-outline-danger');
+                        deleteButton.classList.add('btn-danger');
+                    }
+                });
+
+                // Double confirmation on submit
+                deleteButton.closest('form').addEventListener('submit', function(e) {
+                    if (!confirmCheckbox.checked) {
+                        e.preventDefault();
+                        alert('Please confirm that you understand this action is permanent.');
+                        return false;
+                    }
+
+                    const projectName = /*[[${project.name}]]*/ 'this project';
+                    const confirmed = confirm(
+                        'FINAL CONFIRMATION\n\n' +
+                        'Are you absolutely sure you want to delete "' + projectName + '"?\n\n' +
+                        'This action is PERMANENT and IRREVERSIBLE.\n\n' +
+                        'Click OK to delete permanently, or Cancel to go back.'
+                    );
+
+                    if (!confirmed) {
+                        e.preventDefault();
+                        return false;
+                    }
+                });
+            });
+        </script>
+    </div>
+</body>
+</html>

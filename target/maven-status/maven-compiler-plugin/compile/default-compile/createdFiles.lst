@@ -75,6 +75,7 @@ org\frcpm\web\controllers\TaskDependencyController.class
 org\frcpm\repositories\spring\FrcMatchRepository.class
 org\frcpm\FrcProjectManagementApplication.class
 org\frcpm\repositories\spring\MeetingRepository.class
+org\frcpm\services\impl\TaskServiceImpl.class
 org\frcpm\services\MeetingService.class
 org\frcpm\models\DependencyType.class
 org\frcpm\config\WebSocketConfig.class

@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <title th:text="${project.name} + ' - Project Details'">Project Details</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="container-fluid">
+            <!-- Project Header -->
+            <div class="row mb-4">
+                <div class="col">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h1 class="h3 mb-1" th:text="${project.name}">Project Name</h1>
+                            <p class="text-muted mb-2" th:text="${project.description}">Project description</p>
+                            
+                            <!-- Project Status Badges -->
+                            <div class="mb-3">
+                                <span th:if="${overallHealth == 'good'}" class="badge bg-success me-2">
+                                    <i class="fas fa-check-circle"></i> On Track
+                                </span>
+                                <span th:if="${overallHealth == 'warning'}" class="badge bg-warning me-2">
+                                    <i class="fas fa-exclamation-triangle"></i> Attention Needed
+                                </span>
+                                <span th:if="${overallHealth == 'critical'}" class="badge bg-danger me-2">
+                                    <i class="fas fa-exclamation-circle"></i> Critical
+                                </span>
+                                
+                                <span th:if="${#temporals.createNow().isBefore(project.startDate)}" class="badge bg-info">
+                                    <i class="fas fa-clock"></i> Upcoming
+                                </span>
+                                <span th:if="${!#temporals.createNow().isBefore(project.startDate) && !#temporals.createNow().isAfter(project.goalEndDate)}" class="badge bg-success">
+                                    <i class="fas fa-play"></i> Active
+                                </span>
+                                <span th:if="${#temporals.createNow().isAfter(project.goalEndDate) && !#temporals.createNow().isAfter(project.hardDeadline)}" class="badge bg-warning">
+                                    <i class="fas fa-clock"></i> Past Goal
+                                </span>
+                                <span th:if="${#temporals.createNow().isAfter(project.hardDeadline)}" class="badge bg-danger">
+                                    <i class="fas fa-exclamation-triangle"></i> Overdue
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-cog"></i> Actions
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" th:href="@{/projects/{id}/edit(id=${project.id})}">
+                                    <i class="fas fa-edit"></i> Edit Project</a></li>
+                                <li><a class="dropdown-item" th:href="@{/tasks/new(projectId=${project.id})}">
+                                    <i class="fas fa-plus"></i> Add Task</a></li>
+                                <li><a class="dropdown-item" th:href="@{/tasks(projectId=${project.id})}">
+                                    <i class="fas fa-tasks"></i> View All Tasks</a></li>
+                                <li><a class="dropdown-item" th:href="@{/tasks/kanban(projectId=${project.id})}">
+                                    <i class="fas fa-columns"></i> Kanban Board</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" th:href="@{/projects/{id}/delete(id=${project.id})}">
+                                    <i class="fas fa-trash"></i> Delete Project</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Project Stats Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h3 class="text-primary" th:text="${projectSummary.completionPercentage != null ? projectSummary.completionPercentage + '%' : '0%'}">0%</h3>
+                            <p class="card-text text-muted mb-0">Completion</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h3 class="text-info" th:text="${projectSummary.totalTasks ?: 0}">0</h3>
+                            <p class="card-text text-muted mb-0">Total Tasks</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h3 class="text-success" th:text="${projectSummary.completedTasks ?: 0}">0</h3>
+                            <p class="card-text text-muted mb-0">Completed</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h3 th:class="${(projectSummary.overdueTasks ?: 0) > 0 ? 'text-danger' : 'text-muted'}" 
+                                th:text="${projectSummary.overdueTasks ?: 0}">0</h3>
+                            <p class="card-text text-muted mb-0">Overdue</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Project Timeline -->
+            <div class="row mb-4">
+                <div class="col">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-calendar-alt"></i> Project Timeline
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-play-circle text-primary me-2"></i>
+                                        <div>
+                                            <strong>Start Date</strong><br>
+                                            <span th:text="${#temporals.format(project.startDate, 'MMMM dd, yyyy')}">Start Date</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-flag-checkered text-success me-2"></i>
+                                        <div>
+                                            <strong>Goal Date</strong><br>
+                                            <span th:text="${#temporals.format(project.goalEndDate, 'MMMM dd, yyyy')}">Goal Date</span>
+                                            <br><small class="text-muted" th:if="${daysUntilGoal}">
+                                                <span th:text="${daysUntilGoal > 0 ? daysUntilGoal + ' days remaining' : 'Goal date passed'}">Days info</span>
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                                        <div>
+                                            <strong>Hard Deadline</strong><br>
+                                            <span th:text="${#temporals.format(project.hardDeadline, 'MMMM dd, yyyy')}">Deadline</span>
+                                            <br><small class="text-danger" th:if="${daysUntilDeadline}">
+                                                <span th:text="${daysUntilDeadline > 0 ? daysUntilDeadline + ' days remaining' : 'OVERDUE'}">Days info</span>
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Progress Bar -->
+                            <div class="mt-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <small class="text-muted">Progress</small>
+                                    <small class="text-muted" th:text="${projectSummary.completionPercentage ?: 0} + '%'">0%</small>
+                                </div>
+                                <div class="progress">
+                                    <div class="progress-bar" role="progressbar" 
+                                         th:style="'width: ' + (${projectSummary.completionPercentage} ?: 0) + '%'"
+                                         th:class="'progress-bar ' + (${progressHealth == 'good'} ? 'bg-success' : ${progressHealth == 'warning'} ? 'bg-warning' : 'bg-danger')">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Navigation -->
+            <ul class="nav nav-tabs mb-4" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link" th:class="${activeTab == 'overview' ? 'nav-link active' : 'nav-link'}" 
+                       th:href="@{/projects/{id}(id=${project.id}, tab='overview')}">
+                        <i class="fas fa-chart-pie"></i> Overview
+                    </a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link" th:class="${activeTab == 'tasks' ? 'nav-link active' : 'nav-link'}" 
+                       th:href="@{/projects/{id}(id=${project.id}, tab='tasks')}">
+                        <i class="fas fa-tasks"></i> Tasks
+                        <span class="badge bg-secondary ms-1" th:text="${projectSummary.totalTasks ?: 0}">0</span>
+                    </a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link" th:class="${activeTab == 'team' ? 'nav-link active' : 'nav-link'}" 
+                       th:href="@{/projects/{id}(id=${project.id}, tab='team')}">
+                        <i class="fas fa-users"></i> Team
+                        <span class="badge bg-secondary ms-1" th:text="${memberCount ?: 0}">0</span>
+                    </a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link" th:class="${activeTab == 'milestones' ? 'nav-link active' : 'nav-link'}" 
+                       th:href="@{/projects/{id}(id=${project.id}, tab='milestones')}">
+                        <i class="fas fa-flag"></i> Milestones
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Tab Content -->
+            <div class="tab-content">
+                <!-- Overview Tab -->
+                <div th:if="${activeTab == 'overview'}" class="tab-pane fade show active">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="card-title mb-0">Recent Activity</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div th:if="${recentTasks && !#lists.isEmpty(recentTasks)}">
+                                        <div th:each="task : ${recentTasks}" class="d-flex align-items-center mb-2">
+                                            <i class="fas fa-check-circle text-success me-2"></i>
+                                            <div class="flex-grow-1">
+                                                <a th:href="@{/tasks/{id}(id=${task.id})}" 
+                                                   th:text="${task.title}" class="text-decoration-none">Task</a>
+                                                <br><small class="text-muted">Completed</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div th:if="${!recentTasks || #lists.isEmpty(recentTasks)}" class="text-muted text-center py-3">
+                                        <i class="fas fa-inbox"></i><br>
+                                        <small>No recent activity</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="card-title mb-0">Upcoming Tasks</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div th:if="${upcomingTasks && !#lists.isEmpty(upcomingTasks)}">
+                                        <div th:each="task : ${upcomingTasks}" class="d-flex align-items-center mb-2">
+                                            <i th:class="'fas ' + (${task.priority.name() == 'HIGH'} ? 'fa-exclamation-triangle text-warning' : 'fa-circle text-muted') + ' me-2'"></i>
+                                            <div class="flex-grow-1">
+                                                <a th:href="@{/tasks/{id}(id=${task.id})}" 
+                                                   th:text="${task.title}" class="text-decoration-none">Task</a>
+                                                <br><small class="text-muted" th:text="${task.endDate != null ? 'Due ' + #temporals.format(task.endDate, 'MMM dd') : 'No due date'}">Due date</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div th:if="${!upcomingTasks || #lists.isEmpty(upcomingTasks)}" class="text-muted text-center py-3">
+                                        <i class="fas fa-calendar-check"></i><br>
+                                        <small>No upcoming tasks</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tasks Tab -->
+                <div th:if="${activeTab == 'tasks'}" class="tab-pane fade show active">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5>Project Tasks</h5>
+                        <div>
+                            <a th:href="@{/tasks/new(projectId=${project.id})}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-plus"></i> Add Task
+                            </a>
+                            <a th:href="@{/tasks/kanban(projectId=${project.id})}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-columns"></i> Kanban View
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div th:if="${allTasks && !#lists.isEmpty(allTasks)}">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Task</th>
+                                        <th>Priority</th>
+                                        <th>Assigned To</th>
+                                        <th>Progress</th>
+                                        <th>Due Date</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="task : ${allTasks}">
+                                        <td>
+                                            <a th:href="@{/tasks/{id}(id=${task.id})}" 
+                                               th:text="${task.title}" class="text-decoration-none">Task Title</a>
+                                        </td>
+                                        <td>
+                                            <span th:class="'badge ' + (${task.priority.name() == 'HIGH'} ? 'bg-warning' : ${task.priority.name() == 'MEDIUM'} ? 'bg-info' : 'bg-secondary')"
+                                                  th:text="${task.priority.displayName}">Priority</span>
+                                        </td>
+                                        <td>
+                                            <span th:if="${task.assignedTo && !task.assignedTo.isEmpty()}"
+                                                  th:text="${task.assignedTo.iterator().next().fullName}">Assignee</span>
+                                            <span th:if="${!task.assignedTo || task.assignedTo.isEmpty()}" class="text-muted">Unassigned</span>
+                                        </td>
+                                        <td>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar" 
+                                                     th:style="'width: ' + ${task.progress} + '%'"
+                                                     th:text="${task.progress} + '%'">0%</div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span th:if="${task.endDate}" th:text="${#temporals.format(task.endDate, 'MMM dd, yyyy')}">Due Date</span>
+                                            <span th:if="${!task.endDate}" class="text-muted">No due date</span>
+                                        </td>
+                                        <td>
+                                            <span th:if="${task.completed}" class="badge bg-success">Completed</span>
+                                            <span th:if="${!task.completed && task.progress > 0}" class="badge bg-info">In Progress</span>
+                                            <span th:if="${!task.completed && task.progress == 0}" class="badge bg-secondary">Not Started</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div th:if="${!allTasks || #lists.isEmpty(allTasks)}" class="text-center py-5">
+                        <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No Tasks Yet</h5>
+                        <p class="text-muted">Get started by adding your first task to this project.</p>
+                        <a th:href="@{/tasks/new(projectId=${project.id})}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add Task
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Team Tab -->
+                <div th:if="${activeTab == 'team'}" class="tab-pane fade show active">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5>Team Members</h5>
+                        <small class="text-muted" th:text="${memberCount ?: 0} + ' members working on this project'">Member count</small>
+                    </div>
+                    
+                    <div th:if="${assignedMembers && !#lists.isEmpty(assignedMembers)}">
+                        <div class="row">
+                            <div th:each="member : ${assignedMembers}" class="col-md-6 col-lg-4 mb-3">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                                 style="width: 48px; height: 48px;">
+                                                <span th:text="${member.firstName != null ? member.firstName.substring(0,1) : '?'}">A</span>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0">
+                                                    <a th:href="@{/team/members/{id}(id=${member.id})}" 
+                                                       th:text="${member.fullName}" class="text-decoration-none">Member Name</a>
+                                                </h6>
+                                                <small class="text-muted" th:text="${member.subteam != null ? member.subteam.name : 'No subteam'}">Subteam</small>
+                                                <span th:if="${member.leader}" class="badge bg-warning ms-1">Leader</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div th:if="${!assignedMembers || #lists.isEmpty(assignedMembers)}" class="text-center py-5">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No Team Members Assigned</h5>
+                        <p class="text-muted">Assign tasks to team members to see them here.</p>
+                        <a th:href="@{/tasks/new(projectId=${project.id})}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add Task
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Milestones Tab -->
+                <div th:if="${activeTab == 'milestones'}" class="tab-pane fade show active">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5>Project Milestones</h5>
+                        <button class="btn btn-primary btn-sm" disabled>
+                            <i class="fas fa-plus"></i> Add Milestone
+                        </button>
+                    </div>
+                    
+                    <div class="text-center py-5">
+                        <i class="fas fa-flag fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Milestones Coming Soon</h5>
+                        <p class="text-muted">Milestone management will be available in a future update.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
