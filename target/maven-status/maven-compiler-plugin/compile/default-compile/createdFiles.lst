@@ -68,6 +68,7 @@ org\frcpm\FrcProjectManagementApplication.class
 org\frcpm\repositories\spring\MeetingRepository.class
 org\frcpm\services\impl\TaskServiceImpl.class
 org\frcpm\services\MeetingService.class
+org\frcpm\models\DependencyType.class
 org\frcpm\config\WebSocketConfig.class
 org\frcpm\web\dto\TeamPresenceMessage$SubteamPresence.class
 org\frcpm\services\COPPAComplianceService.class
@@ -83,6 +84,7 @@ org\frcpm\web\controllers\DashboardController.class
 org\frcpm\models\GanttChartData$1.class
 org\frcpm\web\dto\TeamPresenceMessage$RecentActivity.class
 org\frcpm\security\UserDetailsServiceImpl.class
+org\frcpm\models\TaskDependency.class
 org\frcpm\repositories\spring\SubsystemRepository.class
 org\frcpm\services\impl\UserServiceImpl.class
 org\frcpm\models\UserRole.class

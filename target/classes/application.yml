@@ -95,6 +95,11 @@ spring:
           ssl:
             trust: "*"
 
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
 # Server Configuration (enhanced security headers)
 server:
   port: 8080
@@ -279,9 +284,15 @@ app:
   frc:
     api:
       # FIRST API Configuration
+      enabled: false  # Temporarily disable FRC API service
       base-url: ${FRC_API_BASE_URL:https://frc-api.firstinspires.org/v3.0}
-      username: ${FRC_API_USERNAME:}
-      auth-key: ${FRC_API_AUTH_KEY:}
+      username: dhiebert7251
+      key: 4a986fab-899a-440b-8431-502c399eaea5
+      team:
+        number: 2408
+      #username: ${FRC_API_USERNAME:}
+      #auth-key: ${FRC_API_AUTH_KEY:}
+      rateLimitPerMinute: 120  # Add missing rate limit config for future use
       
       # API Rate Limiting
       rate-limit:
@@ -340,6 +351,8 @@ app:
         fallback-to-cache: true
         log-api-errors: true
         notify-admins-on-failure: true
+
+
 
 # Health Checks (Enhanced with FRC API)
 health:
