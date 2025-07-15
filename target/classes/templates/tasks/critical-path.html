@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>Critical Path Analysis - FRC Project Management</title>
+</head>
+
+<div layout:fragment="styles">
+    <style>
+        /* Critical Path Analysis - Advanced visualization styles */
+        .critical-path-header {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            padding: 2rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .critical-path-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="cp-grid" width="15" height="15" patternUnits="userSpaceOnUse"><path d="M 15 0 L 0 0 0 15" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23cp-grid)"/></svg>');
+            opacity: 0.2;
+        }
+        
+        .critical-path-metrics {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            border: 1px solid #dee2e6;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+        }
+        
+        .metric-card.critical {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+        }
+        
+        .metric-card.warning {
+            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+            color: #856404;
+        }
+        
+        .metric-card.success {
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+            color: white;
+        }
+        
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .critical-path-visualization {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            min-height: 400px;
+        }
+        
+        .path-timeline {
+            position: relative;
+            padding: 2rem 0;
+        }
+        
+        .timeline-line {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(to bottom, #dc3545 0%, #c82333 100%);
+            transform: translateX(-50%);
+            z-index: 1;
+        }
+        
+        .timeline-item {
+            position: relative;
+            margin-bottom: 2rem;
+            z-index: 2;
+        }
+        
+        .timeline-item.critical {
+            animation: criticalPulse 2s infinite;
+        }
+        
+        @keyframes criticalPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+        
+        .timeline-item.left {
+            padding-right: 60%;
+        }
+        
+        .timeline-item.right {
+            padding-left: 60%;
+        }
+        
+        .timeline-content {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-left: 5px solid #dc3545;
+            position: relative;
+        }
+        
+        .timeline-content.non-critical {
+            border-left-color: #6c757d;
+            opacity: 0.8;
+        }
+        
+        .timeline-content::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            width: 20px;
+            height: 20px;
+            background: #dc3545;
+            border-radius: 50%;
+            border: 4px solid white;
+            box-shadow: 0 0 0 4px #dc3545;
+        }
+        
+        .timeline-item.left .timeline-content::before {
+            right: -60px;
+        }
+        
+        .timeline-item.right .timeline-content::before {
+            left: -60px;
+        }
+        
+        .timeline-content.non-critical::before {
+            background: #6c757d;
+            box-shadow: 0 0 0 4px #6c757d;
+        }
+        
+        .task-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border: 1px solid #dee2e6;
+            transition: all 0.3s ease;
+        }
+        
+        .task-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .task-card.critical {
+            border-left: 5px solid #dc3545;
+            background: linear-gradient(135deg, #fff 0%, #fff5f5 100%);
+        }
+        
+        .task-card.has-float {
+            border-left: 5px solid #28a745;
+            background: linear-gradient(135deg, #fff 0%, #f0fff4 100%);
+        }
+        
+        .task-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .task-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .task-duration {
+            background: #e9ecef;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .task-float {
+            background: #d4edda;
+            color: #155724;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .task-float.zero {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .task-progress {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+        
+        .task-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+            transition: width 0.3s ease;
+        }
+        
+        .task-progress-bar.critical {
+            background: linear-gradient(90deg, #dc3545 0%, #c82333 100%);
+        }
+        
+        .dependency-arrow {
+            position: absolute;
+            font-size: 1.5rem;
+            color: #dc3545;
+            z-index: 3;
+        }
+        
+        .dependency-arrow.left {
+            right: -30px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .dependency-arrow.right {
+            left: -30px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .controls-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .filter-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .view-toggle {
+            background: none;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .view-toggle.active {
+            background: #dc3545;
+            color: white;
+            border-color: #dc3545;
+        }
+        
+        .view-toggle:hover {
+            border-color: #dc3545;
+        }
+        
+        .gantt-chart {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            overflow-x: auto;
+        }
+        
+        .gantt-timeline {
+            display: flex;
+            flex-direction: column;
+            min-width: 800px;
+        }
+        
+        .gantt-header {
+            display: flex;
+            height: 40px;
+            border-bottom: 2px solid #dee2e6;
+            margin-bottom: 1rem;
+        }
+        
+        .gantt-day {
+            flex: 1;
+            text-align: center;
+            font-size: 0.875rem;
+            font-weight: 500;
+            padding: 0.5rem;
+            border-right: 1px solid #dee2e6;
+        }
+        
+        .gantt-row {
+            display: flex;
+            align-items: center;
+            min-height: 60px;
+            border-bottom: 1px solid #f8f9fa;
+        }
+        
+        .gantt-task-name {
+            width: 200px;
+            padding: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            background: #f8f9fa;
+            border-right: 2px solid #dee2e6;
+        }
+        
+        .gantt-task-bar {
+            height: 30px;
+            margin: 0.25rem;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            padding: 0 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .gantt-task-bar.critical {
+            background: linear-gradient(90deg, #dc3545 0%, #c82333 100%);
+            color: white;
+        }
+        
+        .gantt-task-bar.normal {
+            background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+            color: white;
+        }
+        
+        .gantt-task-bar.completed {
+            background: linear-gradient(90deg, #6c757d 0%, #5a6268 100%);
+            color: white;
+        }
+        
+        .risk-analysis {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .risk-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .risk-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .risk-item.high {
+            border-left: 5px solid #dc3545;
+            background: linear-gradient(135deg, #fff 0%, #fff5f5 100%);
+        }
+        
+        .risk-item.medium {
+            border-left: 5px solid #ffc107;
+            background: linear-gradient(135deg, #fff 0%, #fffcf0 100%);
+        }
+        
+        .risk-item.low {
+            border-left: 5px solid #28a745;
+            background: linear-gradient(135deg, #fff 0%, #f0fff4 100%);
+        }
+        
+        .risk-icon {
+            font-size: 1.5rem;
+            margin-right: 1rem;
+        }
+        
+        .risk-content {
+            flex: 1;
+        }
+        
+        .risk-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .risk-description {
+            color: #6c757d;
+            font-size: 0.875rem;
+        }
+        
+        .optimization-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .optimization-suggestion {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .optimization-suggestion.high-impact {
+            background: #d4edda;
+            border-color: #c3e6cb;
+        }
+        
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+        }
+        
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+            color: #dc3545;
+        }
+        
+        .export-controls {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .export-btn {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .export-btn:hover {
+            background: #e9ecef;
+            border-color: #adb5bd;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .timeline-item.left,
+            .timeline-item.right {
+                padding-left: 0;
+                padding-right: 0;
+            }
+            
+            .timeline-line {
+                left: 30px;
+            }
+            
+            .timeline-item.left .timeline-content::before,
+            .timeline-item.right .timeline-content::before {
+                left: -60px;
+            }
+            
+            .filter-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .view-toggle {
+                width: 100%;
+                text-align: center;
+            }
+        }
+    </style>
+</div>
+
+<body>
+<div layout:fragment="content">
+    <!-- Critical Path Header -->
+    <div class="critical-path-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="mb-1">
+                        <i class="fas fa-route me-3"></i>
+                        Critical Path Analysis
+                    </h1>
+                    <p class="mb-0 opacity-75">
+                        Identify critical tasks and optimize project scheduling
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="/tasks/dependencies" class="btn btn-outline-light me-2">
+                        <i class="fas fa-arrow-left me-2"></i>Dependencies
+                    </a>
+                    <button class="btn btn-light" id="refreshAnalysis">
+                        <i class="fas fa-sync me-2"></i>Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container my-4">
+        <!-- Project Selection -->
+        <div class="controls-panel">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Select Project</label>
+                    <select class="form-select" id="projectSelect">
+                        <option value="">Select a project for analysis...</option>
+                        <option th:each="project : ${projects}" 
+                                th:value="${project.id}" 
+                                th:text="${project.name}">
+                        </option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">View Mode</label>
+                    <div class="filter-controls">
+                        <button class="view-toggle active" data-view="timeline">
+                            <i class="fas fa-stream me-2"></i>Timeline
+                        </button>
+                        <button class="view-toggle" data-view="gantt">
+                            <i class="fas fa-chart-gantt me-2"></i>Gantt Chart
+                        </button>
+                        <button class="view-toggle" data-view="network">
+                            <i class="fas fa-project-diagram me-2"></i>Network
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Critical Path Metrics -->
+        <div class="critical-path-metrics" id="metricsPanel" style="display: none;">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="metric-card critical">
+                        <span class="metric-value" id="totalDuration">0</span>
+                        <div class="metric-label">Total Duration (Days)</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card warning">
+                        <span class="metric-value" id="criticalTasks">0</span>
+                        <div class="metric-label">Critical Tasks</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card success">
+                        <span class="metric-value" id="totalFloat">0</span>
+                        <div class="metric-label">Total Float (Days)</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <span class="metric-value" id="completionPercentage">0%</span>
+                        <div class="metric-label">Completion</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div class="loading-spinner" id="loadingSpinner">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+
+        <!-- Timeline View -->
+        <div class="critical-path-visualization" id="timelineView" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4>Critical Path Timeline</h4>
+                <div class="export-controls">
+                    <button class="export-btn" onclick="exportToPDF()">
+                        <i class="fas fa-file-pdf me-2"></i>Export PDF
+                    </button>
+                    <button class="export-btn" onclick="exportToImage()">
+                        <i class="fas fa-image me-2"></i>Export Image
+                    </button>
+                </div>
+            </div>
+            
+            <div class="path-timeline">
+                <div class="timeline-line"></div>
+                <div id="timelineContainer">
+                    <!-- Timeline items will be generated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Gantt Chart View -->
+        <div class="gantt-chart" id="ganttView" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4>Gantt Chart View</h4>
+                <div class="export-controls">
+                    <button class="export-btn" onclick="exportGanttToPDF()">
+                        <i class="fas fa-file-pdf me-2"></i>Export PDF
+                    </button>
+                </div>
+            </div>
+            
+            <div class="gantt-timeline" id="ganttContainer">
+                <!-- Gantt chart will be generated here -->
+            </div>
+        </div>
+
+        <!-- Network Diagram View -->
+        <div class="critical-path-visualization" id="networkView" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4>Network Diagram</h4>
+                <div class="export-controls">
+                    <button class="export-btn" onclick="exportNetworkToPDF()">
+                        <i class="fas fa-file-pdf me-2"></i>Export PDF
+                    </button>
+                </div>
+            </div>
+            
+            <div id="networkContainer" style="height: 500px; border: 1px solid #dee2e6; border-radius: 8px;">
+                <!-- Network diagram will be rendered here -->
+            </div>
+        </div>
+
+        <!-- Risk Analysis -->
+        <div class="risk-analysis" id="riskAnalysis" style="display: none;">
+            <h4 class="mb-3">Schedule Risk Analysis</h4>
+            <div id="riskContainer">
+                <!-- Risk items will be generated here -->
+            </div>
+        </div>
+
+        <!-- Optimization Suggestions -->
+        <div class="optimization-panel" id="optimizationPanel" style="display: none;">
+            <h4 class="mb-3">Schedule Optimization Suggestions</h4>
+            <div id="optimizationContainer">
+                <!-- Optimization suggestions will be generated here -->
+            </div>
+        </div>
+
+        <!-- Task Details Panel -->
+        <div class="critical-path-visualization" id="taskDetailsPanel" style="display: none;">
+            <h4 class="mb-3">Task Details</h4>
+            <div class="row" id="taskDetailsContainer">
+                <!-- Task details will be generated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Real-time Update Indicator -->
+    <div id="updateIndicator" class="position-fixed top-0 end-0 m-3" style="z-index: 1050; display: none;">
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-sync-alt me-2"></i>
+            <span id="updateMessage">Critical path updated</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    </div>
+</div>
+
+<div layout:fragment="scripts">
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vis-network@latest/dist/vis-network.min.js"></script>
+    <script>
+        // Global variables
+        let currentProject = null;
+        let criticalPathData = null;
+        let currentView = 'timeline';
+        let networkDiagram = null;
+        let wsConnection = null;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCriticalPathAnalysis();
+            setupWebSocketConnection();
+            setupViewControls();
+            setupProjectSelection();
+        });
+        
+        // Initialize critical path analysis
+        function initializeCriticalPathAnalysis() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const projectId = urlParams.get('project');
+            
+            if (projectId) {
+                document.getElementById('projectSelect').value = projectId;
+                loadCriticalPathAnalysis(projectId);
+            }
+        }
+        
+        // Setup view controls
+        function setupViewControls() {
+            document.querySelectorAll('.view-toggle').forEach(button => {
+                button.addEventListener('click', function() {
+                    const view = this.dataset.view;
+                    switchView(view);
+                });
+            });
+            
+            document.getElementById('refreshAnalysis').addEventListener('click', function() {
+                const projectId = document.getElementById('projectSelect').value;
+                if (projectId) {
+                    loadCriticalPathAnalysis(projectId);
+                }
+            });
+        }
+        
+        // Setup project selection
+        function setupProjectSelection() {
+            document.getElementById('projectSelect').addEventListener('change', function() {
+                const projectId = this.value;
+                if (projectId) {
+                    loadCriticalPathAnalysis(projectId);
+                }
+            });
+        }
+        
+        // Load critical path analysis
+        async function loadCriticalPathAnalysis(projectId) {
+            try {
+                showLoadingSpinner();
+                currentProject = projectId;
+                
+                const response = await fetch(`/api/dependencies/critical-path?projectId=${projectId}`);
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load critical path analysis');
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    criticalPathData = data.criticalPath;
+                    displayCriticalPathAnalysis();
+                    loadRiskAnalysis(projectId);
+                    loadOptimizationSuggestions(projectId);
+                } else {
+                    showError('Error loading critical path: ' + data.message);
+                }
+                
+            } catch (error) {
+                console.error('Error loading critical path analysis:', error);
+                showError('Failed to load critical path analysis');
+            } finally {
+                hideLoadingSpinner();
+            }
+        }
+        
+        // Display critical path analysis
+        function displayCriticalPathAnalysis() {
+            if (!criticalPathData) return;
+            
+            updateMetrics();
+            
+            // Show panels
+            document.getElementById('metricsPanel').style.display = 'block';
+            document.getElementById('taskDetailsPanel').style.display = 'block';
+            document.getElementById('riskAnalysis').style.display = 'block';
+            document.getElementById('optimizationPanel').style.display = 'block';
+            
+            // Display current view
+            switchView(currentView);
+            displayTaskDetails();
+        }
+        
+        // Update metrics
+        function updateMetrics() {
+            document.getElementById('totalDuration').textContent = Math.ceil(criticalPathData.totalDuration / 24) || 0;
+            document.getElementById('criticalTasks').textContent = criticalPathData.criticalTasks?.length || 0;
+            
+            // Calculate total float
+            const totalFloat = Object.values(criticalPathData.taskFloats || {}).reduce((sum, float) => sum + float, 0);
+            document.getElementById('totalFloat').textContent = Math.ceil(totalFloat / 24) || 0;
+            
+            // Calculate completion percentage
+            const completedTasks = criticalPathData.criticalTasks?.filter(task => task.completed).length || 0;
+            const totalTasks = criticalPathData.criticalTasks?.length || 1;
+            const completionPercentage = Math.round((completedTasks / totalTasks) * 100);
+            document.getElementById('completionPercentage').textContent = completionPercentage + '%';
+        }
+        
+        // Switch between views
+        function switchView(view) {
+            currentView = view;
+            
+            // Update toggle buttons
+            document.querySelectorAll('.view-toggle').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-view="${view}"]`).classList.add('active');
+            
+            // Hide all views
+            document.getElementById('timelineView').style.display = 'none';
+            document.getElementById('ganttView').style.display = 'none';
+            document.getElementById('networkView').style.display = 'none';
+            
+            // Show selected view
+            switch(view) {
+                case 'timeline':
+                    document.getElementById('timelineView').style.display = 'block';
+                    displayTimelineView();
+                    break;
+                case 'gantt':
+                    document.getElementById('ganttView').style.display = 'block';
+                    displayGanttView();
+                    break;
+                case 'network':
+                    document.getElementById('networkView').style.display = 'block';
+                    displayNetworkView();
+                    break;
+            }
+        }
+        
+        // Display timeline view
+        function displayTimelineView() {
+            if (!criticalPathData?.criticalTasks) return;
+            
+            const container = document.getElementById('timelineContainer');
+            container.innerHTML = '';
+            
+            criticalPathData.criticalTasks.forEach((task, index) => {
+                const timelineItem = document.createElement('div');
+                timelineItem.className = `timeline-item ${index % 2 === 0 ? 'left' : 'right'} critical`;
+                
+                const taskFloat = criticalPathData.taskFloats[task.id] || 0;
+                const isCritical = taskFloat === 0;
+                
+                timelineItem.innerHTML = `
+                    <div class="timeline-content ${isCritical ? 'critical' : 'non-critical'}">
+                        <div class="task-meta">
+                            <span class="task-title">${task.title}</span>
+                            <span class="task-duration">${task.estimatedDuration || 8}h</span>
+                        </div>
+                        <div class="task-meta">
+                            <span class="text-muted">${task.projectName}</span>
+                            <span class="task-float ${taskFloat === 0 ? 'zero' : ''}">${taskFloat}h float</span>
+                        </div>
+                        <div class="task-progress">
+                            <div class="task-progress-bar ${isCritical ? 'critical' : ''}" 
+                                 style="width: ${task.progress || 0}%"></div>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="fas fa-calendar me-1"></i>
+                                ${task.startDate ? new Date(task.startDate).toLocaleDateString() : 'No start date'} - 
+                                ${task.endDate ? new Date(task.endDate).toLocaleDateString() : 'No end date'}
+                            </small>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(timelineItem);
+            });
+        }
+        
+        // Display Gantt view
+        function displayGanttView() {
+            if (!criticalPathData?.criticalTasks) return;
+            
+            const container = document.getElementById('ganttContainer');
+            container.innerHTML = '';
+            
+            // Create header
+            const header = document.createElement('div');
+            header.className = 'gantt-header';
+            
+            // Generate date range (simplified for demo)
+            const startDate = new Date();
+            for (let i = 0; i < 30; i++) {
+                const day = document.createElement('div');
+                day.className = 'gantt-day';
+                const dayDate = new Date(startDate);
+                dayDate.setDate(startDate.getDate() + i);
+                day.textContent = dayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                header.appendChild(day);
+            }
+            
+            container.appendChild(header);
+            
+            // Create task rows
+            criticalPathData.criticalTasks.forEach(task => {
+                const row = document.createElement('div');
+                row.className = 'gantt-row';
+                
+                const taskName = document.createElement('div');
+                taskName.className = 'gantt-task-name';
+                taskName.textContent = task.title;
+                row.appendChild(taskName);
+                
+                const taskBar = document.createElement('div');
+                taskBar.className = 'gantt-task-bar';
+                taskBar.style.width = `${(task.estimatedDuration || 8) * 10}px`;
+                taskBar.style.marginLeft = `${Math.random() * 200}px`; // Simplified positioning
+                
+                const taskFloat = criticalPathData.taskFloats[task.id] || 0;
+                const isCritical = taskFloat === 0;
+                
+                taskBar.classList.add(task.completed ? 'completed' : (isCritical ? 'critical' : 'normal'));
+                taskBar.textContent = `${task.progress || 0}%`;
+                
+                row.appendChild(taskBar);
+                container.appendChild(row);
+            });
+        }
+        
+        // Display network view
+        function displayNetworkView() {
+            if (!criticalPathData?.criticalTasks) return;
+            
+            const container = document.getElementById('networkContainer');
+            container.innerHTML = '';
+            
+            // Prepare data for vis.js network
+            const nodes = criticalPathData.criticalTasks.map(task => {
+                const taskFloat = criticalPathData.taskFloats[task.id] || 0;
+                const isCritical = taskFloat === 0;
+                
+                return {
+                    id: task.id,
+                    label: task.title,
+                    color: isCritical ? '#dc3545' : '#28a745',
+                    font: { color: 'white' },
+                    shape: 'box',
+                    margin: 10
+                };
+            });
+            
+            const edges = criticalPathData.criticalDependencies?.map(dep => ({
+                from: dep.predecessorTaskId,
+                to: dep.successorTaskId,
+                arrows: 'to',
+                color: '#dc3545',
+                width: 3
+            })) || [];
+            
+            const data = { nodes, edges };
+            
+            const options = {
+                layout: {
+                    hierarchical: {
+                        direction: 'LR',
+                        sortMethod: 'directed'
+                    }
+                },
+                physics: {
+                    enabled: false
+                },
+                interaction: {
+                    dragNodes: true,
+                    zoomView: true
+                }
+            };
+            
+            networkDiagram = new vis.Network(container, data, options);
+            
+            // Add click event for task details
+            networkDiagram.on('click', function(params) {
+                if (params.nodes.length > 0) {
+                    const taskId = params.nodes[0];
+                    showTaskDetails(taskId);
+                }
+            });
+        }
+        
+        // Display task details
+        function displayTaskDetails() {
+            if (!criticalPathData?.criticalTasks) return;
+            
+            const container = document.getElementById('taskDetailsContainer');
+            container.innerHTML = '';
+            
+            criticalPathData.criticalTasks.forEach(task => {
+                const taskFloat = criticalPathData.taskFloats[task.id] || 0;
+                const isCritical = taskFloat === 0;
+                
+                const taskCard = document.createElement('div');
+                taskCard.className = 'col-md-6 col-lg-4 mb-3';
+                
+                taskCard.innerHTML = `
+                    <div class="task-card ${isCritical ? 'critical' : 'has-float'}">
+                        <div class="task-title">${task.title}</div>
+                        <div class="task-meta">
+                            <span class="task-duration">${task.estimatedDuration || 8}h</span>
+                            <span class="task-float ${taskFloat === 0 ? 'zero' : ''}">${taskFloat}h float</span>
+                        </div>
+                        <div class="task-progress">
+                            <div class="task-progress-bar ${isCritical ? 'critical' : ''}" 
+                                 style="width: ${task.progress || 0}%"></div>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="fas fa-project-diagram me-1"></i>${task.projectName}
+                            </small>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="fas fa-users me-1"></i>${task.subsystemName || 'No subsystem'}
+                            </small>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(taskCard);
+            });
+        }
+        
+        // Load risk analysis
+        async function loadRiskAnalysis(projectId) {
+            try {
+                const response = await fetch(`/api/dependencies/optimize-schedule?projectId=${projectId}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        displayRiskAnalysis(data.optimization);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading risk analysis:', error);
+            }
+        }
+        
+        // Display risk analysis
+        function displayRiskAnalysis(optimization) {
+            const container = document.getElementById('riskContainer');
+            container.innerHTML = '';
+            
+            const risks = [
+                {
+                    level: 'high',
+                    icon: 'fas fa-exclamation-triangle',
+                    title: 'Critical Path Bottleneck',
+                    description: 'Tasks on critical path have zero float time',
+                    color: '#dc3545'
+                },
+                {
+                    level: 'medium',
+                    icon: 'fas fa-clock',
+                    title: 'Resource Constraints',
+                    description: 'Limited team members assigned to critical tasks',
+                    color: '#ffc107'
+                },
+                {
+                    level: 'low',
+                    icon: 'fas fa-info-circle',
+                    title: 'Dependency Complexity',
+                    description: 'High number of task dependencies may cause delays',
+                    color: '#28a745'
+                }
+            ];
+            
+            risks.forEach(risk => {
+                const riskItem = document.createElement('div');
+                riskItem.className = `risk-item ${risk.level}`;
+                
+                riskItem.innerHTML = `
+                    <div class="risk-icon" style="color: ${risk.color}">
+                        <i class="${risk.icon}"></i>
+                    </div>
+                    <div class="risk-content">
+                        <div class="risk-title">${risk.title}</div>
+                        <div class="risk-description">${risk.description}</div>
+                    </div>
+                `;
+                
+                container.appendChild(riskItem);
+            });
+        }
+        
+        // Load optimization suggestions
+        async function loadOptimizationSuggestions(projectId) {
+            try {
+                const response = await fetch(`/api/dependencies/optimize-schedule?projectId=${projectId}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        displayOptimizationSuggestions(data.optimization);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading optimization suggestions:', error);
+            }
+        }
+        
+        // Display optimization suggestions
+        function displayOptimizationSuggestions(optimization) {
+            const container = document.getElementById('optimizationContainer');
+            container.innerHTML = '';
+            
+            const suggestions = optimization.recommendations || [
+                'Consider parallel execution of non-dependent tasks',
+                'Assign additional resources to critical path tasks',
+                'Review task duration estimates for accuracy',
+                'Optimize task dependencies to reduce bottlenecks'
+            ];
+            
+            suggestions.forEach((suggestion, index) => {
+                const suggestionItem = document.createElement('div');
+                suggestionItem.className = `optimization-suggestion ${index === 0 ? 'high-impact' : ''}`;
+                
+                suggestionItem.innerHTML = `
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-lightbulb me-2 mt-1" style="color: #ffc107;"></i>
+                        <div>
+                            <strong>${index === 0 ? 'High Impact:' : 'Suggestion:'}</strong>
+                            ${suggestion}
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(suggestionItem);
+            });
+        }
+        
+        // Show loading spinner
+        function showLoadingSpinner() {
+            document.getElementById('loadingSpinner').style.display = 'flex';
+            document.getElementById('metricsPanel').style.display = 'none';
+            document.getElementById('timelineView').style.display = 'none';
+            document.getElementById('ganttView').style.display = 'none';
+            document.getElementById('networkView').style.display = 'none';
+            document.getElementById('taskDetailsPanel').style.display = 'none';
+            document.getElementById('riskAnalysis').style.display = 'none';
+            document.getElementById('optimizationPanel').style.display = 'none';
+        }
+        
+        // Hide loading spinner
+        function hideLoadingSpinner() {
+            document.getElementById('loadingSpinner').style.display = 'none';
+        }
+        
+        // Show error message
+        function showError(message) {
+            const indicator = document.getElementById('updateIndicator');
+            const messageElement = document.getElementById('updateMessage');
+            
+            indicator.querySelector('.alert').classList.remove('alert-success');
+            indicator.querySelector('.alert').classList.add('alert-danger');
+            messageElement.textContent = message;
+            indicator.style.display = 'block';
+            
+            setTimeout(() => {
+                indicator.style.display = 'none';
+                indicator.querySelector('.alert').classList.remove('alert-danger');
+                indicator.querySelector('.alert').classList.add('alert-success');
+            }, 5000);
+        }
+        
+        // Show success message
+        function showSuccess(message) {
+            const indicator = document.getElementById('updateIndicator');
+            const messageElement = document.getElementById('updateMessage');
+            
+            messageElement.textContent = message;
+            indicator.style.display = 'block';
+            
+            setTimeout(() => {
+                indicator.style.display = 'none';
+            }, 3000);
+        }
+        
+        // Export functions
+        function exportToPDF() {
+            // TODO: Implement PDF export
+            showSuccess('PDF export feature coming soon');
+        }
+        
+        function exportToImage() {
+            // TODO: Implement image export
+            showSuccess('Image export feature coming soon');
+        }
+        
+        function exportGanttToPDF() {
+            // TODO: Implement Gantt PDF export
+            showSuccess('Gantt PDF export feature coming soon');
+        }
+        
+        function exportNetworkToPDF() {
+            // TODO: Implement network PDF export
+            showSuccess('Network PDF export feature coming soon');
+        }
+        
+        // Show task details modal
+        function showTaskDetails(taskId) {
+            const task = criticalPathData.criticalTasks.find(t => t.id === taskId);
+            if (task) {
+                // TODO: Implement task details modal
+                console.log('Show task details:', task);
+            }
+        }
+        
+        // WebSocket connection for real-time updates
+        function setupWebSocketConnection() {
+            // TODO: Implement WebSocket connection for real-time critical path updates
+            console.log('WebSocket connection for critical path updates');
+        }
+        
+        console.log('✅ Critical Path Analysis page loaded successfully');
+    </script>
+</div>
+</body>
+</html>

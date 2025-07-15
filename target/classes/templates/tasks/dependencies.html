@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>Task Dependencies - FRC Project Management</title>
+</head>
+
+<div layout:fragment="styles">
+    <style>
+        /* Task Dependencies Management - Following existing patterns */
+        .dependencies-header {
+            background: linear-gradient(135deg, #6f42c1 0%, #563d7c 100%);
+            color: white;
+            padding: 2rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .dependencies-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="deps-grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23deps-grid)"/></svg>');
+            opacity: 0.3;
+        }
+        
+        .dependency-card {
+            transition: all 0.3s ease;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            border-left: 5px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .dependency-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+        
+        .dependency-card.dependency-critical {
+            border-left-color: #dc3545;
+            background: linear-gradient(135deg, #fff 0%, #fff5f5 100%);
+        }
+        
+        .dependency-card.dependency-blocking {
+            border-left-color: #fd7e14;
+            background: linear-gradient(135deg, #fff 0%, #fff8f0 100%);
+        }
+        
+        .dependency-card.dependency-normal {
+            border-left-color: #6c757d;
+            background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+        }
+        
+        .dependency-card.dependency-soft {
+            border-left-color: #28a745;
+            background: linear-gradient(135deg, #fff 0%, #f0fff4 100%);
+        }
+        
+        .dependency-type-badge {
+            border-radius: 20px;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .dependency-type-badge.fs { background-color: #e7f3ff; color: #0066cc; }
+        .dependency-type-badge.ss { background-color: #d4edda; color: #155724; }
+        .dependency-type-badge.ff { background-color: #fff3cd; color: #856404; }
+        .dependency-type-badge.sf { background-color: #f8d7da; color: #721c24; }
+        .dependency-type-badge.blocking { background-color: #f8d7da; color: #721c24; }
+        .dependency-type-badge.soft { background-color: #d1ecf1; color: #0c5460; }
+        
+        .task-link {
+            color: #0066cc;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .task-link:hover {
+            color: #004499;
+            text-decoration: underline;
+        }
+        
+        .lag-indicator {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+        
+        .lag-indicator.lag-positive {
+            background-color: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+        
+        .lag-indicator.lag-negative {
+            background-color: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        
+        .critical-path-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #dc3545;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .dependency-actions {
+            display: flex;
+            gap: 0.5rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .dependency-card:hover .dependency-actions {
+            opacity: 1;
+        }
+        
+        .filter-section {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stats-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            border: 1px solid #dee2e6;
+            transition: all 0.3s ease;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .stats-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #6f42c1;
+            margin-bottom: 0.5rem;
+        }
+        
+        .add-dependency-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6f42c1 0%, #563d7c 100%);
+            color: white;
+            border: none;
+            font-size: 24px;
+            box-shadow: 0 4px 12px rgba(111, 66, 193, 0.3);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .add-dependency-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(111, 66, 193, 0.4);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #6c757d;
+        }
+        
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        .dependency-form {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .form-section {
+            border-left: 4px solid #6f42c1;
+            background-color: #f8f9fa;
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-section h6 {
+            color: #6f42c1;
+            font-weight: 600;
+        }
+        
+        .validation-feedback {
+            display: block;
+            width: 100%;
+            margin-top: 0.25rem;
+            font-size: 0.875rem;
+        }
+        
+        .validation-feedback.valid-feedback {
+            color: #198754;
+        }
+        
+        .validation-feedback.invalid-feedback {
+            color: #dc3545;
+        }
+        
+        .real-time-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #28a745;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 1050;
+        }
+        
+        .real-time-indicator.show {
+            opacity: 1;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .add-dependency-btn {
+                bottom: 20px;
+                right: 20px;
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+            
+            .stats-card {
+                margin-bottom: 1rem;
+            }
+            
+            .dependency-actions {
+                opacity: 1;
+                margin-top: 1rem;
+            }
+        }
+    </style>
+</div>
+
+<body>
+<div layout:fragment="content">
+    <!-- Dependencies Header -->
+    <div class="dependencies-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="mb-1">
+                        <i class="fas fa-project-diagram me-3"></i>
+                        Task Dependencies
+                    </h1>
+                    <p class="mb-0 opacity-75">
+                        Manage task relationships and project scheduling
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="/tasks" class="btn btn-outline-light me-2">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Tasks
+                    </a>
+                    <button class="btn btn-light" id="criticalPathBtn">
+                        <i class="fas fa-route me-2"></i>Critical Path
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container my-4">
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3 col-sm-6">
+                <div class="stats-card">
+                    <div class="stats-number" id="totalDependencies">0</div>
+                    <div class="text-muted">Total Dependencies</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="stats-card">
+                    <div class="stats-number" id="criticalDependencies">0</div>
+                    <div class="text-muted">Critical Path</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="stats-card">
+                    <div class="stats-number" id="blockedTasks">0</div>
+                    <div class="text-muted">Blocked Tasks</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="stats-card">
+                    <div class="stats-number" id="readyTasks">0</div>
+                    <div class="text-muted">Ready to Start</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="filter-section">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Project Filter</label>
+                    <select class="form-select" id="projectFilter">
+                        <option value="">All Projects</option>
+                        <option th:each="project : ${projects}" 
+                                th:value="${project.id}" 
+                                th:text="${project.name}">
+                        </option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Dependency Type</label>
+                    <select class="form-select" id="typeFilter">
+                        <option value="">All Types</option>
+                        <option value="FINISH_TO_START">Finish to Start</option>
+                        <option value="START_TO_START">Start to Start</option>
+                        <option value="FINISH_TO_FINISH">Finish to Finish</option>
+                        <option value="START_TO_FINISH">Start to Finish</option>
+                        <option value="BLOCKING">Blocking</option>
+                        <option value="SOFT">Soft</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Options</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="showInactive">
+                        <label class="form-check-label" for="showInactive">
+                            Show inactive dependencies
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="criticalPathOnly">
+                        <label class="form-check-label" for="criticalPathOnly">
+                            Critical path only
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dependencies List -->
+        <div class="row">
+            <div class="col-12">
+                <div id="dependenciesList">
+                    <!-- Dependencies will be loaded here via JavaScript -->
+                </div>
+                
+                <!-- Empty State -->
+                <div id="emptyState" class="empty-state" style="display: none;">
+                    <div class="empty-state-icon">
+                        <i class="fas fa-project-diagram"></i>
+                    </div>
+                    <h4>No Dependencies Found</h4>
+                    <p>Create your first task dependency to start managing project scheduling.</p>
+                    <button class="btn btn-primary" onclick="showAddDependencyForm()">
+                        <i class="fas fa-plus me-2"></i>Add First Dependency
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Dependency Form Modal -->
+    <div class="modal fade" id="addDependencyModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-plus me-2"></i>Add Task Dependency
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="dependencyForm" class="needs-validation" novalidate>
+                        <div class="form-section p-3 mb-4">
+                            <h6 class="mb-3">
+                                <i class="fas fa-link me-2"></i>Dependency Relationship
+                            </h6>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group-enhanced">
+                                        <label for="prerequisiteTask" class="form-label fw-semibold">
+                                            Prerequisite Task <span class="text-danger">*</span>
+                                        </label>
+                                        <select class="form-select" id="prerequisiteTask" name="predecessorTaskId" required>
+                                            <option value="">Select prerequisite task...</option>
+                                            <option th:each="task : ${tasks}" 
+                                                    th:value="${task.id}" 
+                                                    th:text="${task.title + ' (' + task.project.name + ')'}">
+                                            </option>
+                                        </select>
+                                        <div class="validation-feedback invalid-feedback">Please select a prerequisite task</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="form-group-enhanced">
+                                        <label for="dependentTask" class="form-label fw-semibold">
+                                            Dependent Task <span class="text-danger">*</span>
+                                        </label>
+                                        <select class="form-select" id="dependentTask" name="successorTaskId" required>
+                                            <option value="">Select dependent task...</option>
+                                            <option th:each="task : ${tasks}" 
+                                                    th:value="${task.id}" 
+                                                    th:text="${task.title + ' (' + task.project.name + ')'}">
+                                            </option>
+                                        </select>
+                                        <div class="validation-feedback invalid-feedback">Please select a dependent task</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group-enhanced">
+                                        <label for="dependencyType" class="form-label fw-semibold">
+                                            Dependency Type <span class="text-danger">*</span>
+                                        </label>
+                                        <select class="form-select" id="dependencyType" name="type" required>
+                                            <option value="">Select dependency type...</option>
+                                            <option value="FINISH_TO_START">Finish to Start (FS)</option>
+                                            <option value="START_TO_START">Start to Start (SS)</option>
+                                            <option value="FINISH_TO_FINISH">Finish to Finish (FF)</option>
+                                            <option value="START_TO_FINISH">Start to Finish (SF)</option>
+                                            <option value="BLOCKING">Blocking</option>
+                                            <option value="SOFT">Soft Dependency</option>
+                                        </select>
+                                        <div class="validation-feedback invalid-feedback">Please select a dependency type</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="form-group-enhanced">
+                                        <label for="lagDays" class="form-label fw-semibold">
+                                            Lag Time (Days)
+                                        </label>
+                                        <input type="number" class="form-control" id="lagDays" name="lagDays" 
+                                               placeholder="0" min="-30" max="30" step="1">
+                                        <div class="form-text">Positive = delay, Negative = lead time</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section p-3 mb-4">
+                            <h6 class="mb-3">
+                                <i class="fas fa-sticky-note me-2"></i>Additional Information
+                            </h6>
+                            
+                            <div class="form-group-enhanced">
+                                <label for="notes" class="form-label fw-semibold">Notes</label>
+                                <textarea class="form-control" id="notes" name="notes" rows="3"
+                                          placeholder="Optional notes about this dependency..."></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="saveDependency()">
+                        <i class="fas fa-save me-2"></i>Save Dependency
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Add Button -->
+    <button class="add-dependency-btn" onclick="showAddDependencyForm()" title="Add New Dependency">
+        <i class="fas fa-plus"></i>
+    </button>
+    
+    <!-- Real-time Update Indicator -->
+    <div id="realTimeIndicator" class="real-time-indicator">
+        <i class="fas fa-sync-alt me-2"></i>Dependencies updated
+    </div>
+</div>
+
+<div layout:fragment="scripts">
+    <script>
+        // Global variables
+        let currentProjectId = null;
+        let dependencies = [];
+        let wsConnection = null;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDependenciesPage();
+            setupWebSocketConnection();
+            loadDependencies();
+            setupFormValidation();
+        });
+        
+        // Initialize the dependencies page
+        function initializeDependenciesPage() {
+            setupFilters();
+            setupCriticalPathButton();
+            
+            // Get current project ID from URL or default
+            const urlParams = new URLSearchParams(window.location.search);
+            currentProjectId = urlParams.get('project') || null;
+            
+            if (currentProjectId) {
+                document.getElementById('projectFilter').value = currentProjectId;
+            }
+        }
+        
+        // Setup filter event listeners
+        function setupFilters() {
+            document.getElementById('projectFilter').addEventListener('change', loadDependencies);
+            document.getElementById('typeFilter').addEventListener('change', loadDependencies);
+            document.getElementById('showInactive').addEventListener('change', loadDependencies);
+            document.getElementById('criticalPathOnly').addEventListener('change', loadDependencies);
+        }
+        
+        // Setup critical path button
+        function setupCriticalPathButton() {
+            document.getElementById('criticalPathBtn').addEventListener('click', function() {
+                const projectId = document.getElementById('projectFilter').value;
+                if (projectId) {
+                    window.location.href = `/tasks/critical-path?project=${projectId}`;
+                } else {
+                    alert('Please select a project first');
+                }
+            });
+        }
+        
+        // Load dependencies from server
+        async function loadDependencies() {
+            try {
+                const projectId = document.getElementById('projectFilter').value;
+                const typeFilter = document.getElementById('typeFilter').value;
+                const showInactive = document.getElementById('showInactive').checked;
+                const criticalPathOnly = document.getElementById('criticalPathOnly').checked;
+                
+                if (!projectId) {
+                    showEmptyState();
+                    return;
+                }
+                
+                const url = `/api/dependencies?projectId=${projectId}&activeOnly=${!showInactive}`;
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load dependencies');
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    dependencies = data.dependencies;
+                    filterAndDisplayDependencies(typeFilter, criticalPathOnly);
+                    updateStatistics();
+                } else {
+                    console.error('Error loading dependencies:', data.message);
+                    showEmptyState();
+                }
+                
+            } catch (error) {
+                console.error('Error loading dependencies:', error);
+                showEmptyState();
+            }
+        }
+        
+        // Filter and display dependencies
+        function filterAndDisplayDependencies(typeFilter, criticalPathOnly) {
+            let filteredDependencies = dependencies;
+            
+            if (typeFilter) {
+                filteredDependencies = filteredDependencies.filter(dep => dep.type === typeFilter);
+            }
+            
+            if (criticalPathOnly) {
+                filteredDependencies = filteredDependencies.filter(dep => dep.onCriticalPath);
+            }
+            
+            displayDependencies(filteredDependencies);
+        }
+        
+        // Display dependencies in the UI
+        function displayDependencies(deps) {
+            const container = document.getElementById('dependenciesList');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (deps.length === 0) {
+                container.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            
+            const html = deps.map(dep => `
+                <div class="dependency-card card ${getDependencyCardClass(dep)}" data-dependency-id="${dep.id}">
+                    ${dep.onCriticalPath ? '<div class="critical-path-indicator" title="Critical Path"><i class="fas fa-exclamation"></i></div>' : ''}
+                    
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="dependency-type-badge ${getDependencyTypeClass(dep.type)}">
+                                        <i class="${getDependencyTypeIcon(dep.type)}"></i>
+                                        ${dep.typeDisplayName}
+                                    </span>
+                                    ${dep.lagDays && dep.lagDays !== 0 ? `<span class="lag-indicator ${dep.lagDays > 0 ? 'lag-positive' : 'lag-negative'} ms-2">${dep.lagDescription}</span>` : ''}
+                                </div>
+                                
+                                <div class="dependency-relationship">
+                                    <strong>
+                                        <a href="/tasks/${dep.predecessorTaskId}" class="task-link">
+                                            ${dep.predecessorTaskTitle}
+                                        </a>
+                                    </strong>
+                                    <i class="fas fa-arrow-right mx-2 text-muted"></i>
+                                    <strong>
+                                        <a href="/tasks/${dep.successorTaskId}" class="task-link">
+                                            ${dep.successorTaskTitle}
+                                        </a>
+                                    </strong>
+                                </div>
+                                
+                                ${dep.notes ? `<div class="text-muted mt-2"><small><i class="fas fa-sticky-note me-1"></i>${dep.notes}</small></div>` : ''}
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="dependency-actions">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editDependency(${dep.id})" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteDependency(${dep.id})" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-info" onclick="viewDependencyDetails(${dep.id})" title="Details">
+                                        <i class="fas fa-info-circle"></i>
+                                    </button>
+                                </div>
+                                
+                                <div class="text-end">
+                                    <small class="text-muted">
+                                        ${dep.createdAt ? new Date(dep.createdAt).toLocaleDateString() : ''}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = html;
+        }
+        
+        // Update statistics
+        async function updateStatistics() {
+            const projectId = document.getElementById('projectFilter').value;
+            if (!projectId) return;
+            
+            try {
+                const [statsResponse, blockedResponse, readyResponse] = await Promise.all([
+                    fetch(`/api/dependencies/statistics?projectId=${projectId}`),
+                    fetch(`/api/dependencies/blocked-tasks?projectId=${projectId}`),
+                    fetch(`/api/dependencies/ready-tasks?projectId=${projectId}`)
+                ]);
+                
+                const [statsData, blockedData, readyData] = await Promise.all([
+                    statsResponse.json(),
+                    blockedResponse.json(),
+                    readyResponse.json()
+                ]);
+                
+                document.getElementById('totalDependencies').textContent = statsData.statistics?.TOTAL || 0;
+                document.getElementById('criticalDependencies').textContent = dependencies.filter(d => d.onCriticalPath).length;
+                document.getElementById('blockedTasks').textContent = blockedData.totalBlocked || 0;
+                document.getElementById('readyTasks').textContent = readyData.totalReady || 0;
+                
+            } catch (error) {
+                console.error('Error updating statistics:', error);
+            }
+        }
+        
+        // Show add dependency form
+        function showAddDependencyForm() {
+            const modal = new bootstrap.Modal(document.getElementById('addDependencyModal'));
+            document.getElementById('dependencyForm').reset();
+            modal.show();
+        }
+        
+        // Save dependency
+        async function saveDependency() {
+            const form = document.getElementById('dependencyForm');
+            
+            if (!form.checkValidity()) {
+                form.classList.add('was-validated');
+                return;
+            }
+            
+            const formData = new FormData(form);
+            const dependencyData = {
+                predecessorTaskId: parseInt(formData.get('predecessorTaskId')),
+                successorTaskId: parseInt(formData.get('successorTaskId')),
+                type: formData.get('type'),
+                lagDays: formData.get('lagDays') ? parseInt(formData.get('lagDays')) : null,
+                notes: formData.get('notes')
+            };
+            
+            try {
+                const response = await fetch('/api/dependencies', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(dependencyData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('addDependencyModal')).hide();
+                    loadDependencies();
+                    showRealTimeIndicator('Dependency created successfully');
+                } else {
+                    alert('Error creating dependency: ' + result.message);
+                }
+                
+            } catch (error) {
+                console.error('Error saving dependency:', error);
+                alert('Error creating dependency');
+            }
+        }
+        
+        // Delete dependency
+        async function deleteDependency(dependencyId) {
+            if (!confirm('Are you sure you want to delete this dependency?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/dependencies/${dependencyId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    loadDependencies();
+                    showRealTimeIndicator('Dependency deleted successfully');
+                } else {
+                    alert('Error deleting dependency: ' + result.message);
+                }
+                
+            } catch (error) {
+                console.error('Error deleting dependency:', error);
+                alert('Error deleting dependency');
+            }
+        }
+        
+        // Show empty state
+        function showEmptyState() {
+            document.getElementById('dependenciesList').innerHTML = '';
+            document.getElementById('emptyState').style.display = 'block';
+            
+            // Reset statistics
+            document.getElementById('totalDependencies').textContent = '0';
+            document.getElementById('criticalDependencies').textContent = '0';
+            document.getElementById('blockedTasks').textContent = '0';
+            document.getElementById('readyTasks').textContent = '0';
+        }
+        
+        // Helper functions for styling
+        function getDependencyCardClass(dependency) {
+            if (dependency.onCriticalPath) return 'dependency-critical';
+            if (dependency.type === 'BLOCKING') return 'dependency-blocking';
+            if (dependency.type === 'SOFT') return 'dependency-soft';
+            return 'dependency-normal';
+        }
+        
+        function getDependencyTypeClass(type) {
+            switch(type) {
+                case 'FINISH_TO_START': return 'fs';
+                case 'START_TO_START': return 'ss';
+                case 'FINISH_TO_FINISH': return 'ff';
+                case 'START_TO_FINISH': return 'sf';
+                case 'BLOCKING': return 'blocking';
+                case 'SOFT': return 'soft';
+                default: return 'fs';
+            }
+        }
+        
+        function getDependencyTypeIcon(type) {
+            switch(type) {
+                case 'FINISH_TO_START': return 'fas fa-arrow-right';
+                case 'START_TO_START': return 'fas fa-play';
+                case 'FINISH_TO_FINISH': return 'fas fa-stop';
+                case 'START_TO_FINISH': return 'fas fa-exchange-alt';
+                case 'BLOCKING': return 'fas fa-ban';
+                case 'SOFT': return 'fas fa-link';
+                default: return 'fas fa-arrow-right';
+            }
+        }
+        
+        // Setup form validation
+        function setupFormValidation() {
+            const form = document.getElementById('dependencyForm');
+            
+            form.addEventListener('submit', function(event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            });
+        }
+        
+        // WebSocket connection for real-time updates
+        function setupWebSocketConnection() {
+            // TODO: Implement WebSocket connection for real-time updates
+            // This would connect to /topic/dependencies for real-time dependency updates
+        }
+        
+        // Show real-time indicator
+        function showRealTimeIndicator(message) {
+            const indicator = document.getElementById('realTimeIndicator');
+            indicator.textContent = message;
+            indicator.classList.add('show');
+            
+            setTimeout(() => {
+                indicator.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Placeholder functions for future implementation
+        function editDependency(dependencyId) {
+            // TODO: Implement edit functionality
+            console.log('Edit dependency:', dependencyId);
+        }
+        
+        function viewDependencyDetails(dependencyId) {
+            // TODO: Implement details view
+            console.log('View dependency details:', dependencyId);
+        }
+        
+        console.log('✅ Dependencies page fully loaded with real-time features');
+    </script>
+</div>
+</body>
+</html>

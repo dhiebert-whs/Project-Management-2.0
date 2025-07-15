@@ -65,6 +65,8 @@ C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\fr
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\models\FrcEvent.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\impl\SubteamServiceImpl.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\models\TaskStatus.java
+C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\web\controllers\TaskDependencyController.java
+C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\web\dto\TaskDependencyDto.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\TaskDependencyService.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\GanttChartTransformationService.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\utils\TestDatabaseCleaner.java
@@ -89,6 +91,7 @@ C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\fr
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\ReportGenerationService.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\TeamMemberService.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\MeetingService.java
+C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\web\dto\CriticalPathDto.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\EmailService.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\models\User.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\web\controllers\AuthController.java
