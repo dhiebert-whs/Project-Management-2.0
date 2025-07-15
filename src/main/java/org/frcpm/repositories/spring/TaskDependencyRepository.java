@@ -367,10 +367,11 @@ public interface TaskDependencyRepository extends JpaRepository<TaskDependency, 
      * @param limit maximum number of results
      * @return list of tasks ordered by dependency count
      */
-    @Query("SELECT td.dependentTask, COUNT(td) as depCount FROM TaskDependency td " +
+    @Query(value = "SELECT td.dependent_task, COUNT(td) as depCount FROM task_dependency td " +
            "WHERE td.project = :project AND td.active = true " +
-           "GROUP BY td.dependentTask " +
-           "ORDER BY depCount DESC")
+           "GROUP BY td.dependent_task " +
+           "ORDER BY depCount DESC " +
+           "LIMIT :limit", nativeQuery = true)
     List<Object[]> findMostDependentTasks(@Param("project") Project project, @Param("limit") int limit);
     
     /**
@@ -380,10 +381,11 @@ public interface TaskDependencyRepository extends JpaRepository<TaskDependency, 
      * @param limit maximum number of results
      * @return list of tasks ordered by how many depend on them
      */
-    @Query("SELECT td.prerequisiteTask, COUNT(td) as blockCount FROM TaskDependency td " +
+    @Query(value = "SELECT td.prerequisite_task, COUNT(td) as blockCount FROM task_dependency td " +
            "WHERE td.project = :project AND td.active = true " +
-           "GROUP BY td.prerequisiteTask " +
-           "ORDER BY blockCount DESC")
+           "GROUP BY td.prerequisite_task " +
+           "ORDER BY blockCount DESC " +
+           "LIMIT :limit", nativeQuery = true)
     List<Object[]> findMostBlockingTasks(@Param("project") Project project, @Param("limit") int limit);
     
     /**

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>Error - FRC Project Management</title>
+</head>
+
+<div layout:fragment="content" class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error Occurred
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger" role="alert" th:if="${errorMessage}">
+                        <i class="fas fa-times-circle me-2"></i>
+                        <span th:text="${errorMessage}">An error occurred while processing your request.</span>
+                    </div>
+                    
+                    <div class="alert alert-warning" role="alert" th:unless="${errorMessage}">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        An unexpected error occurred while processing your request.
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h5>What can you do?</h5>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-arrow-left text-primary me-2"></i> <a href="javascript:history.back()">Go back</a> to the previous page</li>
+                            <li><i class="fas fa-home text-primary me-2"></i> <a href="/dashboard">Return to Dashboard</a></li>
+                            <li><i class="fas fa-tasks text-primary me-2"></i> <a href="/tasks">View Tasks</a></li>
+                            <li><i class="fas fa-refresh text-primary me-2"></i> <a href="javascript:location.reload()">Refresh the page</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
