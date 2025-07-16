@@ -339,7 +339,8 @@ public class DashboardController extends BaseController {
             }
             
             // Calculate project progress
-            int completionPercentage = (int) projectSummary.getOrDefault("completionPercentage", 0.0);
+            double completionPercentageDouble = (Double) projectSummary.getOrDefault("completionPercentage", 0.0);
+            int completionPercentage = (int) Math.round(completionPercentageDouble);
             model.addAttribute("projectProgress", completionPercentage);
             model.addAttribute("progressBarClass", getProgressBarClass(completionPercentage));
             

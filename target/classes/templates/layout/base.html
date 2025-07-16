@@ -167,6 +167,21 @@
             z-index: 1100;
         }
         
+        /* Desktop responsiveness - sidebar visible by default */
+        @media (min-width: 769px) {
+            .sidebar {
+                transform: translateX(0) !important;
+            }
+            
+            .main-content {
+                margin-left: var(--sidebar-width) !important;
+            }
+            
+            .sidebar-toggle {
+                display: none;
+            }
+        }
+        
         /* Mobile responsiveness */
         @media (max-width: 768px) {
             .sidebar {
@@ -179,12 +194,6 @@
             
             .sidebar-toggle {
                 display: block !important;
-            }
-        }
-        
-        @media (min-width: 769px) {
-            .sidebar-toggle {
-                display: none;
             }
         }
         
@@ -256,7 +265,7 @@
     </nav>
     
     <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
+    <div class="sidebar active" id="sidebar">
         <div class="sidebar-header">
             <h5 class="mb-1">
                 <i class="fas fa-robot me-2"></i>
@@ -369,7 +378,7 @@
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
     
     <!-- Main Content -->
-    <div class="main-content" id="mainContent" style="padding-top: 76px;">
+    <div class="main-content sidebar-open" id="mainContent" style="padding-top: 76px;">
         <!-- Breadcrumbs -->
         <div th:if="${breadcrumbs}" class="container-fluid py-2 bg-light border-bottom">
             <nav aria-label="breadcrumb">

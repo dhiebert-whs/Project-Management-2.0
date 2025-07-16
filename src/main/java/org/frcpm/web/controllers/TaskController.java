@@ -2251,6 +2251,56 @@ public class TaskController {
     }
 
     /**
+     * Show task dependencies management page.
+     * 
+     * @param model Spring model for template data
+     * @param projectId Optional project filter
+     * @return Template name for dependencies view
+     */
+    @GetMapping("/dependencies")
+    public String dependenciesView(Model model,
+                                  @RequestParam(value = "projectId", required = false) Long projectId) {
+        try {
+            model.addAttribute("pageTitle", "Task Dependencies");
+            model.addAttribute("currentSection", "dependencies");
+            
+            if (projectId != null) {
+                model.addAttribute("projectId", projectId);
+            }
+            
+            return "tasks/dependencies";
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error loading dependencies view", e);
+            return "error/500";
+        }
+    }
+    
+    /**
+     * Show critical path analysis page.
+     * 
+     * @param model Spring model for template data
+     * @param projectId Optional project filter
+     * @return Template name for critical path view
+     */
+    @GetMapping("/critical-path")
+    public String criticalPathView(Model model,
+                                  @RequestParam(value = "projectId", required = false) Long projectId) {
+        try {
+            model.addAttribute("pageTitle", "Critical Path Analysis");
+            model.addAttribute("currentSection", "critical-path");
+            
+            if (projectId != null) {
+                model.addAttribute("projectId", projectId);
+            }
+            
+            return "tasks/critical-path";
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error loading critical path view", e);
+            return "error/500";
+        }
+    }
+
+    /**
      * Broadcast task update to specific project.
      * 
      * @param message Task update message to broadcast

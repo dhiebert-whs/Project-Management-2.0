@@ -1,6 +1,7 @@
 package org.frcpm.models;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,15 +18,20 @@ public class Project {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
+    @NotBlank(message = "Project name is required")
+    @Size(max = 100, message = "Project name must not exceed 100 characters")
     @Column(name = "name", length = 100, nullable = false)
     private String name;
     
+    @NotNull(message = "Start date is required")
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
     
+    @NotNull(message = "Goal end date is required")
     @Column(name = "goal_end_date", nullable = false)
     private LocalDate goalEndDate;
     
+    @NotNull(message = "Hard deadline is required")
     @Column(name = "hard_deadline", nullable = false)
     private LocalDate hardDeadline;
     

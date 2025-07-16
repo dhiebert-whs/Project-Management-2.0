@@ -8,7 +8,7 @@
 spring:
   # DataSource Configuration (preserves existing H2 setup)
   datasource:
-    url: jdbc:h2:./db/frc-project-dev;DB_CLOSE_ON_EXIT=FALSE;DB_CLOSE_DELAY=-1;MODE=LEGACY
+    url: jdbc:h2:file:./db/frc-project-dev;DB_CLOSE_ON_EXIT=FALSE;DB_CLOSE_DELAY=-1;MODE=LEGACY
     driver-class-name: org.h2.Driver
     username: sa
     password: ""
@@ -23,7 +23,7 @@ spring:
   # JPA Configuration (enhanced for development)
   jpa:
     hibernate:
-      ddl-auto: create-drop  # Fresh schema on each restart for clean testing
+      ddl-auto: update  # Preserve data between restarts
     show-sql: true           # Show SQL queries for debugging
     properties:
       hibernate:

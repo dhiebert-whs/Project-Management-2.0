@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>Meeting Calendar - FRC Project Management</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="container-fluid">
+            <!-- Page Header -->
+            <div class="row mb-4">
+                <div class="col">
+                    <h1 class="h3 mb-1">Meeting Calendar</h1>
+                    <p class="text-muted">View and manage your team's meeting schedule</p>
+                </div>
+                <div class="col-auto">
+                    <a href="/meetings/new" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> New Meeting
+                    </a>
+                </div>
+            </div>
+
+            <!-- Calendar View -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-calendar-alt"></i> Calendar View
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="text-center py-4">
+                                <i class="fas fa-calendar-day fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">Calendar View Coming Soon</h5>
+                                <p class="text-muted">Full calendar integration will be available in a future update.</p>
+                                <a href="/meetings" class="btn btn-outline-primary">
+                                    <i class="fas fa-list"></i> View Meeting List
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

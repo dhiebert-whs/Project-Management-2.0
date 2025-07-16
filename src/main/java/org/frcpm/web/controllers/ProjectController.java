@@ -654,7 +654,8 @@ public class ProjectController extends BaseController {
         model.addAttribute("timelineHealth", timelineHealth);
         
         // Progress health
-        int completion = (int) summary.getOrDefault("completionPercentage", 0.0);
+        double completionDouble = (Double) summary.getOrDefault("completionPercentage", 0.0);
+        int completion = (int) Math.round(completionDouble);
         String progressHealth = completion >= 80 ? "good" : 
                               completion >= 50 ? "warning" : "critical";
         model.addAttribute("progressHealth", progressHealth);
