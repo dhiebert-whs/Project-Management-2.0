@@ -754,17 +754,22 @@
             });
         }
         
-        // Load critical path analysis
+        // Load critical path analysis (DISABLED for current development phase)
         async function loadCriticalPathAnalysis(projectId) {
-            try {
-                showLoadingSpinner();
-                currentProject = projectId;
-                
-                const response = await fetch(`/api/dependencies/critical-path?projectId=${projectId}`);
-                
-                if (!response.ok) {
-                    throw new Error('Failed to load critical path analysis');
-                }
+            console.log('Critical path analysis disabled for current development phase');
+            showLoadingSpinner(false);
+            
+            // Show placeholder content instead of making API calls
+            document.getElementById('analysisResults').innerHTML = `
+                <div class="alert alert-info">
+                    <h5><i class="fas fa-info-circle"></i> Critical Path Analysis</h5>
+                    <p>Advanced critical path analysis will be available when the TaskDependencyService API is fully implemented.</p>
+                    <p>Current phase focuses on core project management features.</p>
+                </div>
+            `;
+            return;
+            
+            // TODO: Re-enable when TaskDependencyService API is fully implemented
                 
                 const data = await response.json();
                 
@@ -1043,10 +1048,12 @@
             });
         }
         
-        // Load risk analysis
+        // Load risk analysis (DISABLED for current development phase)
         async function loadRiskAnalysis(projectId) {
-            try {
-                const response = await fetch(`/api/dependencies/optimize-schedule?projectId=${projectId}`);
+            console.log('Risk analysis disabled for current development phase');
+            return;
+            
+            // TODO: Re-enable when TaskDependencyService API is fully implemented
                 
                 if (response.ok) {
                     const data = await response.json();

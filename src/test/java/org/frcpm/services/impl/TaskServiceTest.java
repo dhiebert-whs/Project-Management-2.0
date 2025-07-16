@@ -706,10 +706,9 @@ class TaskServiceTest {
         Task dependencyTask = new Task("Dependency Task", testProject, testSubsystem);
         dependencyTask.setId(2L);
         
-        // ✅ FIXED: Mock for multiple findById calls
+        // ✅ FIXED: Mock for multiple findById calls, removed unnecessary save() stub
         when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
         when(taskRepository.findById(2L)).thenReturn(Optional.of(dependencyTask));
-        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
         // Execute
         boolean result = taskService.addDependency(1L, 2L);
@@ -759,10 +758,9 @@ class TaskServiceTest {
         Task dependencyTask = new Task("Dependency Task", testProject, testSubsystem);
         dependencyTask.setId(2L);
         
-        // ✅ FIXED: Mock for multiple findById calls
+        // ✅ FIXED: Mock for multiple findById calls, removed unnecessary save() stub
         when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
         when(taskRepository.findById(2L)).thenReturn(Optional.of(dependencyTask));
-        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
         // Execute
         boolean result = taskService.removeDependency(1L, 2L);

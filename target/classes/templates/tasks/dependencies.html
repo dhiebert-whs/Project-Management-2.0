@@ -578,41 +578,14 @@
             });
         }
         
-        // Load dependencies from server
+        // Load dependencies from server (DISABLED for current development phase)
         async function loadDependencies() {
-            try {
-                const projectId = document.getElementById('projectFilter').value;
-                const typeFilter = document.getElementById('typeFilter').value;
-                const showInactive = document.getElementById('showInactive').checked;
-                const criticalPathOnly = document.getElementById('criticalPathOnly').checked;
-                
-                if (!projectId) {
-                    showEmptyState();
-                    return;
-                }
-                
-                const url = `/api/dependencies?projectId=${projectId}&activeOnly=${!showInactive}`;
-                const response = await fetch(url);
-                
-                if (!response.ok) {
-                    throw new Error('Failed to load dependencies');
-                }
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    dependencies = data.dependencies;
-                    filterAndDisplayDependencies(typeFilter, criticalPathOnly);
-                    updateStatistics();
-                } else {
-                    console.error('Error loading dependencies:', data.message);
-                    showEmptyState();
-                }
-                
-            } catch (error) {
-                console.error('Error loading dependencies:', error);
-                showEmptyState();
-            }
+            console.log('Dependencies loading disabled for current development phase');
+            showEmptyState();
+            return;
+            
+            // TODO: Re-enable when TaskDependencyService API is fully implemented
+            // This prevents API overload during current development phase
         }
         
         // Filter and display dependencies
@@ -702,36 +675,17 @@
             container.innerHTML = html;
         }
         
-        // Update statistics (simplified to prevent API overload)
+        // Update statistics (DISABLED for current development phase)
         async function updateStatistics() {
-            const projectId = document.getElementById('projectFilter').value;
-            if (!projectId) return;
+            console.log('Statistics loading disabled for current development phase');
+            // Set placeholder values to prevent API calls
+            document.getElementById('totalDependencies').textContent = '--';
+            document.getElementById('criticalDependencies').textContent = '--';
+            document.getElementById('blockedTasks').textContent = '--';
+            document.getElementById('readyTasks').textContent = '--';
+            return;
             
-            try {
-                // Only load basic statistics to prevent API overload
-                const response = await fetch(`/api/dependencies/statistics?projectId=${projectId}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    document.getElementById('totalDependencies').textContent = data.statistics?.TOTAL || 0;
-                    document.getElementById('criticalDependencies').textContent = dependencies.filter(d => d.onCriticalPath).length;
-                    // Use placeholder values for now to prevent additional API calls
-                    document.getElementById('blockedTasks').textContent = '--';
-                    document.getElementById('readyTasks').textContent = '--';
-                } else {
-                    // Reset to zero if API call fails
-                    document.getElementById('totalDependencies').textContent = '0';
-                    document.getElementById('criticalDependencies').textContent = '0';
-                    document.getElementById('blockedTasks').textContent = '0';
-                    document.getElementById('readyTasks').textContent = '0';
-                }
-            } catch (error) {
-                console.error('Error updating statistics:', error);
-                // Reset all statistics on error
-                document.getElementById('totalDependencies').textContent = '0';
-                document.getElementById('criticalDependencies').textContent = '0';
-                document.getElementById('blockedTasks').textContent = '0';
-                document.getElementById('readyTasks').textContent = '0';
-            }
+            // TODO: Re-enable when TaskDependencyService API is fully implemented
         }
         
         // Show add dependency form
@@ -741,73 +695,23 @@
             modal.show();
         }
         
-        // Save dependency
+        // Save dependency (DISABLED for current development phase)
         async function saveDependency() {
-            const form = document.getElementById('dependencyForm');
+            console.log('Dependency saving disabled for current development phase');
+            alert('Dependency management is available in advanced features. Current phase focuses on core project management.');
+            bootstrap.Modal.getInstance(document.getElementById('addDependencyModal')).hide();
+            return;
             
-            if (!form.checkValidity()) {
-                form.classList.add('was-validated');
-                return;
-            }
-            
-            const formData = new FormData(form);
-            const dependencyData = {
-                predecessorTaskId: parseInt(formData.get('predecessorTaskId')),
-                successorTaskId: parseInt(formData.get('successorTaskId')),
-                type: formData.get('type'),
-                lagDays: formData.get('lagDays') ? parseInt(formData.get('lagDays')) : null,
-                notes: formData.get('notes')
-            };
-            
-            try {
-                const response = await fetch('/api/dependencies', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(dependencyData)
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    bootstrap.Modal.getInstance(document.getElementById('addDependencyModal')).hide();
-                    loadDependencies();
-                    showRealTimeIndicator('Dependency created successfully');
-                } else {
-                    alert('Error creating dependency: ' + result.message);
-                }
-                
-            } catch (error) {
-                console.error('Error saving dependency:', error);
-                alert('Error creating dependency');
-            }
+            // TODO: Re-enable when TaskDependencyService API is fully implemented
         }
         
-        // Delete dependency
+        // Delete dependency (DISABLED for current development phase)
         async function deleteDependency(dependencyId) {
-            if (!confirm('Are you sure you want to delete this dependency?')) {
-                return;
-            }
+            console.log('Dependency deletion disabled for current development phase');
+            alert('Dependency management is available in advanced features. Current phase focuses on core project management.');
+            return;
             
-            try {
-                const response = await fetch(`/api/dependencies/${dependencyId}`, {
-                    method: 'DELETE'
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    loadDependencies();
-                    showRealTimeIndicator('Dependency deleted successfully');
-                } else {
-                    alert('Error deleting dependency: ' + result.message);
-                }
-                
-            } catch (error) {
-                console.error('Error deleting dependency:', error);
-                alert('Error deleting dependency');
-            }
+            // TODO: Re-enable when TaskDependencyService API is fully implemented
         }
         
         // Show empty state

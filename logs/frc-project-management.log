@@ -195,3 +195,200 @@ java.lang.RuntimeException: Test exception
 2025-07-16 09:49:22 [main] WARN  o.f.s.impl.VisualizationServiceImpl - Project not found for ID: 999
 2025-07-16 09:49:22 [main] WARN  o.f.s.impl.VisualizationServiceImpl - No Gantt data available for project 1
 2025-07-16 09:49:22 [main] WARN  o.f.s.impl.VisualizationServiceImpl - No Gantt data available for project 1
+2025-07-16 10:06:27 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - Unique index or primary key violation: "PUBLIC.CONSTRAINT_INDEX_3 ON PUBLIC.ATTENDANCES(MEETING_ID NULLS FIRST, MEMBER_ID NULLS FIRST) VALUES ( /* key:17 */ CAST(17 AS BIGINT), CAST(15 AS BIGINT))"; SQL statement:
+insert into attendances (arrival_time,departure_time,meeting_id,member_id,present,id) values (?,?,?,?,?,default) [23505-224]
+2025-07-16 10:06:31 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - Unique index or primary key violation: "PUBLIC.CONSTRAINT_INDEX_4D ON PUBLIC.USERS(USERNAME NULLS FIRST) VALUES ( /* 87 */ 'student1' )"; SQL statement:
+insert into users (account_non_expired,account_non_locked,age,created_at,credentials_non_expired,email,enabled,first_name,last_login,last_name,mfa_enabled,parent_email,parental_consent_date,parental_consent_token,password,requires_parental_consent,role,totp_secret,updated_at,username,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,default) [23505-224]
+2025-07-16 10:06:31 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - Unique index or primary key violation: "PUBLIC.CONSTRAINT_INDEX_4 ON PUBLIC.USERS(EMAIL NULLS FIRST) VALUES ( /* 98 */ 'student@frcteam.org' )"; SQL statement:
+insert into users (account_non_expired,account_non_locked,age,created_at,credentials_non_expired,email,enabled,first_name,last_login,last_name,mfa_enabled,parent_email,parental_consent_date,parental_consent_token,password,requires_parental_consent,role,totp_secret,updated_at,username,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,default) [23505-224]
+2025-07-16 10:06:32 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - Unique index or primary key violation: "PUBLIC.CONSTRAINT_INDEX_F ON PUBLIC.SUBSYSTEMS(NAME NULLS FIRST) VALUES ( /* 103 */ 'Drivetrain' )"; SQL statement:
+insert into subsystems (description,name,responsible_subteam_id,status,id) values (?,?,?,?,default) [23505-224]
+2025-07-16 10:06:32 [main] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - Unique index or primary key violation: "PUBLIC.CONSTRAINT_INDEX_371 ON PUBLIC.TEAM_MEMBERS(USERNAME NULLS FIRST) VALUES ( /* 42 */ 'testuser' )"; SQL statement:
+insert into team_members (email,first_name,last_name,is_leader,phone,skills,subteam_id,user_id,username,id) values (?,?,?,?,?,?,?,?,?,default) [23505-224]
+2025-07-16 10:06:33 [main] WARN  org.frcpm.security.MFAService - MFA disabled by admin admin1 for user: mentor2
+2025-07-16 10:06:33 [main] INFO  org.frcpm.security.MFAService - MFA setup completed for user: mentor1
+2025-07-16 10:06:33 [main] ERROR org.frcpm.security.MFAService - Failed to enable MFA for user mentor1: Database error
+2025-07-16 10:06:33 [main] INFO  o.f.security.SecurityIntegrationTest - Starting SecurityIntegrationTest using Java 21.0.7 with PID 20892 (started by dhiebert in C:\Users\dhiebert\Local Repositories\Project Management 2.0)
+2025-07-16 10:06:33 [main] DEBUG o.f.security.SecurityIntegrationTest - Running with Spring Boot v3.2.0, Spring v6.1.1
+2025-07-16 10:06:33 [main] INFO  o.f.security.SecurityIntegrationTest - The following 1 profile is active: "test"
+2025-07-16 10:06:36 [main] INFO  o.f.security.SecurityIntegrationTest - Started SecurityIntegrationTest in 2.485 seconds (process running for 20.466)
+2025-07-16 10:06:38 [main] ERROR o.f.services.impl.AuditServiceImpl - Failed to save COPPA audit log: Database error
+2025-07-16 10:06:38 [main] WARN  o.f.services.impl.AuditServiceImpl - Failed to capture request details for audit log: Request access failed
+2025-07-16 10:06:38 [main] ERROR o.f.services.impl.AuditServiceImpl - Failed to save COPPA audit log: Database connection failed
+2025-07-16 10:06:38 [main] WARN  o.f.s.i.COPPAComplianceServiceImpl - Account activation failed for user under 13: minor - hasConsent: false, hasParentEmail: true
+2025-07-16 10:06:38 [main] WARN  o.f.s.i.COPPAComplianceServiceImpl - Cannot initiate consent process - no parent email for user: minor
+2025-07-16 10:06:38 [main] WARN  o.f.s.i.COPPAComplianceServiceImpl - Disabled account for user minor due to missing parental consent
+2025-07-16 10:06:39 [main] WARN  o.f.s.impl.GanttDataServiceImpl - Project not found with ID: 999
+2025-07-16 10:06:39 [main] WARN  o.f.s.impl.GanttDataServiceImpl - Project not found with ID: 999
+2025-07-16 10:06:39 [main] WARN  o.f.s.impl.GanttDataServiceImpl - Project not found with ID: 999
+2025-07-16 10:06:39 [main] WARN  o.f.s.impl.GanttDataServiceImpl - Project not found with ID: 999
+2025-07-16 10:06:39 [main] WARN  o.f.s.i.MetricsCalculationServiceImpl - Project not found with ID: 999
+2025-07-16 10:06:39 [main] WARN  o.f.s.i.MetricsCalculationServiceImpl - Project not found with ID: 999
+2025-07-16 10:06:39 [main] WARN  o.f.s.i.MetricsCalculationServiceImpl - Project not found with ID: 999
+2025-07-16 10:06:39 [main] WARN  o.f.s.i.MetricsCalculationServiceImpl - Project not found with ID: 999
+2025-07-16 10:06:39 [main] WARN  o.f.s.i.MetricsCalculationServiceImpl - Project not found with ID: 999
+2025-07-16 10:06:39 [main] ERROR o.f.s.i.MetricsCalculationServiceImpl - Error calculating project progress metrics
+java.lang.RuntimeException: Database error
+	at org.frcpm.services.impl.MetricsCalculationServiceImpl.calculateProjectProgressMetrics(MetricsCalculationServiceImpl.java:73)
+	at org.frcpm.services.impl.MetricsCalculationServiceTest.testErrorHandling(MetricsCalculationServiceTest.java:654)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:728)
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:156)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestableMethod(TimeoutExtension.java:147)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestMethod(TimeoutExtension.java:86)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:103)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:93)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:92)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:86)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeTestMethod$7(TestMethodTestDescriptor.java:218)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeTestMethod(TestMethodTestDescriptor.java:214)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:139)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:69)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:151)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:155)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:155)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:198)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:169)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:93)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:58)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:141)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:57)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:103)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:85)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.apache.maven.surefire.junitplatform.LazyLauncher.execute(LazyLauncher.java:56)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:184)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:148)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:122)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+2025-07-16 10:06:39 [main] WARN  o.f.s.i.MetricsCalculationServiceImpl - Project not found with ID: 999
+2025-07-16 10:06:39 [main] WARN  o.f.s.i.MetricsCalculationServiceImpl - Team member not found with ID: 999
+2025-07-16 10:06:39 [main] WARN  o.f.services.impl.ProjectServiceImpl - Cannot get summary for null project ID
+2025-07-16 10:06:39 [main] WARN  o.f.services.impl.ProjectServiceImpl - Project not found with ID: 99
+2025-07-16 10:06:39 [main] WARN  o.f.services.impl.ProjectServiceImpl - Project not found with ID: 99
+2025-07-16 10:06:39 [main] WARN  o.f.services.impl.TaskServiceImpl - Task not found with ID: 999
+2025-07-16 10:06:39 [main] WARN  o.f.services.impl.TaskServiceImpl - Project not found with ID: 999
+2025-07-16 10:06:39 [main] WARN  o.f.services.impl.TaskServiceImpl - removeDependency called - should use TaskDependencyService instead
+2025-07-16 10:06:39 [main] WARN  o.f.services.impl.TaskServiceImpl - Task not found with ID: 999
+2025-07-16 10:06:39 [main] WARN  o.f.services.impl.TaskServiceImpl - Task not found with ID: 999
+2025-07-16 10:06:39 [main] WARN  o.f.services.impl.TaskServiceImpl - addDependency called - should use TaskDependencyService instead
+2025-07-16 10:06:39 [main] WARN  o.f.s.impl.TeamMemberServiceImpl - Team member not found with ID: 999
+2025-07-16 10:06:39 [main] WARN  o.f.s.impl.TeamMemberServiceImpl - Team member not found with ID: 999
+2025-07-16 10:06:39 [main] WARN  o.f.s.impl.TeamMemberServiceImpl - Team member not found with ID: 999
+2025-07-16 10:06:40 [main] WARN  o.f.s.impl.TeamMemberServiceImpl - Subteam not found with ID: 999
+2025-07-16 10:06:40 [main] WARN  o.f.s.impl.VisualizationServiceImpl - No daily data available for project 1 on date 2025-07-16
+2025-07-16 10:06:40 [main] ERROR o.f.s.impl.VisualizationServiceImpl - Error creating Gantt chart data
+java.lang.RuntimeException: Test exception
+	at org.frcpm.services.impl.VisualizationServiceImpl.createGanttChartPane(VisualizationServiceImpl.java:70)
+	at org.frcpm.services.impl.VisualizationServiceTest.testServiceConstructorDependencies(VisualizationServiceTest.java:626)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:728)
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:156)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestableMethod(TimeoutExtension.java:147)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestMethod(TimeoutExtension.java:86)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:103)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:93)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:92)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:86)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeTestMethod$7(TestMethodTestDescriptor.java:218)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeTestMethod(TestMethodTestDescriptor.java:214)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:139)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:69)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:151)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:155)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:155)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:198)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:169)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:93)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:58)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:141)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:57)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:103)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:85)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.apache.maven.surefire.junitplatform.LazyLauncher.execute(LazyLauncher.java:56)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:184)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:148)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:122)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+2025-07-16 10:06:40 [main] WARN  o.f.s.impl.VisualizationServiceImpl - Project not found for ID: 999
+2025-07-16 10:06:40 [main] WARN  o.f.s.impl.VisualizationServiceImpl - No Gantt data available for project 1
+2025-07-16 10:06:40 [main] WARN  o.f.s.impl.VisualizationServiceImpl - No Gantt data available for project 1
