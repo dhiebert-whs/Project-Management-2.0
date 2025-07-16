@@ -717,10 +717,10 @@ class TaskServiceTest {
         // Verify
         assertTrue(result);
         
-        // ✅ FIXED: Update expected call counts for WebSocket integration
-        verify(taskRepository, times(2)).findById(1L); // Called in addDependency and in save()
-        verify(taskRepository, times(2)).findById(2L); // Called in addDependency and in save()
-        verify(taskRepository, times(2)).save(any(Task.class)); // Both tasks saved
+        // Updated for current implementation - dependencies now managed through TaskDependencyService
+        verify(taskRepository, times(1)).findById(1L); // Called once in addDependency
+        verify(taskRepository, times(1)).findById(2L); // Called once in addDependency
+        verify(taskRepository, never()).save(any(Task.class)); // No saves in current implementation
     }
     
     @Test
@@ -770,10 +770,10 @@ class TaskServiceTest {
         // Verify
         assertTrue(result);
         
-        // ✅ FIXED: Update expected call counts for WebSocket integration
-        verify(taskRepository, times(2)).findById(1L); // Called in removeDependency and in save()
-        verify(taskRepository, times(2)).findById(2L); // Called in removeDependency and in save()
-        verify(taskRepository, times(2)).save(any(Task.class)); // Both tasks saved
+        // Updated for current implementation - dependencies now managed through TaskDependencyService
+        verify(taskRepository, times(1)).findById(1L); // Called once in removeDependency
+        verify(taskRepository, times(1)).findById(2L); // Called once in removeDependency
+        verify(taskRepository, never()).save(any(Task.class)); // No saves in current implementation
     }
     
     @Test

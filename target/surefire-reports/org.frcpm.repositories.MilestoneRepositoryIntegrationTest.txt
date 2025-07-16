@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.frcpm.repositories.MilestoneRepositoryIntegrationTest
+-------------------------------------------------------------------------------
+Tests run: 21, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.397 s -- in org.frcpm.repositories.MilestoneRepositoryIntegrationTest
