@@ -754,37 +754,44 @@
             });
         }
         
-        // Load critical path analysis (DISABLED for current development phase)
+        // Load critical path analysis (RE-ENABLED for Phase 2E-D completion)
         async function loadCriticalPathAnalysis(projectId) {
-            console.log('Critical path analysis disabled for current development phase');
-            showLoadingSpinner(false);
+            if (!projectId) {
+                console.log('No project ID provided for critical path analysis');
+                return;
+            }
             
-            // Show placeholder content instead of making API calls
-            document.getElementById('analysisResults').innerHTML = `
-                <div class="alert alert-info">
-                    <h5><i class="fas fa-info-circle"></i> Critical Path Analysis</h5>
-                    <p>Advanced critical path analysis will be available when the TaskDependencyService API is fully implemented.</p>
-                    <p>Current phase focuses on core project management features.</p>
-                </div>
-            `;
-            return;
-            
-            // TODO: Re-enable when TaskDependencyService API is fully implemented
+            try {
+                showLoadingSpinner(true);
+                
+                const response = await fetch(`/api/dependencies/critical-path?projectId=${projectId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 
                 const data = await response.json();
                 
-                if (data.success) {
+                if (data.success && data.criticalPath) {
                     criticalPathData = data.criticalPath;
                     displayCriticalPathAnalysis();
                     loadRiskAnalysis(projectId);
                     loadOptimizationSuggestions(projectId);
+                    
+                    console.log('✅ Critical path analysis loaded successfully');
                 } else {
-                    showError('Error loading critical path: ' + data.message);
+                    showError('Error loading critical path: ' + (data.message || 'Unknown error'));
                 }
                 
             } catch (error) {
                 console.error('Error loading critical path analysis:', error);
-                showError('Failed to load critical path analysis');
+                showError('Failed to load critical path analysis: ' + error.message);
             } finally {
                 hideLoadingSpinner();
             }
@@ -1048,12 +1055,16 @@
             });
         }
         
-        // Load risk analysis (DISABLED for current development phase)
+        // Load risk analysis (RE-ENABLED for Phase 2E-D completion)
         async function loadRiskAnalysis(projectId) {
-            console.log('Risk analysis disabled for current development phase');
-            return;
-            
-            // TODO: Re-enable when TaskDependencyService API is fully implemented
+            try {
+                const response = await fetch(`/api/dependencies/optimize-schedule?projectId=${projectId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
                 
                 if (response.ok) {
                     const data = await response.json();
@@ -1063,7 +1074,27 @@
                 }
             } catch (error) {
                 console.error('Error loading risk analysis:', error);
+                // Show fallback risk analysis based on critical path data
+                displayFallbackRiskAnalysis();
             }
+        }
+        
+        // Display fallback risk analysis when API is unavailable
+        function displayFallbackRiskAnalysis() {
+            const container = document.getElementById('riskContainer');
+            if (!container) return;
+            
+            container.innerHTML = `
+                <div class="risk-item medium">
+                    <div class="risk-icon text-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="risk-content">
+                        <div class="risk-title">Limited Risk Analysis</div>
+                        <div class="risk-description">Basic risk assessment based on critical path analysis</div>
+                    </div>
+                </div>
+            `;
         }
         
         // Display risk analysis

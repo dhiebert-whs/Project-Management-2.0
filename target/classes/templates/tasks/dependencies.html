@@ -578,14 +578,52 @@
             });
         }
         
-        // Load dependencies from server (DISABLED for current development phase)
+        // Load dependencies from server (RE-ENABLED for Phase 2E-D completion)
         async function loadDependencies() {
-            console.log('Dependencies loading disabled for current development phase');
-            showEmptyState();
-            return;
+            const projectId = document.getElementById('projectFilter').value;
+            if (!projectId) {
+                showEmptyState();
+                return;
+            }
             
-            // TODO: Re-enable when TaskDependencyService API is fully implemented
-            // This prevents API overload during current development phase
+            try {
+                showLoadingState();
+                
+                const response = await fetch(`/api/dependencies?projectId=${projectId}&activeOnly=true`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    dependencies = data.dependencies || [];
+                    
+                    // Apply current filters
+                    const typeFilter = document.getElementById('typeFilter').value;
+                    const criticalPathOnly = document.getElementById('criticalPathOnly').checked;
+                    filterAndDisplayDependencies(typeFilter, criticalPathOnly);
+                    
+                    // Update statistics
+                    updateStatistics();
+                    
+                    console.log(`✅ Loaded ${dependencies.length} dependencies for project ${projectId}`);
+                } else {
+                    console.error('Failed to load dependencies:', data.message);
+                    showErrorState(data.message);
+                }
+                
+            } catch (error) {
+                console.error('Error loading dependencies:', error);
+                showErrorState('Failed to load dependencies. Please try again.');
+            }
         }
         
         // Filter and display dependencies
@@ -675,17 +713,108 @@
             container.innerHTML = html;
         }
         
-        // Update statistics (DISABLED for current development phase)
+        // Update statistics (RE-ENABLED for Phase 2E-D completion)
         async function updateStatistics() {
-            console.log('Statistics loading disabled for current development phase');
-            // Set placeholder values to prevent API calls
-            document.getElementById('totalDependencies').textContent = '--';
-            document.getElementById('criticalDependencies').textContent = '--';
-            document.getElementById('blockedTasks').textContent = '--';
-            document.getElementById('readyTasks').textContent = '--';
-            return;
+            const projectId = document.getElementById('projectFilter').value;
+            if (!projectId) {
+                // Reset statistics when no project selected
+                document.getElementById('totalDependencies').textContent = '0';
+                document.getElementById('criticalDependencies').textContent = '0';
+                document.getElementById('blockedTasks').textContent = '0';
+                document.getElementById('readyTasks').textContent = '0';
+                return;
+            }
             
-            // TODO: Re-enable when TaskDependencyService API is fully implemented
+            try {
+                const response = await fetch(`/api/dependencies/statistics?projectId=${projectId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        const stats = data.statistics || {};
+                        document.getElementById('totalDependencies').textContent = stats.TOTAL || '0';
+                        
+                        // Get critical path and blocked tasks counts separately
+                        await updateCriticalPathStats(projectId);
+                        await updateBlockedTasksStats(projectId);
+                        await updateReadyTasksStats(projectId);
+                    }
+                } else {
+                    console.warn('Failed to load statistics, using current dependencies data');
+                    // Fallback to current dependencies data
+                    updateStatisticsFromCurrentData();
+                }
+                
+            } catch (error) {
+                console.error('Error loading statistics:', error);
+                updateStatisticsFromCurrentData();
+            }
+        }
+        
+        // Fallback statistics calculation from current dependencies data
+        function updateStatisticsFromCurrentData() {
+            document.getElementById('totalDependencies').textContent = dependencies.length.toString();
+            
+            const criticalCount = dependencies.filter(dep => dep.onCriticalPath).length;
+            document.getElementById('criticalDependencies').textContent = criticalCount.toString();
+            
+            // For blocked/ready tasks, we'll show approximate counts
+            document.getElementById('blockedTasks').textContent = '—';
+            document.getElementById('readyTasks').textContent = '—';
+        }
+        
+        // Update critical path statistics
+        async function updateCriticalPathStats(projectId) {
+            try {
+                const response = await fetch(`/api/dependencies/critical-path?projectId=${projectId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.criticalPath) {
+                        document.getElementById('criticalDependencies').textContent = 
+                            data.criticalPath.criticalTaskCount || '0';
+                    }
+                }
+            } catch (error) {
+                console.warn('Error loading critical path stats:', error);
+            }
+        }
+        
+        // Update blocked tasks statistics
+        async function updateBlockedTasksStats(projectId) {
+            try {
+                const response = await fetch(`/api/dependencies/blocked-tasks?projectId=${projectId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        document.getElementById('blockedTasks').textContent = 
+                            data.totalBlocked || '0';
+                    }
+                }
+            } catch (error) {
+                console.warn('Error loading blocked tasks stats:', error);
+            }
+        }
+        
+        // Update ready tasks statistics
+        async function updateReadyTasksStats(projectId) {
+            try {
+                const response = await fetch(`/api/dependencies/ready-tasks?projectId=${projectId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        document.getElementById('readyTasks').textContent = 
+                            data.totalReady || '0';
+                    }
+                }
+            } catch (error) {
+                console.warn('Error loading ready tasks stats:', error);
+            }
         }
         
         // Show add dependency form
@@ -695,23 +824,116 @@
             modal.show();
         }
         
-        // Save dependency (DISABLED for current development phase)
+        // Save dependency (RE-ENABLED for Phase 2E-D completion)
         async function saveDependency() {
-            console.log('Dependency saving disabled for current development phase');
-            alert('Dependency management is available in advanced features. Current phase focuses on core project management.');
-            bootstrap.Modal.getInstance(document.getElementById('addDependencyModal')).hide();
-            return;
+            const form = document.getElementById('dependencyForm');
             
-            // TODO: Re-enable when TaskDependencyService API is fully implemented
+            if (!form.checkValidity()) {
+                form.classList.add('was-validated');
+                return;
+            }
+            
+            const formData = new FormData(form);
+            const dependencyData = {
+                predecessorTaskId: parseInt(formData.get('predecessorTaskId')),
+                successorTaskId: parseInt(formData.get('successorTaskId')),
+                type: formData.get('type'),
+                lagDays: formData.get('lagDays') ? parseInt(formData.get('lagDays')) : null,
+                notes: formData.get('notes') || null
+            };
+            
+            // Basic validation
+            if (!dependencyData.predecessorTaskId || !dependencyData.successorTaskId) {
+                alert('Please select both prerequisite and dependent tasks.');
+                return;
+            }
+            
+            if (dependencyData.predecessorTaskId === dependencyData.successorTaskId) {
+                alert('A task cannot depend on itself.');
+                return;
+            }
+            
+            try {
+                showSavingState();
+                
+                const response = await fetch('/api/dependencies', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify(dependencyData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // Close modal
+                    bootstrap.Modal.getInstance(document.getElementById('addDependencyModal')).hide();
+                    
+                    // Reset form
+                    form.reset();
+                    form.classList.remove('was-validated');
+                    
+                    // Reload dependencies
+                    await loadDependencies();
+                    
+                    // Show success message
+                    showSuccessMessage('Dependency created successfully');
+                    
+                    console.log('✅ Dependency created:', data.dependency);
+                    
+                } else {
+                    throw new Error(data.message || 'Failed to create dependency');
+                }
+                
+            } catch (error) {
+                console.error('Error saving dependency:', error);
+                showErrorMessage('Failed to create dependency: ' + error.message);
+            } finally {
+                hideSavingState();
+            }
         }
         
-        // Delete dependency (DISABLED for current development phase)
+        // Delete dependency (RE-ENABLED for Phase 2E-D completion)
         async function deleteDependency(dependencyId) {
-            console.log('Dependency deletion disabled for current development phase');
-            alert('Dependency management is available in advanced features. Current phase focuses on core project management.');
-            return;
+            if (!dependencyId) {
+                console.error('No dependency ID provided for deletion');
+                return;
+            }
             
-            // TODO: Re-enable when TaskDependencyService API is fully implemented
+            if (!confirm('Are you sure you want to delete this dependency? This action cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/dependencies/${dependencyId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // Reload dependencies to reflect the deletion
+                    await loadDependencies();
+                    
+                    // Show success message
+                    showSuccessMessage('Dependency deleted successfully');
+                    
+                    console.log('✅ Dependency deleted:', dependencyId);
+                    
+                } else {
+                    throw new Error(data.message || 'Failed to delete dependency');
+                }
+                
+            } catch (error) {
+                console.error('Error deleting dependency:', error);
+                showErrorMessage('Failed to delete dependency: ' + error.message);
+            }
         }
         
         // Show empty state
@@ -724,6 +946,107 @@
             document.getElementById('criticalDependencies').textContent = '0';
             document.getElementById('blockedTasks').textContent = '0';
             document.getElementById('readyTasks').textContent = '0';
+        }
+        
+        // Show loading state
+        function showLoadingState() {
+            const container = document.getElementById('dependenciesList');
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading dependencies...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Loading dependencies...</p>
+                </div>
+            `;
+            document.getElementById('emptyState').style.display = 'none';
+        }
+        
+        // Show error state
+        function showErrorState(message) {
+            const container = document.getElementById('dependenciesList');
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="text-danger mb-3">
+                        <i class="fas fa-exclamation-triangle fa-2x"></i>
+                    </div>
+                    <h5 class="text-danger">Error Loading Dependencies</h5>
+                    <p class="text-muted">${message}</p>
+                    <button class="btn btn-outline-primary" onclick="loadDependencies()">
+                        <i class="fas fa-refresh me-2"></i>Try Again
+                    </button>
+                </div>
+            `;
+            document.getElementById('emptyState').style.display = 'none';
+        }
+        
+        // Show saving state for forms
+        function showSavingState() {
+            const saveBtn = document.querySelector('#addDependencyModal .btn-primary');
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+            }
+        }
+        
+        // Hide saving state for forms
+        function hideSavingState() {
+            const saveBtn = document.querySelector('#addDependencyModal .btn-primary');
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>Save Dependency';
+            }
+        }
+        
+        // Show success message
+        function showSuccessMessage(message) {
+            showToast(message, 'success');
+        }
+        
+        // Show error message
+        function showErrorMessage(message) {
+            showToast(message, 'error');
+        }
+        
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            // Create toast container if it doesn't exist
+            let toastContainer = document.getElementById('toast-container');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'toast-container';
+                toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+                toastContainer.style.zIndex = '9999';
+                document.body.appendChild(toastContainer);
+            }
+            
+            // Create toast element
+            const toastId = 'toast-' + Date.now();
+            const toastHtml = `
+                <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-header bg-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'} text-white">
+                        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
+                        <strong class="me-auto">Dependencies</strong>
+                        <small>now</small>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                </div>
+            `;
+            
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            
+            // Show toast
+            const toastElement = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastElement, { delay: 4000 });
+            toast.show();
+            
+            // Remove element after hiding
+            toastElement.addEventListener('hidden.bs.toast', () => {
+                toastElement.remove();
+            });
         }
         
         // Helper functions for styling
