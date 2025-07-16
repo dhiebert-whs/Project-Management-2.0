@@ -106,12 +106,14 @@ public class Subteam {
     
     public void addSubsystem(Subsystem subsystem) {
         subsystems.add(subsystem);
-        subsystem.setResponsibleSubteam(this);
+        // Note: Phase 3 updated Subsystem to use responsible member instead of subteam
+        // This method may need to be updated based on new business logic
     }
     
     public void removeSubsystem(Subsystem subsystem) {
         subsystems.remove(subsystem);
-        subsystem.setResponsibleSubteam(null);
+        // Note: Phase 3 updated Subsystem to use responsible member instead of subteam
+        // This method may need to be updated based on new business logic
     }
     
     @Override

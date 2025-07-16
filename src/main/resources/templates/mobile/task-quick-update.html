@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout/base}">
+
+<head>
+    <title>Quick Task Updates - FRC Project Management</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    
+    <!-- Mobile-specific styles for task updates -->
+    <style>
+        .mobile-task-update {
+            padding: 0.5rem;
+            max-width: 100%;
+        }
+        
+        .project-selector {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,123,255,0.3);
+        }
+        
+        .project-dropdown {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.2);
+            color: white;
+            border-radius: 8px;
+            padding: 0.75rem;
+            font-size: 1.1rem;
+            width: 100%;
+        }
+        
+        .project-dropdown option {
+            background: #343a40;
+            color: white;
+        }
+        
+        .task-card {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #17a2b8;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .task-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        
+        .task-header {
+            padding: 1rem;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .task-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin: 0 0 0.5rem 0;
+            color: #343a40;
+            line-height: 1.3;
+        }
+        
+        .task-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        
+        .task-priority {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .priority-high {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .priority-medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .priority-low {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .priority-critical {
+            background: #dc3545;
+            color: white;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        .progress-container {
+            padding: 0 1rem;
+            margin: 1rem 0;
+        }
+        
+        .progress-bar-custom {
+            height: 8px;
+            border-radius: 4px;
+            background: #e9ecef;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-0-25 { background: linear-gradient(90deg, #dc3545, #fd7e14); }
+        .progress-25-50 { background: linear-gradient(90deg, #fd7e14, #ffc107); }
+        .progress-50-75 { background: linear-gradient(90deg, #ffc107, #20c997); }
+        .progress-75-100 { background: linear-gradient(90deg, #20c997, #28a745); }
+        
+        .progress-text {
+            font-size: 0.9rem;
+            color: #495057;
+            font-weight: 500;
+        }
+        
+        .task-actions {
+            padding: 1rem;
+            background: #f8f9fa;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 0.5rem;
+        }
+        
+        .quick-action-btn {
+            padding: 0.75rem;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        
+        .quick-action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .action-start {
+            background: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+        
+        .action-complete {
+            background: #cce7ff;
+            color: #004085;
+            border-color: #b8daff;
+        }
+        
+        .action-block {
+            background: #fff3cd;
+            color: #856404;
+            border-color: #ffeaa7;
+        }
+        
+        .action-note {
+            background: #e2e3e5;
+            color: #383d41;
+            border-color: #d6d8db;
+        }
+        
+        .floating-voice-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            border: none;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 12px rgba(40,167,69,0.4);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .floating-voice-btn:hover {
+            background: linear-gradient(135deg, #218838, #1e7e34);
+            transform: scale(1.1);
+        }
+        
+        .floating-voice-btn.recording {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            animation: pulse 1s infinite;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #6c757d;
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+        
+        .search-container {
+            margin-bottom: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: white;
+            padding: 0.5rem 0;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            font-size: 1rem;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23999' viewBox='0 0 16 16'%3e%3cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: 0.75rem center;
+            background-size: 1rem;
+        }
+        
+        .task-assignment {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .assigned-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #007bff;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 576px) {
+            .mobile-task-update {
+                padding: 0.25rem;
+            }
+            
+            .task-actions {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .task-meta {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div layout:fragment="content" class="mobile-task-update">
+        
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h1 class="h4 mb-0">Quick Task Updates</h1>
+                <small class="text-muted">Update task progress on the go</small>
+            </div>
+            <a href="/mobile/workshop/dashboard" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left"></i> Dashboard
+            </a>
+        </div>
+        
+        <!-- Project Selector -->
+        <div class="project-selector">
+            <label class="form-label mb-2">
+                <i class="fas fa-project-diagram"></i> Select Project
+            </label>
+            <select class="project-dropdown" id="projectSelector" onchange="loadProjectTasks()">
+                <option value="">Choose a project...</option>
+                <option th:each="project : ${projects}" 
+                        th:value="${project.id}" 
+                        th:text="${project.name}"
+                        th:selected="${selectedProject != null and selectedProject.id == project.id}">
+                    Project Name
+                </option>
+            </select>
+        </div>
+        
+        <!-- Search Tasks -->
+        <div class="search-container" th:if="${tasks != null and !tasks.empty}">
+            <input type="text" class="search-input" id="taskSearch" 
+                   placeholder="Search tasks..." onkeyup="filterTasks()">
+        </div>
+        
+        <!-- Task List -->
+        <div id="taskList">
+            <div th:if="${tasks == null or tasks.empty}" class="empty-state">
+                <i class="fas fa-tasks"></i>
+                <h5>No Tasks Found</h5>
+                <p class="mb-0">Select a project to view its active tasks</p>
+            </div>
+            
+            <div th:each="task : ${tasks}" class="task-card" th:id="'task-' + ${task.id}">
+                <div class="task-header">
+                    <h5 class="task-title" th:text="${task.title}">Task Title</h5>
+                    <div class="task-meta">
+                        <div>
+                            <span class="task-priority" 
+                                  th:class="'priority-' + ${task.priority.name().toLowerCase()}"
+                                  th:text="${task.priority.displayName}">
+                                High
+                            </span>
+                        </div>
+                        <div th:if="${task.assignedTo != null and !task.assignedTo.empty}">
+                            <div class="task-assignment">
+                                <i class="fas fa-user" style="font-size: 0.8rem;"></i>
+                                <div th:each="member, iterStat : ${task.assignedTo}">
+                                    <div class="assigned-avatar" th:text="${member.fullName.substring(0,1)}">J</div>
+                                    <span th:if="${iterStat.index < 2}" class="text-muted" style="font-size: 0.8rem;" 
+                                          th:text="${member.fullName}">John Doe</span>
+                                </div>
+                                <span th:if="${task.assignedTo.size() > 2}" class="text-muted" style="font-size: 0.8rem;">
+                                    +<span th:text="${task.assignedTo.size() - 2}">1</span> more
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="progress-container">
+                    <div class="progress-bar-custom">
+                        <div class="progress-fill" 
+                             th:style="'width: ' + ${task.progress} + '%'"
+                             th:class="${task.progress < 25 ? 'progress-0-25' : 
+                                       task.progress < 50 ? 'progress-25-50' : 
+                                       task.progress < 75 ? 'progress-50-75' : 'progress-75-100'}">
+                        </div>
+                    </div>
+                    <div class="progress-text">
+                        <span th:text="${task.progress}">75</span>% Complete
+                        <span th:if="${task.completed}" class="text-success ms-2">
+                            <i class="fas fa-check-circle"></i> Done
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="task-actions">
+                    <button th:if="${!task.completed}" 
+                            class="quick-action-btn action-start"
+                            th:onclick="'quickUpdate(' + ${task.id} + ', \'START\')'">
+                        <i class="fas fa-play"></i>
+                        <span>Start</span>
+                    </button>
+                    
+                    <button th:if="${!task.completed}" 
+                            class="quick-action-btn action-complete"
+                            th:onclick="'quickUpdate(' + ${task.id} + ', \'COMPLETE\')'">
+                        <i class="fas fa-check"></i>
+                        <span>Complete</span>
+                    </button>
+                    
+                    <button th:if="${!task.completed}" 
+                            class="quick-action-btn action-block"
+                            th:onclick="'quickUpdate(' + ${task.id} + ', \'BLOCK\')'">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Block</span>
+                    </button>
+                    
+                    <button class="quick-action-btn action-note"
+                            th:onclick="'addNote(' + ${task.id} + ')'">
+                        <i class="fas fa-sticky-note"></i>
+                        <span>Note</span>
+                    </button>
+                    
+                    <a th:href="@{/tasks/{id}(id=${task.id})}" 
+                       class="quick-action-btn" 
+                       style="background: #f8f9fa; color: #495057; border-color: #dee2e6; text-decoration: none;">
+                        <i class="fas fa-eye"></i>
+                        <span>Details</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Voice Command Button -->
+        <button class="floating-voice-btn" id="voiceBtn" onclick="toggleVoiceCommand()">
+            <i class="fas fa-microphone" id="voiceIcon"></i>
+        </button>
+        
+    </div>
+    
+    <!-- Note Modal -->
+    <div class="modal fade" id="noteModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Note</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <textarea class="form-control" id="noteText" rows="4" 
+                              placeholder="Enter your note..."></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitNote()">Add Note</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts for mobile functionality -->
+    <div layout:fragment="scripts">
+        <script>
+            let currentTaskId = null;
+            let isRecording = false;
+            let recognition = null;
+            
+            // Initialize speech recognition if available
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+                
+                recognition.onstart = function() {
+                    isRecording = true;
+                    document.getElementById('voiceBtn').classList.add('recording');
+                    document.getElementById('voiceIcon').className = 'fas fa-stop';
+                    showToast('Voice command active...', 'info');
+                };
+                
+                recognition.onend = function() {
+                    isRecording = false;
+                    document.getElementById('voiceBtn').classList.remove('recording');
+                    document.getElementById('voiceIcon').className = 'fas fa-microphone';
+                };
+                
+                recognition.onresult = function(event) {
+                    const command = event.results[0][0].transcript.toLowerCase();
+                    processVoiceCommand(command);
+                };
+                
+                recognition.onerror = function(event) {
+                    showToast('Voice recognition error: ' + event.error, 'error');
+                };
+            }
+            
+            function loadProjectTasks() {
+                const projectId = document.getElementById('projectSelector').value;
+                if (projectId) {
+                    window.location.href = `/mobile/workshop/tasks?projectId=${projectId}`;
+                }
+            }
+            
+            function filterTasks() {
+                const searchTerm = document.getElementById('taskSearch').value.toLowerCase();
+                const taskCards = document.querySelectorAll('.task-card');
+                
+                taskCards.forEach(card => {
+                    const title = card.querySelector('.task-title').textContent.toLowerCase();
+                    const assignees = card.querySelector('.task-assignment')?.textContent.toLowerCase() || '';
+                    
+                    if (title.includes(searchTerm) || assignees.includes(searchTerm)) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            }
+            
+            function quickUpdate(taskId, action) {
+                const data = {
+                    action: action,
+                    notes: null
+                };
+                
+                fetch(`/mobile/workshop/api/task/${taskId}/quick-update`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.status === 'updated') {
+                        showToast(`Task ${action.toLowerCase()}ed successfully!`, 'success');
+                        // Update the UI
+                        updateTaskInUI(taskId, action);
+                    } else {
+                        showToast('Failed to update task: ' + (result.error || 'Unknown error'), 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating task:', error);
+                    showToast('Error updating task', 'error');
+                });
+            }
+            
+            function addNote(taskId) {
+                currentTaskId = taskId;
+                document.getElementById('noteText').value = '';
+                new bootstrap.Modal(document.getElementById('noteModal')).show();
+            }
+            
+            function submitNote() {
+                const note = document.getElementById('noteText').value.trim();
+                if (!note) {
+                    showToast('Please enter a note', 'warning');
+                    return;
+                }
+                
+                const data = {
+                    action: 'ADD_NOTE',
+                    notes: note
+                };
+                
+                fetch(`/mobile/workshop/api/task/${currentTaskId}/quick-update`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.status === 'updated') {
+                        showToast('Note added successfully!', 'success');
+                        bootstrap.Modal.getInstance(document.getElementById('noteModal')).hide();
+                    } else {
+                        showToast('Failed to add note: ' + (result.error || 'Unknown error'), 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error adding note:', error);
+                    showToast('Error adding note', 'error');
+                });
+            }
+            
+            function toggleVoiceCommand() {
+                if (!recognition) {
+                    showToast('Voice recognition not supported in this browser', 'warning');
+                    return;
+                }
+                
+                if (isRecording) {
+                    recognition.stop();
+                } else {
+                    recognition.start();
+                }
+            }
+            
+            function processVoiceCommand(command) {
+                showToast(`Processing: "${command}"`, 'info');
+                
+                fetch('/mobile/workshop/api/voice/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({
+                        command: 'voice',
+                        transcript: command
+                    })
+                })
+                .then(response => response.json())
+                .then(result => {
+                    showToast(result.response, result.action === 'unknown' ? 'warning' : 'success');
+                })
+                .catch(error => {
+                    console.error('Error processing voice command:', error);
+                    showToast('Error processing voice command', 'error');
+                });
+            }
+            
+            function updateTaskInUI(taskId, action) {
+                const taskCard = document.getElementById(`task-${taskId}`);
+                if (!taskCard) return;
+                
+                const progressFill = taskCard.querySelector('.progress-fill');
+                const progressText = taskCard.querySelector('.progress-text span');
+                
+                switch (action) {
+                    case 'START':
+                        if (progressFill && progressText) {
+                            progressFill.style.width = '10%';
+                            progressText.textContent = '10';
+                            progressFill.className = 'progress-fill progress-0-25';
+                        }
+                        break;
+                    case 'COMPLETE':
+                        if (progressFill && progressText) {
+                            progressFill.style.width = '100%';
+                            progressText.textContent = '100';
+                            progressFill.className = 'progress-fill progress-75-100';
+                        }
+                        // Hide action buttons
+                        const actionButtons = taskCard.querySelectorAll('.action-start, .action-complete, .action-block');
+                        actionButtons.forEach(btn => btn.style.display = 'none');
+                        break;
+                }
+            }
+            
+            function showToast(message, type = 'info') {
+                const toast = document.createElement('div');
+                toast.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : type === 'warning' ? 'warning' : 'info'} 
+                                  position-fixed top-0 end-0 m-3`;
+                toast.style.zIndex = '9999';
+                toast.style.minWidth = '300px';
+                toast.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+                        <span>${message}</span>
+                        <button type="button" class="btn-close ms-auto" onclick="this.parentElement.parentElement.remove()"></button>
+                    </div>
+                `;
+                
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.remove();
+                    }
+                }, 5000);
+            }
+            
+            // Auto-save draft notes
+            document.getElementById('noteText')?.addEventListener('input', function() {
+                localStorage.setItem('draftNote', this.value);
+            });
+            
+            // Restore draft note
+            const draftNote = localStorage.getItem('draftNote');
+            if (draftNote) {
+                document.getElementById('noteText').value = draftNote;
+            }
+            
+            // Clear draft when note is submitted successfully
+            function clearDraftNote() {
+                localStorage.removeItem('draftNote');
+            }
+        </script>
+    </div>
+</body>
+</html>

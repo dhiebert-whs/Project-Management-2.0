@@ -10,7 +10,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Java Version**: 21
 - **Database**: H2 (development) / SQLite (production)
 - **Build Tool**: Maven 3.11+
-- **Current Phase**: Phase 2E-D (Advanced Task Management) - 85% complete
+- **Current Phase**: Phase 2E-D (Advanced Task Management) - **100% COMPLETE**
+- **Next Phase**: Phase 3 (FRC-Specific Optimizations & Mobile Experience) - Ready to start
 
 ## Common Commands
 
@@ -82,11 +83,13 @@ mvn spring-boot:run  # Will recreate tables
 - **`User`** - Authentication with COPPA compliance
 
 ### Current Development Status
-The service layer for task dependencies is **100% complete** (~25KB TaskDependencyServiceImpl.java). The remaining work focuses on:
-1. **TaskDependencyController** - REST endpoints
-2. **TaskDependencyDto** - API response objects
-3. **UI templates** - Dependency management interfaces
-4. **Testing** - Controller and integration tests
+Phase 2E-D is **100% COMPLETE**. All advanced task dependency management features are operational:
+- **TaskDependencyController** - REST endpoints (✅ Complete)
+- **TaskDependencyDto** - API response objects (✅ Complete)
+- **UI templates** - Dependency management interfaces (✅ Complete)
+- **Critical Path Analysis** - Advanced project planning (✅ Complete)
+
+**Phase 3 is ready to begin** - FRC-specific optimizations and mobile experience enhancements.
 
 ## Key Features
 
@@ -95,8 +98,9 @@ The service layer for task dependencies is **100% complete** (~25KB TaskDependen
 - **Real-time Updates**: WebSocket integration for live collaboration
 - **Security**: Role-based access (Student/Mentor/Admin/Parent)
 - **COPPA Compliance**: Data protection for students under 13
-- **Task Dependencies**: Advanced service layer with critical path analysis
-- **FRC API Integration**: Competition data synchronization (Phase 3A)
+- **Task Dependencies**: Advanced service layer with critical path analysis (✅ Complete)
+- **Critical Path Analysis**: Enterprise-grade CPM implementation (✅ Complete)
+- **Dependency Management UI**: Complete dependency management interfaces (✅ Complete)
 
 ### Technology Stack
 - **Backend**: Spring Boot 3.2, Spring Security, Spring Data JPA
@@ -221,13 +225,53 @@ TEAM_NUMBER=2408
 - Check CORS settings for local development
 - Verify SockJS/STOMP client integration
 
-## Immediate Development Priorities
+## Phase 3: FRC-Specific Optimizations & Mobile Experience
 
-1. **TaskDependencyController** - Complete REST API endpoints
-2. **TaskDependencyDto** - API response objects
-3. **Dependency UI Templates** - Management interfaces
-4. **Critical Path Visualization** - Advanced project planning
-5. **Integration Testing** - Comprehensive test coverage
+### **Overview**
+Phase 3 transforms the secure web application into a specialized FRC team management platform with build season workflows, workshop-optimized mobile features, and comprehensive integration with the FRC ecosystem.
+
+### **Phase 3 Development Priorities**
+
+**Step 1: FRC-Specific Domain Models**
+- **Competition and Season Management**: CompetitionSeason, Competition, CompetitionType, SeasonStatus models
+- **Build Season Workflow**: Robot, RobotStatus, RobotType, Subsystem, RobotTest models
+- **Workshop and Safety**: WorkshopSession, SessionType, SafetyIncident, ToolUsage models
+
+**Step 2: FRC API Integration Services**
+- **FRC Events API**: Official FRC competition schedule integration
+- **The Blue Alliance API**: Competition results and team analytics
+- **GitHub Integration**: Programming task linking with commits
+
+**Step 3: Workshop-Optimized Mobile Features**
+- **QR Code Attendance**: Camera-based check-in system
+- **Mobile Workshop Controllers**: Touch-friendly workshop interface
+- **Voice Commands**: Hands-free task updates while working
+- **Offline Capabilities**: 7-day offline operation with sync
+
+**Step 4: Build Season Workflow Implementation**
+- **Build Season Dashboard**: Specialized build season management
+- **Milestone Tracking**: Robot development milestone tracking
+- **Team Velocity Analytics**: Performance tracking and burndown charts
+- **Competition Preparation**: Automated checklists and logistics
+
+**Step 5: Progressive Web App Service Worker**
+- **Offline-First Architecture**: Works without internet for 7+ days
+- **Background Sync**: Automatic sync when connection restored
+- **Conflict Resolution**: Intelligent merging of offline changes
+- **Strategic Caching**: Essential project data caching
+
+**Step 6: PWA Manifest and Configuration**
+- **Progressive Web App**: Mobile app behavior and installation
+- **Custom Protocol Handlers**: Deep linking for mobile features
+- **High Contrast UI**: Optimized for workshop lighting conditions
+
+### **Phase 3 Deliverables**
+- **50+ new files** across domain models, services, controllers, and templates
+- **Offline-capable mobile interface** optimized for workshop conditions
+- **FRC ecosystem integration** with official APIs and third-party services
+- **Build season optimization** with critical path analysis and risk assessment
+- **Workshop safety features** with incident reporting and tool tracking
+- **Competition preparation** with automated logistics and readiness checklists
 
 ## Reference Files
 

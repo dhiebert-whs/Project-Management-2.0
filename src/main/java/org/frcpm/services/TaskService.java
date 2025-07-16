@@ -324,4 +324,20 @@ public interface TaskService extends Service<Task, Long> {
         }
         return future;
     }
+    
+    /**
+     * Gets active tasks for a project.
+     * 
+     * @param projectId the project ID
+     * @return a list of active (not completed) tasks for the project
+     */
+    List<Task> getActiveTasksForProject(Long projectId);
+    
+    /**
+     * Gets recent tasks limited by count.
+     * 
+     * @param limit the maximum number of tasks to return
+     * @return a list of recent tasks
+     */
+    List<Task> getRecentTasks(int limit);
 }

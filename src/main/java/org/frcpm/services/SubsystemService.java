@@ -2,7 +2,7 @@
 
 package org.frcpm.services;
 
-import org.frcpm.models.Subteam;
+import org.frcpm.models.TeamMember;
 import org.frcpm.models.Subsystem;
 
 import java.util.List;
@@ -29,15 +29,15 @@ public interface SubsystemService extends Service<Subsystem, Long> {
      * @param status the status to search for
      * @return a list of subsystems with the given status
      */
-    List<Subsystem> findByStatus(Subsystem.Status status);
+    List<Subsystem> findByStatus(Subsystem.SubsystemStatus status);
     
     /**
-     * Finds subsystems managed by a specific subteam.
+     * Finds subsystems managed by a specific team member.
      * 
-     * @param subteam the responsible subteam
-     * @return a list of subsystems managed by the subteam
+     * @param member the responsible team member
+     * @return a list of subsystems managed by the team member
      */
-    List<Subsystem> findByResponsibleSubteam(Subteam subteam);
+    List<Subsystem> findByResponsibleMember(TeamMember member);
     
     /**
      * Creates a new subsystem.
@@ -45,11 +45,11 @@ public interface SubsystemService extends Service<Subsystem, Long> {
      * @param name the subsystem name
      * @param description the subsystem description (optional)
      * @param status the initial status
-     * @param responsibleSubteamId the ID of the responsible subteam (optional)
+     * @param responsibleMemberId the ID of the responsible team member (optional)
      * @return the created subsystem
      */
     Subsystem createSubsystem(String name, String description, 
-                             Subsystem.Status status, Long responsibleSubteamId);
+                             Subsystem.SubsystemStatus status, Long responsibleMemberId);
     
     /**
      * Updates a subsystem's status.
@@ -58,16 +58,16 @@ public interface SubsystemService extends Service<Subsystem, Long> {
      * @param status the new status
      * @return the updated subsystem, or null if not found
      */
-    Subsystem updateStatus(Long subsystemId, Subsystem.Status status);
+    Subsystem updateStatus(Long subsystemId, Subsystem.SubsystemStatus status);
     
     /**
-     * Assigns a responsible subteam to a subsystem.
+     * Assigns a responsible team member to a subsystem.
      * 
      * @param subsystemId the subsystem ID
-     * @param subteamId the subteam ID
+     * @param memberId the team member ID
      * @return the updated subsystem, or null if not found
      */
-    Subsystem assignResponsibleSubteam(Long subsystemId, Long subteamId);
+    Subsystem assignResponsibleMember(Long subsystemId, Long memberId);
     
     // Async methods
     
@@ -102,7 +102,7 @@ public interface SubsystemService extends Service<Subsystem, Long> {
      * @param onFailure the callback to run on failure
      * @return a CompletableFuture that will be completed with the list of subsystems
      */
-    default CompletableFuture<List<Subsystem>> findByStatusAsync(Subsystem.Status status,
+    default CompletableFuture<List<Subsystem>> findByStatusAsync(Subsystem.SubsystemStatus status,
                                                             Consumer<List<Subsystem>> onSuccess,
                                                             Consumer<Throwable> onFailure) {
         CompletableFuture<List<Subsystem>> future = new CompletableFuture<>();
@@ -118,19 +118,19 @@ public interface SubsystemService extends Service<Subsystem, Long> {
     }
     
     /**
-     * Finds subsystems managed by a specific subteam asynchronously.
+     * Finds subsystems managed by a specific team member asynchronously.
      * 
-     * @param subteam the responsible subteam
+     * @param member the responsible team member
      * @param onSuccess the callback to run on success
      * @param onFailure the callback to run on failure
      * @return a CompletableFuture that will be completed with the list of subsystems
      */
-    default CompletableFuture<List<Subsystem>> findByResponsibleSubteamAsync(Subteam subteam,
+    default CompletableFuture<List<Subsystem>> findByResponsibleMemberAsync(TeamMember member,
                                                                         Consumer<List<Subsystem>> onSuccess,
                                                                         Consumer<Throwable> onFailure) {
         CompletableFuture<List<Subsystem>> future = new CompletableFuture<>();
         try {
-            List<Subsystem> result = findByResponsibleSubteam(subteam);
+            List<Subsystem> result = findByResponsibleMember(member);
             if (onSuccess != null) onSuccess.accept(result);
             future.complete(result);
         } catch (Exception e) {
@@ -146,18 +146,18 @@ public interface SubsystemService extends Service<Subsystem, Long> {
      * @param name the subsystem name
      * @param description the subsystem description (optional)
      * @param status the initial status
-     * @param responsibleSubteamId the ID of the responsible subteam (optional)
+     * @param responsibleMemberId the ID of the responsible team member (optional)
      * @param onSuccess the callback to run on success
      * @param onFailure the callback to run on failure
      * @return a CompletableFuture that will be completed with the created subsystem
      */
     default CompletableFuture<Subsystem> createSubsystemAsync(String name, String description,
-                                                         Subsystem.Status status, Long responsibleSubteamId,
+                                                         Subsystem.SubsystemStatus status, Long responsibleMemberId,
                                                          Consumer<Subsystem> onSuccess,
                                                          Consumer<Throwable> onFailure) {
         CompletableFuture<Subsystem> future = new CompletableFuture<>();
         try {
-            Subsystem result = createSubsystem(name, description, status, responsibleSubteamId);
+            Subsystem result = createSubsystem(name, description, status, responsibleMemberId);
             if (onSuccess != null) onSuccess.accept(result);
             future.complete(result);
         } catch (Exception e) {
@@ -176,7 +176,7 @@ public interface SubsystemService extends Service<Subsystem, Long> {
      * @param onFailure the callback to run on failure
      * @return a CompletableFuture that will be completed with the updated subsystem
      */
-    default CompletableFuture<Subsystem> updateStatusAsync(Long subsystemId, Subsystem.Status status,
+    default CompletableFuture<Subsystem> updateStatusAsync(Long subsystemId, Subsystem.SubsystemStatus status,
                                                       Consumer<Subsystem> onSuccess,
                                                       Consumer<Throwable> onFailure) {
         CompletableFuture<Subsystem> future = new CompletableFuture<>();
@@ -192,20 +192,20 @@ public interface SubsystemService extends Service<Subsystem, Long> {
     }
     
     /**
-     * Assigns a responsible subteam to a subsystem asynchronously.
+     * Assigns a responsible team member to a subsystem asynchronously.
      * 
      * @param subsystemId the subsystem ID
-     * @param subteamId the subteam ID
+     * @param memberId the team member ID
      * @param onSuccess the callback to run on success
      * @param onFailure the callback to run on failure
      * @return a CompletableFuture that will be completed with the updated subsystem
      */
-    default CompletableFuture<Subsystem> assignResponsibleSubteamAsync(Long subsystemId, Long subteamId,
+    default CompletableFuture<Subsystem> assignResponsibleMemberAsync(Long subsystemId, Long memberId,
                                                                   Consumer<Subsystem> onSuccess,
                                                                   Consumer<Throwable> onFailure) {
         CompletableFuture<Subsystem> future = new CompletableFuture<>();
         try {
-            Subsystem result = assignResponsibleSubteam(subsystemId, subteamId);
+            Subsystem result = assignResponsibleMember(subsystemId, memberId);
             if (onSuccess != null) onSuccess.accept(result);
             future.complete(result);
         } catch (Exception e) {

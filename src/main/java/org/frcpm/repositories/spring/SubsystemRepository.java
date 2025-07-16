@@ -1,6 +1,6 @@
 package org.frcpm.repositories.spring;
 
-import org.frcpm.models.Subteam;
+import org.frcpm.models.TeamMember;
 import org.frcpm.models.Subsystem;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -39,29 +39,29 @@ public interface SubsystemRepository extends JpaRepository<Subsystem, Long> {
      * @param status the status to search for
      * @return a list of subsystems with the given status
      */
-    List<Subsystem> findByStatus(Subsystem.Status status);
+    List<Subsystem> findByStatus(Subsystem.SubsystemStatus status);
     
     /**
-     * Finds subsystems managed by a specific subteam.
+     * Finds subsystems managed by a specific team member.
      * 
-     * @param subteam the responsible subteam
-     * @return a list of subsystems managed by the subteam
+     * @param member the responsible team member
+     * @return a list of subsystems managed by the team member
      */
-    List<Subsystem> findByResponsibleSubteam(Subteam subteam);
+    List<Subsystem> findByResponsibleMember(TeamMember member);
     
     /**
-     * Finds subsystems with no responsible subteam assigned.
+     * Finds subsystems with no responsible team member assigned.
      * 
-     * @return a list of subsystems with no responsible subteam
+     * @return a list of subsystems with no responsible team member
      */
-    List<Subsystem> findByResponsibleSubteamIsNull();
+    List<Subsystem> findByResponsibleMemberIsNull();
     
     /**
-     * Finds subsystems with a responsible subteam assigned.
+     * Finds subsystems with a responsible team member assigned.
      * 
-     * @return a list of subsystems with a responsible subteam
+     * @return a list of subsystems with a responsible team member
      */
-    List<Subsystem> findByResponsibleSubteamIsNotNull();
+    List<Subsystem> findByResponsibleMemberIsNotNull();
     
     /**
      * Finds subsystems by description containing the given text.
@@ -84,7 +84,7 @@ public interface SubsystemRepository extends JpaRepository<Subsystem, Long> {
      * @param status the status to search for
      * @return a list of subsystems with the given status ordered by name
      */
-    List<Subsystem> findByStatusOrderByName(Subsystem.Status status);
+    List<Subsystem> findByStatusOrderByName(Subsystem.SubsystemStatus status);
     
     /**
      * Counts subsystems by status.
@@ -92,15 +92,15 @@ public interface SubsystemRepository extends JpaRepository<Subsystem, Long> {
      * @param status the status to count
      * @return the number of subsystems with the given status
      */
-    long countByStatus(Subsystem.Status status);
+    long countByStatus(Subsystem.SubsystemStatus status);
     
     /**
-     * Counts subsystems managed by a specific subteam.
+     * Counts subsystems managed by a specific team member.
      * 
-     * @param subteam the responsible subteam
-     * @return the number of subsystems managed by the subteam
+     * @param member the responsible team member
+     * @return the number of subsystems managed by the team member
      */
-    long countByResponsibleSubteam(Subteam subteam);
+    long countByResponsibleMember(TeamMember member);
     
     /**
      * Checks if a subsystem with the given name exists.
@@ -119,13 +119,13 @@ public interface SubsystemRepository extends JpaRepository<Subsystem, Long> {
     boolean existsByNameIgnoreCase(String name);
     
     /**
-     * Finds subsystems with a specific status managed by a specific subteam.
+     * Finds subsystems with a specific status managed by a specific team member.
      * 
      * @param status the status to search for
-     * @param subteam the responsible subteam
+     * @param member the responsible team member
      * @return a list of subsystems matching both criteria
      */
-    @Query("SELECT s FROM Subsystem s WHERE s.status = :status AND s.responsibleSubteam = :subteam ORDER BY s.name")
-    List<Subsystem> findByStatusAndResponsibleSubteam(@Param("status") Subsystem.Status status, 
-                                                     @Param("subteam") Subteam subteam);
+    @Query("SELECT s FROM Subsystem s WHERE s.status = :status AND s.responsibleMember = :member ORDER BY s.name")
+    List<Subsystem> findByStatusAndResponsibleMember(@Param("status") Subsystem.SubsystemStatus status, 
+                                                     @Param("member") TeamMember member);
 }

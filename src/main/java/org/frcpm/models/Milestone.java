@@ -1,32 +1,128 @@
 package org.frcpm.models;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 /**
- * Entity class representing a project milestone in the FRC Project Management System.
- * This corresponds to the Milestone model in the Django application.
+ * Entity representing project milestones in the FRC Project Management System.
+ * Enhanced for build season management with completion tracking and priorities.
  */
 @Entity
 @Table(name = "milestones")
+@EntityListeners(AuditingEntityListener.class)
 public class Milestone {
+    
+    public enum MilestoneType {
+        DESIGN("Design Milestone"),
+        PROTOTYPE("Prototype Milestone"),
+        BUILD("Build Milestone"),
+        TESTING("Testing Milestone"),
+        COMPETITION("Competition Milestone"),
+        DOCUMENTATION("Documentation Milestone"),
+        SAFETY("Safety Milestone"),
+        CUSTOM("Custom Milestone");
+        
+        private final String displayName;
+        
+        MilestoneType(String displayName) {
+            this.displayName = displayName;
+        }
+        
+        public String getDisplayName() { return displayName; }
+    }
+    
+    public enum Priority {
+        LOW(1, "Low"),
+        MEDIUM(2, "Medium"),
+        HIGH(3, "High"),
+        CRITICAL(4, "Critical");
+        
+        private final int value;
+        private final String displayName;
+        
+        Priority(int value, String displayName) {
+            this.value = value;
+            this.displayName = displayName;
+        }
+        
+        public int getValue() { return value; }
+        public String getDisplayName() { return displayName; }
+    }
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(name = "name", length = 255, nullable = false)
+    @NotBlank
+    @Column(name = "title", length = 255, nullable = false)
+    private String title;
+    
+    // Keep backward compatibility with existing 'name' field
+    @Column(name = "name", length = 255)
     private String name;
     
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
     
-    @Column(name = "date", nullable = false)
+    @NotNull
+    @Column(name = "target_date", nullable = false)
+    private LocalDate targetDate;
+    
+    // Keep backward compatibility with existing 'date' field
+    @Column(name = "date")
     private LocalDate date;
+    
+    @Column(name = "completion_date")
+    private LocalDate completionDate;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type")
+    private MilestoneType type = MilestoneType.CUSTOM;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "priority")
+    private Priority priority = Priority.MEDIUM;
+    
+    @Column(name = "completed", nullable = false)
+    private boolean completed = false;
+    
+    @Column(name = "completion_percentage", nullable = false)
+    private int completionPercentage = 0;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", nullable = false)
     private Project project;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "robot_id")
+    private Robot robot;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "season_id")
+    private CompetitionSeason season;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assigned_to")
+    private TeamMember assignedTo;
+    
+    @Column(name = "is_critical_path", nullable = false)
+    private boolean isCriticalPath = false;
+    
+    @CreatedDate
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+    
+    @LastModifiedDate
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
     
     // Constructors
     

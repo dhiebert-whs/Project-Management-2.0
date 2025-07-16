@@ -2,10 +2,10 @@
 
 package org.frcpm.services.impl;
 
-import org.frcpm.models.Subteam;
+import org.frcpm.models.TeamMember;
 import org.frcpm.models.Subsystem;
 import org.frcpm.repositories.spring.SubsystemRepository;
-import org.frcpm.repositories.spring.SubteamRepository;
+import org.frcpm.repositories.spring.TeamMemberRepository;
 import org.frcpm.services.SubsystemService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
@@ -28,13 +28,13 @@ import java.util.function.Consumer;
 public class SubsystemServiceImpl implements SubsystemService {
     
     private final SubsystemRepository subsystemRepository;
-    private final SubteamRepository subteamRepository;
+    private final TeamMemberRepository teamMemberRepository;
     
     @Autowired
     public SubsystemServiceImpl(SubsystemRepository subsystemRepository,
-                               SubteamRepository subteamRepository) {
+                               TeamMemberRepository teamMemberRepository) {
         this.subsystemRepository = subsystemRepository;
-        this.subteamRepository = subteamRepository;
+        this.teamMemberRepository = teamMemberRepository;
     }
     
     // ===== BASIC CRUD OPERATIONS (Service<Subsystem, Long> interface) =====
@@ -92,7 +92,7 @@ public class SubsystemServiceImpl implements SubsystemService {
     }
     
     @Override
-    public List<Subsystem> findByStatus(Subsystem.Status status) {
+    public List<Subsystem> findByStatus(Subsystem.SubsystemStatus status) {
         if (status == null) {
             return List.of();
         }
@@ -100,16 +100,16 @@ public class SubsystemServiceImpl implements SubsystemService {
     }
     
     @Override
-    public List<Subsystem> findByResponsibleSubteam(Subteam subteam) {
-        if (subteam == null) {
+    public List<Subsystem> findByResponsibleMember(TeamMember member) {
+        if (member == null) {
             return List.of();
         }
-        return subsystemRepository.findByResponsibleSubteam(subteam);
+        return subsystemRepository.findByResponsibleMember(member);
     }
     
     @Override
     public Subsystem createSubsystem(String name, String description, 
-                                   Subsystem.Status status, Long responsibleSubteamId) {
+                                   Subsystem.SubsystemStatus status, Long responsibleMemberId) {
         if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("Subsystem name cannot be null or empty");
         }
@@ -128,13 +128,13 @@ public class SubsystemServiceImpl implements SubsystemService {
         subsystem.setDescription(description != null ? description.trim() : null);
         subsystem.setStatus(status);
         
-        // Set responsible subteam if provided
-        if (responsibleSubteamId != null) {
-            Optional<Subteam> subteam = subteamRepository.findById(responsibleSubteamId);
-            if (subteam.isPresent()) {
-                subsystem.setResponsibleSubteam(subteam.get());
+        // Set responsible team member if provided
+        if (responsibleMemberId != null) {
+            Optional<TeamMember> member = teamMemberRepository.findById(responsibleMemberId);
+            if (member.isPresent()) {
+                subsystem.setResponsibleMember(member.get());
             } else {
-                throw new IllegalArgumentException("Subteam with ID " + responsibleSubteamId + " not found");
+                throw new IllegalArgumentException("Team member with ID " + responsibleMemberId + " not found");
             }
         }
         
@@ -142,7 +142,7 @@ public class SubsystemServiceImpl implements SubsystemService {
     }
     
     @Override
-    public Subsystem updateStatus(Long subsystemId, Subsystem.Status status) {
+    public Subsystem updateStatus(Long subsystemId, Subsystem.SubsystemStatus status) {
         if (subsystemId == null || status == null) {
             return null;
         }
@@ -158,17 +158,17 @@ public class SubsystemServiceImpl implements SubsystemService {
     }
     
     @Override
-    public Subsystem assignResponsibleSubteam(Long subsystemId, Long subteamId) {
-        if (subsystemId == null || subteamId == null) {
+    public Subsystem assignResponsibleMember(Long subsystemId, Long memberId) {
+        if (subsystemId == null || memberId == null) {
             return null;
         }
         
         Optional<Subsystem> subsystemOpt = subsystemRepository.findById(subsystemId);
-        Optional<Subteam> subteamOpt = subteamRepository.findById(subteamId);
+        Optional<TeamMember> memberOpt = teamMemberRepository.findById(memberId);
         
-        if (subsystemOpt.isPresent() && subteamOpt.isPresent()) {
+        if (subsystemOpt.isPresent() && memberOpt.isPresent()) {
             Subsystem subsystem = subsystemOpt.get();
-            subsystem.setResponsibleSubteam(subteamOpt.get());
+            subsystem.setResponsibleMember(memberOpt.get());
             return subsystemRepository.save(subsystem);
         }
         
@@ -198,7 +198,7 @@ public class SubsystemServiceImpl implements SubsystemService {
     
     @Async
     @Override
-    public CompletableFuture<List<Subsystem>> findByStatusAsync(Subsystem.Status status,
+    public CompletableFuture<List<Subsystem>> findByStatusAsync(Subsystem.SubsystemStatus status,
                                                             Consumer<List<Subsystem>> onSuccess,
                                                             Consumer<Throwable> onFailure) {
         try {
@@ -217,11 +217,11 @@ public class SubsystemServiceImpl implements SubsystemService {
     
     @Async
     @Override
-    public CompletableFuture<List<Subsystem>> findByResponsibleSubteamAsync(Subteam subteam,
+    public CompletableFuture<List<Subsystem>> findByResponsibleMemberAsync(TeamMember member,
                                                                         Consumer<List<Subsystem>> onSuccess,
                                                                         Consumer<Throwable> onFailure) {
         try {
-            List<Subsystem> result = findByResponsibleSubteam(subteam);
+            List<Subsystem> result = findByResponsibleMember(member);
             if (onSuccess != null) {
                 onSuccess.accept(result);
             }
@@ -237,11 +237,11 @@ public class SubsystemServiceImpl implements SubsystemService {
     @Async
     @Override
     public CompletableFuture<Subsystem> createSubsystemAsync(String name, String description,
-                                                         Subsystem.Status status, Long responsibleSubteamId,
+                                                         Subsystem.SubsystemStatus status, Long responsibleMemberId,
                                                          Consumer<Subsystem> onSuccess,
                                                          Consumer<Throwable> onFailure) {
         try {
-            Subsystem result = createSubsystem(name, description, status, responsibleSubteamId);
+            Subsystem result = createSubsystem(name, description, status, responsibleMemberId);
             if (onSuccess != null) {
                 onSuccess.accept(result);
             }
@@ -256,7 +256,7 @@ public class SubsystemServiceImpl implements SubsystemService {
     
     @Async
     @Override
-    public CompletableFuture<Subsystem> updateStatusAsync(Long subsystemId, Subsystem.Status status,
+    public CompletableFuture<Subsystem> updateStatusAsync(Long subsystemId, Subsystem.SubsystemStatus status,
                                                       Consumer<Subsystem> onSuccess,
                                                       Consumer<Throwable> onFailure) {
         try {
@@ -275,11 +275,11 @@ public class SubsystemServiceImpl implements SubsystemService {
     
     @Async
     @Override
-    public CompletableFuture<Subsystem> assignResponsibleSubteamAsync(Long subsystemId, Long subteamId,
+    public CompletableFuture<Subsystem> assignResponsibleMemberAsync(Long subsystemId, Long memberId,
                                                                   Consumer<Subsystem> onSuccess,
                                                                   Consumer<Throwable> onFailure) {
         try {
-            Subsystem result = assignResponsibleSubteam(subsystemId, subteamId);
+            Subsystem result = assignResponsibleMember(subsystemId, memberId);
             if (onSuccess != null) {
                 onSuccess.accept(result);
             }

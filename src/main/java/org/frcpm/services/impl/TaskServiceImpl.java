@@ -635,6 +635,39 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
+    @Override
+    public List<Task> getActiveTasksForProject(Long projectId) {
+        if (projectId == null) {
+            throw new IllegalArgumentException("Project ID cannot be null");
+        }
+
+        Project project = projectRepository.findById(projectId).orElse(null);
+        if (project == null) {
+            LOGGER.log(Level.WARNING, "Project not found with ID: {0}", projectId);
+            return List.of();
+        }
+
+        List<Task> allTasks = taskRepository.findByProject(project);
+        return allTasks.stream()
+                .filter(task -> !task.isCompleted())
+                .toList();
+    }
+    
+    @Override
+    public List<Task> getRecentTasks(int limit) {
+        if (limit <= 0) {
+            throw new IllegalArgumentException("Limit must be positive");
+        }
+
+        List<Task> allTasks = taskRepository.findAll();
+        
+        // Sort by ID descending (most recent first) and limit
+        return allTasks.stream()
+                .sorted((t1, t2) -> Long.compare(t2.getId(), t1.getId()))
+                .limit(limit)
+                .toList();
+    }
+
     /**
      * Gets the current user from Spring Security context.
      * @return current user or null if not authenticated

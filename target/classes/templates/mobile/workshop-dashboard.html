@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout/base}">
+
+<head>
+    <title>Workshop Dashboard - FRC Project Management</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- Mobile-specific styles -->
+    <style>
+        /* Mobile workshop dashboard optimizations */
+        .mobile-dashboard {
+            padding: 0.5rem;
+            font-size: 1.1rem;
+        }
+        
+        .session-card {
+            margin-bottom: 1rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #007bff;
+            transition: all 0.3s ease;
+        }
+        
+        .session-card.active {
+            border-left-color: #28a745;
+            background: linear-gradient(135deg, #f8fff9 0%, #fff 100%);
+        }
+        
+        .session-card.planned {
+            border-left-color: #ffc107;
+        }
+        
+        .session-card.completed {
+            border-left-color: #6c757d;
+            opacity: 0.8;
+        }
+        
+        .session-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .session-title {
+            font-weight: 600;
+            font-size: 1.2rem;
+            margin: 0;
+            color: #343a40;
+        }
+        
+        .session-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-planned {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-completed {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .session-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-bottom: 0.75rem;
+        }
+        
+        .attendance-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .attendance-count {
+            background: #007bff;
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .btn-mobile {
+            flex: 1;
+            min-width: 120px;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-weight: 500;
+            text-align: center;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+        
+        .btn-mobile:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .quick-actions {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .fab {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: #007bff;
+            color: white;
+            border: none;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .fab:hover {
+            background: #0056b3;
+            transform: scale(1.1);
+        }
+        
+        .fab.secondary {
+            background: #28a745;
+            width: 48px;
+            height: 48px;
+            font-size: 1.2rem;
+        }
+        
+        .fab.secondary:hover {
+            background: #1e7e34;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 1.5rem 0 1rem 0;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #495057;
+            margin: 0;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: #6c757d;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 576px) {
+            .mobile-dashboard {
+                padding: 0.25rem;
+            }
+            
+            .session-card {
+                margin-bottom: 0.75rem;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .btn-mobile {
+                min-width: auto;
+            }
+            
+            .session-meta {
+                flex-direction: column;
+                gap: 0.25rem;
+            }
+        }
+        
+        /* PWA specific styles */
+        @media (display-mode: standalone) {
+            .mobile-dashboard {
+                padding-top: 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div layout:fragment="content" class="mobile-dashboard">
+        
+        <!-- Header with user info and quick actions -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h1 class="h4 mb-1">Workshop Dashboard</h1>
+                <small class="text-muted" sec:authentication="name">Welcome back</small>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="/attendance/scanner" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-qrcode"></i> QR Scanner
+                </a>
+                <a href="/mobile/workshop/voice" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-microphone"></i>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Active Sessions Section -->
+        <div class="section-header">
+            <h2 class="section-title">
+                <i class="fas fa-play-circle text-success"></i> Active Sessions
+            </h2>
+            <span class="badge bg-success" th:text="${activeSessions.size()}">0</span>
+        </div>
+        
+        <div th:if="${activeSessions.empty}" class="empty-state">
+            <i class="fas fa-coffee"></i>
+            <h5>No Active Sessions</h5>
+            <p class="mb-0">Workshop is currently quiet. Start a new session to get working!</p>
+        </div>
+        
+        <div th:each="session : ${activeSessions}" class="session-card active">
+            <div class="card-body">
+                <div class="session-header">
+                    <h5 class="session-title" th:text="${session.objectives ?: (session.project.name + ' Session')}">
+                        Build Session
+                    </h5>
+                    <span class="session-status status-active">Active</span>
+                </div>
+                
+                <div class="session-meta">
+                    <div>
+                        <i class="fas fa-clock"></i>
+                        <span th:text="${#temporals.format(session.startTime, 'HH:mm')}">14:30</span>
+                        - 
+                        <span th:text="${session.endTime != null ? #temporals.format(session.endTime, 'HH:mm') : 'Ongoing'}">Ongoing</span>
+                    </div>
+                    <div class="attendance-info">
+                        <i class="fas fa-users"></i>
+                        <span class="attendance-count" th:text="${session.attendanceCount}">5</span>
+                        <span>attendees</span>
+                    </div>
+                </div>
+                
+                <div th:if="${session.supervisingMentor}" class="mb-2">
+                    <small class="text-muted">
+                        <i class="fas fa-user-tie"></i>
+                        Mentor: <span th:text="${session.supervisingMentor.fullName}">John Doe</span>
+                    </small>
+                </div>
+                
+                <div class="action-buttons">
+                    <a th:href="@{/mobile/workshop/session/{id}(id=${session.id})}" 
+                       class="btn btn-primary btn-mobile">
+                        <i class="fas fa-eye"></i> View Details
+                    </a>
+                    <a th:href="@{/attendance/session/{id}(id=${session.id})}" 
+                       class="btn btn-success btn-mobile">
+                        <i class="fas fa-user-check"></i> Attendance
+                    </a>
+                    <button class="btn btn-warning btn-mobile" 
+                            onclick="endSession([[${session.id}]])">
+                        <i class="fas fa-stop"></i> End Session
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Today's Sessions Section -->
+        <div class="section-header">
+            <h2 class="section-title">
+                <i class="fas fa-calendar-day text-primary"></i> Today's Sessions
+            </h2>
+            <span class="badge bg-primary" th:text="${todaysSessions.size()}">0</span>
+        </div>
+        
+        <div th:if="${todaysSessions.empty}" class="empty-state">
+            <i class="fas fa-calendar-plus"></i>
+            <h5>No Sessions Scheduled</h5>
+            <p class="mb-0">No sessions planned for today. Ready to start something new?</p>
+        </div>
+        
+        <div th:each="session : ${todaysSessions}" 
+             th:class="'session-card ' + ${session.status.name().toLowerCase()}">
+            <div class="card-body">
+                <div class="session-header">
+                    <h5 class="session-title" th:text="${session.objectives ?: (session.project.name + ' Session')}">
+                        Programming Session
+                    </h5>
+                    <span class="session-status" 
+                          th:class="'status-' + ${session.status.name().toLowerCase()}"
+                          th:text="${session.status.displayName}">
+                        Planned
+                    </span>
+                </div>
+                
+                <div class="session-meta">
+                    <div>
+                        <i class="fas fa-clock"></i>
+                        <span th:text="${#temporals.format(session.startTime, 'HH:mm')}">16:00</span>
+                        <span th:if="${session.endTime}" 
+                              th:text="' - ' + ${#temporals.format(session.endTime, 'HH:mm')}">- 18:00</span>
+                    </div>
+                    <div>
+                        <i class="fas fa-project-diagram"></i>
+                        <span th:text="${session.project.name}">Robot Chassis</span>
+                    </div>
+                </div>
+                
+                <div class="action-buttons">
+                    <a th:href="@{/mobile/workshop/session/{id}(id=${session.id})}" 
+                       class="btn btn-outline-primary btn-mobile">
+                        <i class="fas fa-eye"></i> Details
+                    </a>
+                    <button th:if="${session.status.name() == 'PLANNED'}" 
+                            class="btn btn-success btn-mobile"
+                            onclick="startSession([[${session.id}]])">
+                        <i class="fas fa-play"></i> Start
+                    </button>
+                    <a th:if="${session.status.name() != 'PLANNED'}" 
+                       th:href="@{/attendance/session/{id}(id=${session.id})}" 
+                       class="btn btn-info btn-mobile">
+                        <i class="fas fa-list"></i> Attendance
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Upcoming Sessions Section -->
+        <div class="section-header" th:if="${upcomingSessions and !upcomingSessions.empty}">
+            <h2 class="section-title">
+                <i class="fas fa-clock text-info"></i> Upcoming
+            </h2>
+            <span class="badge bg-info" th:text="${upcomingSessions.size()}">0</span>
+        </div>
+        
+        <div th:each="session : ${upcomingSessions}" class="session-card planned">
+            <div class="card-body">
+                <div class="session-header">
+                    <h5 class="session-title" th:text="${session.objectives ?: (session.project.name + ' Session')}">
+                        CAD Session
+                    </h5>
+                    <span class="session-status status-planned">Planned</span>
+                </div>
+                
+                <div class="session-meta">
+                    <div>
+                        <i class="fas fa-calendar"></i>
+                        <span th:text="${#temporals.format(session.startTime, 'MMM dd, HH:mm')}">Jan 15, 14:00</span>
+                    </div>
+                    <div>
+                        <i class="fas fa-project-diagram"></i>
+                        <span th:text="${session.project.name}">Intake Mechanism</span>
+                    </div>
+                </div>
+                
+                <div class="action-buttons">
+                    <a th:href="@{/mobile/workshop/session/{id}(id=${session.id})}" 
+                       class="btn btn-outline-info btn-mobile">
+                        <i class="fas fa-eye"></i> View
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Floating Action Buttons -->
+        <div class="quick-actions">
+            <button class="fab secondary" onclick="showQRScanner()" title="QR Scanner">
+                <i class="fas fa-qrcode"></i>
+            </button>
+            <button class="fab" onclick="showNewSessionModal()" title="New Session">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+        
+        <!-- Safety notice for workshop -->
+        <div class="alert alert-warning mt-3" role="alert">
+            <i class="fas fa-hard-hat"></i>
+            <strong>Safety First!</strong> 
+            Ensure all safety protocols are followed. Mentors must be present for machining and power tool use.
+        </div>
+        
+    </div>
+    
+    <!-- Scripts for mobile functionality -->
+    <div layout:fragment="scripts">
+        <script>
+            // Workshop session management
+            function startSession(sessionId) {
+                if (confirm('Start this workshop session?')) {
+                    fetch(`/mobile/workshop/api/session/${sessionId}/start`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'started') {
+                            showToast('Session started successfully!', 'success');
+                            setTimeout(() => window.location.reload(), 1000);
+                        } else {
+                            showToast('Failed to start session: ' + (data.error || 'Unknown error'), 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error starting session:', error);
+                        showToast('Error starting session', 'error');
+                    });
+                }
+            }
+            
+            function endSession(sessionId) {
+                if (confirm('End this workshop session? This will check out all attendees.')) {
+                    fetch(`/mobile/workshop/api/session/${sessionId}/end`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'ended') {
+                            showToast('Session ended successfully!', 'success');
+                            setTimeout(() => window.location.reload(), 1000);
+                        } else {
+                            showToast('Failed to end session: ' + (data.error || 'Unknown error'), 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error ending session:', error);
+                        showToast('Error ending session', 'error');
+                    });
+                }
+            }
+            
+            function showQRScanner() {
+                window.location.href = '/attendance/scanner';
+            }
+            
+            function showNewSessionModal() {
+                // For now, redirect to main session creation
+                // In future, could show a mobile-optimized modal
+                window.location.href = '/workshop/sessions/new';
+            }
+            
+            function showToast(message, type = 'info') {
+                // Simple toast notification
+                const toast = document.createElement('div');
+                toast.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'} 
+                                  position-fixed top-0 end-0 m-3`;
+                toast.style.zIndex = '9999';
+                toast.style.minWidth = '300px';
+                toast.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
+                        <span>${message}</span>
+                        <button type="button" class="btn-close ms-auto" onclick="this.parentElement.parentElement.remove()"></button>
+                    </div>
+                `;
+                
+                document.body.appendChild(toast);
+                
+                // Auto-remove after 5 seconds
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.remove();
+                    }
+                }, 5000);
+            }
+            
+            // Auto-refresh every 30 seconds to keep data current
+            setInterval(() => {
+                // Only refresh if user is actively viewing the page
+                if (!document.hidden) {
+                    window.location.reload();
+                }
+            }, 30000);
+            
+            // PWA offline handling
+            window.addEventListener('online', () => {
+                showToast('Connection restored', 'success');
+            });
+            
+            window.addEventListener('offline', () => {
+                showToast('Working offline - some features may be limited', 'warning');
+            });
+        </script>
+    </div>
+</body>
+</html>

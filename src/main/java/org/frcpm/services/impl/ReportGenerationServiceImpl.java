@@ -413,8 +413,8 @@ public class ReportGenerationServiceImpl implements ReportGenerationService {
                 subsystemData.put("description", subsystem.getDescription());
                 subsystemData.put("status", subsystem.getStatus().toString());
                 
-                if (subsystem.getResponsibleSubteam() != null) {
-                    subsystemData.put("responsibleSubteam", subsystem.getResponsibleSubteam().getName());
+                if (subsystem.getResponsibleMember() != null) {
+                    subsystemData.put("responsibleMember", subsystem.getResponsibleMember().getFullName());
                 }
                 
                 // Get tasks for this subsystem
