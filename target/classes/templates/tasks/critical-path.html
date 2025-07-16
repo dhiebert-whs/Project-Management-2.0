@@ -710,10 +710,10 @@
         let wsConnection = null;
         
         document.addEventListener('DOMContentLoaded', function() {
-            initializeCriticalPathAnalysis();
-            setupWebSocketConnection();
             setupViewControls();
             setupProjectSelection();
+            // Don't auto-load critical path to prevent API overload
+            showLoadingSpinner(false);
         });
         
         // Initialize critical path analysis

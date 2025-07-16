@@ -529,9 +529,9 @@
         
         document.addEventListener('DOMContentLoaded', function() {
             initializeDependenciesPage();
-            setupWebSocketConnection();
-            loadDependencies();
             setupFormValidation();
+            // Don't auto-load dependencies to prevent API overload
+            showEmptyState();
         });
         
         // Initialize the dependencies page
@@ -550,10 +550,20 @@
         
         // Setup filter event listeners
         function setupFilters() {
-            document.getElementById('projectFilter').addEventListener('change', loadDependencies);
-            document.getElementById('typeFilter').addEventListener('change', loadDependencies);
-            document.getElementById('showInactive').addEventListener('change', loadDependencies);
-            document.getElementById('criticalPathOnly').addEventListener('change', loadDependencies);
+            document.getElementById('projectFilter').addEventListener('change', loadDependenciesIfProjectSelected);
+            document.getElementById('typeFilter').addEventListener('change', loadDependenciesIfProjectSelected);
+            document.getElementById('showInactive').addEventListener('change', loadDependenciesIfProjectSelected);
+            document.getElementById('criticalPathOnly').addEventListener('change', loadDependenciesIfProjectSelected);
+        }
+        
+        // Only load dependencies if a project is selected
+        function loadDependenciesIfProjectSelected() {
+            const projectId = document.getElementById('projectFilter').value;
+            if (projectId) {
+                loadDependencies();
+            } else {
+                showEmptyState();
+            }
         }
         
         // Setup critical path button
@@ -692,31 +702,35 @@
             container.innerHTML = html;
         }
         
-        // Update statistics
+        // Update statistics (simplified to prevent API overload)
         async function updateStatistics() {
             const projectId = document.getElementById('projectFilter').value;
             if (!projectId) return;
             
             try {
-                const [statsResponse, blockedResponse, readyResponse] = await Promise.all([
-                    fetch(`/api/dependencies/statistics?projectId=${projectId}`),
-                    fetch(`/api/dependencies/blocked-tasks?projectId=${projectId}`),
-                    fetch(`/api/dependencies/ready-tasks?projectId=${projectId}`)
-                ]);
-                
-                const [statsData, blockedData, readyData] = await Promise.all([
-                    statsResponse.json(),
-                    blockedResponse.json(),
-                    readyResponse.json()
-                ]);
-                
-                document.getElementById('totalDependencies').textContent = statsData.statistics?.TOTAL || 0;
-                document.getElementById('criticalDependencies').textContent = dependencies.filter(d => d.onCriticalPath).length;
-                document.getElementById('blockedTasks').textContent = blockedData.totalBlocked || 0;
-                document.getElementById('readyTasks').textContent = readyData.totalReady || 0;
-                
+                // Only load basic statistics to prevent API overload
+                const response = await fetch(`/api/dependencies/statistics?projectId=${projectId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('totalDependencies').textContent = data.statistics?.TOTAL || 0;
+                    document.getElementById('criticalDependencies').textContent = dependencies.filter(d => d.onCriticalPath).length;
+                    // Use placeholder values for now to prevent additional API calls
+                    document.getElementById('blockedTasks').textContent = '--';
+                    document.getElementById('readyTasks').textContent = '--';
+                } else {
+                    // Reset to zero if API call fails
+                    document.getElementById('totalDependencies').textContent = '0';
+                    document.getElementById('criticalDependencies').textContent = '0';
+                    document.getElementById('blockedTasks').textContent = '0';
+                    document.getElementById('readyTasks').textContent = '0';
+                }
             } catch (error) {
                 console.error('Error updating statistics:', error);
+                // Reset all statistics on error
+                document.getElementById('totalDependencies').textContent = '0';
+                document.getElementById('criticalDependencies').textContent = '0';
+                document.getElementById('blockedTasks').textContent = '0';
+                document.getElementById('readyTasks').textContent = '0';
             }
         }
         
@@ -853,10 +867,10 @@
             });
         }
         
-        // WebSocket connection for real-time updates
+        // WebSocket connection for real-time updates (disabled to prevent API overload)
         function setupWebSocketConnection() {
-            // TODO: Implement WebSocket connection for real-time updates
-            // This would connect to /topic/dependencies for real-time dependency updates
+            // Disabled to prevent connection overload during development
+            console.log('WebSocket connection disabled to prevent API overload');
         }
         
         // Show real-time indicator
