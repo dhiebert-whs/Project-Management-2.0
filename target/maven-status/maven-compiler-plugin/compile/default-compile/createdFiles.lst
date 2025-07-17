@@ -30,6 +30,7 @@ org\frcpm\security\UserPrincipal.class
 org\frcpm\services\GanttDataService.class
 org\frcpm\services\SubteamService.class
 org\frcpm\models\TaskStatus.class
+org\frcpm\web\controllers\ComponentController.class
 org\frcpm\models\User.class
 org\frcpm\services\AttendanceService.class
 org\frcpm\models\Meeting.class
@@ -89,7 +90,9 @@ org\frcpm\repositories\spring\SubsystemRepository.class
 org\frcpm\services\impl\UserServiceImpl.class
 org\frcpm\models\UserRole.class
 org\frcpm\services\impl\ComponentServiceImpl.class
+org\frcpm\web\controllers\ReportsController.class
 org\frcpm\models\Subteam.class
+org\frcpm\web\controllers\DependencyViewController.class
 org\frcpm\repositories\spring\TeamMemberRepository.class
 org\frcpm\services\impl\TeamMemberServiceImpl.class
 org\frcpm\web\websocket\ActivityController.class

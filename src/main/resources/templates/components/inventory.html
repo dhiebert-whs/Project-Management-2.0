@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>Component Inventory - FRC Project Management</title>
+</head>
+
+<div layout:fragment="content">
+    <div class="container mt-4">
+        
+        <!-- Inventory Header -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <h1>
+                    <i class="fas fa-warehouse text-primary me-2"></i>
+                    Component Inventory
+                </h1>
+                <p class="text-muted mb-0">
+                    Monitor stock levels, track usage, and manage reorder points for all components
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="btn-group">
+                    <a href="/components" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Components
+                    </a>
+                    <button class="btn btn-primary" onclick="exportInventory()">
+                        <i class="fas fa-download me-1"></i>Export
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inventory Overview -->
+        <div class="row mb-4">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Current Inventory Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Component</th>
+                                        <th>Current Stock</th>
+                                        <th>Min Stock</th>
+                                        <th>Max Stock</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="item : ${inventoryItems}">
+                                        <td>
+                                            <strong th:text="${item.name}">Component Name</strong>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-primary" th:text="${item.currentStock}">0</span>
+                                        </td>
+                                        <td th:text="${item.minStock}">0</td>
+                                        <td th:text="${item.maxStock}">0</td>
+                                        <td>
+                                            <span class="badge" 
+                                                  th:classappend="${item.status == 'Good' ? 'bg-success' : (item.status == 'Low' ? 'bg-warning' : 'bg-danger')}"
+                                                  th:text="${item.status}">Status</span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-primary" onclick="updateStock(this)" 
+                                                        th:data-component="${item.name}">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="btn btn-outline-success" onclick="reorderComponent(this)"
+                                                        th:data-component="${item.name}">
+                                                    <i class="fas fa-shopping-cart"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <!-- Low Stock Alert -->
+                <div class="card mb-3" th:if="${lowStockItems != null and !#lists.isEmpty(lowStockItems)}">
+                    <div class="card-header bg-warning text-dark">
+                        <h6 class="mb-0">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            Low Stock Alert
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div th:each="item : ${lowStockItems}" class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <strong th:text="${item.name}">Component</strong>
+                                <br>
+                                <small class="text-muted">
+                                    Stock: <span th:text="${item.currentStock}">0</span> / 
+                                    Min: <span th:text="${item.minStock}">0</span>
+                                </small>
+                            </div>
+                            <span class="badge" 
+                                  th:classappend="${item.urgency == 'Critical' ? 'bg-danger' : 'bg-warning'}"
+                                  th:text="${item.urgency}">Urgency</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Reorder Suggestions -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-shopping-cart me-1"></i>
+                            Reorder Suggestions
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div th:if="${reorderSuggestions != null and !#lists.isEmpty(reorderSuggestions)}">
+                            <div th:each="suggestion : ${reorderSuggestions}" class="mb-3 p-2 border rounded">
+                                <div class="fw-bold" th:text="${suggestion.name}">Component</div>
+                                <small class="text-muted">
+                                    Qty: <span th:text="${suggestion.suggestedQuantity}">0</span> • 
+                                    Cost: $<span th:text="${suggestion.estimatedCost}">0.00</span>
+                                </small>
+                                <br>
+                                <small>Supplier: <span th:text="${suggestion.supplier}">Supplier</span></small>
+                                <br>
+                                <button class="btn btn-sm btn-outline-success mt-1" 
+                                        onclick="createPurchaseOrder(this)"
+                                        th:data-component="${suggestion.name}">
+                                    <i class="fas fa-cart-plus me-1"></i>Order
+                                </button>
+                            </div>
+                        </div>
+                        <div th:if="${reorderSuggestions == null or #lists.isEmpty(reorderSuggestions)}" class="text-center text-muted">
+                            <i class="fas fa-check-circle fa-2x mb-2"></i>
+                            <p>All components are well stocked!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Stock Modal -->
+    <div class="modal fade" id="updateStockModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Update Stock Level</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="updateStockForm">
+                        <div class="mb-3">
+                            <label for="componentName" class="form-label">Component</label>
+                            <input type="text" class="form-control" id="componentName" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="currentStock" class="form-label">Current Stock</label>
+                            <input type="number" class="form-control" id="currentStock" min="0" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="minStock" class="form-label">Minimum Stock Level</label>
+                            <input type="number" class="form-control" id="minStock" min="0">
+                        </div>
+                        <div class="mb-3">
+                            <label for="maxStock" class="form-label">Maximum Stock Level</label>
+                            <input type="number" class="form-control" id="maxStock" min="0">
+                        </div>
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="notes" rows="2" 
+                                      placeholder="Reason for stock update..."></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveStockUpdate()">
+                        <i class="fas fa-save me-1"></i>Update Stock
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div layout:fragment="scripts">
+    <script>
+        // Inventory Management JavaScript
+        function updateStock(button) {
+            const componentName = button.dataset.component;
+            const modal = new bootstrap.Modal(document.getElementById('updateStockModal'));
+            
+            // Set component name in modal
+            document.getElementById('componentName').value = componentName;
+            
+            // Clear form
+            document.getElementById('updateStockForm').reset();
+            document.getElementById('componentName').value = componentName;
+            
+            modal.show();
+        }
+        
+        function saveStockUpdate() {
+            const form = document.getElementById('updateStockForm');
+            const formData = new FormData(form);
+            
+            // Here you would typically send an AJAX request to update the stock
+            // For now, we'll just show a success message
+            alert('Stock updated successfully!');
+            
+            // Close modal and refresh page
+            bootstrap.Modal.getInstance(document.getElementById('updateStockModal')).hide();
+            // In a real implementation, you would refresh the inventory data
+        }
+        
+        function reorderComponent(button) {
+            const componentName = button.dataset.component;
+            
+            if (confirm(`Create a reorder request for ${componentName}?`)) {
+                // Here you would typically create a purchase order or reorder request
+                alert(`Reorder request created for ${componentName}`);
+            }
+        }
+        
+        function createPurchaseOrder(button) {
+            const componentName = button.dataset.component;
+            
+            if (confirm(`Create purchase order for ${componentName}?`)) {
+                // Here you would typically integrate with purchasing system
+                alert(`Purchase order created for ${componentName}`);
+            }
+        }
+        
+        function exportInventory() {
+            // Here you would typically generate and download an inventory report
+            alert('Inventory export functionality will be implemented in a future version.');
+        }
+    </script>
+</div>
+
+</html>

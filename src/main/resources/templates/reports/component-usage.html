@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>Component Usage Report - FRC Project Management</title>
+</head>
+
+<div layout:fragment="styles">
+    <style>
+        .usage-card {
+            transition: all 0.3s ease;
+            border: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .usage-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        
+        .category-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin: 0 auto 0.5rem;
+        }
+        
+        .utilization-meter {
+            position: relative;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .utilization-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        
+        .inventory-status {
+            padding: 0.5rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .status-good { background: #d4edda; border-left: 4px solid #28a745; }
+        .status-low { background: #fff3cd; border-left: 4px solid #ffc107; }
+        .status-critical { background: #f8d7da; border-left: 4px solid #dc3545; }
+        
+        .cost-breakdown {
+            height: 300px;
+        }
+        
+        .component-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+        
+        .trend-indicator {
+            font-size: 0.875rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        
+        .trend-up { background: #d4edda; color: #155724; }
+        .trend-down { background: #f8d7da; color: #721c24; }
+        .trend-stable { background: #e2e3e5; color: #495057; }
+    </style>
+</div>
+
+<div layout:fragment="content">
+    <div class="container mt-4">
+        
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <h1>
+                    <i class="fas fa-cogs text-info me-2"></i>
+                    Component Usage Report
+                </h1>
+                <p class="text-muted mb-0">
+                    Monitor component inventory, usage patterns, and cost analysis
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="btn-group">
+                    <button class="btn btn-outline-primary btn-sm" onclick="exportUsageReport()">
+                        <i class="fas fa-download me-1"></i>Export
+                    </button>
+                    <a href="/reports" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Reports
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Component Statistics Overview -->
+        <div class="row mb-4">
+            <div class="col-lg-8">
+                <div class="card usage-card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-pie me-2"></i>
+                            Component Overview
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-md-3">
+                                <div class="category-icon bg-primary text-white">
+                                    <i class="fas fa-cogs"></i>
+                                </div>
+                                <h4 th:text="${componentStats.totalComponents}">0</h4>
+                                <small class="text-muted">Total Components</small>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="category-icon bg-warning text-dark">
+                                    <i class="fas fa-tools"></i>
+                                </div>
+                                <h4 th:text="${componentStats.inUse}">0</h4>
+                                <small class="text-muted">In Use</small>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="category-icon bg-success text-white">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <h4 th:text="${componentStats.available}">0</h4>
+                                <small class="text-muted">Available</small>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="category-icon bg-info text-white">
+                                    <i class="fas fa-dollar-sign"></i>
+                                </div>
+                                <h4>$<span th:text="${#numbers.formatDecimal(componentStats.totalValue, 0, 2)}">0.00</span></h4>
+                                <small class="text-muted">Total Value</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Inventory Status Alerts -->
+            <div class="col-lg-4">
+                <div class="card usage-card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Inventory Alerts
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div th:each="item : ${inventoryStatus}" 
+                             class="inventory-status"
+                             th:classappend="${item.status == 'Good' ? 'status-good' : (item.status == 'Low' ? 'status-low' : 'status-critical')}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="fw-bold" th:text="${item.component}">Component</div>
+                                    <small>
+                                        Current: <span th:text="${item.current}">0</span> / 
+                                        Min: <span th:text="${item.minimum}">0</span>
+                                    </small>
+                                </div>
+                                <span class="badge" 
+                                      th:classappend="${item.status == 'Good' ? 'bg-success' : (item.status == 'Low' ? 'bg-warning' : 'bg-danger')}"
+                                      th:text="${item.status}">Status</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Usage by Category -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card usage-card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-bar me-2"></i>
+                            Usage by Category
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="component-grid">
+                            <div th:each="category : ${usageByCategory}" class="card">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="card-title mb-0" th:text="${category.category}">Category</h6>
+                                        <span class="badge bg-primary" th:text="${category.count}">0</span>
+                                    </div>
+                                    
+                                    <div class="mb-2">
+                                        <small class="text-muted">Utilization</small>
+                                        <div class="utilization-meter">
+                                            <div class="utilization-fill" 
+                                                 th:style="'width: ' + ${category.utilization} + '%; background: ' + 
+                                                          (${category.utilization} >= 80 ? '#dc3545' : 
+                                                           ${category.utilization} >= 60 ? '#ffc107' : '#28a745')"></div>
+                                        </div>
+                                        <small th:text="${category.utilization + '%'}">0%</small>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between">
+                                        <small class="text-muted">
+                                            Cost: $<span th:text="${#numbers.formatDecimal(category.cost, 0, 2)}">0.00</span>
+                                        </small>
+                                        <span class="trend-indicator" 
+                                              th:classappend="${category.trend == 'up' ? 'trend-up' : 
+                                                             (category.trend == 'down' ? 'trend-down' : 'trend-stable')}">
+                                            <i th:class="${category.trend == 'up' ? 'fas fa-arrow-up' : 
+                                                         (category.trend == 'down' ? 'fas fa-arrow-down' : 'fas fa-minus')}"></i>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cost Analysis -->
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card usage-card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-dollar-sign me-2"></i>
+                            Cost Analysis
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Budget Overview -->
+                        <div class="row mb-4">
+                            <div class="col-md-3 text-center">
+                                <h5>$<span th:text="${#numbers.formatDecimal(costAnalysis.budgetTotal, 0, 2)}">0.00</span></h5>
+                                <small class="text-muted">Total Budget</small>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <h5 class="text-warning">$<span th:text="${#numbers.formatDecimal(costAnalysis.spent, 0, 2)}">0.00</span></h5>
+                                <small class="text-muted">Spent</small>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <h5 class="text-success">$<span th:text="${#numbers.formatDecimal(costAnalysis.remaining, 0, 2)}">0.00</span></h5>
+                                <small class="text-muted">Remaining</small>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <h5 th:class="${costAnalysis.projectedOverrun > 0 ? 'text-danger' : 'text-success'}">
+                                    $<span th:text="${#numbers.formatDecimal(costAnalysis.projectedOverrun, 0, 2)}">0.00</span>
+                                </h5>
+                                <small class="text-muted">Proj. Over/Under</small>
+                            </div>
+                        </div>
+                        
+                        <!-- Budget Progress -->
+                        <div class="progress mb-3" style="height: 20px;">
+                            <div class="progress-bar bg-warning" 
+                                 th:style="'width: ' + ${(costAnalysis.spent / costAnalysis.budgetTotal) * 100} + '%'"
+                                 role="progressbar">
+                                <span th:text="${#numbers.formatDecimal((costAnalysis.spent / costAnalysis.budgetTotal) * 100, 1, 1)} + '%'">0%</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Category Breakdown -->
+                        <div class="cost-breakdown">
+                            <canvas id="costChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Usage Trends -->
+            <div class="col-lg-4">
+                <div class="card usage-card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-chart-line me-2"></i>
+                            Usage Trends
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <h6>Most Used Components</h6>
+                            <div class="list-group list-group-flush">
+                                <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                    <span>Drive Motors</span>
+                                    <span class="badge bg-primary">95%</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                    <span>Control System</span>
+                                    <span class="badge bg-primary">88%</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                    <span>Sensors</span>
+                                    <span class="badge bg-primary">76%</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h6>Reorder Recommendations</h6>
+                            <div class="alert alert-warning">
+                                <small>
+                                    <i class="fas fa-shopping-cart me-1"></i>
+                                    3 components need reordering within 2 weeks
+                                </small>
+                            </div>
+                            <div class="alert alert-info">
+                                <small>
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Consider bulk purchase discounts for electronics
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h6>Quick Actions</h6>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-warehouse me-1"></i>Update Inventory
+                                </button>
+                                <button class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-shopping-cart me-1"></i>Create Purchase Order
+                                </button>
+                                <button class="btn btn-outline-info btn-sm">
+                                    <i class="fas fa-chart-bar me-1"></i>Detailed Analysis
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div layout:fragment="scripts">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Cost Analysis Chart
+        const costCtx = document.getElementById('costChart').getContext('2d');
+        const costChart = new Chart(costCtx, {
+            type: 'doughnut',
+            data: {
+                labels: /*[[${costAnalysis.categories.![name]}]]*/ ['Electronics', 'Mechanical', 'Programming', 'Miscellaneous'],
+                datasets: [{
+                    data: /*[[${costAnalysis.categories.![spent]}]]*/ [4200, 6800, 1200, 3220],
+                    backgroundColor: [
+                        '#007bff',
+                        '#28a745', 
+                        '#ffc107',
+                        '#6c757d'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `${label}: $${value.toLocaleString()} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        function exportUsageReport() {
+            // Implementation for exporting component usage report
+            alert('Component usage report export functionality will be implemented.');
+        }
+    </script>
+</div>
+
+</html>

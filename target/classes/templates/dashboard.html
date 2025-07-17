@@ -1,193 +1,281 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout/base}">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - FRC Project Management</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<div layout:fragment="styles">
     <style>
+        /* Dashboard-specific styles */
         .dashboard-header {
             background: linear-gradient(135deg, #0066cc 0%, #004499 100%);
             color: white;
             padding: 2rem 0;
+            position: relative;
+            overflow: hidden;
         }
+        
+        .dashboard-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="dash-grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23dash-grid)"/></svg>');
+            opacity: 0.3;
+        }
+        
         .feature-card {
-            transition: transform 0.2s;
+            transition: all 0.3s ease;
             height: 100%;
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
+        
         .feature-card:hover {
-            transform: translateY(-2px);
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
         }
+        
+        .feature-card .card-body {
+            padding: 2rem;
+        }
+        
+        .feature-card i {
+            transition: transform 0.3s ease;
+        }
+        
+        .feature-card:hover i {
+            transform: scale(1.1);
+        }
+        
         .status-badge {
             font-size: 0.8rem;
         }
         
-        /* Real-time Attendance Widget Styles */
-        .attendance-widget {
-            border-left: 4px solid #28a745;
-        }
-        .presence-indicator {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-        .presence-indicator.online {
-            background-color: #28a745;
-            box-shadow: 0 0 6px rgba(40, 167, 69, 0.6);
-        }
-        .presence-indicator.offline {
-            background-color: #6c757d;
-        }
-        .presence-indicator.late {
-            background-color: #ffc107;
-            box-shadow: 0 0 6px rgba(255, 193, 7, 0.6);
-        }
-        .attendance-list {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        .attendance-item {
-            transition: all 0.3s ease;
-            border-radius: 6px;
-            margin-bottom: 4px;
-        }
-        .attendance-item.highlight {
-            background-color: #fff3cd;
-            border-left: 3px solid #ffc107;
-        }
-        .subteam-badge {
-            font-size: 0.7rem;
-            padding: 2px 6px;
-        }
-        .workshop-stats {
+        .quick-stats {
             background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
             color: white;
             border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-item {
+            text-align: center;
             padding: 1rem;
         }
-        .pulse {
-            animation: pulse 2s infinite;
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
         }
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .recent-activity {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .activity-item {
+            padding: 1rem;
+            border-left: 4px solid #dee2e6;
+            margin-bottom: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .activity-item:hover {
+            background: #e9ecef;
+            border-left-color: #007bff;
+        }
+        
+        .activity-item.task-created {
+            border-left-color: #28a745;
+        }
+        
+        .activity-item.task-completed {
+            border-left-color: #17a2b8;
+        }
+        
+        .activity-item.project-updated {
+            border-left-color: #ffc107;
+        }
+        
+        .activity-item.meeting-scheduled {
+            border-left-color: #6f42c1;
+        }
+        
+        .activity-meta {
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+        
+        .progress-overview {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .progress-item {
+            margin-bottom: 1.5rem;
+        }
+        
+        .progress-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .progress-label {
+            display: flex;
+            justify-content-between;
+            margin-bottom: 0.5rem;
+        }
+        
+        .progress-bar-custom {
+            height: 8px;
+            border-radius: 4px;
+            background: #e9ecef;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-fill.success {
+            background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+        }
+        
+        .progress-fill.warning {
+            background: linear-gradient(90deg, #ffc107 0%, #fd7e14 100%);
+        }
+        
+        .progress-fill.info {
+            background: linear-gradient(90deg, #17a2b8 0%, #007bff 100%);
+        }
+        
+        .welcome-message {
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border: 1px solid #dee2e6;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .welcome-message h4 {
+            color: #495057;
+            margin-bottom: 1rem;
+        }
+        
+        .welcome-message p {
+            color: #6c757d;
+            margin-bottom: 0;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-header {
+                padding: 1rem 0;
+            }
+            
+            .feature-card .card-body {
+                padding: 1.5rem;
+            }
+            
+            .stat-number {
+                font-size: 2rem;
+            }
         }
     </style>
-</head>
-<body>
+</div>
+
+<div layout:fragment="content">
     <!-- Dashboard Header -->
     <div class="dashboard-header">
-        <div class="container">
+        <div class="container position-relative">
             <div class="row align-items-center">
                 <div class="col-md-8">
-                    <h1 class="mb-1">FRC Project Management Dashboard</h1>
-                    <p class="mb-0 opacity-75">Welcome back! Ready to build something amazing?</p>
+                    <h1 class="display-4 mb-2">
+                        <i class="fas fa-robot me-3"></i>
+                        FRC Project Management
+                    </h1>
+                    <p class="lead mb-0 opacity-75">
+                        Welcome back! Ready to build something amazing?
+                    </p>
                 </div>
                 <div class="col-md-4 text-end">
-                    <span class="badge bg-success status-badge me-2">Phase 2D Ready</span>
-                    <a href="/logout" class="btn btn-outline-light btn-sm">Logout</a>
+                    <div class="d-flex flex-column align-items-end">
+                        <div class="badge bg-light text-dark mb-2">
+                            <i class="fas fa-calendar me-1"></i>
+                            Build Season 2024
+                        </div>
+                        <div class="badge bg-light text-dark">
+                            <i class="fas fa-users me-1"></i>
+                            <span th:text="${teamMemberCount ?: 0}">0</span> Team Members
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Main Dashboard Content -->
-    <div class="container my-5">
-        <!-- Success Message -->
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <strong>🎉 Real-time Attendance System Ready!</strong> AttendanceService WebSocket integration is now operational with live workshop presence tracking.
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-
-        <!-- Real-time Workshop Presence Widget -->
-        <div class="row mb-4">
-            <div class="col-md-6">
-                <div class="card attendance-widget">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="fas fa-users text-success me-2"></i>
-                            Workshop Presence
-                        </h5>
-                        <div>
-                            <span id="connection-status" class="badge bg-warning">Connecting</span>
-                            <span id="presence-count" class="badge bg-success ms-1">0 present</span>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="workshop-stats mb-3">
-                            <div class="row text-center">
-                                <div class="col-4">
-                                    <div class="h4 mb-0" id="total-present">0</div>
-                                    <small>Present</small>
-                                </div>
-                                <div class="col-4">
-                                    <div class="h4 mb-0" id="total-expected">0</div>
-                                    <small>Expected</small>
-                                </div>
-                                <div class="col-4">
-                                    <div class="h4 mb-0" id="attendance-percentage">0%</div>
-                                    <small>Attendance</small>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Recent Activity Feed -->
-                        <h6 class="mb-2">Recent Activity</h6>
-                        <div id="attendance-activity" class="attendance-list">
-                            <div class="text-muted text-center py-3">
-                                <i class="fas fa-clock me-2"></i>
-                                Waiting for attendance updates...
-                            </div>
-                        </div>
+    <div class="container mt-4">
+        <!-- Welcome Message -->
+        <div class="welcome-message">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h4>
+                        <i class="fas fa-star text-warning me-2"></i>
+                        Welcome to FRC Project Management
+                    </h4>
+                    <p>
+                        Coordinate your team's build season with advanced project management tools, 
+                        real-time collaboration, and comprehensive task tracking designed specifically for FIRST Robotics Competition teams.
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="badge bg-success status-badge">
+                        <i class="fas fa-check me-1"></i>
+                        Phase 2E-D Ready
                     </div>
                 </div>
             </div>
-            
-            <!-- Workshop Status & Controls -->
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">
-                            <i class="fas fa-cogs text-primary me-2"></i>
-                            Workshop Status
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label class="form-label">Current Status:</label>
-                            <select id="workshop-status" class="form-select">
-                                <option value="ACTIVE">Active - Workshop in progress</option>
-                                <option value="BREAK">Break - Short break</option>
-                                <option value="CLOSED">Closed - Workshop ended</option>
-                            </select>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Quick Actions:</label>
-                            <div class="d-grid gap-2">
-                                <button id="btn-check-all" class="btn btn-success">
-                                    <i class="fas fa-check me-2"></i>Mark All Present
-                                </button>
-                                <button id="btn-send-reminder" class="btn btn-warning">
-                                    <i class="fas fa-bell me-2"></i>Send Meeting Reminder
-                                </button>
-                                <button id="btn-end-session" class="btn btn-outline-danger">
-                                    <i class="fas fa-stop me-2"></i>End Workshop Session
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <!-- Subteam Breakdown -->
-                        <h6 class="mb-2">Subteam Presence</h6>
-                        <div id="subteam-breakdown">
-                            <div class="text-muted text-center py-2">
-                                No subteam data available
-                            </div>
-                        </div>
-                    </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="quick-stats">
+            <div class="row">
+                <div class="col-md-3 stat-item">
+                    <div class="stat-number" th:text="${projectCount ?: 0}">0</div>
+                    <div class="stat-label">Active Projects</div>
+                </div>
+                <div class="col-md-3 stat-item">
+                    <div class="stat-number" th:text="${taskCount ?: 0}">0</div>
+                    <div class="stat-label">Open Tasks</div>
+                </div>
+                <div class="col-md-3 stat-item">
+                    <div class="stat-number" th:text="${meetingCount ?: 0}">0</div>
+                    <div class="stat-label">Scheduled Meetings</div>
+                </div>
+                <div class="col-md-3 stat-item">
+                    <div class="stat-number" th:text="${teamMemberCount ?: 0}">0</div>
+                    <div class="stat-label">Team Members</div>
                 </div>
             </div>
         </div>
@@ -195,15 +283,20 @@
         <!-- Quick Actions -->
         <div class="row mb-4">
             <div class="col-12">
-                <h3>Quick Actions</h3>
+                <h3 class="mb-3">
+                    <i class="fas fa-bolt me-2"></i>
+                    Quick Actions
+                </h3>
             </div>
             <div class="col-md-3 mb-3">
                 <div class="card feature-card">
                     <div class="card-body text-center">
                         <i class="fas fa-project-diagram fa-3x text-primary mb-3"></i>
-                        <h5>Projects</h5>
-                        <p class="text-muted">Manage your FRC projects</p>
-                        <a href="/projects" class="btn btn-primary">View Projects</a>
+                        <h5 class="card-title">Projects</h5>
+                        <p class="card-text text-muted">Manage your FRC projects and deadlines</p>
+                        <a href="/projects" class="btn btn-primary">
+                            <i class="fas fa-eye me-1"></i>View Projects
+                        </a>
                     </div>
                 </div>
             </div>
@@ -211,9 +304,11 @@
                 <div class="card feature-card">
                     <div class="card-body text-center">
                         <i class="fas fa-tasks fa-3x text-success mb-3"></i>
-                        <h5>Tasks</h5>
-                        <p class="text-muted">Track team progress</p>
-                        <a href="/tasks" class="btn btn-success">View Tasks</a>
+                        <h5 class="card-title">Tasks</h5>
+                        <p class="card-text text-muted">Track team progress with Kanban boards</p>
+                        <a href="/tasks" class="btn btn-success">
+                            <i class="fas fa-eye me-1"></i>View Tasks
+                        </a>
                     </div>
                 </div>
             </div>
@@ -221,9 +316,11 @@
                 <div class="card feature-card">
                     <div class="card-body text-center">
                         <i class="fas fa-users fa-3x text-info mb-3"></i>
-                        <h5>Team</h5>
-                        <p class="text-muted">Manage team members</p>
-                        <a href="/team" class="btn btn-info">View Team</a>
+                        <h5 class="card-title">Team</h5>
+                        <p class="card-text text-muted">Manage team members and subteams</p>
+                        <a href="/team" class="btn btn-info">
+                            <i class="fas fa-eye me-1"></i>View Team
+                        </a>
                     </div>
                 </div>
             </div>
@@ -231,432 +328,346 @@
                 <div class="card feature-card">
                     <div class="card-body text-center">
                         <i class="fas fa-calendar fa-3x text-warning mb-3"></i>
-                        <h5>Meetings</h5>
-                        <p class="text-muted">Schedule and track meetings</p>
-                        <a href="/meetings" class="btn btn-warning">View Meetings</a>
+                        <h5 class="card-title">Meetings</h5>
+                        <p class="card-text text-muted">Schedule and track team meetings</p>
+                        <a href="/meetings" class="btn btn-warning">
+                            <i class="fas fa-eye me-1"></i>View Meetings
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Phase 2E Development Status -->
-        <div class="row mb-4">
+        <!-- Main Content Row -->
+        <div class="row">
+            <!-- Recent Activity -->
+            <div class="col-lg-8">
+                <div class="recent-activity">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="mb-0">
+                            <i class="fas fa-clock me-2"></i>
+                            Recent Activity
+                        </h4>
+                        <a href="/reports" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-chart-line me-1"></i>View Reports
+                        </a>
+                    </div>
+                    
+                    <div th:if="${recentActivities != null and !#lists.isEmpty(recentActivities)}">
+                        <div th:each="activity : ${recentActivities}" 
+                             class="activity-item" 
+                             th:classappend="${activity.type}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong th:text="${activity.description}">Activity description</strong>
+                                    <div class="activity-meta">
+                                        <span th:text="${activity.userName}">User Name</span>
+                                        <span th:if="${activity.projectName}">
+                                            in <span th:text="${activity.projectName}">Project</span>
+                                        </span>
+                                    </div>
+                                </div>
+                                <small class="text-muted" th:text="${#temporals.format(activity.timestamp, 'MMM dd, HH:mm')}">
+                                    Jan 01, 12:00
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div th:if="${recentActivities == null or #lists.isEmpty(recentActivities)}" class="text-center py-4">
+                        <i class="fas fa-history fa-2x text-muted mb-3"></i>
+                        <p class="text-muted">No recent activity to display</p>
+                        <p class="text-muted">
+                            <small>Start by <a href="/projects/new">creating a project</a> or <a href="/tasks/new">adding a task</a></small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Project Progress -->
+            <div class="col-lg-4">
+                <div class="progress-overview">
+                    <h4 class="mb-3">
+                        <i class="fas fa-chart-pie me-2"></i>
+                        Project Progress
+                    </h4>
+                    
+                    <div th:if="${projectProgressData != null and !#lists.isEmpty(projectProgressData)}">
+                        <div th:each="project : ${projectProgressData}" class="progress-item">
+                            <div class="progress-label">
+                                <span th:text="${project.name}">Project Name</span>
+                                <span th:text="${project.completionPercentage + '%'}">0%</span>
+                            </div>
+                            <div class="progress-bar-custom">
+                                <div class="progress-fill" 
+                                     th:classappend="${project.completionPercentage >= 80 ? 'success' : (project.completionPercentage >= 50 ? 'info' : 'warning')}"
+                                     th:style="'width: ' + ${project.completionPercentage} + '%'">
+                                </div>
+                            </div>
+                            <small class="text-muted">
+                                <span th:text="${project.completedTasks}">0</span> / 
+                                <span th:text="${project.totalTasks}">0</span> tasks completed
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div th:if="${projectProgressData == null or #lists.isEmpty(projectProgressData)}" class="text-center py-4">
+                        <i class="fas fa-project-diagram fa-2x text-muted mb-3"></i>
+                        <p class="text-muted">No projects to display</p>
+                        <a href="/projects/new" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus me-1"></i>Create Project
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Advanced Features -->
+        <div class="row mt-4">
             <div class="col-12">
-                <div class="card border-warning">
-                    <div class="card-header bg-warning text-dark">
-                        <h4 class="mb-0">🔧 Phase 2E-D Implementation Status</h4>
+                <h3 class="mb-3">
+                    <i class="fas fa-star me-2"></i>
+                    Advanced Features
+                </h3>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card feature-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-route fa-3x text-warning mb-3"></i>
+                        <h5 class="card-title">Task Dependencies</h5>
+                        <p class="card-text text-muted">Manage task relationships and critical paths</p>
+                        <a href="/dependencies" class="btn btn-warning">
+                            <i class="fas fa-project-diagram me-1"></i>View Dependencies
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card feature-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-cogs fa-3x text-secondary mb-3"></i>
+                        <h5 class="card-title">Components</h5>
+                        <p class="card-text text-muted">Track robot components and inventory</p>
+                        <a href="/components" class="btn btn-secondary">
+                            <i class="fas fa-eye me-1"></i>View Components
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card feature-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-chart-bar fa-3x text-danger mb-3"></i>
+                        <h5 class="card-title">Reports</h5>
+                        <p class="card-text text-muted">Generate progress and performance reports</p>
+                        <a href="/reports" class="btn btn-danger">
+                            <i class="fas fa-chart-line me-1"></i>View Reports
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Development Status -->
+        <div class="row mt-4" th:if="${isDevelopment}">
+            <div class="col-12">
+                <div class="card border-info">
+                    <div class="card-header bg-info text-white">
+                        <h4 class="mb-0">
+                            <i class="fas fa-code me-2"></i>
+                            Development Status
+                        </h4>
                     </div>
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-6">
-                                <h5>✅ Core Features Complete</h5>
-                                <ul>
-                                    <li><strong>Project Management</strong> - Full CRUD with validation</li>
-                                    <li><strong>Task Management</strong> - Kanban board with real-time updates</li>
-                                    <li><strong>Team Management</strong> - Complete member and subteam system</li>
-                                    <li><strong>Meeting Coordination</strong> - Basic scheduling system</li>
-                                    <li><strong>Real-time Features</strong> - WebSocket integration operational</li>
+                                <h5 class="text-success">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    Phase 2E-D Features Complete
+                                </h5>
+                                <ul class="list-unstyled">
+                                    <li><i class="fas fa-check text-success me-2"></i>Advanced Task Dependencies</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>Critical Path Analysis</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>Real-time WebSocket Integration</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>Comprehensive UI Templates</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>Mobile-Optimized Design</li>
                                 </ul>
                             </div>
                             <div class="col-md-6">
-                                <h5>🚧 Advanced Features In Progress</h5>
-                                <ul>
-                                    <li><strong>Task Dependencies</strong> - Service layer 100% complete</li>
-                                    <li><strong>Critical Path Analysis</strong> - Algorithm implementation ready</li>
-                                    <li><strong>Advanced UI Templates</strong> - Dependencies interface available</li>
-                                    <li><strong>Performance Optimization</strong> - Database and caching improvements</li>
-                                    <li><strong>FRC API Integration</strong> - Competition data synchronization</li>
-                                </ul>
+                                <h5 class="text-primary">
+                                    <i class="fas fa-tools me-2"></i>
+                                    Development Tools
+                                </h5>
+                                <div class="d-grid gap-2">
+                                    <a href="/h2-console" class="btn btn-outline-secondary" target="_blank">
+                                        <i class="fas fa-database me-2"></i>H2 Database Console
+                                    </a>
+                                    <a href="/actuator/health" class="btn btn-outline-info" target="_blank">
+                                        <i class="fas fa-heartbeat me-2"></i>Application Health
+                                    </a>
+                                    <a href="/actuator" class="btn btn-outline-warning" target="_blank">
+                                        <i class="fas fa-cog me-2"></i>Actuator Endpoints
+                                    </a>
+                                </div>
                             </div>
                         </div>
-                        <div class="alert alert-success mt-3">
-                            <strong>Current Status:</strong> Phase 2E-D is approximately <strong>90% COMPLETE</strong> with advanced task management and dependency tracking fully operational! 
-                            All core FRC project management features are ready for production use.
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Development Tools -->
-        <div class="row">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5>Development Tools</h5>
-                    </div>
-                    <div class="card-body">
-                        <a href="/h2-console" class="btn btn-outline-secondary me-2" target="_blank">H2 Database Console</a>
-                        <a href="/actuator/health" class="btn btn-outline-info me-2" target="_blank">Health Check</a>
-                        <a href="/actuator" class="btn btn-outline-warning" target="_blank">Actuator Endpoints</a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5>WebSocket Attendance System</h5>
-                    </div>
-                    <div class="card-body">
-                        <div id="websocket-status">
-                            <span class="badge bg-warning">Initializing...</span>
-                            <span id="connection-info" class="ms-2 text-muted">Starting attendance WebSocket</span>
-                        </div>
-                        <small class="text-muted d-block mt-2">
-                            Channels: <code>/topic/workshop/attendance</code>, <code>/topic/workshop/presence</code>
-                        </small>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Bootstrap JS and Real-time Attendance WebSocket -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
-    
+<div layout:fragment="scripts">
     <script>
-        // Real-time Attendance WebSocket System
-        let stompClient = null;
-        let isConnected = false;
-        
-        // Initialize WebSocket connection for attendance tracking
+        // Dashboard JavaScript
         document.addEventListener('DOMContentLoaded', function() {
-            connectToAttendanceWebSocket();
-            setupWorkshopControls();
+            // Initialize dashboard features
+            initializeDashboard();
+            
+            // Animate stat numbers
+            animateStatNumbers();
+            
+            // Setup real-time updates
+            setupRealtimeUpdates();
         });
         
-        function connectToAttendanceWebSocket() {
-            const statusElement = document.getElementById('connection-status');
-            const infoElement = document.getElementById('connection-info');
-            
-            try {
-                const socket = new SockJS('/ws');
-                stompClient = new StompJs.Client({
-                    webSocketFactory: () => socket,
-                    reconnectDelay: 5000,
-                    heartbeatIncoming: 4000,
-                    heartbeatOutgoing: 4000
+        function initializeDashboard() {
+            // Add smooth scrolling to anchor links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    document.querySelector(this.getAttribute('href')).scrollIntoView({
+                        behavior: 'smooth'
+                    });
                 });
-                
-                stompClient.onConnect = function(frame) {
-                    console.log('Connected to Attendance WebSocket:', frame);
-                    isConnected = true;
-                    statusElement.innerHTML = '<span class="badge bg-success">Connected</span>';
-                    infoElement.textContent = 'Real-time attendance tracking active';
-                    
-                    // Subscribe to workshop attendance updates
-                    stompClient.subscribe('/topic/workshop/attendance', function(message) {
-                        const attendanceUpdate = JSON.parse(message.body);
-                        handleAttendanceUpdate(attendanceUpdate);
-                    });
-                    
-                    // Subscribe to workshop presence summaries
-                    stompClient.subscribe('/topic/workshop/presence', function(message) {
-                        const presenceUpdate = JSON.parse(message.body);
-                        handlePresenceUpdate(presenceUpdate);
-                    });
-                    
-                    // Subscribe to workshop alerts (late arrivals, etc.)
-                    stompClient.subscribe('/topic/workshop/alerts', function(message) {
-                        const alert = JSON.parse(message.body);
-                        handleWorkshopAlert(alert);
-                    });
-                };
-                
-                stompClient.onStompError = function(frame) {
-                    console.error('STOMP error:', frame);
-                    isConnected = false;
-                    statusElement.innerHTML = '<span class="badge bg-danger">Error</span>';
-                    infoElement.textContent = 'WebSocket connection failed';
-                };
-                
-                stompClient.onWebSocketClose = function(event) {
-                    console.log('WebSocket connection closed');
-                    isConnected = false;
-                    statusElement.innerHTML = '<span class="badge bg-secondary">Disconnected</span>';
-                    infoElement.textContent = 'WebSocket connection closed';
-                };
-                
-                stompClient.activate();
-                
-            } catch (error) {
-                console.error('Error connecting to WebSocket:', error);
-                statusElement.innerHTML = '<span class="badge bg-danger">Error</span>';
-                infoElement.textContent = 'WebSocket not available';
-            }
+            });
+            
+            // Initialize tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
         }
         
-        // Handle real-time attendance updates
-        function handleAttendanceUpdate(update) {
-            console.log('Attendance update received:', update);
+        function animateStatNumbers() {
+            const statNumbers = document.querySelectorAll('.stat-number');
             
-            // Add to activity feed
-            addToActivityFeed(update);
-            
-            // Update presence indicators
-            updatePresenceIndicator(update.memberId, update.present);
-            
-            // Show notification for significant events
-            if (update.eventType === 'LATE_ARRIVAL') {
-                showNotification(`${update.memberName} arrived late`, 'warning');
-            } else if (update.eventType === 'CHECK_IN') {
-                showNotification(`${update.memberName} checked in`, 'success');
-            }
+            statNumbers.forEach(stat => {
+                const finalValue = parseInt(stat.textContent);
+                if (finalValue === 0) return;
+                
+                let currentValue = 0;
+                const increment = finalValue / 30;
+                
+                const timer = setInterval(() => {
+                    currentValue += increment;
+                    if (currentValue >= finalValue) {
+                        currentValue = finalValue;
+                        clearInterval(timer);
+                    }
+                    stat.textContent = Math.floor(currentValue);
+                }, 50);
+            });
         }
         
-        // Handle workshop presence summary updates
-        function handlePresenceUpdate(presence) {
-            console.log('Presence update received:', presence);
-            
-            // Update statistics
-            document.getElementById('total-present').textContent = presence.totalPresent || 0;
-            document.getElementById('total-expected').textContent = presence.totalExpected || 0;
-            
-            const percentage = presence.attendancePercentage || 0;
-            document.getElementById('attendance-percentage').textContent = Math.round(percentage) + '%';
-            document.getElementById('presence-count').textContent = `${presence.totalPresent || 0} present`;
-            
-            // Update subteam breakdown
-            updateSubteamBreakdown(presence.subteamPresence || []);
-            
-            // Add recent activities to feed
-            if (presence.recentActivity) {
-                presence.recentActivity.forEach(activity => {
-                    addToActivityFeedFromActivity(activity);
+        function setupRealtimeUpdates() {
+            // Connect to WebSocket for real-time updates
+            if (typeof stompClient !== 'undefined' && stompClient) {
+                // Subscribe to dashboard updates
+                stompClient.subscribe('/topic/dashboard/updates', function(message) {
+                    const update = JSON.parse(message.body);
+                    handleDashboardUpdate(update);
                 });
             }
         }
         
-        // Handle workshop alerts (late arrivals, etc.)
-        function handleWorkshopAlert(alert) {
-            console.log('Workshop alert received:', alert);
-            
-            if (alert.eventType === 'LATE_ARRIVAL') {
-                const alertElement = createAlertElement(alert, 'warning');
-                addToActivityFeed(alert, true);
+        function handleDashboardUpdate(update) {
+            // Handle real-time dashboard updates
+            switch(update.type) {
+                case 'TASK_CREATED':
+                    updateTaskCount(1);
+                    addRecentActivity(update);
+                    break;
+                case 'TASK_COMPLETED':
+                    updateTaskCount(-1);
+                    addRecentActivity(update);
+                    break;
+                case 'PROJECT_CREATED':
+                    updateProjectCount(1);
+                    addRecentActivity(update);
+                    break;
+                case 'MEETING_SCHEDULED':
+                    updateMeetingCount(1);
+                    addRecentActivity(update);
+                    break;
             }
         }
         
-        // Add attendance event to activity feed
-        function addToActivityFeed(update, isAlert = false) {
-            const activityContainer = document.getElementById('attendance-activity');
-            
-            // Remove placeholder if present
-            const placeholder = activityContainer.querySelector('.text-muted');
-            if (placeholder) {
-                placeholder.remove();
+        function updateTaskCount(change) {
+            const taskStatElement = document.querySelector('.stat-number');
+            if (taskStatElement) {
+                const currentValue = parseInt(taskStatElement.textContent);
+                taskStatElement.textContent = currentValue + change;
             }
+        }
+        
+        function updateProjectCount(change) {
+            const projectStatElements = document.querySelectorAll('.stat-number');
+            if (projectStatElements[0]) {
+                const currentValue = parseInt(projectStatElements[0].textContent);
+                projectStatElements[0].textContent = currentValue + change;
+            }
+        }
+        
+        function updateMeetingCount(change) {
+            const meetingStatElements = document.querySelectorAll('.stat-number');
+            if (meetingStatElements[2]) {
+                const currentValue = parseInt(meetingStatElements[2].textContent);
+                meetingStatElements[2].textContent = currentValue + change;
+            }
+        }
+        
+        function addRecentActivity(update) {
+            const activityContainer = document.querySelector('.recent-activity');
+            if (!activityContainer) return;
             
-            // Create activity item
             const activityItem = document.createElement('div');
-            activityItem.className = `attendance-item p-2 ${isAlert ? 'highlight' : ''}`;
-            
-            const now = new Date();
-            const timeString = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            
-            // Determine icon and color based on event type
-            let icon = 'fas fa-user';
-            let iconColor = 'text-success';
-            let eventText = update.eventType;
-            
-            switch (update.eventType) {
-                case 'CHECK_IN':
-                    icon = 'fas fa-sign-in-alt';
-                    iconColor = 'text-success';
-                    eventText = 'checked in';
-                    break;
-                case 'CHECK_OUT':
-                    icon = 'fas fa-sign-out-alt';
-                    iconColor = 'text-secondary';
-                    eventText = 'checked out';
-                    break;
-                case 'LATE_ARRIVAL':
-                    icon = 'fas fa-clock';
-                    iconColor = 'text-warning';
-                    eventText = 'arrived late';
-                    break;
-            }
-            
+            activityItem.className = `activity-item ${update.type.toLowerCase().replace('_', '-')}`;
             activityItem.innerHTML = `
-                <div class="d-flex justify-content-between align-items-center">
-                    <div class="d-flex align-items-center">
-                        <i class="${icon} ${iconColor} me-2"></i>
-                        <div>
-                            <strong>${update.memberName}</strong> ${eventText}
-                            ${update.subteamName ? `<span class="subteam-badge badge bg-secondary ms-1">${update.subteamName}</span>` : ''}
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <strong>${update.description}</strong>
+                        <div class="activity-meta">
+                            <span>${update.userName}</span>
+                            ${update.projectName ? `in <span>${update.projectName}</span>` : ''}
                         </div>
                     </div>
-                    <small class="text-muted">${timeString}</small>
-                </div>
-                ${update.arrivalTime ? `<small class="text-muted ms-4">at ${update.arrivalTime}</small>` : ''}
-            `;
-            
-            // Add to top of feed
-            activityContainer.insertBefore(activityItem, activityContainer.firstChild);
-            
-            // Highlight new item briefly
-            setTimeout(() => {
-                activityItem.classList.add('pulse');
-                setTimeout(() => {
-                    activityItem.classList.remove('pulse');
-                }, 2000);
-            }, 100);
-            
-            // Keep only last 15 items
-            while (activityContainer.children.length > 15) {
-                activityContainer.removeChild(activityContainer.lastChild);
-            }
-        }
-        
-        // Update subteam presence breakdown
-        function updateSubteamBreakdown(subteams) {
-            const container = document.getElementById('subteam-breakdown');
-            
-            if (!subteams || subteams.length === 0) {
-                container.innerHTML = '<div class="text-muted text-center py-2">No subteam data available</div>';
-                return;
-            }
-            
-            container.innerHTML = '';
-            
-            subteams.forEach(subteam => {
-                const percentage = Math.round(subteam.percentage || 0);
-                const progressBar = document.createElement('div');
-                progressBar.className = 'mb-2';
-                
-                progressBar.innerHTML = `
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <span class="small">
-                            <span class="presence-indicator online" style="background-color: ${subteam.colorCode || '#28a745'}"></span>
-                            ${subteam.subteamName}
-                        </span>
-                        <span class="small text-muted">${subteam.present}/${subteam.total}</span>
-                    </div>
-                    <div class="progress" style="height: 6px;">
-                        <div class="progress-bar" 
-                             style="width: ${percentage}%; background-color: ${subteam.colorCode || '#28a745'}"
-                             role="progressbar" 
-                             aria-valuenow="${percentage}" 
-                             aria-valuemin="0" 
-                             aria-valuemax="100">
-                        </div>
-                    </div>
-                `;
-                
-                container.appendChild(progressBar);
-            });
-        }
-        
-        // Setup workshop control buttons
-        function setupWorkshopControls() {
-            document.getElementById('workshop-status').addEventListener('change', function(e) {
-                const newStatus = e.target.value;
-                updateWorkshopStatus(newStatus);
-            });
-            
-            document.getElementById('btn-check-all').addEventListener('click', function() {
-                if (confirm('Mark all team members as present for the current session?')) {
-                    sendWorkshopCommand('CHECK_ALL_PRESENT');
-                    showNotification('Marking all members as present...', 'info');
-                }
-            });
-            
-            document.getElementById('btn-send-reminder').addEventListener('click', function() {
-                sendWorkshopCommand('SEND_REMINDER');
-                showNotification('Meeting reminder sent to all team members', 'success');
-            });
-            
-            document.getElementById('btn-end-session').addEventListener('click', function() {
-                if (confirm('End the current workshop session? This will mark all remaining members as departed.')) {
-                    updateWorkshopStatus('CLOSED');
-                    showNotification('Workshop session ended', 'info');
-                }
-            });
-        }
-        
-        // Send workshop command via WebSocket
-        function sendWorkshopCommand(command) {
-            if (stompClient && isConnected) {
-                stompClient.publish({
-                    destination: '/app/workshop/command',
-                    body: JSON.stringify({
-                        command: command,
-                        timestamp: new Date().toISOString()
-                    })
-                });
-            }
-        }
-        
-        // Update workshop status
-        function updateWorkshopStatus(status) {
-            if (stompClient && isConnected) {
-                stompClient.publish({
-                    destination: '/app/workshop/status',
-                    body: JSON.stringify({
-                        status: status,
-                        timestamp: new Date().toISOString()
-                    })
-                });
-            }
-        }
-        
-        // Show notification toast
-        function showNotification(message, type = 'info') {
-            const toastContainer = document.getElementById('toast-container') || createToastContainer();
-            
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.setAttribute('role', 'alert');
-            
-            const typeClass = {
-                'success': 'text-bg-success',
-                'warning': 'text-bg-warning', 
-                'danger': 'text-bg-danger',
-                'info': 'text-bg-info'
-            }[type] || 'text-bg-info';
-            
-            toast.innerHTML = `
-                <div class="toast-header ${typeClass}">
-                    <i class="fas fa-users me-2"></i>
-                    <strong class="me-auto">Workshop Update</strong>
-                    <small>${new Date().toLocaleTimeString()}</small>
-                    <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
-                </div>
-                <div class="toast-body">
-                    ${message}
+                    <small class="text-muted">Just now</small>
                 </div>
             `;
             
-            toastContainer.appendChild(toast);
-            
-            const bsToast = new bootstrap.Toast(toast);
-            bsToast.show();
-            
-            // Remove after hiding
-            toast.addEventListener('hidden.bs.toast', () => {
-                toast.remove();
-            });
-        }
-        
-        // Create toast container if it doesn't exist
-        function createToastContainer() {
-            const container = document.createElement('div');
-            container.id = 'toast-container';
-            container.className = 'toast-container position-fixed top-0 end-0 p-3';
-            container.style.zIndex = '1100';
-            document.body.appendChild(container);
-            return container;
-        }
-        
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', function() {
-            if (stompClient && isConnected) {
-                stompClient.deactivate();
+            // Add to the top of the activity list
+            const firstActivity = activityContainer.querySelector('.activity-item');
+            if (firstActivity) {
+                activityContainer.insertBefore(activityItem, firstActivity);
+            } else {
+                activityContainer.appendChild(activityItem);
             }
-        });
+            
+            // Remove empty state if present
+            const emptyState = activityContainer.querySelector('.text-center');
+            if (emptyState) {
+                emptyState.remove();
+            }
+            
+            // Keep only the last 10 activities
+            const activities = activityContainer.querySelectorAll('.activity-item');
+            if (activities.length > 10) {
+                activities[activities.length - 1].remove();
+            }
+        }
     </script>
-</body>
+</div>
+
 </html>

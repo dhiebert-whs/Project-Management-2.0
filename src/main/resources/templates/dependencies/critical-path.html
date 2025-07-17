@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>Critical Path Analysis - FRC Project Management</title>
+</head>
+
+<div layout:fragment="styles">
+    <style>
+        /* Critical Path Visualization Styles - Phase 2E-D */
+        .critical-path-header {
+            background: linear-gradient(135deg, #ffc107 0%, #ff8c00 100%);
+            color: white;
+            padding: 2rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .critical-path-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="path-grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23path-grid)"/></svg>');
+            opacity: 0.3;
+        }
+        
+        .timeline-container {
+            position: relative;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .timeline-track {
+            position: relative;
+            min-height: 100px;
+            margin: 20px 0;
+            padding: 20px 0;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border-radius: 8px;
+            border: 2px solid #dee2e6;
+        }
+        
+        .timeline-axis {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #28a745 0%, #ffc107 50%, #dc3545 100%);
+            border-radius: 2px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .timeline-task {
+            position: absolute;
+            top: 20px;
+            height: 60px;
+            background: white;
+            border-radius: 8px;
+            border: 2px solid #dee2e6;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            min-width: 120px;
+        }
+        
+        .timeline-task:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+            z-index: 10;
+        }
+        
+        .timeline-task.critical {
+            border-color: #ffc107;
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border-width: 3px;
+        }
+        
+        .timeline-task.critical::before {
+            content: '';
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 12px;
+            height: 12px;
+            background: #ffc107;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        .timeline-task.completed {
+            border-color: #28a745;
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+        }
+        
+        .timeline-task.in-progress {
+            border-color: #007bff;
+            background: linear-gradient(135deg, #cce7ff 0%, #99d7ff 100%);
+        }
+        
+        .timeline-task.blocked {
+            border-color: #dc3545;
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+        }
+        
+        .task-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .task-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #495057;
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .task-meta {
+            font-size: 0.75rem;
+            color: #6c757d;
+            margin-top: 2px;
+        }
+        
+        .task-duration {
+            font-size: 0.7rem;
+            color: #6c757d;
+            white-space: nowrap;
+        }
+        
+        .dependency-arrow {
+            position: absolute;
+            top: 50%;
+            height: 2px;
+            background: #6c757d;
+            z-index: 5;
+            pointer-events: none;
+        }
+        
+        .dependency-arrow::after {
+            content: '';
+            position: absolute;
+            right: -6px;
+            top: -4px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid #6c757d;
+            border-top: 4px solid transparent;
+            border-bottom: 4px solid transparent;
+        }
+        
+        .dependency-arrow.critical {
+            background: #ffc107;
+        }
+        
+        .dependency-arrow.critical::after {
+            border-left-color: #ffc107;
+        }
+        
+        .timeline-controls {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .timeline-zoom {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .zoom-control {
+            width: 200px;
+        }
+        
+        .timeline-legend {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            margin-right: 10px;
+            border: 2px solid #dee2e6;
+        }
+        
+        .legend-color.critical {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border-color: #ffc107;
+        }
+        
+        .legend-color.completed {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            border-color: #28a745;
+        }
+        
+        .legend-color.in-progress {
+            background: linear-gradient(135deg, #cce7ff 0%, #99d7ff 100%);
+            border-color: #007bff;
+        }
+        
+        .legend-color.blocked {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            border-color: #dc3545;
+        }
+        
+        .critical-path-stats {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            margin-bottom: 10px;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #495057;
+            margin: 0;
+        }
+        
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+        
+        .stat-value.critical {
+            color: #ffc107;
+        }
+        
+        .stat-value.time {
+            color: #007bff;
+        }
+        
+        .stat-value.risk {
+            color: #dc3545;
+        }
+        
+        .task-details-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .task-detail-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .task-detail-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #495057;
+            margin: 0;
+        }
+        
+        .task-detail-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .meta-label {
+            font-weight: 600;
+            color: #6c757d;
+            min-width: 80px;
+        }
+        
+        .meta-value {
+            color: #495057;
+        }
+        
+        .float-indicator {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-left: 5px;
+        }
+        
+        .float-zero {
+            background: #ffc107;
+            color: #fff;
+        }
+        
+        .float-low {
+            background: #fd7e14;
+            color: #fff;
+        }
+        
+        .float-medium {
+            background: #28a745;
+            color: #fff;
+        }
+        
+        .float-high {
+            background: #6c757d;
+            color: #fff;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        @media (max-width: 768px) {
+            .timeline-task {
+                min-width: 80px;
+                height: 50px;
+                padding: 0 8px;
+            }
+            
+            .task-title {
+                font-size: 0.8rem;
+            }
+            
+            .task-meta {
+                font-size: 0.7rem;
+            }
+        }
+    </style>
+</div>
+
+<div layout:fragment="content">
+    <!-- Header -->
+    <div class="critical-path-header">
+        <div class="container position-relative">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="display-4 mb-2">
+                        <i class="fas fa-route me-3"></i>
+                        Critical Path Analysis
+                    </h1>
+                    <p class="lead mb-0">
+                        Visualize project timeline and identify bottlenecks for <span th:text="${project.name}">Project Name</span>
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="d-flex flex-column align-items-end">
+                        <div class="badge bg-light text-dark mb-2">
+                            <i class="fas fa-calendar me-1"></i>
+                            <span th:text="${#temporals.format(project.hardDeadline, 'MMM dd, yyyy')}">Dec 31, 2024</span>
+                        </div>
+                        <div class="badge bg-light text-dark">
+                            <i class="fas fa-clock me-1"></i>
+                            <span th:text="${criticalPath.totalDuration} + ' hours'">240 hours</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mt-4">
+        
+        <!-- Navigation -->
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dependencies">Dependencies</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Critical Path</li>
+            </ol>
+        </nav>
+
+        <!-- Controls -->
+        <div class="timeline-controls">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <div class="timeline-zoom">
+                        <label for="zoomLevel" class="form-label me-2">Zoom:</label>
+                        <input type="range" class="form-range zoom-control" id="zoomLevel" min="0.5" max="2" step="0.1" value="1">
+                        <span id="zoomValue">1.0x</span>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-primary active" data-view="timeline">
+                            <i class="fas fa-chart-line"></i> Timeline
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" data-view="gantt">
+                            <i class="fas fa-chart-bar"></i> Gantt
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-4 text-end">
+                    <button class="btn btn-primary" id="refreshAnalysis">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Timeline Visualization -->
+            <div class="col-lg-9">
+                <div class="timeline-container">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="mb-0">
+                            <i class="fas fa-project-diagram me-2"></i>Project Timeline
+                        </h4>
+                        <div class="text-muted">
+                            <small>Critical Path: <strong th:text="${criticalPath.totalDuration} + ' hours'">240 hours</strong></small>
+                        </div>
+                    </div>
+
+                    <!-- Timeline Track -->
+                    <div class="timeline-track" id="timelineTrack">
+                        <div class="timeline-axis"></div>
+                        
+                        <!-- Timeline Tasks -->
+                        <div th:each="task, taskStat : ${criticalPath.criticalTasks}" 
+                             class="timeline-task critical"
+                             th:style="'left: ' + ${taskStat.index * 150 + 20} + 'px;'"
+                             th:data-task-id="${task.id}"
+                             th:data-task-float="0">
+                            <div class="task-content">
+                                <div class="task-title" th:text="${task.title}">Task Title</div>
+                                <div class="task-meta">
+                                    <span th:text="${task.subsystem.name}">Subsystem</span>
+                                    <span class="float-indicator float-zero">Critical</span>
+                                </div>
+                            </div>
+                            <div class="task-duration" th:text="${task.estimatedDuration / 3600} + 'h'">8h</div>
+                        </div>
+                        
+                        <!-- Non-critical tasks with float -->
+                        <div th:each="task : ${tasks}" 
+                             class="timeline-task"
+                             th:if="${!#lists.contains(criticalPath.criticalTasks, task)}"
+                             th:classappend="${task.completed ? 'completed' : (task.progress > 0 ? 'in-progress' : 'blocked')}"
+                             th:style="'left: ' + ${task.id * 20 + 50} + 'px; top: ' + ${task.id % 3 * 25 + 100} + 'px;'"
+                             th:data-task-id="${task.id}"
+                             th:data-task-float="${criticalPath.taskFloats[task.id.toString()]}">
+                            <div class="task-content">
+                                <div class="task-title" th:text="${task.title}">Task Title</div>
+                                <div class="task-meta">
+                                    <span th:text="${task.subsystem.name}">Subsystem</span>
+                                    <span class="float-indicator float-medium" 
+                                          th:text="${criticalPath.taskFloats[task.id.toString()]} + ' days'">2 days</span>
+                                </div>
+                            </div>
+                            <div class="task-duration" th:text="${task.estimatedDuration / 3600} + 'h'">8h</div>
+                        </div>
+                        
+                        <!-- Dependency Arrows -->
+                        <div th:each="dependency : ${criticalPath.criticalDependencies}" 
+                             class="dependency-arrow critical"
+                             th:style="'left: ' + ${dependency.predecessorTask.id * 20 + 150} + 'px; width: ' + ${dependency.successorTask.id * 20 - dependency.predecessorTask.id * 20 - 20} + 'px;'">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Task Details Panel -->
+                <div class="task-details-panel" id="taskDetailsPanel" style="display: none;">
+                    <div class="task-detail-header">
+                        <h5 class="task-detail-title" id="taskDetailTitle">Task Details</h5>
+                        <button type="button" class="btn-close ms-auto" id="closeTaskDetails"></button>
+                    </div>
+                    
+                    <div class="task-detail-meta" id="taskDetailMeta">
+                        <!-- Task details will be populated here -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sidebar -->
+            <div class="col-lg-3">
+                <!-- Critical Path Stats -->
+                <div class="critical-path-stats">
+                    <h5 class="mb-3">
+                        <i class="fas fa-chart-line me-2"></i>Analysis Summary
+                    </h5>
+                    
+                    <div class="stat-item">
+                        <div class="stat-value critical" th:text="${#lists.size(criticalPath.criticalTasks)}">8</div>
+                        <div class="stat-label">Critical Tasks</div>
+                    </div>
+                    
+                    <div class="stat-item">
+                        <div class="stat-value time" th:text="${criticalPath.totalDuration} + ' hrs'">240 hrs</div>
+                        <div class="stat-label">Total Duration</div>
+                    </div>
+                    
+                    <div class="stat-item">
+                        <div class="stat-value risk" th:text="${#lists.size(dependencies)} + ' deps'">15 deps</div>
+                        <div class="stat-label">Dependencies</div>
+                    </div>
+                </div>
+                
+                <!-- Timeline Legend -->
+                <div class="timeline-legend">
+                    <h6 class="mb-3">
+                        <i class="fas fa-info-circle me-2"></i>Legend
+                    </h6>
+                    
+                    <div class="legend-item">
+                        <div class="legend-color critical"></div>
+                        <span>Critical Path Task</span>
+                    </div>
+                    
+                    <div class="legend-item">
+                        <div class="legend-color completed"></div>
+                        <span>Completed Task</span>
+                    </div>
+                    
+                    <div class="legend-item">
+                        <div class="legend-color in-progress"></div>
+                        <span>In Progress Task</span>
+                    </div>
+                    
+                    <div class="legend-item">
+                        <div class="legend-color blocked"></div>
+                        <span>Blocked Task</span>
+                    </div>
+                </div>
+                
+                <!-- Critical Tasks List -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-exclamation-triangle me-2 text-warning"></i>Critical Tasks
+                        </h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush">
+                            <div th:each="task : ${criticalPath.criticalTasks}" 
+                                 class="list-group-item list-group-item-action">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1" th:text="${task.title}">Task Title</h6>
+                                        <small class="text-muted" th:text="${task.subsystem.name}">Subsystem</small>
+                                    </div>
+                                    <small class="text-warning">
+                                        <i class="fas fa-clock me-1"></i>
+                                        <span th:text="${task.estimatedDuration / 3600} + 'h'">8h</span>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div layout:fragment="scripts">
+    <script>
+        // Critical Path Visualization JavaScript
+        class CriticalPathVisualizer {
+            constructor() {
+                this.currentZoom = 1.0;
+                this.selectedTask = null;
+                this.tasks = /*[[${tasks}]]*/ [];
+                this.criticalPath = /*[[${criticalPath}]]*/ {};
+                this.dependencies = /*[[${dependencies}]]*/ [];
+                
+                this.init();
+            }
+            
+            init() {
+                this.setupEventHandlers();
+                this.setupZoomControl();
+                this.setupTaskInteraction();
+                this.renderTimeline();
+            }
+            
+            setupEventHandlers() {
+                // View toggle
+                document.querySelectorAll('[data-view]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const view = e.target.dataset.view;
+                        this.switchView(view);
+                    });
+                });
+                
+                // Refresh button
+                document.getElementById('refreshAnalysis').addEventListener('click', () => {
+                    this.refreshAnalysis();
+                });
+                
+                // Task details close
+                document.getElementById('closeTaskDetails').addEventListener('click', () => {
+                    this.hideTaskDetails();
+                });
+            }
+            
+            setupZoomControl() {
+                const zoomSlider = document.getElementById('zoomLevel');
+                const zoomValue = document.getElementById('zoomValue');
+                
+                zoomSlider.addEventListener('input', (e) => {
+                    this.currentZoom = parseFloat(e.target.value);
+                    zoomValue.textContent = this.currentZoom.toFixed(1) + 'x';
+                    this.updateTimelineZoom();
+                });
+            }
+            
+            setupTaskInteraction() {
+                // Task click handlers
+                document.querySelectorAll('.timeline-task').forEach(task => {
+                    task.addEventListener('click', (e) => {
+                        const taskId = e.currentTarget.dataset.taskId;
+                        this.showTaskDetails(taskId);
+                    });
+                    
+                    task.addEventListener('mouseenter', (e) => {
+                        this.highlightTaskDependencies(e.currentTarget.dataset.taskId);
+                    });
+                    
+                    task.addEventListener('mouseleave', () => {
+                        this.clearHighlights();
+                    });
+                });
+            }
+            
+            renderTimeline() {
+                const track = document.getElementById('timelineTrack');
+                const tasks = this.tasks;
+                const criticalTasks = this.criticalPath.criticalTasks || [];
+                
+                // Clear existing timeline
+                track.innerHTML = '<div class="timeline-axis"></div>';
+                
+                // Calculate timeline positions
+                const timelineWidth = track.offsetWidth - 40;
+                const totalDuration = this.criticalPath.totalDuration || 1;
+                
+                let currentPosition = 20;
+                
+                // Render critical path tasks
+                criticalTasks.forEach((task, index) => {
+                    const taskElement = this.createTaskElement(task, currentPosition, true);
+                    track.appendChild(taskElement);
+                    
+                    const taskWidth = (task.estimatedDuration / totalDuration) * timelineWidth * 0.8;
+                    currentPosition += taskWidth + 20;
+                });
+                
+                // Render non-critical tasks
+                tasks.forEach((task, index) => {
+                    if (!criticalTasks.find(ct => ct.id === task.id)) {
+                        const taskFloat = this.criticalPath.taskFloats ? this.criticalPath.taskFloats[task.id.toString()] : 0;
+                        const yOffset = 100 + (index % 3) * 80;
+                        const taskElement = this.createTaskElement(task, currentPosition + (index * 30), false, yOffset);
+                        track.appendChild(taskElement);
+                    }
+                });
+                
+                // Render dependency arrows
+                this.renderDependencyArrows();
+            }
+            
+            createTaskElement(task, x, isCritical, y = 20) {
+                const taskDiv = document.createElement('div');
+                taskDiv.className = `timeline-task ${isCritical ? 'critical' : ''}`;
+                taskDiv.style.left = x + 'px';
+                taskDiv.style.top = y + 'px';
+                taskDiv.dataset.taskId = task.id;
+                taskDiv.dataset.taskFloat = isCritical ? '0' : (this.criticalPath.taskFloats ? this.criticalPath.taskFloats[task.id.toString()] : '1');
+                
+                // Add status class
+                if (task.completed) {
+                    taskDiv.classList.add('completed');
+                } else if (task.progress > 0) {
+                    taskDiv.classList.add('in-progress');
+                } else {
+                    taskDiv.classList.add('blocked');
+                }
+                
+                const taskWidth = Math.max(120, (task.estimatedDuration / 3600) * 15);
+                taskDiv.style.width = taskWidth + 'px';
+                
+                const floatClass = isCritical ? 'float-zero' : 
+                                 (task.taskFloat < 1 ? 'float-low' : 
+                                  task.taskFloat < 3 ? 'float-medium' : 'float-high');
+                
+                taskDiv.innerHTML = `
+                    <div class="task-content">
+                        <div class="task-title">${task.title}</div>
+                        <div class="task-meta">
+                            <span>${task.subsystem.name}</span>
+                            <span class="float-indicator ${floatClass}">
+                                ${isCritical ? 'Critical' : Math.round(task.taskFloat || 0) + ' days'}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="task-duration">${Math.round(task.estimatedDuration / 3600)}h</div>
+                `;
+                
+                // Add click handler
+                taskDiv.addEventListener('click', () => {
+                    this.showTaskDetails(task.id);
+                });
+                
+                return taskDiv;
+            }
+            
+            renderDependencyArrows() {
+                const track = document.getElementById('timelineTrack');
+                const dependencies = this.dependencies;
+                
+                dependencies.forEach(dep => {
+                    const predecessorEl = track.querySelector(`[data-task-id="${dep.predecessorTask.id}"]`);
+                    const successorEl = track.querySelector(`[data-task-id="${dep.successorTask.id}"]`);
+                    
+                    if (predecessorEl && successorEl) {
+                        const arrow = this.createDependencyArrow(predecessorEl, successorEl, dep.onCriticalPath);
+                        track.appendChild(arrow);
+                    }
+                });
+            }
+            
+            createDependencyArrow(fromEl, toEl, isCritical) {
+                const arrow = document.createElement('div');
+                arrow.className = `dependency-arrow ${isCritical ? 'critical' : ''}`;
+                
+                const fromRect = fromEl.getBoundingClientRect();
+                const toRect = toEl.getBoundingClientRect();
+                const trackRect = document.getElementById('timelineTrack').getBoundingClientRect();
+                
+                const startX = fromRect.right - trackRect.left;
+                const endX = toRect.left - trackRect.left;
+                const y = (fromRect.top + fromRect.bottom) / 2 - trackRect.top;
+                
+                arrow.style.left = startX + 'px';
+                arrow.style.top = y + 'px';
+                arrow.style.width = (endX - startX) + 'px';
+                
+                return arrow;
+            }
+            
+            updateTimelineZoom() {
+                const track = document.getElementById('timelineTrack');
+                track.style.transform = `scaleX(${this.currentZoom})`;
+                track.style.transformOrigin = 'left center';
+            }
+            
+            showTaskDetails(taskId) {
+                const task = this.tasks.find(t => t.id == taskId);
+                if (!task) return;
+                
+                const panel = document.getElementById('taskDetailsPanel');
+                const title = document.getElementById('taskDetailTitle');
+                const meta = document.getElementById('taskDetailMeta');
+                
+                title.textContent = task.title;
+                
+                const taskFloat = this.criticalPath.taskFloats ? this.criticalPath.taskFloats[task.id.toString()] : 0;
+                const isCritical = taskFloat === 0;
+                
+                meta.innerHTML = `
+                    <div class="meta-item">
+                        <span class="meta-label">Status:</span>
+                        <span class="meta-value">${task.completed ? 'Completed' : (task.progress > 0 ? 'In Progress' : 'Not Started')}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Subsystem:</span>
+                        <span class="meta-value">${task.subsystem.name}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Duration:</span>
+                        <span class="meta-value">${Math.round(task.estimatedDuration / 3600)} hours</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Float:</span>
+                        <span class="meta-value ${isCritical ? 'text-warning' : 'text-success'}">
+                            ${isCritical ? 'Critical Task' : Math.round(taskFloat) + ' days'}
+                        </span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Progress:</span>
+                        <span class="meta-value">${task.progress}%</span>
+                    </div>
+                `;
+                
+                panel.style.display = 'block';
+                this.selectedTask = task;
+            }
+            
+            hideTaskDetails() {
+                document.getElementById('taskDetailsPanel').style.display = 'none';
+                this.selectedTask = null;
+            }
+            
+            highlightTaskDependencies(taskId) {
+                // Add visual highlighting for task dependencies
+                const dependencies = this.dependencies.filter(dep => 
+                    dep.predecessorTask.id == taskId || dep.successorTask.id == taskId
+                );
+                
+                dependencies.forEach(dep => {
+                    const predecessorEl = document.querySelector(`[data-task-id="${dep.predecessorTask.id}"]`);
+                    const successorEl = document.querySelector(`[data-task-id="${dep.successorTask.id}"]`);
+                    
+                    if (predecessorEl) predecessorEl.style.boxShadow = '0 0 15px rgba(255, 193, 7, 0.8)';
+                    if (successorEl) successorEl.style.boxShadow = '0 0 15px rgba(255, 193, 7, 0.8)';
+                });
+            }
+            
+            clearHighlights() {
+                document.querySelectorAll('.timeline-task').forEach(task => {
+                    task.style.boxShadow = '';
+                });
+            }
+            
+            switchView(view) {
+                // Toggle between timeline and gantt view
+                document.querySelectorAll('[data-view]').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.querySelector(`[data-view="${view}"]`).classList.add('active');
+                
+                if (view === 'gantt') {
+                    this.renderGanttView();
+                } else {
+                    this.renderTimeline();
+                }
+            }
+            
+            renderGanttView() {
+                // Implement Gantt chart view
+                console.log('Gantt view not yet implemented');
+            }
+            
+            refreshAnalysis() {
+                // Refresh critical path analysis
+                window.location.reload();
+            }
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new CriticalPathVisualizer();
+        });
+    </script>
+</div>
+
+</html>

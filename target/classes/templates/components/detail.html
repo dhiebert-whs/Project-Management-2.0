@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>Component Details - FRC Project Management</title>
+</head>
+
+<div layout:fragment="content">
+    <div class="container mt-4">
+        
+        <!-- Component Header -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <h1>
+                    <i class="fas fa-cog text-secondary me-2"></i>
+                    <span th:text="${component.name}">Component Name</span>
+                </h1>
+                <p class="text-muted mb-0">
+                    <span th:text="${component.category}">Category</span> • 
+                    <span th:text="${component.status}">Status</span>
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="btn-group">
+                    <a th:href="@{/components/{id}/edit(id=${component.id})}" 
+                       class="btn btn-primary"
+                       sec:authorize="hasAnyRole('MENTOR', 'ADMIN')">
+                        <i class="fas fa-edit me-1"></i>Edit
+                    </a>
+                    <a href="/components" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Components
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Component Details -->
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Component Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Name:</strong> <span th:text="${component.name}">Component Name</span></p>
+                                <p><strong>Category:</strong> <span th:text="${component.category}">Category</span></p>
+                                <p><strong>Status:</strong> <span th:text="${component.status}">Status</span></p>
+                                <p><strong>Quantity:</strong> <span th:text="${component.quantity}">0</span></p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Supplier:</strong> <span th:text="${component.supplier}">Supplier</span></p>
+                                <p><strong>Part Number:</strong> <span th:text="${component.partNumber}">Part Number</span></p>
+                                <p><strong>Unit Cost:</strong> $<span th:text="${component.unitCost}">0.00</span></p>
+                                <p><strong>Project:</strong> <span th:text="${component.project}">Project</span></p>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <p><strong>Description:</strong></p>
+                                <p th:text="${component.description}">Component description</p>
+                                <p><strong>Specifications:</strong></p>
+                                <p th:text="${component.specifications}">Component specifications</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Related Tasks -->
+                <div class="card mb-4" th:if="${relatedTasks != null and !#lists.isEmpty(relatedTasks)}">
+                    <div class="card-header">
+                        <h5 class="mb-0">Related Tasks</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group list-group-flush">
+                            <div th:each="task : ${relatedTasks}" class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1" th:text="${task.title}">Task Title</h6>
+                                        <small class="text-muted">Assigned to: <span th:text="${task.assignee}">Assignee</span></small>
+                                    </div>
+                                    <span class="badge bg-primary" th:text="${task.status}">Status</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <!-- Usage History -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">Usage History</h6>
+                    </div>
+                    <div class="card-body" th:if="${usageHistory != null and !#lists.isEmpty(usageHistory)}">
+                        <div class="timeline">
+                            <div th:each="entry : ${usageHistory}" class="timeline-item">
+                                <div class="timeline-content">
+                                    <div class="fw-bold" th:text="${entry.action}">Action</div>
+                                    <small class="text-muted">
+                                        by <span th:text="${entry.user}">User</span> • 
+                                        <span th:text="${entry.date}">Date</span>
+                                    </small>
+                                    <div th:if="${entry.quantity}">
+                                        Quantity: <span th:text="${entry.quantity}">0</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body" th:if="${usageHistory == null or #lists.isEmpty(usageHistory)}">
+                        <p class="text-muted text-center">No usage history available</p>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">Quick Actions</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-plus me-1"></i>Add to Task
+                            </button>
+                            <button class="btn btn-outline-success btn-sm">
+                                <i class="fas fa-warehouse me-1"></i>Update Inventory
+                            </button>
+                            <button class="btn btn-outline-warning btn-sm">
+                                <i class="fas fa-shopping-cart me-1"></i>Reorder Component
+                            </button>
+                            <button class="btn btn-outline-info btn-sm">
+                                <i class="fas fa-file-alt me-1"></i>View Documentation
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</html>

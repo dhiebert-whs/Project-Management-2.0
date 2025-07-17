@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>Project Progress Report - FRC Project Management</title>
+</head>
+
+<div layout:fragment="styles">
+    <style>
+        .progress-card {
+            transition: all 0.3s ease;
+            border: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .progress-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        
+        .progress-bar-custom {
+            height: 8px;
+            border-radius: 4px;
+        }
+        
+        .timeline-item {
+            position: relative;
+            padding-left: 30px;
+            margin-bottom: 20px;
+        }
+        
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 10px;
+            top: 5px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #007bff;
+        }
+        
+        .timeline-item::after {
+            content: '';
+            position: absolute;
+            left: 14px;
+            top: 15px;
+            width: 2px;
+            height: calc(100% + 10px);
+            background: #dee2e6;
+        }
+        
+        .timeline-item:last-child::after {
+            display: none;
+        }
+        
+        .milestone-card {
+            border-left: 4px solid #28a745;
+            transition: all 0.3s ease;
+        }
+        
+        .milestone-card.pending {
+            border-left-color: #6c757d;
+        }
+        
+        .milestone-card.in-progress {
+            border-left-color: #ffc107;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+    </style>
+</div>
+
+<div layout:fragment="content">
+    <div class="container mt-4">
+        
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <h1>
+                    <i class="fas fa-chart-line text-primary me-2"></i>
+                    Project Progress Report
+                </h1>
+                <p class="text-muted mb-0">
+                    Track project completion, milestones, and timeline progress
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="btn-group">
+                    <select class="form-select" style="max-width: 200px;">
+                        <option value="">All Projects</option>
+                        <option th:each="project : ${projects}" th:value="${project.id}" 
+                                th:selected="${project.id == selectedProjectId}" th:text="${project.name}">Project</option>
+                    </select>
+                    <a href="/reports" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Reports
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Project Progress Overview -->
+        <div class="row mb-4">
+            <div th:each="project : ${projectProgressData}" class="col-lg-6 mb-3">
+                <div class="card progress-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="card-title mb-0" th:text="${project.name}">Project Name</h5>
+                            <span class="badge bg-primary" th:text="${project.completion + '%'}">0%</span>
+                        </div>
+                        
+                        <div class="progress progress-bar-custom mb-3">
+                            <div class="progress-bar" role="progressbar" 
+                                 th:style="'width: ' + ${project.completion} + '%'"
+                                 th:aria-valuenow="${project.completion}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="fw-bold" th:text="${project.tasksCompleted}">0</div>
+                                <small class="text-muted">Tasks Done</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="fw-bold" th:text="${project.totalTasks}">0</div>
+                                <small class="text-muted">Total Tasks</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="fw-bold" th:text="${project.daysRemaining}">0</div>
+                                <small class="text-muted">Days Left</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Row -->
+        <div class="row">
+            <!-- Timeline -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-calendar-alt me-2"></i>
+                            Project Timeline
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="timeline">
+                            <div th:each="event : ${timelineData}" class="timeline-item">
+                                <div class="timeline-content">
+                                    <div class="fw-bold" th:text="${event.event}">Event</div>
+                                    <small class="text-muted" th:text="${event.date}">Date</small>
+                                    <span class="badge badge-sm ms-2" 
+                                          th:classappend="${event.type == 'milestone' ? 'bg-success' : (event.type == 'deadline' ? 'bg-danger' : 'bg-info')}"
+                                          th:text="${event.type}">Type</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Milestones -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-flag me-2"></i>
+                            Project Milestones
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div th:each="milestone : ${milestoneData}" 
+                             class="card milestone-card mb-3"
+                             th:classappend="${milestone.status.toLowerCase().replace(' ', '-')}">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0" th:text="${milestone.name}">Milestone</h6>
+                                    <span class="badge" 
+                                          th:classappend="${milestone.status == 'Completed' ? 'bg-success' : (milestone.status == 'In Progress' ? 'bg-warning' : 'bg-secondary')}"
+                                          th:text="${milestone.status}">Status</span>
+                                </div>
+                                <small class="text-muted">Due: <span th:text="${milestone.date}">Date</span></small>
+                                <div class="progress progress-bar-custom mt-2">
+                                    <div class="progress-bar" 
+                                         th:style="'width: ' + ${milestone.completion} + '%'"
+                                         th:aria-valuenow="${milestone.completion}"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Chart -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-area me-2"></i>
+                            Progress Trends
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="progressChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div layout:fragment="scripts">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Progress Chart
+        const ctx = document.getElementById('progressChart').getContext('2d');
+        const progressChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6'],
+                datasets: [{
+                    label: 'Project Completion %',
+                    data: [10, 25, 40, 55, 75, 85],
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }, {
+                    label: 'Planned Progress %',
+                    data: [15, 30, 45, 60, 75, 90],
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    tension: 0.4,
+                    fill: false,
+                    borderDash: [5, 5]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    }
+                }
+            }
+        });
+    </script>
+</div>
+
+</html>

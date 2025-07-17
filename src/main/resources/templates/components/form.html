@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout/base}">
+<head>
+    <title th:text="${component != null ? 'Edit Component' : 'New Component'} + ' - FRC Project Management'">New Component - FRC Project Management</title>
+</head>
+
+<div layout:fragment="content">
+    <div class="container mt-4">
+        
+        <!-- Form Header -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <h1>
+                    <i class="fas fa-cog text-secondary me-2"></i>
+                    <span th:text="${component != null ? 'Edit Component' : 'New Component'}">New Component</span>
+                </h1>
+                <p class="text-muted mb-0">
+                    <span th:text="${component != null ? 'Update component information and specifications' : 'Add a new component to your inventory'}">Add a new component to your inventory</span>
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="/components" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Components
+                </a>
+            </div>
+        </div>
+
+        <!-- Component Form -->
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Component Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <form th:action="@{/components}" method="post" th:object="${component}">
+                            <input type="hidden" th:field="*{id}" th:if="${component != null}"/>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="name" class="form-label">Component Name *</label>
+                                        <input type="text" class="form-control" id="name" th:field="*{name}" required>
+                                        <div class="form-text">Enter a descriptive name for the component</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="category" class="form-label">Category *</label>
+                                        <select class="form-select" id="category" th:field="*{category}" required>
+                                            <option value="">Select a category...</option>
+                                            <option th:each="cat : ${categories}" th:value="${cat}" th:text="${cat}">Category</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="partNumber" class="form-label">Part Number</label>
+                                        <input type="text" class="form-control" id="partNumber" th:field="*{partNumber}">
+                                        <div class="form-text">Manufacturer's part number</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="supplier" class="form-label">Supplier</label>
+                                        <select class="form-select" id="supplier" th:field="*{supplier}">
+                                            <option value="">Select a supplier...</option>
+                                            <option th:each="sup : ${suppliers}" th:value="${sup}" th:text="${sup}">Supplier</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="quantity" class="form-label">Quantity *</label>
+                                        <input type="number" class="form-control" id="quantity" th:field="*{quantity}" min="0" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="unitCost" class="form-label">Unit Cost ($)</label>
+                                        <input type="number" class="form-control" id="unitCost" th:field="*{unitCost}" step="0.01" min="0">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="status" class="form-label">Status *</label>
+                                        <select class="form-select" id="status" th:field="*{status}" required>
+                                            <option value="">Select status...</option>
+                                            <option value="Available">Available</option>
+                                            <option value="In Use">In Use</option>
+                                            <option value="Ordered">Ordered</option>
+                                            <option value="Out of Stock">Out of Stock</option>
+                                            <option value="Discontinued">Discontinued</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="project" class="form-label">Associated Project</label>
+                                <select class="form-select" id="project" th:field="*{project}">
+                                    <option value="">Select a project...</option>
+                                    <option th:each="proj : ${projects}" th:value="${proj.name}" th:text="${proj.name}">Project</option>
+                                </select>
+                                <div class="form-text">Link this component to a specific project</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description</label>
+                                <textarea class="form-control" id="description" th:field="*{description}" rows="3" 
+                                          placeholder="Describe the component's purpose and usage..."></textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="specifications" class="form-label">Technical Specifications</label>
+                                <textarea class="form-control" id="specifications" th:field="*{specifications}" rows="3" 
+                                          placeholder="Enter technical specifications (voltage, dimensions, etc.)..."></textarea>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between">
+                                <button type="button" class="btn btn-outline-secondary" onclick="history.back()">
+                                    <i class="fas fa-times me-1"></i>Cancel
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i>
+                                    <span th:text="${component != null ? 'Update Component' : 'Create Component'}">Create Component</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sidebar with help -->
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">Help & Guidelines</h6>
+                    </div>
+                    <div class="card-body">
+                        <h6>Component Categories</h6>
+                        <ul class="small">
+                            <li><strong>Motors:</strong> Drive motors, actuators, servos</li>
+                            <li><strong>Electronics:</strong> Controllers, sensors, wiring</li>
+                            <li><strong>Mechanical:</strong> Frames, gears, wheels</li>
+                            <li><strong>Pneumatics:</strong> Cylinders, valves, fittings</li>
+                            <li><strong>Hardware:</strong> Fasteners, brackets, tools</li>
+                        </ul>
+                        
+                        <h6 class="mt-3">Status Guidelines</h6>
+                        <ul class="small">
+                            <li><strong>Available:</strong> Ready to use</li>
+                            <li><strong>In Use:</strong> Currently assigned to tasks</li>
+                            <li><strong>Ordered:</strong> On order from supplier</li>
+                            <li><strong>Out of Stock:</strong> Need to reorder</li>
+                        </ul>
+                        
+                        <div class="alert alert-info mt-3">
+                            <small>
+                                <i class="fas fa-info-circle me-1"></i>
+                                Complete specifications help with future planning and ordering decisions.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</html>

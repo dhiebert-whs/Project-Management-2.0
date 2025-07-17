@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>Reports Dashboard - FRC Project Management</title>
+</head>
+
+<div layout:fragment="styles">
+    <style>
+        /* Reports Dashboard Styles */
+        .reports-header {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            padding: 2rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .reports-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="reports-grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23reports-grid)"/></svg>');
+            opacity: 0.3;
+        }
+        
+        .report-type-card {
+            transition: all 0.3s ease;
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            height: 100%;
+        }
+        
+        .report-type-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .report-type-card .card-body {
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .report-type-card i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            transition: transform 0.3s ease;
+        }
+        
+        .report-type-card:hover i {
+            transform: scale(1.1);
+        }
+        
+        .stats-overview {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .recent-reports {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .report-item {
+            padding: 1rem;
+            border-left: 4px solid #dee2e6;
+            margin-bottom: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .report-item:hover {
+            background: #e9ecef;
+            border-left-color: #007bff;
+        }
+        
+        .report-meta {
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+        
+        .quick-filters {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .filter-chip {
+            display: inline-block;
+            background: #e9ecef;
+            border-radius: 20px;
+            padding: 5px 15px;
+            margin: 5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.875rem;
+        }
+        
+        .filter-chip:hover,
+        .filter-chip.active {
+            background: #007bff;
+            color: white;
+        }
+    </style>
+</div>
+
+<div layout:fragment="content">
+    <!-- Header -->
+    <div class="reports-header">
+        <div class="container position-relative">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="display-4 mb-2">
+                        <i class="fas fa-chart-bar me-3"></i>
+                        Reports & Analytics
+                    </h1>
+                    <p class="lead mb-0">
+                        Generate insights, track progress, and analyze team performance with comprehensive reporting tools
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="d-flex flex-column align-items-end">
+                        <div class="badge bg-light text-dark mb-2">
+                            <i class="fas fa-chart-line me-1"></i>
+                            <span th:text="${totalProjects}">0</span> Projects Tracked
+                        </div>
+                        <a href="/reports/custom" class="btn btn-light" sec:authorize="hasAnyRole('MENTOR', 'ADMIN')">
+                            <i class="fas fa-tools me-1"></i>Custom Report
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mt-4">
+        
+        <!-- Statistics Overview -->
+        <div class="stats-overview">
+            <div class="row">
+                <div class="col-md-3 stat-item">
+                    <div class="stat-number" th:text="${totalProjects}">0</div>
+                    <div class="stat-label">Total Projects</div>
+                </div>
+                <div class="col-md-3 stat-item">
+                    <div class="stat-number" th:text="${activeProjects}">0</div>
+                    <div class="stat-label">Active Projects</div>
+                </div>
+                <div class="col-md-3 stat-item">
+                    <div class="stat-number" th:text="${completedProjects}">0</div>
+                    <div class="stat-label">Completed Projects</div>
+                </div>
+                <div class="col-md-3 stat-item">
+                    <div class="stat-number" th:text="${overdueProjects}">0</div>
+                    <div class="stat-label">Overdue Projects</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Filters -->
+        <div class="quick-filters">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Filter Reports:</label>
+                    <div>
+                        <span class="filter-chip active" data-type="">All Reports</span>
+                        <span class="filter-chip" data-type="project-progress">Project Progress</span>
+                        <span class="filter-chip" data-type="team-performance">Team Performance</span>
+                        <span class="filter-chip" data-type="component-usage">Components</span>
+                    </div>
+                </div>
+                <div class="col-md-6 text-end">
+                    <select class="form-select" style="max-width: 200px; display: inline-block;">
+                        <option value="">All Projects</option>
+                        <option th:each="project : ${projects}" th:value="${project.id}" th:text="${project.name}">Project</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Report Types -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h3 class="mb-3">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    Available Reports
+                </h3>
+            </div>
+            <div th:each="reportType : ${reportTypes}" class="col-lg-4 col-md-6 mb-3">
+                <div class="card report-type-card" th:data-type="${reportType.id}">
+                    <div class="card-body">
+                        <i th:class="${reportType.icon} + ' text-primary mb-3'"></i>
+                        <h5 class="card-title" th:text="${reportType.name}">Report Name</h5>
+                        <p class="card-text text-muted" th:text="${reportType.description}">Report description</p>
+                        <a th:href="@{/reports/{type}(type=${reportType.id})}" class="btn btn-primary">
+                            <i class="fas fa-eye me-1"></i>View Report
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Row -->
+        <div class="row">
+            <!-- Recent Reports -->
+            <div class="col-lg-8">
+                <div class="recent-reports">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="mb-0">
+                            <i class="fas fa-clock me-2"></i>
+                            Recent Reports
+                        </h4>
+                        <button class="btn btn-outline-primary btn-sm" onclick="refreshReports()">
+                            <i class="fas fa-sync-alt me-1"></i>Refresh
+                        </button>
+                    </div>
+                    
+                    <div th:if="${recentReports != null and !#lists.isEmpty(recentReports)}">
+                        <div th:each="report : ${recentReports}" class="report-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong th:text="${report.name}">Report Name</strong>
+                                    <div class="report-meta">
+                                        <span th:text="${report.type}">Report Type</span> • 
+                                        <span th:text="${report.size}">File Size</span>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <small class="text-muted" th:text="${report.date}">Date</small>
+                                    <br>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-outline-success">
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div th:if="${recentReports == null or #lists.isEmpty(recentReports)}" class="text-center py-4">
+                        <i class="fas fa-chart-bar fa-2x text-muted mb-3"></i>
+                        <p class="text-muted">No recent reports available</p>
+                        <p class="text-muted">
+                            <small>Generate your first report using one of the options above</small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Popular Reports -->
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-star me-2"></i>
+                            Popular Reports
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div th:if="${popularReports != null and !#lists.isEmpty(popularReports)}">
+                            <div th:each="report : ${popularReports}" class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <div class="fw-bold" th:text="${report.name}">Report Name</div>
+                                    <small class="text-muted" th:text="${report.type}">Report Type</small>
+                                </div>
+                                <span class="badge bg-primary" th:text="${report.downloads} + ' downloads'">0 downloads</span>
+                            </div>
+                        </div>
+                        
+                        <div th:if="${popularReports == null or #lists.isEmpty(popularReports)}" class="text-center py-3">
+                            <i class="fas fa-chart-line fa-2x text-muted mb-2"></i>
+                            <p class="text-muted">No popular reports yet</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-bolt me-2"></i>
+                            Quick Actions
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="/reports/project-progress" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-chart-line me-1"></i>Project Progress
+                            </a>
+                            <a href="/reports/team-performance" class="btn btn-outline-success btn-sm">
+                                <i class="fas fa-users me-1"></i>Team Performance
+                            </a>
+                            <a href="/reports/component-usage" class="btn btn-outline-info btn-sm">
+                                <i class="fas fa-cogs me-1"></i>Component Usage
+                            </a>
+                            <a href="/reports/custom" class="btn btn-outline-warning btn-sm" sec:authorize="hasAnyRole('MENTOR', 'ADMIN')">
+                                <i class="fas fa-tools me-1"></i>Custom Report
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div layout:fragment="scripts">
+    <script>
+        // Reports Dashboard JavaScript
+        document.addEventListener('DOMContentLoaded', function() {
+            setupReportFilters();
+            setupReportTypeCards();
+        });
+        
+        function setupReportFilters() {
+            const filterChips = document.querySelectorAll('.filter-chip');
+            const reportCards = document.querySelectorAll('.report-type-card');
+            
+            filterChips.forEach(chip => {
+                chip.addEventListener('click', function() {
+                    // Remove active class from all chips
+                    filterChips.forEach(c => c.classList.remove('active'));
+                    // Add active class to clicked chip
+                    this.classList.add('active');
+                    
+                    const selectedType = this.dataset.type;
+                    
+                    reportCards.forEach(card => {
+                        if (selectedType === '' || card.dataset.type === selectedType) {
+                            card.closest('.col-lg-4').style.display = 'block';
+                        } else {
+                            card.closest('.col-lg-4').style.display = 'none';
+                        }
+                    });
+                });
+            });
+        }
+        
+        function setupReportTypeCards() {
+            const reportCards = document.querySelectorAll('.report-type-card');
+            
+            reportCards.forEach(card => {
+                card.addEventListener('click', function(e) {
+                    if (!e.target.closest('a')) {
+                        const link = this.querySelector('a');
+                        if (link) {
+                            link.click();
+                        }
+                    }
+                });
+            });
+        }
+        
+        function refreshReports() {
+            // In a real implementation, this would refresh the reports list
+            location.reload();
+        }
+    </script>
+</div>
+
+</html>

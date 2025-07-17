@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Dependency Modal</title>
+</head>
+<body>
+
+<!-- Edit Dependency Modal -->
+<div class="modal fade" id="editDependencyModal" tabindex="-1" aria-labelledby="editDependencyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="editDependencyForm">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editDependencyModalLabel">
+                        <i class="fas fa-edit me-2"></i>Edit Task Dependency
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editDependencyId" name="dependencyId" />
+                    
+                    <!-- Current Dependency Display -->
+                    <div class="alert alert-info mb-3">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-info-circle me-2"></i>Current Dependency
+                        </h6>
+                        <div class="d-flex align-items-center">
+                            <span id="currentPredecessorTask" class="fw-bold">Loading...</span>
+                            <i class="fas fa-arrow-right mx-3 text-primary"></i>
+                            <span id="currentSuccessorTask" class="fw-bold">Loading...</span>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-section">
+                                <h6><i class="fas fa-arrow-right me-2"></i>Prerequisite Task</h6>
+                                <select class="form-select" id="editPrerequisiteTaskId" name="predecessorTaskId" required>
+                                    <option value="">Choose prerequisite task...</option>
+                                    <option th:each="task : ${tasks}" 
+                                            th:value="${task.id}" 
+                                            th:text="${task.title + ' (' + task.subsystem.name + ')'}">
+                                        Task Name (Subsystem)
+                                    </option>
+                                </select>
+                                <div class="form-text">Task that must be completed first</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-section">
+                                <h6><i class="fas fa-arrow-left me-2"></i>Dependent Task</h6>
+                                <select class="form-select" id="editDependentTaskId" name="successorTaskId" required>
+                                    <option value="">Choose dependent task...</option>
+                                    <option th:each="task : ${tasks}" 
+                                            th:value="${task.id}" 
+                                            th:text="${task.title + ' (' + task.subsystem.name + ')'}">
+                                        Task Name (Subsystem)
+                                    </option>
+                                </select>
+                                <div class="form-text">Task that depends on the prerequisite</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-section">
+                                <label for="editDependencyType" class="form-label">Dependency Type</label>
+                                <select class="form-select" id="editDependencyType" name="type" required>
+                                    <option value="">Choose dependency type...</option>
+                                    <option value="FINISH_TO_START">Finish to Start (Default)</option>
+                                    <option value="START_TO_START">Start to Start</option>
+                                    <option value="FINISH_TO_FINISH">Finish to Finish</option>
+                                    <option value="START_TO_FINISH">Start to Finish</option>
+                                    <option value="BLOCKING">Blocking</option>
+                                    <option value="SOFT">Soft (Recommendation)</option>
+                                </select>
+                                <div class="form-text">
+                                    <small>
+                                        <strong>Finish to Start:</strong> Prerequisite must finish before dependent can start<br>
+                                        <strong>Start to Start:</strong> Both tasks can start simultaneously<br>
+                                        <strong>Blocking:</strong> Hard constraint that cannot be overridden
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-section">
+                                <label for="editLagDays" class="form-label">Lag Time (Days)</label>
+                                <input type="number" class="form-control" id="editLagDays" name="lagDays" min="0" max="30" step="1" value="0">
+                                <div class="form-text">Optional delay between tasks</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <label for="editDependencyNotes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="editDependencyNotes" name="notes" rows="3" 
+                                  placeholder="Optional notes about this dependency..."></textarea>
+                    </div>
+                    
+                    <!-- Dependency Status -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-section">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="editDependencyActive" name="active" checked>
+                                    <label class="form-check-label" for="editDependencyActive">
+                                        Active Dependency
+                                    </label>
+                                    <div class="form-text">Uncheck to temporarily disable this dependency</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-section">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="editCriticalPath" name="criticalPath" disabled>
+                                    <label class="form-check-label" for="editCriticalPath">
+                                        On Critical Path
+                                    </label>
+                                    <div class="form-text">Automatically calculated based on project schedule</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Validation Messages -->
+                    <div class="alert alert-danger d-none" id="editValidationError">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <span id="editValidationMessage"></span>
+                    </div>
+                    
+                    <!-- Impact Analysis -->
+                    <div class="alert alert-warning d-none" id="editImpactAnalysis">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Impact Analysis
+                        </h6>
+                        <div id="editImpactMessage"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" id="previewChanges">
+                        <i class="fas fa-eye me-2"></i>Preview Changes
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Edit Dependency Modal JavaScript
+class EditDependencyModal {
+    constructor() {
+        this.modal = null;
+        this.currentDependency = null;
+        this.init();
+    }
+    
+    init() {
+        this.modal = new bootstrap.Modal(document.getElementById('editDependencyModal'));
+        this.setupEventHandlers();
+    }
+    
+    setupEventHandlers() {
+        // Form submission
+        document.getElementById('editDependencyForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.updateDependency();
+        });
+        
+        // Preview changes
+        document.getElementById('previewChanges').addEventListener('click', () => {
+            this.previewChanges();
+        });
+        
+        // Type change handler
+        document.getElementById('editDependencyType').addEventListener('change', (e) => {
+            this.updateTypeDescription(e.target.value);
+        });
+        
+        // Validation on field changes
+        const fields = ['editPrerequisiteTaskId', 'editDependentTaskId', 'editDependencyType'];
+        fields.forEach(fieldId => {
+            document.getElementById(fieldId).addEventListener('change', () => {
+                this.validateDependency();
+            });
+        });
+    }
+    
+    open(dependency) {
+        this.currentDependency = dependency;
+        this.loadDependencyData();
+        this.modal.show();
+    }
+    
+    loadDependencyData() {
+        if (!this.currentDependency) return;
+        
+        // Set hidden ID
+        document.getElementById('editDependencyId').value = this.currentDependency.id;
+        
+        // Update current dependency display
+        document.getElementById('currentPredecessorTask').textContent = this.currentDependency.predecessorTaskTitle;
+        document.getElementById('currentSuccessorTask').textContent = this.currentDependency.successorTaskTitle;
+        
+        // Populate form fields
+        document.getElementById('editPrerequisiteTaskId').value = this.currentDependency.predecessorTaskId;
+        document.getElementById('editDependentTaskId').value = this.currentDependency.successorTaskId;
+        document.getElementById('editDependencyType').value = this.currentDependency.type;
+        document.getElementById('editLagDays').value = this.currentDependency.lagDays || 0;
+        document.getElementById('editDependencyNotes').value = this.currentDependency.notes || '';
+        document.getElementById('editDependencyActive').checked = this.currentDependency.active !== false;
+        document.getElementById('editCriticalPath').checked = this.currentDependency.onCriticalPath === true;
+        
+        // Update type description
+        this.updateTypeDescription(this.currentDependency.type);
+        
+        // Clear validation messages
+        this.clearValidationMessages();
+    }
+    
+    updateTypeDescription(type) {
+        const descriptions = {
+            'FINISH_TO_START': 'Prerequisite must finish before dependent can start (most common)',
+            'START_TO_START': 'Both tasks can start simultaneously',
+            'FINISH_TO_FINISH': 'Both tasks must finish simultaneously',
+            'START_TO_FINISH': 'Dependent must start before prerequisite finishes (rare)',
+            'BLOCKING': 'Hard constraint that cannot be overridden',
+            'SOFT': 'Recommendation that can be overridden if needed'
+        };
+        
+        const formText = document.querySelector('#editDependencyType').nextElementSibling;
+        if (formText && descriptions[type]) {
+            formText.innerHTML = `<small><strong>Selected:</strong> ${descriptions[type]}</small>`;
+        }
+    }
+    
+    validateDependency() {
+        const prerequisiteId = document.getElementById('editPrerequisiteTaskId').value;
+        const dependentId = document.getElementById('editDependentTaskId').value;
+        const type = document.getElementById('editDependencyType').value;
+        
+        // Clear previous validation
+        this.clearValidationMessages();
+        
+        // Basic validation
+        if (!prerequisiteId || !dependentId || !type) {
+            return;
+        }
+        
+        // Same task validation
+        if (prerequisiteId === dependentId) {
+            this.showValidationError('A task cannot depend on itself');
+            return;
+        }
+        
+        // Check for potential cycle (simplified check)
+        if (this.wouldCreateCycle(prerequisiteId, dependentId)) {
+            this.showValidationError('This dependency would create a cycle in the project');
+            return;
+        }
+        
+        // Check for existing dependency
+        if (this.dependencyExists(prerequisiteId, dependentId)) {
+            this.showValidationError('A dependency already exists between these tasks');
+            return;
+        }
+    }
+    
+    wouldCreateCycle(prerequisiteId, dependentId) {
+        // This is a simplified cycle detection - in reality, you'd call the backend
+        // For now, we'll do a basic check
+        return false; // Implement proper cycle detection if needed
+    }
+    
+    dependencyExists(prerequisiteId, dependentId) {
+        // Check if this dependency already exists (excluding current one)
+        // This would typically be a backend call
+        return false; // Implement proper existence check if needed
+    }
+    
+    previewChanges() {
+        const formData = new FormData(document.getElementById('editDependencyForm'));
+        const changes = this.getChanges(formData);
+        
+        if (changes.length === 0) {
+            this.showImpactAnalysis('No changes detected');
+            return;
+        }
+        
+        let message = '<ul>';
+        changes.forEach(change => {
+            message += `<li>${change}</li>`;
+        });
+        message += '</ul>';
+        
+        this.showImpactAnalysis(message);
+    }
+    
+    getChanges(formData) {
+        const changes = [];
+        
+        // Compare each field
+        const newPrerequisiteId = formData.get('predecessorTaskId');
+        const newDependentId = formData.get('successorTaskId');
+        const newType = formData.get('type');
+        const newLagDays = formData.get('lagDays');
+        const newNotes = formData.get('notes');
+        const newActive = formData.get('active') === 'on';
+        
+        if (newPrerequisiteId != this.currentDependency.predecessorTaskId) {
+            changes.push('Prerequisite task changed');
+        }
+        
+        if (newDependentId != this.currentDependency.successorTaskId) {
+            changes.push('Dependent task changed');
+        }
+        
+        if (newType !== this.currentDependency.type) {
+            changes.push(`Dependency type changed from ${this.currentDependency.type} to ${newType}`);
+        }
+        
+        if (newLagDays != (this.currentDependency.lagDays || 0)) {
+            changes.push(`Lag time changed from ${this.currentDependency.lagDays || 0} to ${newLagDays} days`);
+        }
+        
+        if (newNotes !== (this.currentDependency.notes || '')) {
+            changes.push('Notes updated');
+        }
+        
+        if (newActive !== (this.currentDependency.active !== false)) {
+            changes.push(`Dependency ${newActive ? 'activated' : 'deactivated'}`);
+        }
+        
+        return changes;
+    }
+    
+    async updateDependency() {
+        // Validate before submission
+        this.validateDependency();
+        
+        if (document.getElementById('editValidationError').classList.contains('d-none') === false) {
+            return; // Don't submit if there are validation errors
+        }
+        
+        const form = document.getElementById('editDependencyForm');
+        const formData = new FormData(form);
+        
+        const dependencyData = {
+            id: parseInt(formData.get('dependencyId')),
+            predecessorTaskId: parseInt(formData.get('predecessorTaskId')),
+            successorTaskId: parseInt(formData.get('successorTaskId')),
+            type: formData.get('type'),
+            lagDays: parseInt(formData.get('lagDays')) || 0,
+            notes: formData.get('notes') || '',
+            active: formData.get('active') === 'on'
+        };
+        
+        try {
+            const response = await fetch(`/api/dependencies/${dependencyData.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(dependencyData)
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                this.showSuccess('Dependency updated successfully');
+                this.modal.hide();
+                
+                // Refresh the dependency list
+                if (window.dependencyManager) {
+                    window.dependencyManager.loadDependencies();
+                }
+            } else {
+                this.showValidationError(data.message || 'Failed to update dependency');
+            }
+        } catch (error) {
+            console.error('Error updating dependency:', error);
+            this.showValidationError('Error updating dependency');
+        }
+    }
+    
+    showValidationError(message) {
+        const errorDiv = document.getElementById('editValidationError');
+        const messageSpan = document.getElementById('editValidationMessage');
+        
+        messageSpan.textContent = message;
+        errorDiv.classList.remove('d-none');
+    }
+    
+    showImpactAnalysis(message) {
+        const impactDiv = document.getElementById('editImpactAnalysis');
+        const messageDiv = document.getElementById('editImpactMessage');
+        
+        messageDiv.innerHTML = message;
+        impactDiv.classList.remove('d-none');
+    }
+    
+    clearValidationMessages() {
+        document.getElementById('editValidationError').classList.add('d-none');
+        document.getElementById('editImpactAnalysis').classList.add('d-none');
+    }
+    
+    showSuccess(message) {
+        // Create a simple toast notification
+        const toast = document.createElement('div');
+        toast.className = 'alert alert-success alert-dismissible fade show';
+        toast.style.position = 'fixed';
+        toast.style.top = '100px';
+        toast.style.right = '20px';
+        toast.style.zIndex = '9999';
+        toast.style.minWidth = '300px';
+        
+        toast.innerHTML = `
+            <i class="fas fa-check-circle me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 5000);
+    }
+}
+
+// Initialize the edit modal when the document loads
+document.addEventListener('DOMContentLoaded', () => {
+    window.editDependencyModal = new EditDependencyModal();
+});
+</script>
+
+</body>
+</html>

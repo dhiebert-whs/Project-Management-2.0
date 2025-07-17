@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>Team Performance Report - FRC Project Management</title>
+</head>
+
+<div layout:fragment="styles">
+    <style>
+        .performance-card {
+            transition: all 0.3s ease;
+            border: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .performance-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        
+        .member-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .rating-stars {
+            color: #ffc107;
+        }
+        
+        .subteam-progress {
+            position: relative;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .subteam-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .activity-chart {
+            height: 200px;
+        }
+        
+        .stat-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 0 auto;
+        }
+        
+        .engagement-meter {
+            background: conic-gradient(
+                #28a745 0deg,
+                #28a745 calc(var(--engagement) * 3.6deg),
+                #e9ecef calc(var(--engagement) * 3.6deg),
+                #e9ecef 360deg
+            );
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .engagement-meter::before {
+            content: attr(data-value) '%';
+            background: white;
+            border-radius: 50%;
+            width: 80%;
+            height: 80%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+    </style>
+</div>
+
+<div layout:fragment="content">
+    <div class="container mt-4">
+        
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <h1>
+                    <i class="fas fa-users text-success me-2"></i>
+                    Team Performance Report
+                </h1>
+                <p class="text-muted mb-0">
+                    Analyze team productivity, engagement, and individual contributions
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="btn-group">
+                    <button class="btn btn-outline-primary btn-sm" onclick="exportReport()">
+                        <i class="fas fa-download me-1"></i>Export
+                    </button>
+                    <a href="/reports" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Reports
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Team Statistics Overview -->
+        <div class="row mb-4">
+            <div class="col-lg-8">
+                <div class="card performance-card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-bar me-2"></i>
+                            Team Statistics
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-md-2">
+                                <div class="stat-circle bg-primary text-white" th:text="${teamStats.totalMembers}">0</div>
+                                <small class="text-muted mt-2 d-block">Total Members</small>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="stat-circle bg-success text-white" th:text="${teamStats.activeMembers}">0</div>
+                                <small class="text-muted mt-2 d-block">Active Members</small>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="stat-circle bg-warning text-dark" th:text="${teamStats.leaders}">0</div>
+                                <small class="text-muted mt-2 d-block">Team Leaders</small>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-circle bg-info text-white" th:text="${teamStats.averageHours}">0</div>
+                                <small class="text-muted mt-2 d-block">Avg Hours/Week</small>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-circle bg-secondary text-white" th:text="${teamStats.attendanceRate + '%'}">0%</div>
+                                <small class="text-muted mt-2 d-block">Attendance Rate</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Activity Timeline -->
+            <div class="col-lg-4">
+                <div class="card performance-card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-clock me-2"></i>
+                            Recent Activity
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="activity-chart">
+                            <canvas id="activityChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Individual Performance -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card performance-card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-user-friends me-2"></i>
+                            Individual Performance
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Member</th>
+                                        <th>Role</th>
+                                        <th>Tasks Completed</th>
+                                        <th>Hours Logged</th>
+                                        <th>Performance Rating</th>
+                                        <th>Engagement</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="member : ${memberPerformance}">
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="member-avatar me-2" th:text="${#strings.substring(member.name, 0, 1)}">A</div>
+                                                <span th:text="${member.name}">Member Name</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-dark" th:text="${member.role}">Role</span>
+                                        </td>
+                                        <td>
+                                            <span class="fw-bold" th:text="${member.tasksCompleted}">0</span>
+                                        </td>
+                                        <td>
+                                            <span th:text="${member.hoursLogged}">0</span> hrs
+                                        </td>
+                                        <td>
+                                            <div class="rating-stars">
+                                                <span th:each="star : ${#numbers.sequence(1, 5)}">
+                                                    <i th:class="${star <= member.rating ? 'fas fa-star' : 'far fa-star'}"></i>
+                                                </span>
+                                                <small class="text-muted ms-1" th:text="${member.rating}">0.0</small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="engagement-meter" 
+                                                 th:style="'--engagement: ' + ${member.engagement ?: 75}"
+                                                 th:data-value="${member.engagement ?: 75}">
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Subteam Progress -->
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card performance-card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-sitemap me-2"></i>
+                            Subteam Progress
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div th:each="subteam : ${subteamProgress}" class="subteam-progress">
+                            <div class="subteam-header">
+                                <div>
+                                    <h6 class="mb-0" th:text="${subteam.name}">Subteam Name</h6>
+                                    <small class="text-muted">
+                                        <span th:text="${subteam.members}">0</span> members • 
+                                        <span th:text="${subteam.tasksCompleted}">0</span> / <span th:text="${subteam.totalTasks}">0</span> tasks
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-primary" th:text="${subteam.completion + '%'}">0%</span>
+                                </div>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar" 
+                                     th:style="'width: ' + ${subteam.completion} + '%'"
+                                     th:aria-valuenow="${subteam.completion}"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Performance Insights -->
+            <div class="col-lg-4">
+                <div class="card performance-card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            Performance Insights
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <small class="fw-bold">Top Performers</small>
+                                <i class="fas fa-trophy text-warning"></i>
+                            </div>
+                            <small class="text-muted">Programming team leading with 80% completion rate</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <small class="fw-bold">Engagement Trend</small>
+                                <i class="fas fa-chart-line text-success"></i>
+                            </div>
+                            <small class="text-muted">Team engagement increased 15% this week</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <small class="fw-bold">Areas for Improvement</small>
+                                <i class="fas fa-exclamation-triangle text-warning"></i>
+                            </div>
+                            <small class="text-muted">Strategy team needs more active participation</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <small class="fw-bold">Productivity Score</small>
+                                <i class="fas fa-speedometer-alt text-info"></i>
+                            </div>
+                            <div class="progress progress-sm">
+                                <div class="progress-bar bg-info" style="width: 78%"></div>
+                            </div>
+                            <small class="text-muted">78% team productivity score</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="card performance-card mt-3">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-tools me-2"></i>
+                            Quick Actions
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-plus me-1"></i>Schedule Team Meeting
+                            </button>
+                            <button class="btn btn-outline-success btn-sm">
+                                <i class="fas fa-trophy me-1"></i>Recognize Achievement
+                            </button>
+                            <button class="btn btn-outline-info btn-sm">
+                                <i class="fas fa-chart-bar me-1"></i>Detailed Analytics
+                            </button>
+                            <button class="btn btn-outline-warning btn-sm">
+                                <i class="fas fa-users me-1"></i>Team Survey
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div layout:fragment="scripts">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Activity Chart
+        const activityCtx = document.getElementById('activityChart').getContext('2d');
+        const activityChart = new Chart(activityCtx, {
+            type: 'line',
+            data: {
+                labels: /*[[${activityData.![date]}]]*/ ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5'],
+                datasets: [{
+                    label: 'Daily Activities',
+                    data: /*[[${activityData.![activities]}]]*/ [25, 32, 28, 41, 35],
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+        
+        function exportReport() {
+            // Implementation for exporting team performance report
+            alert('Team performance report export functionality will be implemented.');
+        }
+    </script>
+</div>
+
+</html>
