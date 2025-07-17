@@ -5,6 +5,7 @@ package org.frcpm.services.impl;
 import org.frcpm.events.WebSocketEventPublisher;
 import org.frcpm.models.Project;
 import org.frcpm.models.Subsystem;
+import org.frcpm.models.Subteam;
 import org.frcpm.models.Task;
 import org.frcpm.models.TeamMember;
 import org.frcpm.repositories.spring.ComponentRepository;
@@ -86,7 +87,12 @@ class TaskServiceTest {
      * Creates a test subsystem for use in tests.
      */
     private Subsystem createTestSubsystem() {
-        Subsystem subsystem = new Subsystem("Test Subsystem");
+        // Create a test subteam for the subsystem
+        Subteam testSubteam = new Subteam("Test Subteam", "Test subteam description");
+        testSubteam.setId(1L);
+        testSubteam.setColor("#FF0000");
+        
+        Subsystem subsystem = new Subsystem("Test Subsystem", testProject, testSubteam);
         subsystem.setId(1L);
         return subsystem;
     }

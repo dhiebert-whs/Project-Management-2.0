@@ -4,6 +4,7 @@ package org.frcpm.repositories;
 
 import org.frcpm.models.Project;
 import org.frcpm.models.Subsystem;
+import org.frcpm.models.Subteam;
 import org.frcpm.models.Task;
 import org.frcpm.models.TeamMember;
 import org.frcpm.repositories.spring.TaskRepository;
@@ -96,10 +97,13 @@ class TaskRepositoryIntegrationTest {
      * Creates a test subsystem for use in tests.
      */
     private Subsystem createTestSubsystem() {
-        Subsystem subsystem = new Subsystem();
-        subsystem.setName("Drivetrain");
+        // Create required Subteam and persist it
+        Subteam mechanicalSubteam = new Subteam("Mechanical", "Mechanical subteam");
+        mechanicalSubteam.setColor("#FF0000");
+        mechanicalSubteam = entityManager.persistAndFlush(mechanicalSubteam);
+        
+        Subsystem subsystem = new Subsystem("Drivetrain", testProject, mechanicalSubteam);
         subsystem.setDescription("Main robot drivetrain system");
-        subsystem.setStatus(Subsystem.Status.IN_PROGRESS);
         return subsystem;
     }
     
@@ -107,10 +111,13 @@ class TaskRepositoryIntegrationTest {
      * Creates another subsystem for multi-subsystem tests.
      */
     private Subsystem createOtherSubsystem() {
-        Subsystem subsystem = new Subsystem();
-        subsystem.setName("Intake");
+        // Create required Subteam and persist it
+        Subteam programmingSubteam = new Subteam("Programming", "Programming subteam");
+        programmingSubteam.setColor("#00FF00");
+        programmingSubteam = entityManager.persistAndFlush(programmingSubteam);
+        
+        Subsystem subsystem = new Subsystem("Intake", testProject, programmingSubteam);
         subsystem.setDescription("Game piece intake mechanism");
-        subsystem.setStatus(Subsystem.Status.NOT_STARTED);
         return subsystem;
     }
     

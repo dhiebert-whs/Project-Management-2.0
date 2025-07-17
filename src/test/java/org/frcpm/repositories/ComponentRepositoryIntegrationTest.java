@@ -5,6 +5,7 @@ package org.frcpm.repositories;
 import org.frcpm.models.Component;
 import org.frcpm.models.Project;
 import org.frcpm.models.Subsystem;
+import org.frcpm.models.Subteam;
 import org.frcpm.models.Task;
 import org.frcpm.repositories.spring.ComponentRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -75,10 +76,21 @@ class ComponentRepositoryIntegrationTest {
      * Creates a test subsystem for use in tests.
      */
     private Subsystem createTestSubsystem() {
-        Subsystem subsystem = new Subsystem();
-        subsystem.setName("Test Subsystem");
+        // Create required Project and Subteam for Subsystem
+        Project testProject = new Project();
+        testProject.setName("Test Project");
+        testProject.setDescription("Test project description");
+        testProject.setStartDate(LocalDate.now());
+        testProject.setGoalEndDate(LocalDate.now().plusWeeks(6));
+        testProject.setHardDeadline(LocalDate.now().plusWeeks(8));
+        testProject = entityManager.persistAndFlush(testProject);
+        
+        Subteam testSubteam = new Subteam("Test Subteam", "Test subteam description");
+        testSubteam.setColor("#FF0000");
+        testSubteam = entityManager.persistAndFlush(testSubteam);
+        
+        Subsystem subsystem = new Subsystem("Test Subsystem", testProject, testSubteam);
         subsystem.setDescription("Test subsystem for component testing");
-        subsystem.setStatus(Subsystem.Status.IN_PROGRESS);
         return subsystem;
     }
 
@@ -1212,9 +1224,17 @@ class ComponentRepositoryIntegrationTest {
         Project savedProject = entityManager.persistAndFlush(testProject);
         
         // Create multiple subsystems
-        Subsystem driveSubsystem = new Subsystem("Drivetrain", Subsystem.Status.IN_PROGRESS);
-        Subsystem shooterSubsystem = new Subsystem("Shooter", Subsystem.Status.NOT_STARTED);
-        Subsystem intakeSubsystem = new Subsystem("Intake", Subsystem.Status.COMPLETED);
+        Subteam mechanicalSubteam = new Subteam("Mechanical", "Mechanical subteam");
+        mechanicalSubteam.setColor("#FF0000");
+        mechanicalSubteam = entityManager.persistAndFlush(mechanicalSubteam);
+        
+        Subteam programmingSubteam = new Subteam("Programming", "Programming subteam");
+        programmingSubteam.setColor("#00FF00");
+        programmingSubteam = entityManager.persistAndFlush(programmingSubteam);
+        
+        Subsystem driveSubsystem = new Subsystem("Drivetrain", savedProject, mechanicalSubteam);
+        Subsystem shooterSubsystem = new Subsystem("Shooter", savedProject, mechanicalSubteam);
+        Subsystem intakeSubsystem = new Subsystem("Intake", savedProject, programmingSubteam);
         
         Subsystem savedDriveSubsystem = entityManager.persistAndFlush(driveSubsystem);
         Subsystem savedShooterSubsystem = entityManager.persistAndFlush(shooterSubsystem);

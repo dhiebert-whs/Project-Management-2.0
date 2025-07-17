@@ -6,7 +6,8 @@
       "Bash(touch:*)",
       "Bash(mvn clean:*)",
       "Bash(rm:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }
