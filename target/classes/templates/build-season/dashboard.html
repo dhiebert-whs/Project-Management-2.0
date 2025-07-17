@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout/base}">
+
+<head>
+    <title>Build Season Dashboard - FRC Project Management</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Chart.js for analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Build Season Dashboard Styles -->
+    <style>
+        .dashboard-container {
+            padding: 1rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .season-header {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 15px rgba(0,123,255,0.3);
+        }
+        
+        .season-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0 0 0.5rem 0;
+        }
+        
+        .season-subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin: 0;
+        }
+        
+        .countdown-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .countdown-item {
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        .countdown-number {
+            font-size: 2rem;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        
+        .countdown-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .metric-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #007bff;
+        }
+        
+        .metric-card.critical {
+            border-left-color: #dc3545;
+        }
+        
+        .metric-card.warning {
+            border-left-color: #ffc107;
+        }
+        
+        .metric-card.success {
+            border-left-color: #28a745;
+        }
+        
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .metric-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #495057;
+            margin: 0;
+        }
+        
+        .metric-icon {
+            font-size: 1.5rem;
+            color: #007bff;
+        }
+        
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #007bff;
+            margin: 0.5rem 0;
+        }
+        
+        .metric-subtitle {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin: 0;
+        }
+        
+        .progress-ring {
+            position: relative;
+            display: inline-block;
+            width: 100px;
+            height: 100px;
+        }
+        
+        .progress-ring svg {
+            transform: rotate(-90deg);
+            width: 100%;
+            height: 100%;
+        }
+        
+        .progress-ring-background {
+            fill: none;
+            stroke: #e9ecef;
+            stroke-width: 8;
+        }
+        
+        .progress-ring-progress {
+            fill: none;
+            stroke: #007bff;
+            stroke-width: 8;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.5s ease-in-out;
+        }
+        
+        .progress-ring-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 1rem;
+        }
+        
+        .milestone-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .milestone-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            border-bottom: 1px solid #e9ecef;
+            transition: background-color 0.2s ease;
+        }
+        
+        .milestone-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .milestone-item:last-child {
+            border-bottom: none;
+        }
+        
+        .milestone-status {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 0.75rem;
+            flex-shrink: 0;
+        }
+        
+        .milestone-status.completed {
+            background-color: #28a745;
+        }
+        
+        .milestone-status.in-progress {
+            background-color: #ffc107;
+        }
+        
+        .milestone-status.pending {
+            background-color: #6c757d;
+        }
+        
+        .milestone-status.overdue {
+            background-color: #dc3545;
+        }
+        
+        .milestone-content {
+            flex: 1;
+        }
+        
+        .milestone-title {
+            font-weight: 600;
+            margin: 0 0 0.25rem 0;
+            color: #343a40;
+        }
+        
+        .milestone-meta {
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin: 0;
+        }
+        
+        .milestone-date {
+            font-size: 0.8rem;
+            color: #495057;
+            font-weight: 500;
+        }
+        
+        .critical-path-badge {
+            background: #dc3545;
+            color: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+        
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        
+        .quick-action-btn {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            text-decoration: none;
+            color: #495057;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .quick-action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            color: #007bff;
+            border-color: #007bff;
+        }
+        
+        .quick-action-btn i {
+            font-size: 1.5rem;
+        }
+        
+        .velocity-trend {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .trend-icon {
+            font-size: 1.2rem;
+        }
+        
+        .trend-up {
+            color: #28a745;
+        }
+        
+        .trend-down {
+            color: #dc3545;
+        }
+        
+        .trend-stable {
+            color: #6c757d;
+        }
+        
+        .alert-dashboard {
+            margin-bottom: 1.5rem;
+        }
+        
+        .team-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #007bff;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-right: 0.5rem;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .dashboard-container {
+                padding: 0.5rem;
+            }
+            
+            .season-header {
+                padding: 1.5rem;
+            }
+            
+            .season-title {
+                font-size: 2rem;
+            }
+            
+            .countdown-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .metric-card {
+                padding: 1rem;
+            }
+            
+            .metric-value {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div layout:fragment="content" class="dashboard-container">
+        
+        <!-- Season Header -->
+        <div class="season-header">
+            <h1 class="season-title" th:text="${currentSeason?.gameName ?: 'Build Season'}">
+                CRESCENDO
+            </h1>
+            <p class="season-subtitle" th:text="${currentSeason?.year ?: '2024'} + ' FRC Season'">
+                2024 FRC Season
+            </p>
+            
+            <div class="countdown-grid">
+                <div class="countdown-item">
+                    <span class="countdown-number" th:text="${daysUntilKickoff ?: 0}">42</span>
+                    <span class="countdown-label">Days to Kickoff</span>
+                </div>
+                <div class="countdown-item">
+                    <span class="countdown-number" th:text="${buildDaysRemaining ?: 0}">28</span>
+                    <span class="countdown-label">Build Days Left</span>
+                </div>
+                <div class="countdown-item">
+                    <span class="countdown-number" th:text="${daysUntilCompetition ?: 0}">65</span>
+                    <span class="countdown-label">Days to Competition</span>
+                </div>
+                <div class="countdown-item">
+                    <span class="countdown-number" th:text="${velocityMetrics?.tasksPerWeek ?: 0}">12.5</span>
+                    <span class="countdown-label">Tasks/Week</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Critical Alerts -->
+        <div th:if="${overdueMilestones != null and !overdueMilestones.empty}" class="alert alert-danger alert-dashboard">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>Critical Alert:</strong> 
+            <span th:text="${overdueMilestones.size()}">3</span> milestones are overdue!
+            <a href="/build-season/milestones?filter=overdue" class="alert-link ms-2">View Details</a>
+        </div>
+        
+        <!-- Metrics Grid -->
+        <div class="metrics-grid">
+            <!-- Robot Progress -->
+            <div class="metric-card success">
+                <div class="metric-header">
+                    <h3 class="metric-title">Robot Progress</h3>
+                    <i class="fas fa-robot metric-icon"></i>
+                </div>
+                <div class="d-flex align-items-center">
+                    <div class="progress-ring">
+                        <svg>
+                            <circle class="progress-ring-background" cx="50" cy="50" r="40"></circle>
+                            <circle class="progress-ring-progress" cx="50" cy="50" r="40" 
+                                    th:attr="stroke-dasharray='251.2', stroke-dashoffset=${251.2 - (251.2 * (completionPercentage ?: 0) / 100)}"></circle>
+                        </svg>
+                        <div class="progress-ring-text" th:text="${completionPercentage ?: 0} + '%'">65%</div>
+                    </div>
+                    <div class="ms-3">
+                        <div class="metric-value" th:text="${completionPercentage ?: 0} + '%'">65%</div>
+                        <p class="metric-subtitle">Complete</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Project Status -->
+            <div class="metric-card">
+                <div class="metric-header">
+                    <h3 class="metric-title">Active Projects</h3>
+                    <i class="fas fa-project-diagram metric-icon"></i>
+                </div>
+                <div class="metric-value" th:text="${activeProjects?.size() ?: 0}">8</div>
+                <p class="metric-subtitle">
+                    <span th:text="${criticalTasks?.size() ?: 0}">5</span> critical tasks
+                </p>
+            </div>
+            
+            <!-- Milestone Status -->
+            <div class="metric-card" th:classappend="${overdueMilestones != null and !overdueMilestones.empty ? 'warning' : ''}">
+                <div class="metric-header">
+                    <h3 class="metric-title">Milestones</h3>
+                    <i class="fas fa-flag-checkered metric-icon"></i>
+                </div>
+                <div class="metric-value" th:text="${upcomingMilestones?.size() ?: 0}">12</div>
+                <p class="metric-subtitle">
+                    <span th:text="${overdueMilestones?.size() ?: 0}">3</span> overdue
+                </p>
+            </div>
+            
+            <!-- Team Velocity -->
+            <div class="metric-card">
+                <div class="metric-header">
+                    <h3 class="metric-title">Team Velocity</h3>
+                    <i class="fas fa-tachometer-alt metric-icon"></i>
+                </div>
+                <div class="metric-value" th:text="${velocityMetrics?.tasksPerWeek ?: 0}">12.5</div>
+                <p class="metric-subtitle">
+                    Tasks per week
+                    <span class="velocity-trend">
+                        <i th:class="${velocityMetrics?.trend == 'increasing' ? 'fas fa-arrow-up trend-up' : 
+                                      velocityMetrics?.trend == 'decreasing' ? 'fas fa-arrow-down trend-down' : 
+                                      'fas fa-minus trend-stable'}"></i>
+                        <span th:text="${velocityMetrics?.trend ?: 'stable'}">increasing</span>
+                    </span>
+                </p>
+            </div>
+        </div>
+        
+        <!-- Content Grid -->
+        <div class="row">
+            <!-- Upcoming Milestones -->
+            <div class="col-lg-6 mb-4">
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <h3 class="metric-title">Upcoming Milestones</h3>
+                        <a href="/build-season/milestones" class="btn btn-sm btn-outline-primary">View All</a>
+                    </div>
+                    
+                    <div class="milestone-list" th:if="${upcomingMilestones != null and !upcomingMilestones.empty}">
+                        <div th:each="milestone : ${upcomingMilestones}" class="milestone-item">
+                            <div class="milestone-status" 
+                                 th:class="'milestone-status ' + ${milestone.completed ? 'completed' : 
+                                          milestone.completionPercentage > 0 ? 'in-progress' : 
+                                          milestone.overdue ? 'overdue' : 'pending'}"></div>
+                            <div class="milestone-content">
+                                <h6 class="milestone-title" th:text="${milestone.title}">
+                                    CAD Design Complete
+                                    <span th:if="${milestone.criticalPath}" class="critical-path-badge">Critical</span>
+                                </h6>
+                                <p class="milestone-meta">
+                                    <span th:text="${milestone.type?.displayName ?: 'Milestone'}">Design</span>
+                                    • <span th:text="${milestone.priority?.displayName ?: 'Medium'}">High</span>
+                                    • <span th:text="${milestone.completionPercentage}">75</span>% complete
+                                </p>
+                            </div>
+                            <div class="milestone-date" th:text="${milestone.daysRemainingFormatted}">
+                                5 days left
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div th:if="${upcomingMilestones == null or upcomingMilestones.empty}" class="text-center p-4 text-muted">
+                        <i class="fas fa-flag-checkered fa-3x mb-3" style="opacity: 0.3;"></i>
+                        <p>No upcoming milestones</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Critical Tasks -->
+            <div class="col-lg-6 mb-4">
+                <div class="metric-card" th:classappend="${criticalTasks != null and !criticalTasks.empty ? 'critical' : ''}">
+                    <div class="metric-header">
+                        <h3 class="metric-title">Critical Tasks</h3>
+                        <a href="/tasks?priority=critical" class="btn btn-sm btn-outline-danger">View All</a>
+                    </div>
+                    
+                    <div class="milestone-list" th:if="${criticalTasks != null and !criticalTasks.empty}">
+                        <div th:each="task : ${criticalTasks}" class="milestone-item">
+                            <div class="milestone-status" 
+                                 th:class="'milestone-status ' + ${task.completed ? 'completed' : 
+                                          task.progress > 0 ? 'in-progress' : 
+                                          task.endDate != null and task.endDate.isBefore(T(java.time.LocalDate).now()) ? 'overdue' : 'pending'}"></div>
+                            <div class="milestone-content">
+                                <h6 class="milestone-title" th:text="${task.title}">
+                                    Drivetrain Assembly
+                                </h6>
+                                <p class="milestone-meta">
+                                    <span th:text="${task.project?.name ?: 'No Project'}">Robot Chassis</span>
+                                    • <span th:text="${task.priority?.displayName ?: 'Medium'}">Critical</span>
+                                    • <span th:text="${task.progress}">45</span>% complete
+                                </p>
+                            </div>
+                            <div class="milestone-date" th:if="${task.endDate != null}">
+                                <span th:text="${T(java.time.temporal.ChronoUnit).DAYS.between(T(java.time.LocalDate).now(), task.endDate)}">2</span> days left
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div th:if="${criticalTasks == null or criticalTasks.empty}" class="text-center p-4 text-muted">
+                        <i class="fas fa-tasks fa-3x mb-3" style="opacity: 0.3;"></i>
+                        <p>No critical tasks</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Workshop Activity -->
+        <div class="metric-card mb-4" th:if="${recentSessions != null and !recentSessions.empty}">
+            <div class="metric-header">
+                <h3 class="metric-title">Recent Workshop Activity</h3>
+                <a href="/mobile/workshop/dashboard" class="btn btn-sm btn-outline-success">Workshop Dashboard</a>
+            </div>
+            
+            <div class="row">
+                <div th:each="session : ${recentSessions}" class="col-md-6 col-lg-4 mb-3">
+                    <div class="card border-0 bg-light">
+                        <div class="card-body p-3">
+                            <h6 class="card-title mb-2" th:text="${session.objectives ?: (session.project?.name + ' Session')}">
+                                Build Session
+                            </h6>
+                            <p class="card-text small text-muted mb-2">
+                                <i class="fas fa-clock"></i>
+                                <span th:text="${#temporals.format(session.startTime, 'MMM dd, HH:mm')}">Jan 15, 14:30</span>
+                                <span th:if="${session.endTime != null}" 
+                                      th:text="' - ' + ${#temporals.format(session.endTime, 'HH:mm')}">- 17:00</span>
+                            </p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    <i class="fas fa-users"></i>
+                                    <span th:text="${session.attendanceCount ?: 0}">5</span> attendees
+                                </small>
+                                <span class="badge" 
+                                      th:class="'bg-' + ${session.status?.name() == 'ACTIVE' ? 'success' : 
+                                                         session.status?.name() == 'COMPLETED' ? 'primary' : 'secondary'}"
+                                      th:text="${session.status?.displayName ?: 'Unknown'}">
+                                    Active
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <a href="/build-season/milestones" class="quick-action-btn">
+                <i class="fas fa-flag-checkered"></i>
+                <span>Manage Milestones</span>
+            </a>
+            <a href="/build-season/robot-status" class="quick-action-btn">
+                <i class="fas fa-robot"></i>
+                <span>Robot Status</span>
+            </a>
+            <a href="/build-season/competition-prep" class="quick-action-btn">
+                <i class="fas fa-trophy"></i>
+                <span>Competition Prep</span>
+            </a>
+            <a href="/mobile/workshop/dashboard" class="quick-action-btn">
+                <i class="fas fa-tools"></i>
+                <span>Workshop</span>
+            </a>
+            <a href="/tasks" class="quick-action-btn">
+                <i class="fas fa-tasks"></i>
+                <span>All Tasks</span>
+            </a>
+            <a href="/projects" class="quick-action-btn">
+                <i class="fas fa-project-diagram"></i>
+                <span>Projects</span>
+            </a>
+        </div>
+        
+    </div>
+    
+    <!-- Scripts -->
+    <div layout:fragment="scripts">
+        <script>
+            // Auto-refresh dashboard data every 30 seconds
+            setInterval(() => {
+                if (!document.hidden) {
+                    fetch('/build-season/api/progress/summary')
+                        .then(response => response.json())
+                        .then(data => {
+                            // Update key metrics without full page refresh
+                            updateProgressRing(data.robotCompletion);
+                            updateCountdowns(data);
+                        })
+                        .catch(error => console.error('Error updating dashboard:', error));
+                }
+            }, 30000);
+            
+            function updateProgressRing(percentage) {
+                const progressRing = document.querySelector('.progress-ring-progress');
+                const progressText = document.querySelector('.progress-ring-text');
+                
+                if (progressRing && progressText) {
+                    const circumference = 251.2;
+                    const offset = circumference - (circumference * percentage / 100);
+                    
+                    progressRing.style.strokeDashoffset = offset;
+                    progressText.textContent = Math.round(percentage) + '%';
+                }
+            }
+            
+            function updateCountdowns(data) {
+                const buildDaysEl = document.querySelector('.countdown-number');
+                if (buildDaysEl && data.daysRemaining !== undefined) {
+                    buildDaysEl.textContent = data.daysRemaining;
+                }
+                
+                const velocityEl = document.querySelector('.countdown-grid .countdown-item:last-child .countdown-number');
+                if (velocityEl && data.teamVelocity !== undefined) {
+                    velocityEl.textContent = data.teamVelocity.toFixed(1);
+                }
+            }
+            
+            // Initialize progress ring animation
+            document.addEventListener('DOMContentLoaded', function() {
+                const percentage = parseFloat(document.querySelector('.progress-ring-text').textContent);
+                updateProgressRing(percentage);
+            });
+        </script>
+    </div>
+</body>
+</html>

@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout/base}">
+
+<head>
+    <title>Robot Status - FRC Project Management</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Chart.js for progress visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Robot Status Styles -->
+    <style>
+        .robot-container {
+            padding: 1rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .robot-header {
+            background: linear-gradient(135deg, #6f42c1 0%, #495057 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 15px rgba(111,66,193,0.3);
+        }
+        
+        .robot-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0 0 0.5rem 0;
+        }
+        
+        .robot-subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin: 0 0 1rem 0;
+        }
+        
+        .robot-status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+        }
+        
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #28a745;
+        }
+        
+        .status-design {
+            background: #17a2b8;
+        }
+        
+        .status-prototype {
+            background: #ffc107;
+        }
+        
+        .status-build {
+            background: #fd7e14;
+        }
+        
+        .status-testing {
+            background: #20c997;
+        }
+        
+        .status-complete {
+            background: #28a745;
+        }
+        
+        .status-retired {
+            background: #6c757d;
+        }
+        
+        .overview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .overview-card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .overview-icon {
+            font-size: 3rem;
+            color: #6f42c1;
+            margin-bottom: 1rem;
+        }
+        
+        .overview-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #343a40;
+            margin-bottom: 0.5rem;
+        }
+        
+        .overview-label {
+            color: #6c757d;
+            font-weight: 500;
+            margin-bottom: 1rem;
+        }
+        
+        .overview-detail {
+            font-size: 0.9rem;
+            color: #495057;
+        }
+        
+        .progress-ring {
+            position: relative;
+            display: inline-block;
+            width: 120px;
+            height: 120px;
+            margin-bottom: 1rem;
+        }
+        
+        .progress-ring svg {
+            transform: rotate(-90deg);
+            width: 100%;
+            height: 100%;
+        }
+        
+        .progress-ring-background {
+            fill: none;
+            stroke: #e9ecef;
+            stroke-width: 12;
+        }
+        
+        .progress-ring-progress {
+            fill: none;
+            stroke: #6f42c1;
+            stroke-width: 12;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.5s ease-in-out;
+        }
+        
+        .progress-ring-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #495057;
+        }
+        
+        .subsystems-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .subsystem-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #6f42c1;
+        }
+        
+        .subsystem-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .subsystem-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #343a40;
+            margin: 0;
+        }
+        
+        .subsystem-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .subsystem-progress {
+            margin-bottom: 1rem;
+        }
+        
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .progress-label {
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .progress-percentage {
+            font-weight: 700;
+            color: #6f42c1;
+        }
+        
+        .progress-bar-container {
+            height: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-0-25 {
+            background: linear-gradient(90deg, #dc3545, #fd7e14);
+        }
+        
+        .progress-25-50 {
+            background: linear-gradient(90deg, #fd7e14, #ffc107);
+        }
+        
+        .progress-50-75 {
+            background: linear-gradient(90deg, #ffc107, #20c997);
+        }
+        
+        .progress-75-100 {
+            background: linear-gradient(90deg, #20c997, #28a745);
+        }
+        
+        .subsystem-details {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-bottom: 1rem;
+        }
+        
+        .subsystem-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .subsystem-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+        
+        .btn-update {
+            background: #6f42c1;
+            color: white;
+        }
+        
+        .btn-update:hover {
+            background: #5a32a3;
+        }
+        
+        .btn-tasks {
+            background: #e9ecef;
+            color: #495057;
+        }
+        
+        .btn-tasks:hover {
+            background: #dee2e6;
+        }
+        
+        .weight-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .weight-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        
+        .weight-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #343a40;
+            margin: 0;
+        }
+        
+        .weight-current {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+        
+        .weight-display {
+            text-align: center;
+        }
+        
+        .weight-value {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #6f42c1;
+            margin: 0;
+        }
+        
+        .weight-unit {
+            font-size: 1.2rem;
+            color: #6c757d;
+            margin-top: 0.5rem;
+        }
+        
+        .weight-gauge {
+            flex: 1;
+            position: relative;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .weight-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .weight-normal {
+            background: linear-gradient(90deg, #28a745, #20c997);
+        }
+        
+        .weight-warning {
+            background: linear-gradient(90deg, #ffc107, #fd7e14);
+        }
+        
+        .weight-danger {
+            background: linear-gradient(90deg, #dc3545, #c82333);
+        }
+        
+        .weight-markers {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+        }
+        
+        .weight-marker {
+            position: absolute;
+            width: 2px;
+            height: 100%;
+            background: #fff;
+            box-shadow: 0 0 3px rgba(0,0,0,0.3);
+        }
+        
+        .weight-marker.limit {
+            right: 0;
+            background: #dc3545;
+        }
+        
+        .weight-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        
+        .critical-path-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .critical-path-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #343a40;
+            margin: 0 0 1rem 0;
+        }
+        
+        .timeline {
+            position: relative;
+        }
+        
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 20px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #dee2e6;
+        }
+        
+        .timeline-item {
+            position: relative;
+            padding: 1rem 0 1rem 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 14px;
+            top: 1.5rem;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #6f42c1;
+            border: 2px solid white;
+            box-shadow: 0 0 0 2px #6f42c1;
+        }
+        
+        .timeline-item.completed::before {
+            background: #28a745;
+            box-shadow: 0 0 0 2px #28a745;
+        }
+        
+        .timeline-item.overdue::before {
+            background: #dc3545;
+            box-shadow: 0 0 0 2px #dc3545;
+        }
+        
+        .timeline-content {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        
+        .timeline-title {
+            font-weight: 600;
+            color: #343a40;
+            margin: 0 0 0.5rem 0;
+        }
+        
+        .timeline-meta {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin: 0;
+        }
+        
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        
+        .quick-action {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            text-decoration: none;
+            color: #495057;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .quick-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            color: #6f42c1;
+            border-color: #6f42c1;
+        }
+        
+        .quick-action i {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .robot-container {
+                padding: 0.5rem;
+            }
+            
+            .robot-header {
+                padding: 1.5rem;
+            }
+            
+            .robot-title {
+                font-size: 2rem;
+            }
+            
+            .overview-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .subsystems-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .weight-current {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .timeline-item {
+                padding-left: 2rem;
+            }
+            
+            .timeline::before {
+                left: 10px;
+            }
+            
+            .timeline-item::before {
+                left: 4px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div layout:fragment="content" class="robot-container">
+        
+        <!-- Robot Header -->
+        <div class="robot-header">
+            <h1 class="robot-title">
+                <i class="fas fa-robot"></i> 
+                <span th:text="${currentRobot?.name ?: 'Robot Status'}">CRESCENDO Bot</span>
+            </h1>
+            <p class="robot-subtitle" th:text="${currentRobot?.description ?: 'Competition Robot Status and Progress'}">
+                2024 Competition Robot - Build Progress and Systems Status
+            </p>
+            <div class="robot-status-badge">
+                <div class="status-indicator" 
+                     th:class="'status-' + ${currentRobot?.status?.name()?.toLowerCase() ?: 'design'}"></div>
+                <span th:text="${currentRobot?.status?.displayName ?: 'In Development'}">In Development</span>
+            </div>
+        </div>
+        
+        <!-- Overview Cards -->
+        <div class="overview-grid">
+            <div class="overview-card">
+                <div class="progress-ring">
+                    <svg>
+                        <circle class="progress-ring-background" cx="60" cy="60" r="50"></circle>
+                        <circle class="progress-ring-progress" cx="60" cy="60" r="50" 
+                                th:attr="stroke-dasharray='314.16', stroke-dashoffset=${314.16 - (314.16 * (completionPercentage ?: 0) / 100)}"></circle>
+                    </svg>
+                    <div class="progress-ring-text" th:text="${completionPercentage ?: 0} + '%'">65%</div>
+                </div>
+                <div class="overview-value" th:text="${completionPercentage ?: 0} + '%'">65%</div>
+                <div class="overview-label">Overall Completion</div>
+                <div class="overview-detail">
+                    <span th:text="${subsystems?.size() ?: 0}">8</span> subsystems tracked
+                </div>
+            </div>
+            
+            <div class="overview-card">
+                <i class="fas fa-weight-hanging overview-icon"></i>
+                <div class="overview-value" th:text="${metrics?.currentWeight ?: 0} + ' ' + ${metrics?.weightUnit ?: 'lbs'}">45.2 lbs</div>
+                <div class="overview-label">Current Weight</div>
+                <div class="overview-detail" th:text="${metrics?.weightPercentage ?: 0} + '% of limit'">
+                    36% of limit
+                </div>
+            </div>
+            
+            <div class="overview-card">
+                <i class="fas fa-tasks overview-icon"></i>
+                <div class="overview-value" th:text="${criticalPath?.size() ?: 0}">5</div>
+                <div class="overview-label">Critical Path Items</div>
+                <div class="overview-detail">High priority tasks remaining</div>
+            </div>
+        </div>
+        
+        <!-- Weight Tracking -->
+        <div class="weight-section">
+            <div class="weight-header">
+                <h2 class="weight-title">
+                    <i class="fas fa-weight-hanging"></i> Robot Weight Tracking
+                </h2>
+                <button class="btn btn-primary" onclick="updateWeight()">
+                    <i class="fas fa-plus"></i> Record Weight
+                </button>
+            </div>
+            
+            <div class="weight-current">
+                <div class="weight-display">
+                    <div class="weight-value" th:text="${metrics?.currentWeight ?: 0}">45.2</div>
+                    <div class="weight-unit" th:text="${metrics?.weightUnit ?: 'lbs'}">lbs</div>
+                </div>
+                
+                <div class="weight-gauge">
+                    <div class="weight-fill" 
+                         th:style="'width: ' + ${metrics?.weightPercentage ?: 0} + '%'"
+                         th:class="${metrics?.weightPercentage < 80 ? 'weight-normal' : 
+                                   metrics?.weightPercentage < 95 ? 'weight-warning' : 'weight-danger'}">
+                    </div>
+                    <div class="weight-markers">
+                        <div class="weight-marker limit"></div>
+                    </div>
+                </div>
+                
+                <div class="text-center">
+                    <strong th:text="${metrics?.weightLimit ?: 125} + ' ' + ${metrics?.weightUnit ?: 'lbs'}">125 lbs</strong>
+                    <div class="small text-muted">FRC Limit</div>
+                </div>
+            </div>
+            
+            <div class="weight-info">
+                <span>Weight Remaining: <strong th:text="${(metrics?.weightLimit ?: 125) - (metrics?.currentWeight ?: 0)} + ' ' + ${metrics?.weightUnit ?: 'lbs'}">79.8 lbs</strong></span>
+                <span>Percentage Used: <strong th:text="${metrics?.weightPercentage ?: 0} + '%'">36%</strong></span>
+            </div>
+        </div>
+        
+        <!-- Subsystems Grid -->
+        <div class="subsystems-grid" th:if="${subsystems != null and !subsystems.empty}">
+            <div th:each="subsystem : ${subsystems}" class="subsystem-card">
+                <div class="subsystem-header">
+                    <h3 class="subsystem-name" th:text="${subsystem.name}">Drivetrain</h3>
+                    <span class="subsystem-status" 
+                          th:class="'subsystem-status ' + ${subsystem.status?.name()?.toLowerCase() ?: 'design'}"
+                          th:text="${subsystem.status?.displayName ?: 'In Design'}">
+                        In Progress
+                    </span>
+                </div>
+                
+                <div class="subsystem-progress">
+                    <div class="progress-header">
+                        <span class="progress-label">Progress</span>
+                        <span class="progress-percentage" th:text="${subsystem.completionPercentage ?: 0} + '%'">75%</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" 
+                             th:style="'width: ' + ${subsystem.completionPercentage ?: 0} + '%'"
+                             th:class="${subsystem.completionPercentage < 25 ? 'progress-0-25' : 
+                                       subsystem.completionPercentage < 50 ? 'progress-25-50' : 
+                                       subsystem.completionPercentage < 75 ? 'progress-50-75' : 'progress-75-100'}">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="subsystem-details" th:if="${subsystem.description != null}" th:text="${subsystem.description}">
+                    4-wheel tank drive with 6-inch wheels and 2-speed gearbox
+                </div>
+                
+                <div class="subsystem-actions">
+                    <button class="subsystem-btn btn-update" 
+                            th:onclick="'updateSubsystem(' + ${subsystem.id} + ')'">
+                        <i class="fas fa-edit"></i> Update
+                    </button>
+                    <button class="subsystem-btn btn-tasks" 
+                            th:onclick="'viewSubsystemTasks(' + ${subsystem.id} + ')'">
+                        <i class="fas fa-tasks"></i> View Tasks
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Critical Path Timeline -->
+        <div class="critical-path-section" th:if="${criticalPath != null and !criticalPath.empty}">
+            <h2 class="critical-path-title">
+                <i class="fas fa-route"></i> Critical Path Timeline
+            </h2>
+            
+            <div class="timeline">
+                <div th:each="item : ${criticalPath}" 
+                     class="timeline-item" 
+                     th:classappend="${item.completed ? 'completed' : item.overdue ? 'overdue' : ''}">
+                    <div class="timeline-content">
+                        <h4 class="timeline-title" th:text="${item.title}">
+                            Complete Drivetrain Assembly
+                        </h4>
+                        <p class="timeline-meta">
+                            <span th:if="${item.type != null}" th:text="${item.type}">Task</span>
+                            <span th:if="${item.endDate != null}">
+                                • Due: <span th:text="${#temporals.format(item.endDate, 'MMM dd, yyyy')}">Jan 20, 2024</span>
+                            </span>
+                            <span th:if="${item.progress != null}">
+                                • <span th:text="${item.progress}">75</span>% complete
+                            </span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <a href="/build-season/milestones" class="quick-action">
+                <i class="fas fa-flag-checkered"></i>
+                <span>View Milestones</span>
+            </a>
+            <a href="/tasks?robot=current" class="quick-action">
+                <i class="fas fa-tasks"></i>
+                <span>Robot Tasks</span>
+            </a>
+            <a href="/build-season/competition-prep" class="quick-action">
+                <i class="fas fa-trophy"></i>
+                <span>Competition Prep</span>
+            </a>
+            <a href="/mobile/workshop/dashboard" class="quick-action">
+                <i class="fas fa-tools"></i>
+                <span>Workshop</span>
+            </a>
+        </div>
+        
+    </div>
+    
+    <!-- Weight Update Modal -->
+    <div class="modal fade" id="weightModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Record Robot Weight</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Weight</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="weightValue" 
+                                   placeholder="Enter weight" step="0.1" min="0" max="125">
+                            <select class="form-select" id="weightUnit" style="max-width: 100px;">
+                                <option value="lbs">lbs</option>
+                                <option value="kg">kg</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes (Optional)</label>
+                        <textarea class="form-control" id="weightNotes" rows="3" 
+                                  placeholder="Add notes about this weight measurement..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitWeight()">Record Weight</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <div layout:fragment="scripts">
+        <script>
+            function updateWeight() {
+                // Reset modal
+                document.getElementById('weightValue').value = '';
+                document.getElementById('weightUnit').value = 'lbs';
+                document.getElementById('weightNotes').value = '';
+                
+                // Show modal
+                new bootstrap.Modal(document.getElementById('weightModal')).show();
+            }
+            
+            function submitWeight() {
+                const weight = parseFloat(document.getElementById('weightValue').value);
+                const unit = document.getElementById('weightUnit').value;
+                const notes = document.getElementById('weightNotes').value;
+                
+                if (!weight || weight <= 0) {
+                    showToast('Please enter a valid weight', 'error');
+                    return;
+                }
+                
+                const data = {
+                    weight: weight,
+                    unit: unit,
+                    notes: notes
+                };
+                
+                fetch('/build-season/api/robot/weight', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'updated') {
+                        showToast('Weight recorded successfully!', 'success');
+                        bootstrap.Modal.getInstance(document.getElementById('weightModal')).hide();
+                        setTimeout(() => window.location.reload(), 1000);
+                    } else {
+                        showToast('Failed to record weight: ' + (data.error || 'Unknown error'), 'error');
+                    }\n                })\n                .catch(error => {\n                    console.error('Error recording weight:', error);\n                    showToast('Error recording weight', 'error');\n                });\n            }\n            \n            function updateSubsystem(subsystemId) {\n                // Navigate to subsystem update page\n                window.location.href = `/subsystems/${subsystemId}/edit`;\n            }\n            \n            function viewSubsystemTasks(subsystemId) {\n                // Navigate to tasks filtered by subsystem\n                window.location.href = `/tasks?subsystem=${subsystemId}`;\n            }\n            \n            function showToast(message, type = 'info') {\n                const toast = document.createElement('div');\n                toast.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'} \n                                  position-fixed top-0 end-0 m-3`;\n                toast.style.zIndex = '9999';\n                toast.style.minWidth = '300px';\n                toast.innerHTML = `\n                    <div class=\"d-flex align-items-center\">\n                        <i class=\"fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} me-2\"></i>\n                        <span>${message}</span>\n                        <button type=\"button\" class=\"btn-close ms-auto\" onclick=\"this.parentElement.parentElement.remove()\"></button>\n                    </div>\n                `;\n                \n                document.body.appendChild(toast);\n                \n                setTimeout(() => {\n                    if (toast.parentElement) {\n                        toast.remove();\n                    }\n                }, 5000);\n            }\n            \n            // Initialize progress ring animation\n            document.addEventListener('DOMContentLoaded', function() {\n                const progressText = document.querySelector('.progress-ring-text');\n                if (progressText) {\n                    const percentage = parseFloat(progressText.textContent);\n                    const progressRing = document.querySelector('.progress-ring-progress');\n                    if (progressRing) {\n                        const circumference = 314.16;\n                        const offset = circumference - (circumference * percentage / 100);\n                        progressRing.style.strokeDashoffset = offset;\n                    }\n                }\n            });\n        </script>\n    </div>\n</body>\n</html>

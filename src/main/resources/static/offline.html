@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline - FRC Project Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .offline-container {
+            text-align: center;
+            max-width: 600px;
+            padding: 2rem;
+        }
+        
+        .offline-icon {
+            font-size: 8rem;
+            margin-bottom: 2rem;
+            opacity: 0.8;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.8; }
+            50% { opacity: 0.4; }
+            100% { opacity: 0.8; }
+        }
+        
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            font-weight: 300;
+        }
+        
+        .subtitle {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+        
+        .message {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+            opacity: 0.8;
+        }
+        
+        .offline-features {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2rem 0;
+            backdrop-filter: blur(10px);
+        }
+        
+        .features-title {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            font-weight: 500;
+        }
+        
+        .feature-list {
+            list-style: none;
+            text-align: left;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .feature-list li {
+            padding: 0.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .feature-list li::before {
+            content: "✓";
+            color: #4CAF50;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        
+        .actions {
+            margin-top: 2rem;
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 1rem 2rem;
+            border: 2px solid white;
+            border-radius: 8px;
+            background: transparent;
+            color: white;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn:hover {
+            background: white;
+            color: #667eea;
+            transform: translateY(-2px);
+        }
+        
+        .btn-primary {
+            background: white;
+            color: #667eea;
+        }
+        
+        .btn-primary:hover {
+            background: transparent;
+            color: white;
+        }
+        
+        .status-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #f44336;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+        
+        .cached-data {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            backdrop-filter: blur(10px);
+        }
+        
+        .cached-data h3 {
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+        
+        .cached-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .sync-status {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .sync-pending {
+            color: #FFC107;
+        }
+        
+        .footer {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+        
+        @media (max-width: 768px) {
+            .offline-container {
+                padding: 1rem;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .subtitle {
+                font-size: 1.2rem;
+            }
+            
+            .offline-icon {
+                font-size: 6rem;
+            }
+            
+            .actions {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="status-indicator">
+        <div class="status-dot"></div>
+        <span>Offline</span>
+    </div>
+    
+    <div class="offline-container">
+        <div class="offline-icon">📡</div>
+        <h1>You're Offline</h1>
+        <p class="subtitle">No internet connection detected</p>
+        
+        <div class="message">
+            Don't worry! You can still access cached data and continue working. 
+            Your changes will be synchronized when you're back online.
+        </div>
+        
+        <div class="offline-features">
+            <h3 class="features-title">Available Offline Features</h3>
+            <ul class="feature-list">
+                <li>View cached tasks and projects</li>
+                <li>Access team member information</li>
+                <li>View build season progress</li>
+                <li>Check milestone status</li>
+                <li>Make updates (synced when online)</li>
+                <li>Use workshop attendance scanner</li>
+            </ul>
+        </div>
+        
+        <div class="cached-data">
+            <h3>Cached Data Available</h3>
+            <div class="cached-stats" id="cachedStats">
+                <div class="stat-item">
+                    <div class="stat-number" id="cachedTasks">0</div>
+                    <div class="stat-label">Tasks</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="cachedProjects">0</div>
+                    <div class="stat-label">Projects</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="cachedMembers">0</div>
+                    <div class="stat-label">Members</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="cachedMilestones">0</div>
+                    <div class="stat-label">Milestones</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="sync-status" id="syncStatus">
+            <span>Pending Updates:</span>
+            <span class="sync-pending" id="pendingCount">0</span>
+        </div>
+        
+        <div class="actions">
+            <a href="/" class="btn btn-primary">
+                🏠 Go to Dashboard
+            </a>
+            <a href="/tasks" class="btn">
+                📋 View Tasks
+            </a>
+            <a href="/mobile/workshop/dashboard" class="btn">
+                🔧 Workshop
+            </a>
+            <button class="btn" onclick="retryConnection()">
+                🔄 Retry Connection
+            </button>
+        </div>
+    </div>
+    
+    <div class="footer">
+        FRC Project Management System • Offline Mode
+    </div>
+    
+    <script>
+        // Check for offline managers and update stats
+        document.addEventListener('DOMContentLoaded', function() {
+            updateOfflineStats();
+            
+            // Listen for online/offline events
+            window.addEventListener('online', handleOnline);
+            window.addEventListener('offline', handleOffline);
+            
+            // Check connection status periodically
+            setInterval(checkConnection, 5000);
+        });
+        
+        function updateOfflineStats() {
+            // Update cached data stats if offline manager is available
+            if (window.offlineManager) {
+                window.offlineManager.getOfflineStats().then(stats => {
+                    document.getElementById('cachedTasks').textContent = stats.cachedTasks || 0;
+                    document.getElementById('cachedProjects').textContent = stats.cachedProjects || 0;
+                    document.getElementById('cachedMembers').textContent = stats.cachedMembers || 0;
+                    document.getElementById('cachedMilestones').textContent = stats.cachedMilestones || 0;
+                    document.getElementById('pendingCount').textContent = stats.pendingOperations || 0;
+                });
+            }
+        }
+        
+        function handleOnline() {
+            // Update status indicator
+            const statusIndicator = document.querySelector('.status-indicator');
+            statusIndicator.innerHTML = `
+                <div class="status-dot" style="background: #4CAF50; animation: none;"></div>
+                <span>Back Online</span>
+            `;
+            
+            // Show reconnection message
+            showReconnectionMessage();
+            
+            // Redirect to main app after brief delay
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 2000);
+        }
+        
+        function handleOffline() {
+            // Reset status indicator
+            const statusIndicator = document.querySelector('.status-indicator');
+            statusIndicator.innerHTML = `
+                <div class="status-dot"></div>
+                <span>Offline</span>
+            `;
+        }
+        
+        function showReconnectionMessage() {
+            const message = document.createElement('div');
+            message.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(76, 175, 80, 0.9);
+                color: white;
+                padding: 2rem;
+                border-radius: 12px;
+                font-size: 1.2rem;
+                font-weight: 500;
+                z-index: 1000;
+                backdrop-filter: blur(10px);
+                text-align: center;
+            `;
+            message.innerHTML = `
+                <div>✅ Connection Restored!</div>
+                <div style="font-size: 1rem; margin-top: 0.5rem; opacity: 0.9;">
+                    Redirecting to dashboard...
+                </div>
+            `;
+            
+            document.body.appendChild(message);
+            
+            setTimeout(() => {
+                message.remove();
+            }, 3000);
+        }
+        
+        function retryConnection() {
+            const button = event.target;
+            button.innerHTML = '🔄 Checking...';
+            button.disabled = true;
+            
+            fetch('/')
+                .then(response => {
+                    if (response.ok) {
+                        button.innerHTML = '✅ Connected!';
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 1000);
+                    } else {
+                        throw new Error('Connection failed');
+                    }
+                })
+                .catch(error => {
+                    button.innerHTML = '❌ Still Offline';
+                    setTimeout(() => {
+                        button.innerHTML = '🔄 Retry Connection';
+                        button.disabled = false;
+                    }, 2000);
+                });
+        }
+        
+        function checkConnection() {
+            if (navigator.onLine) {
+                fetch('/', { method: 'HEAD', cache: 'no-cache' })
+                    .then(response => {
+                        if (response.ok) {
+                            handleOnline();
+                        }
+                    })
+                    .catch(() => {
+                        // Still offline
+                    });
+            }
+        }
+        
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                if (e.target.tagName === 'BUTTON') {
+                    e.target.click();
+                }
+            }
+            
+            // Keyboard shortcuts
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'r':
+                        e.preventDefault();
+                        retryConnection();
+                        break;
+                    case 'h':
+                        e.preventDefault();
+                        window.location.href = '/';
+                        break;
+                }
+            }
+        });
+        
+        // Update stats periodically
+        setInterval(updateOfflineStats, 10000);
+    </script>
+</body>
+</html>

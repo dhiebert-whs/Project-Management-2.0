@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout/base}">
+
+<head>
+    <title>Competition Preparation - FRC Project Management</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Competition Prep Styles -->
+    <style>
+        .competition-container {
+            padding: 1rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .competition-header {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 15px rgba(220,53,69,0.3);
+        }
+        
+        .competition-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0 0 0.5rem 0;
+        }
+        
+        .competition-subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin: 0;
+        }
+        
+        .competition-selector {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1.5rem;
+            backdrop-filter: blur(10px);
+        }
+        
+        .competition-dropdown {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.2);
+            color: white;
+            border-radius: 6px;
+            padding: 0.75rem;
+            font-size: 1rem;
+            width: 100%;
+        }
+        
+        .competition-dropdown option {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .readiness-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .readiness-card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .readiness-card.high {
+            border-left-color: #28a745;
+        }
+        
+        .readiness-card.medium {
+            border-left-color: #ffc107;
+        }
+        
+        .readiness-card.low {
+            border-left-color: #dc3545;
+        }
+        
+        .readiness-icon {
+            font-size: 3rem;
+            color: #dc3545;
+            margin-bottom: 1rem;
+        }
+        
+        .readiness-icon.high {
+            color: #28a745;
+        }
+        
+        .readiness-icon.medium {
+            color: #ffc107;
+        }
+        
+        .readiness-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #343a40;
+            margin-bottom: 0.5rem;
+        }
+        
+        .readiness-label {
+            color: #6c757d;
+            font-weight: 500;
+            margin-bottom: 1rem;
+        }
+        
+        .readiness-bar {
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+        
+        .readiness-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        
+        .readiness-fill.high {
+            background: linear-gradient(90deg, #20c997, #28a745);
+        }
+        
+        .readiness-fill.medium {
+            background: linear-gradient(90deg, #ffc107, #fd7e14);
+        }
+        
+        .readiness-fill.low {
+            background: linear-gradient(90deg, #dc3545, #c82333);
+        }
+        
+        .checklist-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #343a40;
+            margin: 0;
+        }
+        
+        .section-progress {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .progress-text {
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .progress-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: #495057;
+            position: relative;
+        }
+        
+        .progress-circle.completed {
+            border-color: #28a745;
+            color: #28a745;
+        }
+        
+        .checklist-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .checklist-category {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+            border: 1px solid #e9ecef;
+        }
+        
+        .category-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .category-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #343a40;
+            margin: 0;
+        }
+        
+        .category-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .category-technical {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .category-documentation {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+        
+        .category-logistics {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+        
+        .category-safety {
+            background: #fff8e1;
+            color: #f9a825;
+        }
+        
+        .checklist-items {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #e9ecef;
+            transition: background-color 0.2s ease;
+        }
+        
+        .checklist-item:last-child {
+            border-bottom: none;
+        }
+        
+        .checklist-item:hover {
+            background-color: rgba(0,0,0,0.02);
+        }
+        
+        .checklist-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #dee2e6;
+            border-radius: 4px;
+            margin-right: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .checklist-checkbox.completed {
+            background: #28a745;
+            border-color: #28a745;
+            color: white;
+        }
+        
+        .checklist-text {
+            flex: 1;
+            color: #495057;
+            font-weight: 500;
+        }
+        
+        .checklist-text.completed {
+            text-decoration: line-through;
+            color: #6c757d;
+        }
+        
+        .packing-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .packing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .packing-category {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+            border: 1px solid #e9ecef;
+        }
+        
+        .packing-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .packing-item:last-child {
+            border-bottom: none;
+        }
+        
+        .packing-info {
+            flex: 1;
+        }
+        
+        .packing-name {
+            font-weight: 500;
+            color: #495057;
+            margin: 0;
+        }
+        
+        .packing-quantity {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin: 0;
+        }
+        
+        .packing-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-packed {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .timeline-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .timeline {
+            position: relative;
+            padding: 1rem 0;
+        }
+        
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 30px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #dee2e6;
+        }
+        
+        .timeline-item {
+            position: relative;
+            padding: 1rem 0 1rem 4rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 22px;
+            top: 1.5rem;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #dc3545;
+            border: 3px solid white;
+            box-shadow: 0 0 0 3px #dc3545;
+        }
+        
+        .timeline-item.completed::before {
+            background: #28a745;
+            box-shadow: 0 0 0 3px #28a745;
+        }
+        
+        .timeline-item.current::before {
+            background: #ffc107;
+            box-shadow: 0 0 0 3px #ffc107;
+        }
+        
+        .timeline-content {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .timeline-content.completed {
+            border-left-color: #28a745;
+            opacity: 0.8;
+        }
+        
+        .timeline-content.current {
+            border-left-color: #ffc107;
+            background: #fff8e1;
+        }
+        
+        .timeline-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #343a40;
+            margin: 0 0 0.5rem 0;
+        }
+        
+        .timeline-date {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin: 0 0 1rem 0;
+        }
+        
+        .timeline-description {
+            color: #495057;
+            margin: 0;
+        }
+        
+        .emergency-contacts {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .emergency-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #856404;
+            margin: 0 0 1rem 0;
+        }
+        
+        .contacts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+        
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .contact-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #856404;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .contact-info h6 {
+            margin: 0;
+            color: #343a40;
+            font-weight: 600;
+        }
+        
+        .contact-info p {
+            margin: 0;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        
+        .quick-action {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            text-decoration: none;
+            color: #495057;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .quick-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            color: #dc3545;
+            border-color: #dc3545;
+        }
+        
+        .quick-action i {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .competition-container {
+                padding: 0.5rem;
+            }
+            
+            .competition-header {
+                padding: 1.5rem;
+            }
+            
+            .competition-title {
+                font-size: 2rem;
+            }
+            
+            .readiness-overview {
+                grid-template-columns: 1fr;
+            }
+            
+            .checklist-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .packing-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .timeline-item {
+                padding-left: 3rem;
+            }
+            
+            .timeline::before {
+                left: 20px;
+            }
+            
+            .timeline-item::before {
+                left: 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div layout:fragment="content" class="competition-container">
+        
+        <!-- Competition Header -->
+        <div class="competition-header">
+            <h1 class="competition-title">
+                <i class="fas fa-trophy"></i> Competition Preparation
+            </h1>
+            <p class="competition-subtitle">
+                Prepare for upcoming FRC competitions with comprehensive checklists and tracking
+            </p>
+            
+            <div class="competition-selector" th:if="${upcomingCompetitions != null and !upcomingCompetitions.empty}">
+                <select class="competition-dropdown" onchange="selectCompetition(this.value)">
+                    <option value="">Select Competition...</option>
+                    <option th:each="competition : ${upcomingCompetitions}" 
+                            th:value="${competition.id}" 
+                            th:text="${competition.name + ' - ' + #temporals.format(competition.startDate, 'MMM dd, yyyy')}"
+                            th:selected="${selectedCompetition != null and selectedCompetition.id == competition.id}">
+                        Regional Championship - Mar 15, 2024
+                    </option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- No Competition Selected -->
+        <div th:if="${selectedCompetition == null}" class="text-center p-5">
+            <i class="fas fa-trophy fa-5x text-muted mb-3" style="opacity: 0.3;"></i>
+            <h3 class="text-muted">No Competition Selected</h3>
+            <p class="text-muted mb-4">Select a competition above to view preparation details</p>
+            <a href="/competitions" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add Competition
+            </a>
+        </div>
+        
+        <!-- Competition Preparation Content -->
+        <div th:if="${selectedCompetition != null}">
+            
+            <!-- Readiness Overview -->
+            <div class="readiness-overview">
+                <div class="readiness-card" 
+                     th:classappend="${readinessPercentage >= 80 ? 'high' : readinessPercentage >= 60 ? 'medium' : 'low'}">
+                    <i class="fas fa-chart-line readiness-icon" 
+                       th:classappend="${readinessPercentage >= 80 ? 'high' : readinessPercentage >= 60 ? 'medium' : ''}"></i>
+                    <div class="readiness-value" th:text="${readinessPercentage ?: 0} + '%'">78%</div>
+                    <div class="readiness-label">Overall Readiness</div>
+                    <div class="readiness-bar">
+                        <div class="readiness-fill" 
+                             th:style="'width: ' + ${readinessPercentage ?: 0} + '%'"
+                             th:class="${readinessPercentage >= 80 ? 'high' : readinessPercentage >= 60 ? 'medium' : 'low'}"></div>
+                    </div>
+                </div>
+                
+                <div class="readiness-card">
+                    <i class="fas fa-calendar-alt readiness-icon"></i>
+                    <div class="readiness-value" th:text="${selectedCompetition.startDate != null ? T(java.time.temporal.ChronoUnit).DAYS.between(T(java.time.LocalDate).now(), selectedCompetition.startDate) : 0}">12</div>
+                    <div class="readiness-label">Days Until Competition</div>
+                </div>
+                
+                <div class="readiness-card">
+                    <i class="fas fa-tasks readiness-icon"></i>
+                    <div class="readiness-value" th:text="${checklist?.items?.size() ?: 0}">24</div>
+                    <div class="readiness-label">Checklist Items</div>
+                </div>
+                
+                <div class="readiness-card">
+                    <i class="fas fa-boxes readiness-icon"></i>
+                    <div class="readiness-value" th:text="${packingList?.size() ?: 0}">42</div>
+                    <div class="readiness-label">Packing Items</div>
+                </div>
+            </div>
+            
+            <!-- Competition Timeline -->
+            <div class="timeline-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-clock"></i> Competition Timeline
+                    </h2>
+                </div>
+                
+                <div class="timeline">
+                    <div class="timeline-item current">
+                        <div class="timeline-content current">
+                            <h3 class="timeline-title">Final Robot Testing</h3>
+                            <p class="timeline-date">Today - 3 days before competition</p>
+                            <p class="timeline-description">
+                                Complete final robot testing and performance validation. Address any remaining issues.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <div class="timeline-content">
+                            <h3 class="timeline-title">Pit Setup & Packing</h3>
+                            <p class="timeline-date">2 days before competition</p>
+                            <p class="timeline-description">
+                                Pack all equipment, tools, and spare parts. Prepare pit setup materials.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <div class="timeline-content">
+                            <h3 class="timeline-title">Travel & Setup</h3>
+                            <p class="timeline-date">1 day before competition</p>
+                            <p class="timeline-description">
+                                Travel to competition venue. Set up pit area and complete robot inspection.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <div class="timeline-content">
+                            <h3 class="timeline-title">Competition Day</h3>
+                            <p class="timeline-date" th:text="${selectedCompetition.startDate != null ? #temporals.format(selectedCompetition.startDate, 'EEEE, MMMM dd, yyyy') : 'Competition Date'}">
+                                Friday, March 15, 2024
+                            </p>
+                            <p class="timeline-description">
+                                Qualification matches, alliance selection, and elimination rounds.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Preparation Checklist -->
+            <div class="checklist-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-clipboard-check"></i> Preparation Checklist
+                    </h2>
+                    <div class="section-progress">
+                        <span class="progress-text">12 / 24 Complete</span>
+                        <div class="progress-circle completed">50%</div>
+                    </div>
+                </div>
+                
+                <div class="checklist-grid">
+                    <div class="checklist-category">
+                        <div class="category-header">
+                            <h3 class="category-title">Technical</h3>
+                            <span class="category-badge category-technical">Robot</span>
+                        </div>
+                        <ul class="checklist-items">
+                            <li class="checklist-item">
+                                <div class="checklist-checkbox completed" onclick="toggleChecklistItem(1)">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <span class="checklist-text completed">Robot passes weight inspection</span>
+                            </li>
+                            <li class="checklist-item">
+                                <div class="checklist-checkbox completed" onclick="toggleChecklistItem(2)">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <span class="checklist-text completed">All safety requirements met</span>
+                            </li>
+                            <li class="checklist-item">
+                                <div class="checklist-checkbox" onclick="toggleChecklistItem(3)"></div>
+                                <span class="checklist-text">Electrical system inspection complete</span>
+                            </li>
+                            <li class="checklist-item">
+                                <div class="checklist-checkbox" onclick="toggleChecklistItem(4)"></div>
+                                <span class="checklist-text">Driver practice sessions completed</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="checklist-category">
+                        <div class="category-header">
+                            <h3 class="category-title">Documentation</h3>
+                            <span class="category-badge category-documentation">Paperwork</span>
+                        </div>
+                        <ul class="checklist-items">
+                            <li class="checklist-item">
+                                <div class="checklist-checkbox completed" onclick="toggleChecklistItem(5)">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <span class="checklist-text completed">Team registration confirmed</span>
+                            </li>
+                            <li class="checklist-item">
+                                <div class="checklist-checkbox" onclick="toggleChecklistItem(6)"></div>
+                                <span class="checklist-text">Student medical forms collected</span>
+                            </li>
+                            <li class="checklist-item">
+                                <div class="checklist-checkbox" onclick="toggleChecklistItem(7)"></div>
+                                <span class="checklist-text">Emergency contact information updated</span>
+                            </li>
+                            <li class="checklist-item">
+                                <div class="checklist-checkbox" onclick="toggleChecklistItem(8)"></div>
+                                <span class="checklist-text">Award submission materials ready</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="checklist-category">
+                        <div class="category-header">
+                            <h3 class="category-title">Logistics</h3>
+                            <span class="category-badge category-logistics">Travel</span>
+                        </div>
+                        <ul class="checklist-items">
+                            <li class="checklist-item">
+                                <div class="checklist-checkbox completed" onclick="toggleChecklistItem(9)">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <span class="checklist-text completed">Transportation arranged</span>
+                            </li>
+                            <li class="checklist-item">
+                                <div class="checklist-checkbox" onclick="toggleChecklistItem(10)"></div>
+                                <span class="checklist-text">Hotel reservations confirmed</span>
+                            </li>
+                            <li class="checklist-item">
+                                <div class="checklist-checkbox" onclick="toggleChecklistItem(11)"></div>
+                                <span class="checklist-text">Meal arrangements made</span>
+                            </li>
+                            <li class="checklist-item">
+                                <div class="checklist-checkbox" onclick="toggleChecklistItem(12)"></div>
+                                <span class="checklist-text">Pit setup materials ready</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Packing List -->
+            <div class="packing-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-boxes"></i> Packing List
+                    </h2>
+                    <div class="section-progress">
+                        <span class="progress-text">28 / 42 Packed</span>
+                        <div class="progress-circle">67%</div>
+                    </div>
+                </div>
+                
+                <div class="packing-grid">
+                    <div class="packing-category">
+                        <div class="category-header">
+                            <h3 class="category-title">Robot & Hardware</h3>
+                        </div>
+                        <div class="packing-item">
+                            <div class="packing-info">
+                                <h6 class="packing-name">Competition Robot</h6>
+                                <p class="packing-quantity">1x</p>
+                            </div>
+                            <span class="packing-status status-packed">Packed</span>
+                        </div>
+                        <div class="packing-item">
+                            <div class="packing-info">
+                                <h6 class="packing-name">Spare Motors</h6>
+                                <p class="packing-quantity">4x CIM, 2x MiniCIM</p>
+                            </div>
+                            <span class="packing-status status-packed">Packed</span>
+                        </div>
+                        <div class="packing-item">
+                            <div class="packing-info">
+                                <h6 class="packing-name">Spare Wheels</h6>
+                                <p class="packing-quantity">2x 6\" Pneumatic</p>
+                            </div>
+                            <span class="packing-status status-pending">Pending</span>
+                        </div>
+                    </div>
+                    
+                    <div class="packing-category">
+                        <div class="category-header">
+                            <h3 class="category-title">Tools & Equipment</h3>
+                        </div>
+                        <div class="packing-item">
+                            <div class="packing-info">
+                                <h6 class="packing-name">Tool Kit</h6>
+                                <p class="packing-quantity">Complete set</p>
+                            </div>
+                            <span class="packing-status status-packed">Packed</span>
+                        </div>
+                        <div class="packing-item">
+                            <div class="packing-info">
+                                <h6 class="packing-name">Laptop & Programming</h6>
+                                <p class="packing-quantity">2x Laptops, cables</p>
+                            </div>
+                            <span class="packing-status status-packed">Packed</span>
+                        </div>
+                        <div class="packing-item">
+                            <div class="packing-info">
+                                <h6 class="packing-name">Battery Charger</h6>
+                                <p class="packing-quantity">1x Charger, 4x Batteries</p>
+                            </div>
+                            <span class="packing-status status-pending">Pending</span>
+                        </div>
+                    </div>
+                    
+                    <div class="packing-category">
+                        <div class="category-header">
+                            <h3 class="category-title">Team Supplies</h3>
+                        </div>
+                        <div class="packing-item">
+                            <div class="packing-info">
+                                <h6 class="packing-name">Team Shirts</h6>
+                                <p class="packing-quantity">15x Competition shirts</p>
+                            </div>
+                            <span class="packing-status status-packed">Packed</span>
+                        </div>
+                        <div class="packing-item">
+                            <div class="packing-info">
+                                <h6 class="packing-name">Safety Glasses</h6>
+                                <p class="packing-quantity">20x pairs</p>
+                            </div>
+                            <span class="packing-status status-packed">Packed</span>
+                        </div>
+                        <div class="packing-item">
+                            <div class="packing-info">
+                                <h6 class="packing-name">Team Banner</h6>
+                                <p class="packing-quantity">1x Large banner</p>
+                            </div>
+                            <span class="packing-status status-pending">Pending</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Emergency Contacts -->
+            <div class="emergency-contacts">
+                <h3 class="emergency-title">
+                    <i class="fas fa-phone-alt"></i> Emergency Contacts
+                </h3>
+                <div class="contacts-grid">
+                    <div class="contact-item">
+                        <div class="contact-icon">
+                            <i class="fas fa-user-tie"></i>
+                        </div>
+                        <div class="contact-info">
+                            <h6>Lead Mentor</h6>
+                            <p>John Smith • (555) 123-4567</p>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <div class="contact-icon">
+                            <i class="fas fa-user-nurse"></i>
+                        </div>
+                        <div class="contact-info">
+                            <h6>Safety Officer</h6>
+                            <p>Jane Doe • (555) 987-6543</p>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <div class="contact-icon">
+                            <i class="fas fa-hospital"></i>
+                        </div>
+                        <div class="contact-info">
+                            <h6>Local Hospital</h6>
+                            <p>Regional Medical Center • 911</p>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <div class="contact-icon">
+                            <i class="fas fa-school"></i>
+                        </div>
+                        <div class="contact-info">
+                            <h6>School Contact</h6>
+                            <p>Principal Office • (555) 555-0123</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <a href="/build-season/robot-status" class="quick-action">
+                <i class="fas fa-robot"></i>
+                <span>Robot Status</span>
+            </a>
+            <a href="/build-season/milestones" class="quick-action">
+                <i class="fas fa-flag-checkered"></i>
+                <span>Milestones</span>
+            </a>
+            <a href="/mobile/workshop/dashboard" class="quick-action">
+                <i class="fas fa-tools"></i>
+                <span>Workshop</span>
+            </a>
+            <a href="/build-season" class="quick-action">
+                <i class="fas fa-chart-line"></i>
+                <span>Dashboard</span>
+            </a>
+        </div>
+        
+    </div>
+    
+    <!-- Scripts -->
+    <div layout:fragment="scripts">
+        <script>
+            function selectCompetition(competitionId) {
+                if (competitionId) {
+                    window.location.href = `/build-season/competition-prep?competitionId=${competitionId}`;
+                }
+            }
+            
+            function toggleChecklistItem(itemId) {
+                fetch(`/build-season/api/checklist/${itemId}/toggle`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'toggled') {
+                        // Update UI without full page refresh
+                        const checkbox = document.querySelector(`[onclick="toggleChecklistItem(${itemId})"]`);
+                        const text = checkbox.nextElementSibling;
+                        
+                        if (checkbox.classList.contains('completed')) {
+                            checkbox.classList.remove('completed');
+                            checkbox.innerHTML = '';
+                            text.classList.remove('completed');
+                        } else {
+                            checkbox.classList.add('completed');
+                            checkbox.innerHTML = '<i class="fas fa-check"></i>';
+                            text.classList.add('completed');
+                        }
+                        
+                        showToast('Checklist item updated', 'success');
+                    } else {
+                        showToast('Failed to update checklist item', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error toggling checklist item:', error);
+                    showToast('Error updating checklist item', 'error');
+                });
+            }
+            
+            function showToast(message, type = 'info') {
+                const toast = document.createElement('div');
+                toast.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'} 
+                                  position-fixed top-0 end-0 m-3`;
+                toast.style.zIndex = '9999';
+                toast.style.minWidth = '300px';
+                toast.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
+                        <span>${message}</span>
+                        <button type="button" class="btn-close ms-auto" onclick="this.parentElement.parentElement.remove()"></button>
+                    </div>
+                `;
+                
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.remove();
+                    }
+                }, 5000);
+            }
+        </script>
+    </div>
+</body>
+</html>
