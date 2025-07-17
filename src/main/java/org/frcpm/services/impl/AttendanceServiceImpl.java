@@ -376,7 +376,7 @@ public class AttendanceServiceImpl implements AttendanceService {
             // Add subteam context
             if (attendance.getMember().getSubteam() != null) {
                 message.setSubteamName(attendance.getMember().getSubteam().getName());
-                message.setSubteamColorCode(attendance.getMember().getSubteam().getColorCode());
+                message.setSubteamColorCode(attendance.getMember().getSubteam().getColor());
             }
             
             message.setEventType(eventType);
@@ -415,7 +415,7 @@ public class AttendanceServiceImpl implements AttendanceService {
             // Add subteam context
             if (attendance.getMember().getSubteam() != null) {
                 message.setSubteamName(attendance.getMember().getSubteam().getName());
-                message.setSubteamColorCode(attendance.getMember().getSubteam().getColorCode());
+                message.setSubteamColorCode(attendance.getMember().getSubteam().getColor());
             }
             
             message.setSessionInfo("Workshop Session");
@@ -466,7 +466,7 @@ public class AttendanceServiceImpl implements AttendanceService {
             // Add context
             if (attendance.getMember().getSubteam() != null) {
                 message.setSubteamName(attendance.getMember().getSubteam().getName());
-                message.setSubteamColorCode(attendance.getMember().getSubteam().getColorCode());
+                message.setSubteamColorCode(attendance.getMember().getSubteam().getColor());
             }
             
             message.setSessionInfo("Workshop Session");
@@ -497,7 +497,7 @@ public class AttendanceServiceImpl implements AttendanceService {
             // Add context
             if (attendance.getMember().getSubteam() != null) {
                 message.setSubteamName(attendance.getMember().getSubteam().getName());
-                message.setSubteamColorCode(attendance.getMember().getSubteam().getColorCode());
+                message.setSubteamColorCode(attendance.getMember().getSubteam().getColor());
             }
             
             message.setSessionInfo("Workshop Session");
@@ -539,7 +539,7 @@ public class AttendanceServiceImpl implements AttendanceService {
             bySubteam.forEach((subteamName, attendances) -> {
                 int present = (int) attendances.stream().filter(Attendance::isPresent).count();
                 int total = attendances.size();
-                String colorCode = attendances.get(0).getMember().getSubteam().getColorCode();
+                String colorCode = attendances.get(0).getMember().getSubteam().getColor();
                 
                 presenceMessage.addSubteamPresence(subteamName, colorCode, present, total);
             });
@@ -701,7 +701,7 @@ public class AttendanceServiceImpl implements AttendanceService {
             // Add context information
             if (attendance.getMember().getSubteam() != null) {
                 message.setSubteamName(attendance.getMember().getSubteam().getName());
-                message.setSubteamColorCode(attendance.getMember().getSubteam().getColorCode());
+                message.setSubteamColorCode(attendance.getMember().getSubteam().getColor());
             }
             
             message.setSessionInfo("Workshop Session");

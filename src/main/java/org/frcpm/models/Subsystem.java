@@ -2,178 +2,168 @@ package org.frcpm.models;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import jakarta.validation.constraints.Size;
 
-import java.time.LocalDateTime;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
+/**
+ * Entity representing FRC robot subsystems (drivetrain, elevator, collector, etc).
+ * Each subsystem is owned by a subteam and can have multiple tasks.
+ */
 @Entity
 @Table(name = "subsystems")
-@EntityListeners(AuditingEntityListener.class)
 public class Subsystem {
-    
-    public enum SubsystemStatus {
-        DESIGN("Design"),
-        IN_PROGRESS("In Progress"),
-        TESTING("Testing"),
-        COMPLETE("Complete"),
-        ON_HOLD("On Hold");
-        
-        private final String displayName;
-        
-        SubsystemStatus(String displayName) {
-            this.displayName = displayName;
-        }
-        
-        public String getDisplayName() { return displayName; }
-    }
-    
-    public enum SubsystemPriority {
-        LOW("Low"),
-        MEDIUM("Medium"),
-        HIGH("High"),
-        CRITICAL("Critical");
-        
-        private final String displayName;
-        
-        SubsystemPriority(String displayName) {
-            this.displayName = displayName;
-        }
-        
-        public String getDisplayName() { return displayName; }
-    }
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
     @NotBlank
+    @Size(max = 100)
+    @Column(name = "name", nullable = false)
     private String name;
     
-    @NotNull
-    @ManyToOne
-    @JoinColumn(name = "robot_id")
-    private Robot robot;
-    
-    @Enumerated(EnumType.STRING)
-    private SubsystemStatus status;
-    
-    @Enumerated(EnumType.STRING)
-    private SubsystemPriority priority;
-    
+    @Size(max = 500)
+    @Column(name = "description")
     private String description;
-    private String requirements;
     
-    @ManyToOne
-    @JoinColumn(name = "responsible_member_id")
-    private TeamMember responsibleMember;
+    @Size(max = 7)
+    @Column(name = "color")
+    private String color; // Hex color for Gantt chart display
     
-    @OneToMany(mappedBy = "subsystem", cascade = CascadeType.ALL)
-    private List<Task> tasks;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id", nullable = false)
+    private Project project;
     
-    private Double budgetAllocated;
-    private Double budgetUsed;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_subteam_id", nullable = false)
+    private Subteam ownerSubteam;
     
-    private String notes;
-    
-    @CreatedDate
-    private LocalDateTime createdAt;
-    
-    @LastModifiedDate
-    private LocalDateTime updatedAt;
+    @OneToMany(mappedBy = "subsystem", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Set<Task> tasks = new HashSet<>();
     
     // Constructors
-    public Subsystem() {}
     
-    public Subsystem(String name, Robot robot) {
+    public Subsystem() {
+        // Default constructor required by JPA
+    }
+    
+    public Subsystem(String name, Project project, Subteam ownerSubteam) {
         this.name = name;
-        this.robot = robot;
-        this.status = SubsystemStatus.DESIGN;
-        this.priority = SubsystemPriority.MEDIUM;
+        this.project = project;
+        this.ownerSubteam = ownerSubteam;
     }
     
-    // Business methods
-    public boolean isComplete() {
-        return status == SubsystemStatus.COMPLETE;
+    // Getters and Setters
+    
+    public Long getId() {
+        return id;
     }
     
-    public boolean isInProgress() {
-        return status == SubsystemStatus.IN_PROGRESS || status == SubsystemStatus.TESTING;
+    public void setId(Long id) {
+        this.id = id;
     }
     
+    public String getName() {
+        return name;
+    }
+    
+    public void setName(String name) {
+        this.name = name;
+    }
+    
+    public String getDescription() {
+        return description;
+    }
+    
+    public void setDescription(String description) {
+        this.description = description;
+    }
+    
+    public String getColor() {
+        return color;
+    }
+    
+    public void setColor(String color) {
+        this.color = color;
+    }
+    
+    public Project getProject() {
+        return project;
+    }
+    
+    public void setProject(Project project) {
+        this.project = project;
+    }
+    
+    public Subteam getOwnerSubteam() {
+        return ownerSubteam;
+    }
+    
+    public void setOwnerSubteam(Subteam ownerSubteam) {
+        this.ownerSubteam = ownerSubteam;
+    }
+    
+    public Set<Task> getTasks() {
+        return tasks;
+    }
+    
+    public void setTasks(Set<Task> tasks) {
+        this.tasks = tasks;
+    }
+    
+    // Helper methods
+    
+    public void addTask(Task task) {
+        tasks.add(task);
+        task.setSubsystem(this);
+    }
+    
+    public void removeTask(Task task) {
+        tasks.remove(task);
+        task.setSubsystem(null);
+    }
+    
+    /**
+     * Get the completion percentage of this subsystem based on its tasks
+     */
     public double getCompletionPercentage() {
-        return switch (status) {
-            case DESIGN -> 10.0;
-            case IN_PROGRESS -> 50.0;
-            case TESTING -> 80.0;
-            case COMPLETE -> 100.0;
-            case ON_HOLD -> 25.0;
-        };
+        if (tasks.isEmpty()) {
+            return 0.0;
+        }
+        
+        double totalProgress = tasks.stream()
+                .mapToDouble(Task::getProgress)
+                .sum();
+        
+        return totalProgress / tasks.size();
     }
     
-    public double getBudgetUtilizationPercentage() {
-        if (budgetAllocated == null || budgetAllocated == 0) return 0.0;
-        if (budgetUsed == null) return 0.0;
-        return (budgetUsed / budgetAllocated) * 100.0;
+    /**
+     * Get the number of completed tasks in this subsystem
+     */
+    public long getCompletedTaskCount() {
+        return tasks.stream()
+                .filter(Task::isCompleted)
+                .count();
     }
     
-    public double getRemainingBudget() {
-        if (budgetAllocated == null) return 0.0;
-        if (budgetUsed == null) return budgetAllocated;
-        return budgetAllocated - budgetUsed;
+    @Override
+    public String toString() {
+        return name;
     }
     
-    public boolean isOverBudget() {
-        return budgetAllocated != null && budgetUsed != null && budgetUsed > budgetAllocated;
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Subsystem subsystem = (Subsystem) o;
+        return id != null && id.equals(subsystem.id);
     }
     
-    public boolean isHighPriority() {
-        return priority == SubsystemPriority.HIGH || priority == SubsystemPriority.CRITICAL;
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
     }
-    
-    // Standard getters and setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    
-    public Robot getRobot() { return robot; }
-    public void setRobot(Robot robot) { this.robot = robot; }
-    
-    public SubsystemStatus getStatus() { return status; }
-    public void setStatus(SubsystemStatus status) { this.status = status; }
-    
-    public SubsystemPriority getPriority() { return priority; }
-    public void setPriority(SubsystemPriority priority) { this.priority = priority; }
-    
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-    
-    public String getRequirements() { return requirements; }
-    public void setRequirements(String requirements) { this.requirements = requirements; }
-    
-    public TeamMember getResponsibleMember() { return responsibleMember; }
-    public void setResponsibleMember(TeamMember responsibleMember) { this.responsibleMember = responsibleMember; }
-    
-    public List<Task> getTasks() { return tasks; }
-    public void setTasks(List<Task> tasks) { this.tasks = tasks; }
-    
-    public Double getBudgetAllocated() { return budgetAllocated; }
-    public void setBudgetAllocated(Double budgetAllocated) { this.budgetAllocated = budgetAllocated; }
-    
-    public Double getBudgetUsed() { return budgetUsed; }
-    public void setBudgetUsed(Double budgetUsed) { this.budgetUsed = budgetUsed; }
-    
-    public String getNotes() { return notes; }
-    public void setNotes(String notes) { this.notes = notes; }
-    
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
-    
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

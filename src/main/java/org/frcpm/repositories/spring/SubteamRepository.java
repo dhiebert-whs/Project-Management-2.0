@@ -1,5 +1,3 @@
-// src/main/java/org/frcpm/repositories/spring/SubteamRepository.java
-
 package org.frcpm.repositories.spring;
 
 import org.frcpm.models.Subteam;
@@ -12,84 +10,73 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Spring Data JPA repository for Subteam entity.
- * Provides Spring Data JPA auto-implemented methods plus custom query methods.
+ * Spring Data JPA repository for Subteam entities.
  */
 @Repository
 public interface SubteamRepository extends JpaRepository<Subteam, Long> {
     
     /**
-     * Finds a subteam by name.
-     * 
-     * @param name the name to search for
-     * @return an Optional containing the found subteam, or empty if not found
+     * Find subteam by name.
+     *
+     * @param name the name of the subteam
+     * @return Optional containing the subteam if found
      */
     Optional<Subteam> findByName(String name);
     
     /**
-     * Finds a subteam by name (case insensitive).
-     * 
-     * @param name the name to search for
-     * @return an Optional containing the found subteam, or empty if not found
+     * Find subteam by name (case insensitive).
+     *
+     * @param name the name of the subteam
+     * @return Optional containing the subteam if found
      */
     Optional<Subteam> findByNameIgnoreCase(String name);
     
     /**
-     * Finds subteams by color code.
-     * 
-     * @param colorCode the color code to search for
-     * @return a list of subteams with the given color code
-     */
-    List<Subteam> findByColorCode(String colorCode);
-    
-    /**
-     * Finds subteams with specialties containing the given text.
-     * 
-     * @param specialty the specialty to search for
-     * @return a list of subteams with matching specialties
-     */
-    @Query("SELECT s FROM Subteam s WHERE s.specialties LIKE %:specialty%")
-    List<Subteam> findBySpecialty(@Param("specialty") String specialty);
-    
-    /**
-     * Finds subteams with specialties containing the given text (case insensitive).
-     * 
-     * @param specialty the specialty to search for
-     * @return a list of subteams with matching specialties
-     */
-    @Query("SELECT s FROM Subteam s WHERE LOWER(s.specialties) LIKE LOWER(CONCAT('%', :specialty, '%'))")
-    List<Subteam> findBySpecialtyIgnoreCase(@Param("specialty") String specialty);
-    
-    /**
-     * Finds subteams with specialties containing the given text (case insensitive).
-     * This method is used by the service layer for specialty searches.
-     * 
-     * @param specialty the specialty to search for
-     * @return a list of subteams with matching specialties
-     */
-    @Query("SELECT s FROM Subteam s WHERE LOWER(s.specialties) LIKE LOWER(CONCAT('%', :specialty, '%'))")
-    List<Subteam> findBySpecialtiesContainingIgnoreCase(@Param("specialty") String specialty);
-    
-    /**
-     * Finds all subteams ordered by name.
-     * 
-     * @return a list of all subteams ordered by name
+     * Find all subteams ordered by name.
+     *
+     * @return List of subteams ordered by name
      */
     List<Subteam> findAllByOrderByName();
     
     /**
-     * Checks if a subteam with the given name exists.
-     * 
-     * @param name the name to check
-     * @return true if exists, false otherwise
+     * Find subteams that have members.
+     *
+     * @return List of subteams with members
      */
-    boolean existsByName(String name);
+    @Query("SELECT DISTINCT s FROM Subteam s WHERE s.members IS NOT EMPTY")
+    List<Subteam> findSubteamsWithMembers();
     
     /**
-     * Checks if a subteam with the given name exists (case insensitive).
-     * 
+     * Find subteams that have subsystems.
+     *
+     * @return List of subteams with subsystems
+     */
+    @Query("SELECT DISTINCT s FROM Subteam s WHERE s.subsystems IS NOT EMPTY")
+    List<Subteam> findSubteamsWithSubsystems();
+    
+    /**
+     * Count members in a subteam.
+     *
+     * @param subteamId the ID of the subteam
+     * @return number of members in the subteam
+     */
+    @Query("SELECT COUNT(tm) FROM TeamMember tm WHERE tm.subteam.id = :subteamId")
+    long countMembersBySubteamId(@Param("subteamId") Long subteamId);
+    
+    /**
+     * Count subsystems owned by a subteam.
+     *
+     * @param subteamId the ID of the subteam
+     * @return number of subsystems owned by the subteam
+     */
+    @Query("SELECT COUNT(s) FROM Subsystem s WHERE s.ownerSubteam.id = :subteamId")
+    long countSubsystemsBySubteamId(@Param("subteamId") Long subteamId);
+    
+    /**
+     * Check if a subteam name exists (case insensitive).
+     *
      * @param name the name to check
-     * @return true if exists, false otherwise
+     * @return true if the name exists
      */
     boolean existsByNameIgnoreCase(String name);
 }

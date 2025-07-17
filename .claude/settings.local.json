@@ -5,7 +5,8 @@
       "Bash(mvn test:*)",
       "Bash(touch:*)",
       "Bash(mvn clean:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(sed:*)"
     ],
     "deny": []
   }

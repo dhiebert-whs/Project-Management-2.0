@@ -1,7 +1,8 @@
 package org.frcpm.repositories.spring;
 
-import org.frcpm.models.TeamMember;
 import org.frcpm.models.Subsystem;
+import org.frcpm.models.Subteam;
+import org.frcpm.models.Project;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -11,121 +12,120 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Spring Data JPA repository for Subsystem entity.
- * Provides Spring Data JPA auto-implemented methods plus custom query methods.
+ * Spring Data JPA repository for Subsystem entities.
  */
 @Repository
 public interface SubsystemRepository extends JpaRepository<Subsystem, Long> {
     
     /**
-     * Finds a subsystem by name.
-     * 
-     * @param name the name to search for
-     * @return an Optional containing the found subsystem, or empty if not found
+     * Find subsystems by project.
+     *
+     * @param project the project
+     * @return List of subsystems in the project
      */
-    Optional<Subsystem> findByName(String name);
+    List<Subsystem> findByProject(Project project);
     
     /**
-     * Finds a subsystem by name (case insensitive).
-     * 
-     * @param name the name to search for
-     * @return an Optional containing the found subsystem, or empty if not found
+     * Find subsystems by project ID.
+     *
+     * @param projectId the project ID
+     * @return List of subsystems in the project
      */
-    Optional<Subsystem> findByNameIgnoreCase(String name);
+    List<Subsystem> findByProjectId(Long projectId);
     
     /**
-     * Finds subsystems by status.
-     * 
-     * @param status the status to search for
-     * @return a list of subsystems with the given status
+     * Find subsystems by owner subteam.
+     *
+     * @param subteam the owner subteam
+     * @return List of subsystems owned by the subteam
      */
-    List<Subsystem> findByStatus(Subsystem.SubsystemStatus status);
+    List<Subsystem> findByOwnerSubteam(Subteam subteam);
     
     /**
-     * Finds subsystems managed by a specific team member.
-     * 
-     * @param member the responsible team member
-     * @return a list of subsystems managed by the team member
+     * Find subsystems by owner subteam ID.
+     *
+     * @param subteamId the owner subteam ID
+     * @return List of subsystems owned by the subteam
      */
-    List<Subsystem> findByResponsibleMember(TeamMember member);
+    List<Subsystem> findByOwnerSubteamId(Long subteamId);
     
     /**
-     * Finds subsystems with no responsible team member assigned.
-     * 
-     * @return a list of subsystems with no responsible team member
+     * Find subsystem by name within a project.
+     *
+     * @param name the name of the subsystem
+     * @param project the project
+     * @return Optional containing the subsystem if found
      */
-    List<Subsystem> findByResponsibleMemberIsNull();
+    Optional<Subsystem> findByNameAndProject(String name, Project project);
     
     /**
-     * Finds subsystems with a responsible team member assigned.
-     * 
-     * @return a list of subsystems with a responsible team member
+     * Find subsystem by name within a project (case insensitive).
+     *
+     * @param name the name of the subsystem
+     * @param project the project
+     * @return Optional containing the subsystem if found
      */
-    List<Subsystem> findByResponsibleMemberIsNotNull();
+    Optional<Subsystem> findByNameIgnoreCaseAndProject(String name, Project project);
     
     /**
-     * Finds subsystems by description containing the given text.
-     * 
-     * @param description the description text to search for
-     * @return a list of subsystems with matching descriptions
+     * Find subsystems by project ordered by name.
+     *
+     * @param project the project
+     * @return List of subsystems ordered by name
      */
-    List<Subsystem> findByDescriptionContainingIgnoreCase(String description);
+    List<Subsystem> findByProjectOrderByName(Project project);
     
     /**
-     * Finds all subsystems ordered by name.
-     * 
-     * @return a list of all subsystems ordered by name
+     * Find subsystems by project and owner subteam.
+     *
+     * @param project the project
+     * @param subteam the owner subteam
+     * @return List of subsystems owned by the subteam in the project
      */
-    List<Subsystem> findAllByOrderByName();
+    List<Subsystem> findByProjectAndOwnerSubteam(Project project, Subteam subteam);
     
     /**
-     * Finds subsystems by status ordered by name.
-     * 
-     * @param status the status to search for
-     * @return a list of subsystems with the given status ordered by name
+     * Count tasks in a subsystem.
+     *
+     * @param subsystemId the ID of the subsystem
+     * @return number of tasks in the subsystem
      */
-    List<Subsystem> findByStatusOrderByName(Subsystem.SubsystemStatus status);
+    @Query("SELECT COUNT(t) FROM Task t WHERE t.subsystem.id = :subsystemId")
+    long countTasksBySubsystemId(@Param("subsystemId") Long subsystemId);
     
     /**
-     * Counts subsystems by status.
-     * 
-     * @param status the status to count
-     * @return the number of subsystems with the given status
+     * Count completed tasks in a subsystem.
+     *
+     * @param subsystemId the ID of the subsystem
+     * @return number of completed tasks in the subsystem
      */
-    long countByStatus(Subsystem.SubsystemStatus status);
+    @Query("SELECT COUNT(t) FROM Task t WHERE t.subsystem.id = :subsystemId AND t.completed = true")
+    long countCompletedTasksBySubsystemId(@Param("subsystemId") Long subsystemId);
     
     /**
-     * Counts subsystems managed by a specific team member.
-     * 
-     * @param member the responsible team member
-     * @return the number of subsystems managed by the team member
+     * Calculate average progress for a subsystem.
+     *
+     * @param subsystemId the ID of the subsystem
+     * @return average progress percentage
      */
-    long countByResponsibleMember(TeamMember member);
+    @Query("SELECT AVG(t.progress) FROM Task t WHERE t.subsystem.id = :subsystemId")
+    Double calculateAverageProgressBySubsystemId(@Param("subsystemId") Long subsystemId);
     
     /**
-     * Checks if a subsystem with the given name exists.
-     * 
+     * Find subsystems with tasks.
+     *
+     * @param projectId the project ID
+     * @return List of subsystems that have tasks
+     */
+    @Query("SELECT DISTINCT s FROM Subsystem s WHERE s.project.id = :projectId AND s.tasks IS NOT EMPTY")
+    List<Subsystem> findSubsystemsWithTasks(@Param("projectId") Long projectId);
+    
+    /**
+     * Check if a subsystem name exists within a project (case insensitive).
+     *
      * @param name the name to check
-     * @return true if exists, false otherwise
+     * @param projectId the project ID
+     * @return true if the name exists
      */
-    boolean existsByName(String name);
-    
-    /**
-     * Checks if a subsystem with the given name exists (case insensitive).
-     * 
-     * @param name the name to check
-     * @return true if exists, false otherwise
-     */
-    boolean existsByNameIgnoreCase(String name);
-    
-    /**
-     * Finds subsystems with a specific status managed by a specific team member.
-     * 
-     * @param status the status to search for
-     * @param member the responsible team member
-     * @return a list of subsystems matching both criteria
-     */
-    @Query("SELECT s FROM Subsystem s WHERE s.status = :status AND s.responsibleMember = :member ORDER BY s.name")
-    List<Subsystem> findByStatusAndResponsibleMember(@Param("status") Subsystem.SubsystemStatus status, 
-                                                     @Param("member") TeamMember member);
+    boolean existsByNameIgnoreCaseAndProjectId(String name, Long projectId);
 }

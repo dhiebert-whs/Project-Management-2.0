@@ -101,13 +101,7 @@ public class Milestone {
     @JoinColumn(name = "project_id", nullable = false)
     private Project project;
     
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "robot_id")
-    private Robot robot;
-    
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "season_id")
-    private CompetitionSeason season;
+    // Robot and CompetitionSeason references removed due to scope reduction
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_to")

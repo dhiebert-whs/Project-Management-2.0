@@ -57,7 +57,7 @@ class TeamMemberRepositoryIntegrationTest {
     private Subteam createTestSubteam() {
         Subteam subteam = new Subteam();
         subteam.setName("Programming Team");
-        subteam.setColorCode("#007ACC");
+        subteam.setColor("#007ACC");
         return subteam;
     }
     
@@ -67,7 +67,7 @@ class TeamMemberRepositoryIntegrationTest {
     private Subteam createOtherSubteam() {
         Subteam subteam = new Subteam();
         subteam.setName("Mechanical Team");
-        subteam.setColorCode("#FF6B35");
+        subteam.setColor("#FF6B35");
         return subteam;
     }
     

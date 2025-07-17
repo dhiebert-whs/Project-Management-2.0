@@ -1,12 +1,15 @@
 package org.frcpm.models;
 
 import jakarta.persistence.*;
-import java.util.ArrayList;
-import java.util.List;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+import java.util.HashSet;
+import java.util.Set;
 
 /**
- * Entity class representing a subteam in the FRC Project Management System.
- * This corresponds to the Subteam model in the Django application.
+ * Entity representing FRC team subteams (mechanical, programming, electrical, etc).
+ * Each team member belongs to one or more subteams.
  */
 @Entity
 @Table(name = "subteams")
@@ -16,20 +19,24 @@ public class Subteam {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(name = "name", length = 100, nullable = false)
+    @NotBlank
+    @Size(max = 100)
+    @Column(name = "name", nullable = false, unique = true)
     private String name;
     
-    @Column(name = "color_code", length = 7, nullable = false)
-    private String colorCode;
+    @Size(max = 500)
+    @Column(name = "description")
+    private String description;
     
-    @Column(name = "specialties", columnDefinition = "TEXT")
-    private String specialties;
+    @Size(max = 7)
+    @Column(name = "color")
+    private String color; // Hex color for UI display
     
-    @OneToMany(mappedBy = "subteam", cascade = CascadeType.ALL)
-    private List<TeamMember> members = new ArrayList<>();
+    @OneToMany(mappedBy = "subteam", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Set<TeamMember> members = new HashSet<>();
     
-    @OneToMany(mappedBy = "responsibleSubteam")
-    private List<Subsystem> subsystems = new ArrayList<>();
+    @OneToMany(mappedBy = "ownerSubteam", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Set<Subsystem> subsystems = new HashSet<>();
     
     // Constructors
     
@@ -37,9 +44,13 @@ public class Subteam {
         // Default constructor required by JPA
     }
     
-    public Subteam(String name, String colorCode) {
+    public Subteam(String name) {
         this.name = name;
-        this.colorCode = colorCode;
+    }
+    
+    public Subteam(String name, String description) {
+        this.name = name;
+        this.description = description;
     }
     
     // Getters and Setters
@@ -47,48 +58,48 @@ public class Subteam {
     public Long getId() {
         return id;
     }
-
+    
     public void setId(Long id) {
         this.id = id;
     }
-
+    
     public String getName() {
         return name;
     }
-
+    
     public void setName(String name) {
         this.name = name;
     }
-
-    public String getColorCode() {
-        return colorCode;
+    
+    public String getDescription() {
+        return description;
     }
-
-    public void setColorCode(String colorCode) {
-        this.colorCode = colorCode;
+    
+    public void setDescription(String description) {
+        this.description = description;
     }
-
-    public String getSpecialties() {
-        return specialties;
+    
+    public String getColor() {
+        return color;
     }
-
-    public void setSpecialties(String specialties) {
-        this.specialties = specialties;
+    
+    public void setColor(String color) {
+        this.color = color;
     }
-
-    public List<TeamMember> getMembers() {
+    
+    public Set<TeamMember> getMembers() {
         return members;
     }
-
-    public void setMembers(List<TeamMember> members) {
+    
+    public void setMembers(Set<TeamMember> members) {
         this.members = members;
     }
-
-    public List<Subsystem> getSubsystems() {
+    
+    public Set<Subsystem> getSubsystems() {
         return subsystems;
     }
-
-    public void setSubsystems(List<Subsystem> subsystems) {
+    
+    public void setSubsystems(Set<Subsystem> subsystems) {
         this.subsystems = subsystems;
     }
     
@@ -106,18 +117,29 @@ public class Subteam {
     
     public void addSubsystem(Subsystem subsystem) {
         subsystems.add(subsystem);
-        // Note: Phase 3 updated Subsystem to use responsible member instead of subteam
-        // This method may need to be updated based on new business logic
+        subsystem.setOwnerSubteam(this);
     }
     
     public void removeSubsystem(Subsystem subsystem) {
         subsystems.remove(subsystem);
-        // Note: Phase 3 updated Subsystem to use responsible member instead of subteam
-        // This method may need to be updated based on new business logic
+        subsystem.setOwnerSubteam(null);
     }
     
     @Override
     public String toString() {
         return name;
+    }
+    
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Subteam subteam = (Subteam) o;
+        return id != null && id.equals(subteam.id);
+    }
+    
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
     }
 }

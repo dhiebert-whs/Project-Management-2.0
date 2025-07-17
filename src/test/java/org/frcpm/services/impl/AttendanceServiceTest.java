@@ -116,7 +116,7 @@ class AttendanceServiceTest {
         Subteam subteam = new Subteam();
         subteam.setId(1L);
         subteam.setName("Programming");
-        subteam.setColorCode("#3498db");
+        subteam.setColor("#3498db");
         return subteam;
     }
     
@@ -605,7 +605,7 @@ class AttendanceServiceTest {
         // Ensure test member has subteam
         assertNotNull(testMember.getSubteam());
         assertEquals("Programming", testMember.getSubteam().getName());
-        assertEquals("#3498db", testMember.getSubteam().getColorCode());
+        assertEquals("#3498db", testMember.getSubteam().getColor());
         
         when(meetingRepository.findById(1L)).thenReturn(Optional.of(testMeeting));
         when(teamMemberRepository.findById(1L)).thenReturn(Optional.of(testMember));

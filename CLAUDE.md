@@ -2,16 +2,50 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
+## FRC Project Visualization & Management System
 
-**FRC Project Management System** - A Spring Boot web application for FIRST Robotics Competition teams to manage projects, tasks, and team coordination during build season.
+This Spring Boot application supports FIRST Robotics Competition (FRC) teams in visualizing build projects through interactive Gantt charts and managing team responsibilities via daily to-do lists.
 
 - **Architecture**: Spring Boot 3.2 + Spring Data JPA + Thymeleaf
 - **Java Version**: 21
 - **Database**: H2 (development) / SQLite (production)
 - **Build Tool**: Maven 3.11+
 - **Current Phase**: Phase 2E-D (Advanced Task Management) - **100% COMPLETE**
-- **Next Phase**: Phase 3 (FRC-Specific Optimizations & Mobile Experience) - Ready to start
+
+## 🎯 **Project Focus**
+
+This system **does not include**:
+- Competition schedules or match tracking
+- Messaging or internal communications
+- FIRST API or The Blue Alliance API integration
+- Rankings, match analysis, or live scouting
+
+The **primary goals** are to:
+- Visually represent FRC build projects via **interactive Gantt charts**
+- Track **task dependencies and deadlines**
+- Assign and display **group and individual to-do lists**
+- Archive **completed projects** and **former team members**
+- Manage **components**, with deletion allowed only when unused
+- Support **mobile-friendly use**, including app-like behavior
+- Export **Gantt charts to PDF/image formats**
+- Enable **Google OAuth login for mentors**
+
+## 🔧 Architecture & Tech Stack
+
+| Component        | Technology              | Notes |
+|------------------|--------------------------|-------|
+| Framework        | Spring Boot 3.2.x        | Current LTS |
+| Language         | Java 21                  | Records, pattern matching |
+| Build Tool       | Maven 3.11+              | |
+| Frontend         | Thymeleaf + Bootstrap 5  | Responsive UI |
+| Gantt Chart      | `dhtmlxGantt` Standard   | Free educational license |
+| Real-Time        | WebSocket (STOMP/SockJS) | Push task updates |
+| Database (Dev)   | H2 (in-memory or file)   | |
+| Database (Prod)  | SQLite + HikariCP        | Lightweight embedded DB |
+| Authentication   | Spring Security + Google OAuth | Mentor SSO |
+| Mobile Support   | PWA, responsive layout   | Installable on mobile |
+| Gantt Export     | `html2canvas` + `jsPDF`  | Client-side export to PDF/image |
+| Testing          | JUnit 5, Mockito, JaCoCo | Full stack coverage |
 
 ## Common Commands
 
@@ -73,11 +107,10 @@ mvn spring-boot:run  # Will recreate tables
   - **`web/dto/`** - Data transfer objects
   - **`web/websocket/`** - WebSocket controllers for real-time features
   - **`security/`** - Authentication and authorization logic
-  - **`integration/frc/`** - FRC API integration services
 
 ### Key Domain Models
 - **`Task`** - Core task entity with Kanban workflow
-- **`TaskDependency`** - Advanced task dependencies (NEW in Phase 2E-D)
+- **`TaskDependency`** - Advanced task dependencies (Phase 2E-D)
 - **`Project`** - Project management with deadlines
 - **`TeamMember`** - Team profiles and role assignments
 - **`User`** - Authentication with COPPA compliance
@@ -88,8 +121,6 @@ Phase 2E-D is **100% COMPLETE**. All advanced task dependency management feature
 - **TaskDependencyDto** - API response objects (✅ Complete)
 - **UI templates** - Dependency management interfaces (✅ Complete)
 - **Critical Path Analysis** - Advanced project planning (✅ Complete)
-
-**Phase 3 is ready to begin** - FRC-specific optimizations and mobile experience enhancements.
 
 ## Key Features
 
@@ -108,6 +139,41 @@ Phase 2E-D is **100% COMPLETE**. All advanced task dependency management feature
 - **Database**: H2 (dev), SQLite (prod), HikariCP connection pooling
 - **Build**: Maven with Spring Boot plugin
 - **Security**: BCrypt password hashing, MFA for mentors
+
+## 📊 Gantt Chart Integration
+
+- Library: `dhtmlxGantt` Standard Edition
+- Features:
+  - Drag-and-drop task scheduling
+  - Visual dependencies
+  - Critical path visualization
+  - Inline editing
+  - **PDF/Image export** using `html2canvas` + `jsPDF`
+
+## 📱 Mobile-Friendly Features
+
+| Feature                    | Status |
+|-----------------------------|--------|
+| Responsive UI (Bootstrap)   | ✅     |
+| Installable as PWA          | ✅     |
+| Offline fallback (basic)    | ✅     |
+| Touch-friendly controls     | ✅     |
+| Optional QR code attendance | 🔲 _(future)_ |
+
+## 📑 Features Summary
+
+| Feature                             | Status       |
+|--------------------------------------|--------------|
+| Gantt chart with dependencies        | ✅ Complete  |
+| Group/Individual task list views     | ✅ Complete  |
+| Task assignment and auditing         | ✅ Complete  |
+| Real-time updates via WebSocket      | ✅ Complete  |
+| Role-based access control            | ✅ Complete  |
+| Project & team member archiving      | ✅ Complete  |
+| Component reuse w/ archive rules     | ✅ Complete  |
+| Mobile support + PWA behavior        | ✅ Complete  |
+| Gantt export (PDF/image)             | ✅ Complete  |
+| Google OAuth for mentor login        | ✅ Complete  |
 
 ## Development Patterns
 
@@ -141,8 +207,9 @@ users                 -- Authentication with COPPA compliance
 team_members         -- Team profiles and roles
 projects             -- Project management with deadlines
 tasks                -- Task management with Kanban status
-task_dependencies    -- Advanced dependency relationships (NEW)
+task_dependencies    -- Advanced dependency relationships
 meetings             -- Meeting coordination
+components           -- Component tracking
 audit_logs           -- Security and compliance tracking
 ```
 
@@ -152,6 +219,15 @@ audit_logs           -- Security and compliance tracking
 - Users can have multiple TeamMember profiles across projects
 - All changes are tracked in audit_logs for compliance
 
+## 🗃️ Data Lifecycle Rules
+
+| Entity      | Actionable Rules                                      |
+|-------------|--------------------------------------------------------|
+| Projects    | Can be archived, not deleted                          |
+| Tasks       | Deletable if not linked via dependencies              |
+| Components  | Deletable if unused; archived if used in any project  |
+| TeamMembers | Archived per project upon departure                   |
+
 ## Configuration
 
 ### Application Profiles
@@ -160,7 +236,7 @@ audit_logs           -- Security and compliance tracking
 - **test**: In-memory H2, isolated test environment
 
 ### Important Configuration Files
-- **`application.yml`** - Main configuration with FRC API settings
+- **`application.yml`** - Main configuration
 - **`application-development.yml`** - Development-specific overrides
 - **`application-production.yml`** - Production deployment settings
 
@@ -173,11 +249,33 @@ SPRING_PROFILES_ACTIVE=development
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=secure_password
 
-# FRC API Integration
-FRC_API_USERNAME=your_frc_username
-FRC_API_AUTH_KEY=your_frc_auth_key
-TEAM_NUMBER=2408
+# OAuth
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
 ```
+
+## 🔐 Security & Authentication
+
+- **Mentor login** via Google OAuth
+- Standard login for other roles (COPPA-compliant)
+- Role-based access:
+  - `ADMIN`: All features
+  - `MENTOR`: Full project/task management
+  - `STUDENT`: View + task completion
+  - `PARENT`: Optional, read-only
+
+### Role-Based Access Control
+```java
+@PreAuthorize("hasAnyRole('MENTOR', 'ADMIN')")  // Management functions
+@PreAuthorize("isAuthenticated()")              // Basic access
+@PreAuthorize("hasRole('ADMIN')")               // Admin-only operations
+```
+
+### COPPA Compliance
+- Automatic age verification for student accounts
+- Parental consent workflow for users under 13
+- Data minimization and retention policies
+- Comprehensive audit logging for compliance
 
 ## Testing Guidelines
 
@@ -193,20 +291,25 @@ TEAM_NUMBER=2408
 - Use `@DataJpaTest` for repository tests
 - Mock external dependencies with `@MockBean`
 
-## Security Considerations
+### Testing Commands
+```bash
+# Run all tests
+mvn test
 
-### Role-Based Access Control
-```java
-@PreAuthorize("hasAnyRole('MENTOR', 'ADMIN')")  // Management functions
-@PreAuthorize("isAuthenticated()")              // Basic access
-@PreAuthorize("hasRole('ADMIN')")               // Admin-only operations
+# Run with code coverage
+mvn test jacoco:report
+
+# Run only integration tests
+mvn test -Dtest=*IntegrationTest
 ```
 
-### COPPA Compliance
-- Automatic age verification for student accounts
-- Parental consent workflow for users under 13
-- Data minimization and retention policies
-- Comprehensive audit logging for compliance
+## 🌐 URLs & UI
+
+| Resource             | URL Example                             |
+|----------------------|------------------------------------------|
+| H2 Console (Dev)     | `http://localhost:8080/h2-console`       |
+| Gantt Chart UI       | `http://localhost:8080/projects/{id}/gantt` |
+| Health Check         | `http://localhost:8080/actuator/health` |
 
 ## Common Issues and Solutions
 
@@ -225,53 +328,20 @@ TEAM_NUMBER=2408
 - Check CORS settings for local development
 - Verify SockJS/STOMP client integration
 
-## Phase 3: FRC-Specific Optimizations & Mobile Experience
+## 🧹 Removed Features
 
-### **Overview**
-Phase 3 transforms the secure web application into a specialized FRC team management platform with build season workflows, workshop-optimized mobile features, and comprehensive integration with the FRC ecosystem.
+| Feature                      | Status |
+|------------------------------|--------|
+| Competition/match tracking   | ❌     |
+| Blue Alliance / FIRST APIs   | ❌     |
+| GitHub integration           | ❌     |
+| Messaging & chat             | ❌     |
 
-### **Phase 3 Development Priorities**
+## 🔗 Optional Future Enhancements
 
-**Step 1: FRC-Specific Domain Models**
-- **Competition and Season Management**: CompetitionSeason, Competition, CompetitionType, SeasonStatus models
-- **Build Season Workflow**: Robot, RobotStatus, RobotType, Subsystem, RobotTest models
-- **Workshop and Safety**: WorkshopSession, SessionType, SafetyIncident, ToolUsage models
-
-**Step 2: FRC API Integration Services**
-- **FRC Events API**: Official FRC competition schedule integration
-- **The Blue Alliance API**: Competition results and team analytics
-- **GitHub Integration**: Programming task linking with commits
-
-**Step 3: Workshop-Optimized Mobile Features**
-- **QR Code Attendance**: Camera-based check-in system
-- **Mobile Workshop Controllers**: Touch-friendly workshop interface
-- **Voice Commands**: Hands-free task updates while working
-- **Offline Capabilities**: 7-day offline operation with sync
-
-**Step 4: Build Season Workflow Implementation**
-- **Build Season Dashboard**: Specialized build season management
-- **Milestone Tracking**: Robot development milestone tracking
-- **Team Velocity Analytics**: Performance tracking and burndown charts
-- **Competition Preparation**: Automated checklists and logistics
-
-**Step 5: Progressive Web App Service Worker**
-- **Offline-First Architecture**: Works without internet for 7+ days
-- **Background Sync**: Automatic sync when connection restored
-- **Conflict Resolution**: Intelligent merging of offline changes
-- **Strategic Caching**: Essential project data caching
-
-**Step 6: PWA Manifest and Configuration**
-- **Progressive Web App**: Mobile app behavior and installation
-- **Custom Protocol Handlers**: Deep linking for mobile features
-- **High Contrast UI**: Optimized for workshop lighting conditions
-
-### **Phase 3 Deliverables**
-- **50+ new files** across domain models, services, controllers, and templates
-- **Offline-capable mobile interface** optimized for workshop conditions
-- **FRC ecosystem integration** with official APIs and third-party services
-- **Build season optimization** with critical path analysis and risk assessment
-- **Workshop safety features** with incident reporting and tool tracking
-- **Competition preparation** with automated logistics and readiness checklists
+- Calendar/task reminder sync (Google Calendar)
+- Component usage analytics
+- QR-code based workshop attendance
 
 ## Reference Files
 

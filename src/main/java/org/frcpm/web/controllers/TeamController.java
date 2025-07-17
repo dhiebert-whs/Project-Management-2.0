@@ -495,7 +495,7 @@ public class TeamController extends BaseController {
             Subteam subteam = new Subteam();
             
             // Set default color
-            subteam.setColorCode("#007bff");
+            subteam.setColor("#007bff");
             
             model.addAttribute("subteam", subteam);
             model.addAttribute("isEdit", false);
@@ -550,8 +550,8 @@ public class TeamController extends BaseController {
             // Create the subteam using the service
             Subteam savedSubteam = subteamService.createSubteam(
                 subteam.getName(),
-                subteam.getColorCode(),
-                subteam.getSpecialties()
+                subteam.getColor(),
+                subteam.getDescription()
             );
             
             // Add success message
@@ -1287,10 +1287,10 @@ public class TeamController extends BaseController {
         }
         
         // Color code validation
-        if (subteam.getColorCode() == null || subteam.getColorCode().trim().isEmpty()) {
+        if (subteam.getColor() == null || subteam.getColor().trim().isEmpty()) {
             result.rejectValue("colorCode", "required", "Color code is required");
         } else {
-            String colorCode = subteam.getColorCode().trim();
+            String colorCode = subteam.getColor().trim();
             if (!colorCode.matches("^#[0-9A-Fa-f]{6}$")) {
                 result.rejectValue("colorCode", "invalid", "Color code must be in hex format (e.g., #007bff)");
             }

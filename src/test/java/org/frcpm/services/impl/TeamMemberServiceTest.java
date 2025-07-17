@@ -57,7 +57,7 @@ class TeamMemberServiceTest {
         Subteam subteam = new Subteam();
         subteam.setId(1L);
         subteam.setName("Test Subteam");
-        subteam.setColorCode("#FF5733");
+        subteam.setColor("#FF5733");
         return subteam;
     }
     
