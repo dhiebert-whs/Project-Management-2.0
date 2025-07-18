@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  frc-project-management:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: frc-pm-app
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=production
+      - JAVA_OPTS=-Xmx512m -Xms256m
+      - SERVER_PORT=8080
+    volumes:
+      - frc_data:/app/data
+      - frc_logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      - frc-backup
+    networks:
+      - frc-network
+
+  frc-backup:
+    image: alpine:latest
+    container_name: frc-pm-backup
+    volumes:
+      - frc_data:/data
+      - frc_backups:/backups
+    environment:
+      - BACKUP_SCHEDULE=0 2 * * *  # Daily at 2 AM
+    command: >
+      sh -c "
+        echo '#!/bin/sh' > /backup.sh &&
+        echo 'timestamp=$$(date +%Y%m%d_%H%M%S)' >> /backup.sh &&
+        echo 'tar -czf /backups/frc-backup-$$timestamp.tar.gz -C /data .' >> /backup.sh &&
+        echo 'find /backups -name \"frc-backup-*.tar.gz\" -mtime +7 -delete' >> /backup.sh &&
+        echo 'echo \"Backup completed: frc-backup-$$timestamp.tar.gz\"' >> /backup.sh &&
+        chmod +x /backup.sh &&
+        while true; do
+          /backup.sh
+          sleep 86400
+        done
+      "
+    restart: unless-stopped
+    networks:
+      - frc-network
+
+  frc-nginx:
+    image: nginx:alpine
+    container_name: frc-pm-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - frc_ssl:/etc/nginx/ssl
+    depends_on:
+      - frc-project-management
+    restart: unless-stopped
+    networks:
+      - frc-network
+
+volumes:
+  frc_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data
+  frc_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./logs
+  frc_backups:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./backups
+  frc_ssl:
+    driver: local
+
+networks:
+  frc-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

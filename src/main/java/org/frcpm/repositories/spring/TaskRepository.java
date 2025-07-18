@@ -68,7 +68,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      * @param member the team member
      * @return a list of tasks assigned to the member
      */
-    @Query("SELECT t FROM Task t JOIN t.assignedTo m WHERE m = :member")
+    @Query("SELECT t FROM Task t WHERE :member MEMBER OF t.assignedTo")
     List<Task> findByAssignedMember(@Param("member") TeamMember member);
     
     /**
@@ -147,7 +147,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      * @param memberIds the list of team member IDs
      * @return a list of tasks assigned to any of the specified members
      */
-    @Query("SELECT DISTINCT t FROM Task t JOIN t.assignedTo m WHERE m.id IN :memberIds")
+    @Query("SELECT DISTINCT t FROM Task t WHERE EXISTS (SELECT m FROM t.assignedTo m WHERE m.id IN :memberIds)")
     List<Task> findTasksAssignedToMembers(@Param("memberIds") List<Long> memberIds);
     
     /**
@@ -173,7 +173,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      * 
      * @return a list of tasks with dependencies
      */
-    @Query("SELECT DISTINCT td.dependentTask FROM TaskDependency td WHERE td.active = true")
+    @Query("SELECT DISTINCT td.dependentTask FROM TaskDependency td WHERE td.isActive = true")
     List<Task> findTasksWithDependencies();
     
     /**
@@ -182,7 +182,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      * 
      * @return a list of blocking tasks
      */
-    @Query("SELECT DISTINCT td.prerequisiteTask FROM TaskDependency td WHERE td.active = true")
+    @Query("SELECT DISTINCT td.prerequisiteTask FROM TaskDependency td WHERE td.isActive = true")
     List<Task> findBlockingTasks();
     
     // =========================================================================
@@ -196,7 +196,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      * @return tasks that have TaskDependency entities where they are the dependent task
      */
     @Query("SELECT DISTINCT td.dependentTask FROM TaskDependency td " +
-           "WHERE td.project.id = :projectId AND td.active = true")
+           "WHERE td.project.id = :projectId AND td.isActive = true")
     List<Task> findTasksWithAdvancedDependencies(@Param("projectId") Long projectId);
     
     /**
@@ -206,7 +206,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      * @return tasks that have TaskDependency entities where they are the prerequisite task
      */
     @Query("SELECT DISTINCT td.prerequisiteTask FROM TaskDependency td " +
-           "WHERE td.project.id = :projectId AND td.active = true")
+           "WHERE td.project.id = :projectId AND td.isActive = true")
     List<Task> findAdvancedBlockingTasks(@Param("projectId") Long projectId);
     
     /**
@@ -217,7 +217,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      */
     @Query("SELECT DISTINCT td.dependentTask FROM TaskDependency td " +
            "WHERE td.project.id = :projectId " +
-           "AND td.active = true " +
+           "AND td.isActive = true " +
            "AND td.dependentTask.completed = false " +
            "AND (td.dependencyType IN ('FINISH_TO_START', 'BLOCKING') AND td.prerequisiteTask.completed = false) " +
            "OR (td.dependencyType = 'START_TO_START' AND td.prerequisiteTask.progress = 0)")
@@ -231,12 +231,12 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      */
     @Query("SELECT DISTINCT td.dependentTask FROM TaskDependency td " +
            "WHERE td.project.id = :projectId " +
-           "AND td.active = true " +
+           "AND td.isActive = true " +
            "AND td.criticalPath = true " +
            "UNION " +
            "SELECT DISTINCT td.prerequisiteTask FROM TaskDependency td " +
            "WHERE td.project.id = :projectId " +
-           "AND td.active = true " +
+           "AND td.isActive = true " +
            "AND td.criticalPath = true")
     List<Task> findCriticalPathTasks(@Param("projectId") Long projectId);
     
@@ -249,7 +249,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      */
     @Query("SELECT DISTINCT td.dependentTask FROM TaskDependency td " +
            "WHERE td.project.id = :projectId " +
-           "AND td.active = true " +
+           "AND td.isActive = true " +
            "AND td.dependencyType = :dependencyType")
     List<Task> findTasksByDependencyType(@Param("projectId") Long projectId, 
                                         @Param("dependencyType") DependencyType dependencyType);
@@ -267,7 +267,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
            "AND NOT EXISTS (" +
            "    SELECT 1 FROM TaskDependency td " +
            "    WHERE td.dependentTask = t " +
-           "    AND td.active = true " +
+           "    AND td.isActive = true " +
            "    AND (" +
            "        (td.dependencyType IN ('FINISH_TO_START', 'BLOCKING') AND td.prerequisiteTask.completed = false) " +
            "        OR (td.dependencyType = 'START_TO_START' AND td.prerequisiteTask.progress = 0)" +
@@ -283,7 +283,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      */
     @Query("SELECT td.prerequisiteTask FROM TaskDependency td " +
            "WHERE td.dependentTask.id = :taskId " +
-           "AND td.active = true " +
+           "AND td.isActive = true " +
            "ORDER BY td.dependencyType, td.prerequisiteTask.endDate")
     List<Task> findDirectPrerequisites(@Param("taskId") Long taskId);
     
@@ -295,7 +295,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      */
     @Query("SELECT td.dependentTask FROM TaskDependency td " +
            "WHERE td.prerequisiteTask.id = :taskId " +
-           "AND td.active = true " +
+           "AND td.isActive = true " +
            "ORDER BY td.dependencyType, td.dependentTask.startDate")
     List<Task> findDirectDependents(@Param("taskId") Long taskId);
     
@@ -308,7 +308,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      */
     @Query("SELECT DISTINCT td.dependentTask FROM TaskDependency td " +
            "WHERE td.project.id = :projectId " +
-           "AND td.active = true " +
+           "AND td.isActive = true " +
            "AND td.lagHours IS NOT NULL " +
            "AND td.lagHours != 0")
     List<Task> findTasksWithLagTime(@Param("projectId") Long projectId);
@@ -336,7 +336,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      */
     @Query("SELECT DISTINCT td.dependentTask FROM TaskDependency td " +
            "WHERE td.project.id = :projectId " +
-           "AND td.active = true " +
+           "AND td.isActive = true " +
            "AND td.dependencyType = 'SOFT' " +
            "AND NOT EXISTS (" +
            "    SELECT 1 FROM TaskDependency td2 " +
@@ -378,7 +378,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
            "    OR EXISTS (" +
            "        SELECT 1 FROM TaskDependency td " +
            "        WHERE td.dependentTask = t " +
-           "        AND td.active = true " +
+           "        AND td.isActive = true " +
            "        AND td.lagHours IS NOT NULL " +
            "        AND td.lagHours > 24" +  // More than 1 day lag suggests external dependency
            "    )" +
@@ -398,7 +398,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
            "AND NOT EXISTS (" +
            "    SELECT 1 FROM TaskDependency td " +
            "    WHERE (td.dependentTask = t OR td.prerequisiteTask = t) " +
-           "    AND td.active = true" +
+           "    AND td.isActive = true" +
            ")")
     List<Task> findIndependentTasks(@Param("projectId") Long projectId);
     
@@ -413,7 +413,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      */
     @Query("SELECT td.dependentTask FROM TaskDependency td " +
            "WHERE td.project.id = :projectId " +
-           "AND td.active = true " +
+           "AND td.isActive = true " +
            "AND (:dependencyType IS NULL OR td.dependencyType = :dependencyType) " +
            "AND (:prerequisiteCompleted IS NULL OR td.prerequisiteTask.completed = :prerequisiteCompleted) " +
            "AND (:dependentCompleted IS NULL OR td.dependentTask.completed = :dependentCompleted)")

@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>Analytics Dashboard - FRC Project Management</title>
+    <link th:href="@{/css/analytics.css}" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="container-fluid">
+            <!-- Page Header -->
+            <div class="row mb-4">
+                <div class="col">
+                    <h1 class="h3 mb-1">
+                        <i class="fas fa-chart-line"></i> Analytics Dashboard
+                        <span th:if="${selectedProject}" class="text-muted h5 ms-2">
+                            - <span th:text="${selectedProject.name}">Project Name</span>
+                        </span>
+                    </h1>
+                    <p class="text-muted">
+                        Comprehensive project analytics and performance insights
+                        <span th:if="${lastUpdated}" class="ms-2">
+                            • Updated <span th:text="${#temporals.format(lastUpdated, 'MMM dd, yyyy HH:mm')}">timestamp</span>
+                        </span>
+                    </p>
+                </div>
+                <div class="col-auto">
+                    <div class="btn-group">
+                        <button class="btn btn-outline-secondary" onclick="refreshDashboard()">
+                            <i class="fas fa-sync"></i> Refresh
+                        </button>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-outline-secondary dropdown-toggle" 
+                                    type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-download"></i> Export
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="exportToPDF()">
+                                    <i class="fas fa-file-pdf"></i> PDF Report
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="exportToExcel()">
+                                    <i class="fas fa-file-excel"></i> Excel Data
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="exportToCSV()">
+                                    <i class="fas fa-file-csv"></i> CSV Data
+                                </a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Key Metrics Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card metrics-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title text-muted mb-1">Project Progress</h6>
+                                    <h2 class="mb-0" th:text="${analytics.completionRate + '%'}">75%</h2>
+                                </div>
+                                <div class="metrics-icon text-primary">
+                                    <i class="fas fa-chart-pie fa-2x"></i>
+                                </div>
+                            </div>
+                            <div class="progress mt-2" style="height: 4px;">
+                                <div class="progress-bar" role="progressbar" 
+                                     th:style="'width: ' + ${analytics.completionRate} + '%'">
+                                </div>
+                            </div>
+                            <small class="text-muted">
+                                <span th:text="${analytics.completedTasks}">15</span> of 
+                                <span th:text="${analytics.totalTasks}">20</span> tasks completed
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card metrics-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title text-muted mb-1">Team Velocity</h6>
+                                    <h2 class="mb-0" th:text="${analytics.velocityMetrics.avgTasksPerDay}">2.3</h2>
+                                </div>
+                                <div class="metrics-icon text-success">
+                                    <i class="fas fa-tachometer-alt fa-2x"></i>
+                                </div>
+                            </div>
+                            <small class="text-muted">tasks per day</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card metrics-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title text-muted mb-1">Days Remaining</h6>
+                                    <h2 class="mb-0" th:text="${analytics.daysUntilEnd}">25</h2>
+                                </div>
+                                <div class="metrics-icon text-warning">
+                                    <i class="fas fa-calendar-alt fa-2x"></i>
+                                </div>
+                            </div>
+                            <small class="text-muted">until project deadline</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card metrics-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title text-muted mb-1">Team Size</h6>
+                                    <h2 class="mb-0" th:text="${analytics.teamSize}">8</h2>
+                                </div>
+                                <div class="metrics-icon text-info">
+                                    <i class="fas fa-users fa-2x"></i>
+                                </div>
+                            </div>
+                            <small class="text-muted">active members</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="row mb-4">
+                <!-- Progress Chart -->
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-line"></i> Progress Trends
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="progressChart" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Task Status Chart -->
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-donut"></i> Task Status Distribution
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="taskStatusChart" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Grid -->
+            <div class="row">
+                <!-- Team Performance -->
+                <div class="col-lg-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-users"></i> Team Performance
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="teamPerformanceChart" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Priority Analysis -->
+                <div class="col-lg-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-exclamation-triangle"></i> Task Priority Analysis
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="priorityChart" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Analytics Tabs -->
+            <div class="card">
+                <div class="card-header">
+                    <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#projectAnalytics">
+                                <i class="fas fa-project-diagram"></i> Project Analytics
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#teamAnalytics">
+                                <i class="fas fa-users"></i> Team Analytics
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#riskAnalysis">
+                                <i class="fas fa-shield-alt"></i> Risk Analysis
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#forecasting">
+                                <i class="fas fa-crystal-ball"></i> Forecasting
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content">
+                        <!-- Project Analytics Tab -->
+                        <div class="tab-pane fade show active" id="projectAnalytics">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Completion Metrics</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <tbody>
+                                                <tr>
+                                                    <td>Total Tasks</td>
+                                                    <td class="text-end" th:text="${analytics.totalTasks}">20</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Completed Tasks</td>
+                                                    <td class="text-end text-success" th:text="${analytics.completedTasks}">15</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>In Progress</td>
+                                                    <td class="text-end text-primary" th:text="${analytics.inProgressTasks}">3</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>To Do</td>
+                                                    <td class="text-end text-warning" th:text="${analytics.todoTasks}">2</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Quality Metrics</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <tbody>
+                                                <tr>
+                                                    <td>On-Time Completion</td>
+                                                    <td class="text-end" th:text="${analytics.qualityMetrics.onTimeCompletionRate + '%'}">85%</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Avg Task Duration</td>
+                                                    <td class="text-end" th:text="${analytics.qualityMetrics.avgTaskDuration + ' days'}">3.2 days</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Project Timeline</td>
+                                                    <td class="text-end" th:text="${analytics.timeProgress + '%'}">60%</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Velocity Variance</td>
+                                                    <td class="text-end" th:text="${analytics.velocityMetrics.velocityVariance}">0.3</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Team Analytics Tab -->
+                        <div class="tab-pane fade" id="teamAnalytics">
+                            <div class="row">
+                                <div class="col-12">
+                                    <h6>Team Member Performance</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Member</th>
+                                                    <th>Role</th>
+                                                    <th>Tasks Assigned</th>
+                                                    <th>Completed</th>
+                                                    <th>Completion Rate</th>
+                                                    <th>Velocity</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr th:each="member : ${teamPerformance.memberPerformance}">
+                                                    <td th:text="${member.memberName}">John Doe</td>
+                                                    <td th:text="${member.memberRole}">Student</td>
+                                                    <td th:text="${member.totalTasks}">5</td>
+                                                    <td th:text="${member.completedTasks}">4</td>
+                                                    <td>
+                                                        <div class="progress" style="height: 20px;">
+                                                            <div class="progress-bar" role="progressbar" 
+                                                                 th:style="'width: ' + ${member.completionRate} + '%'"
+                                                                 th:text="${member.completionRate + '%'}">
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td th:text="${member.velocity}">0.5</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Risk Analysis Tab -->
+                        <div class="tab-pane fade" id="riskAnalysis">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Risk Assessment</h6>
+                                    <div class="alert" th:classappend="${riskAnalysis.riskLevel == 'HIGH' ? 'alert-danger' : 
+                                                                      riskAnalysis.riskLevel == 'MEDIUM' ? 'alert-warning' : 'alert-success'}">
+                                        <h5 class="alert-heading">
+                                            <i class="fas fa-shield-alt"></i> 
+                                            Overall Risk Level: <span th:text="${riskAnalysis.riskLevel}">MEDIUM</span>
+                                        </h5>
+                                        <p>Risk Score: <span th:text="${riskAnalysis.overallRiskScore}">0.4</span></p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Risk Breakdown</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <tbody>
+                                                <tr>
+                                                    <td>Schedule Risk</td>
+                                                    <td class="text-end">
+                                                        <span class="badge" 
+                                                              th:classappend="${riskAnalysis.scheduleRisk.riskLevel == 'HIGH' ? 'bg-danger' : 
+                                                                               riskAnalysis.scheduleRisk.riskLevel == 'MEDIUM' ? 'bg-warning' : 'bg-success'}"
+                                                              th:text="${riskAnalysis.scheduleRisk.riskLevel}">MEDIUM</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Dependency Risk</td>
+                                                    <td class="text-end">
+                                                        <span class="badge" 
+                                                              th:classappend="${riskAnalysis.dependencyRisk.riskLevel == 'HIGH' ? 'bg-danger' : 
+                                                                               riskAnalysis.dependencyRisk.riskLevel == 'MEDIUM' ? 'bg-warning' : 'bg-success'}"
+                                                              th:text="${riskAnalysis.dependencyRisk.riskLevel}">LOW</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Resource Risk</td>
+                                                    <td class="text-end">
+                                                        <span class="badge" 
+                                                              th:classappend="${riskAnalysis.resourceRisk.riskLevel == 'HIGH' ? 'bg-danger' : 
+                                                                               riskAnalysis.resourceRisk.riskLevel == 'MEDIUM' ? 'bg-warning' : 'bg-success'}"
+                                                              th:text="${riskAnalysis.resourceRisk.riskLevel}">LOW</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Quality Risk</td>
+                                                    <td class="text-end">
+                                                        <span class="badge" 
+                                                              th:classappend="${riskAnalysis.qualityRisk.riskLevel == 'HIGH' ? 'bg-danger' : 
+                                                                               riskAnalysis.qualityRisk.riskLevel == 'MEDIUM' ? 'bg-warning' : 'bg-success'}"
+                                                              th:text="${riskAnalysis.qualityRisk.riskLevel}">LOW</span>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Forecasting Tab -->
+                        <div class="tab-pane fade" id="forecasting">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Completion Forecast</h6>
+                                    <div class="alert alert-info">
+                                        <h5 class="alert-heading">
+                                            <i class="fas fa-crystal-ball"></i> Projected Completion
+                                        </h5>
+                                        <p>
+                                            Based on current velocity, project completion is forecasted for 
+                                            <strong th:text="${forecast.forecastCompletionDate}">March 15, 2024</strong>
+                                        </p>
+                                        <p class="mb-0">
+                                            Confidence Level: <span th:text="${forecast.confidenceLevel * 100 + '%'}">75%</span>
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Forecast Metrics</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <tbody>
+                                                <tr>
+                                                    <td>Remaining Tasks</td>
+                                                    <td class="text-end" th:text="${forecast.remainingTasks}">5</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Days to Complete</td>
+                                                    <td class="text-end" th:text="${forecast.daysToComplete}">15</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Days Until Deadline</td>
+                                                    <td class="text-end" th:text="${forecast.daysUntilDeadline}">25</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Schedule Status</td>
+                                                    <td class="text-end">
+                                                        <span class="badge" 
+                                                              th:classappend="${forecast.isOnTrack ? 'bg-success' : 'bg-danger'}"
+                                                              th:text="${forecast.isOnTrack ? 'On Track' : 'Behind Schedule'}">On Track</span>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <div layout:fragment="scripts">
+        <script th:inline="javascript">
+            /*<![CDATA[*/
+            
+            // Analytics data from server
+            var analyticsData = /*[[${analytics}]]*/ {};
+            var teamPerformanceData = /*[[${teamPerformance}]]*/ {};
+            var riskAnalysisData = /*[[${riskAnalysis}]]*/ {};
+            var forecastData = /*[[${forecast}]]*/ {};
+            var projectId = /*[[${selectedProject?.id}]]*/ null;
+
+            // Chart instances
+            var progressChart = null;
+            var taskStatusChart = null;
+            var teamPerformanceChart = null;
+            var priorityChart = null;
+
+            document.addEventListener('DOMContentLoaded', function() {
+                initializeCharts();
+            });
+
+            function initializeCharts() {
+                // Progress Trends Chart
+                var progressCtx = document.getElementById('progressChart').getContext('2d');
+                progressChart = new Chart(progressCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6'],
+                        datasets: [{
+                            label: 'Completed Tasks',
+                            data: [2, 5, 8, 12, 15, 18],
+                            borderColor: 'rgb(75, 192, 192)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                            tension: 0.1
+                        }, {
+                            label: 'Planned Tasks',
+                            data: [3, 6, 9, 12, 15, 18],
+                            borderColor: 'rgb(255, 99, 132)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                            borderDash: [5, 5],
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+
+                // Task Status Chart
+                var taskStatusCtx = document.getElementById('taskStatusChart').getContext('2d');
+                taskStatusChart = new Chart(taskStatusCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Completed', 'In Progress', 'To Do'],
+                        datasets: [{
+                            data: [analyticsData.completedTasks || 0, 
+                                   analyticsData.inProgressTasks || 0, 
+                                   analyticsData.todoTasks || 0],
+                            backgroundColor: [
+                                'rgb(75, 192, 192)',
+                                'rgb(255, 205, 86)',
+                                'rgb(255, 99, 132)'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+
+                // Team Performance Chart
+                var teamPerformanceCtx = document.getElementById('teamPerformanceChart').getContext('2d');
+                if (teamPerformanceData.memberPerformance) {
+                    var memberNames = teamPerformanceData.memberPerformance.map(m => m.memberName);
+                    var completionRates = teamPerformanceData.memberPerformance.map(m => m.completionRate);
+                    
+                    teamPerformanceChart = new Chart(teamPerformanceCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: memberNames,
+                            datasets: [{
+                                label: 'Completion Rate (%)',
+                                data: completionRates,
+                                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    max: 100
+                                }
+                            }
+                        }
+                    });
+                }
+
+                // Priority Chart
+                var priorityCtx = document.getElementById('priorityChart').getContext('2d');
+                if (analyticsData.priorityDistribution) {
+                    var priorities = Object.keys(analyticsData.priorityDistribution);
+                    var counts = Object.values(analyticsData.priorityDistribution);
+                    
+                    priorityChart = new Chart(priorityCtx, {
+                        type: 'pie',
+                        data: {
+                            labels: priorities,
+                            datasets: [{
+                                data: counts,
+                                backgroundColor: [
+                                    'rgb(255, 99, 132)',
+                                    'rgb(255, 159, 64)',
+                                    'rgb(255, 205, 86)',
+                                    'rgb(75, 192, 192)',
+                                    'rgb(54, 162, 235)'
+                                ]
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom'
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
+            // Dashboard functions
+            function refreshDashboard() {
+                window.location.reload();
+            }
+
+            function exportToPDF() {
+                if (projectId) {
+                    window.location.href = `/api/analytics/export/${projectId}/pdf`;
+                }
+            }
+
+            function exportToExcel() {
+                if (projectId) {
+                    window.location.href = `/api/analytics/export/${projectId}/excel`;
+                }
+            }
+
+            function exportToCSV() {
+                if (projectId) {
+                    window.location.href = `/api/analytics/export/${projectId}/csv`;
+                }
+            }
+
+            // Auto-refresh dashboard every 5 minutes
+            setInterval(function() {
+                refreshDashboard();
+            }, 300000); // 5 minutes
+            
+            /*]]>*/
+        </script>
+    </div>
+</body>
+</html>

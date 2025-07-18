@@ -15,6 +15,7 @@ org\frcpm\models\User$1.class
 org\frcpm\services\impl\AbstractSpringService.class
 org\frcpm\config\WebConfig$PerformanceMonitoringInterceptor.class
 org\frcpm\security\TOTPService.class
+org\frcpm\services\MeetingNotificationService.class
 org\frcpm\services\NotificationService.class
 org\frcpm\web\controllers\TaskController$1.class
 org\frcpm\models\Milestone$MilestoneType.class
@@ -31,6 +32,7 @@ org\frcpm\utils\TestDatabaseCleaner.class
 org\frcpm\config\PasswordEncoderConfig.class
 org\frcpm\security\UserPrincipal.class
 org\frcpm\services\GanttDataService.class
+org\frcpm\services\impl\MeetingNotificationServiceImpl.class
 org\frcpm\services\SubteamService.class
 org\frcpm\models\TaskStatus.class
 org\frcpm\web\controllers\ComponentController.class
@@ -78,6 +80,8 @@ org\frcpm\repositories\spring\MeetingRepository.class
 org\frcpm\services\impl\TaskServiceImpl.class
 org\frcpm\services\MeetingService.class
 org\frcpm\models\DependencyType.class
+org\frcpm\services\impl\ReportingServiceImpl.class
+org\frcpm\services\ReportingService.class
 org\frcpm\config\WebSocketConfig.class
 org\frcpm\services\impl\NotificationServiceImpl.class
 org\frcpm\web\dto\TeamPresenceMessage$SubteamPresence.class
@@ -102,6 +106,7 @@ org\frcpm\services\impl\UserServiceImpl.class
 org\frcpm\services\NotificationService$NotificationType.class
 org\frcpm\models\UserRole.class
 org\frcpm\services\impl\ComponentServiceImpl.class
+org\frcpm\web\controllers\AnalyticsController.class
 org\frcpm\web\controllers\ReportsController.class
 org\frcpm\models\Subteam.class
 org\frcpm\web\controllers\DependencyViewController.class

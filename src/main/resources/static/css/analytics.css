@@ -1,0 +1,427 @@
+/* Analytics Dashboard Styles */
+
+/* Metrics Cards */
+.metrics-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.metrics-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.metrics-icon {
+    opacity: 0.1;
+}
+
+.metrics-card .card-body {
+    padding: 1.5rem;
+}
+
+.metrics-card h2 {
+    font-weight: 700;
+    font-size: 2rem;
+}
+
+.metrics-card h6 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Charts */
+.chart-container {
+    position: relative;
+    height: 300px;
+    margin-bottom: 1rem;
+}
+
+.chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 1rem;
+}
+
+.chart-legend-item {
+    display: flex;
+    align-items: center;
+    margin: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.chart-legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    margin-right: 0.5rem;
+}
+
+/* Analytics Tables */
+.analytics-table {
+    font-size: 0.875rem;
+}
+
+.analytics-table th {
+    background-color: #f8f9fa;
+    border-top: none;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.75rem;
+}
+
+.analytics-table td {
+    vertical-align: middle;
+    border-top: 1px solid #dee2e6;
+}
+
+.analytics-table .progress {
+    height: 6px;
+    background-color: #e9ecef;
+}
+
+.analytics-table .progress-bar {
+    font-size: 0.75rem;
+    line-height: 1;
+}
+
+/* Risk Analysis */
+.risk-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+}
+
+.risk-low {
+    background-color: #28a745;
+}
+
+.risk-medium {
+    background-color: #ffc107;
+}
+
+.risk-high {
+    background-color: #dc3545;
+}
+
+.risk-critical {
+    background-color: #6f42c1;
+}
+
+/* Forecast Section */
+.forecast-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.forecast-section h6 {
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 1rem;
+}
+
+.forecast-metric {
+    text-align: center;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 0.25rem;
+    margin-bottom: 1rem;
+}
+
+.forecast-metric h4 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.forecast-metric small {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.875rem;
+}
+
+/* Team Performance */
+.team-member-card {
+    border: 1px solid #e9ecef;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    transition: box-shadow 0.2s ease-in-out;
+}
+
+.team-member-card:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.team-member-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: white;
+    font-size: 1.25rem;
+}
+
+.team-member-info h6 {
+    margin-bottom: 0.25rem;
+    font-weight: 600;
+}
+
+.team-member-role {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.team-member-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.team-stat {
+    text-align: center;
+    min-width: 80px;
+}
+
+.team-stat-value {
+    font-weight: 600;
+    font-size: 1.125rem;
+    color: #495057;
+}
+
+.team-stat-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Tabs */
+.nav-tabs .nav-link {
+    border: none;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.nav-tabs .nav-link.active {
+    color: #495057;
+    background-color: transparent;
+    border-bottom: 2px solid #007bff;
+}
+
+.nav-tabs .nav-link:hover {
+    color: #007bff;
+    border-color: transparent;
+}
+
+/* Status Badges */
+.status-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-on-track {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-at-risk {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.status-behind {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* Export Buttons */
+.export-section {
+    background-color: #f8f9fa;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.export-btn {
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Loading States */
+.loading-spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .metrics-card {
+        margin-bottom: 1rem;
+    }
+    
+    .metrics-card h2 {
+        font-size: 1.5rem;
+    }
+    
+    .chart-container {
+        height: 250px;
+    }
+    
+    .team-member-stats {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .team-stat {
+        min-width: auto;
+    }
+    
+    .nav-tabs {
+        flex-wrap: wrap;
+    }
+    
+    .nav-tabs .nav-link {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .metrics-card .card-body {
+        padding: 1rem;
+    }
+    
+    .metrics-card h2 {
+        font-size: 1.25rem;
+    }
+    
+    .chart-container {
+        height: 200px;
+    }
+    
+    .forecast-section {
+        padding: 1rem;
+    }
+    
+    .forecast-metric h4 {
+        font-size: 1.5rem;
+    }
+    
+    .team-member-card {
+        padding: 0.75rem;
+    }
+}
+
+/* Animation for metric cards */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.metrics-card {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.metrics-card:nth-child(1) { animation-delay: 0.1s; }
+.metrics-card:nth-child(2) { animation-delay: 0.2s; }
+.metrics-card:nth-child(3) { animation-delay: 0.3s; }
+.metrics-card:nth-child(4) { animation-delay: 0.4s; }
+
+/* Chart loading state */
+.chart-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    color: #6c757d;
+}
+
+.chart-loading .loading-spinner {
+    margin-right: 0.5rem;
+}
+
+/* Trend indicators */
+.trend-indicator {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.875rem;
+    margin-left: 0.5rem;
+}
+
+.trend-up {
+    color: #28a745;
+}
+
+.trend-down {
+    color: #dc3545;
+}
+
+.trend-neutral {
+    color: #6c757d;
+}
+
+/* Alert customizations */
+.alert-analytics {
+    border: none;
+    border-radius: 0.5rem;
+    padding: 1rem 1.5rem;
+}
+
+.alert-analytics .alert-heading {
+    margin-bottom: 0.5rem;
+}
+
+.alert-analytics p:last-child {
+    margin-bottom: 0;
+}
+
+/* Custom scrollbar for tables */
+.table-responsive::-webkit-scrollbar {
+    height: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}

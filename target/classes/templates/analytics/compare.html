@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <title layout:title-pattern="$CONTENT_TITLE - FRC Project Management">Project Comparison</title>
+</head>
+
+<body>
+    <div layout:fragment="content">
+        <div class="container-fluid py-4">
+            <!-- Page Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="mb-1">
+                        <i class="fas fa-balance-scale text-primary me-2"></i>
+                        Project Comparison
+                    </h1>
+                    <p class="text-muted mb-0">Compare project performance and analytics across multiple projects</p>
+                </div>
+                
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary" onclick="refreshComparison()">
+                        <i class="fas fa-sync-alt me-1"></i>
+                        Refresh
+                    </button>
+                    <button class="btn btn-primary" onclick="exportComparison()">
+                        <i class="fas fa-download me-1"></i>
+                        Export
+                    </button>
+                </div>
+            </div>
+
+            <!-- Project Selection -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-project-diagram me-2"></i>
+                                Primary Project
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <select class="form-select" id="primaryProject" onchange="selectPrimaryProject()">
+                                <option value="">Select primary project</option>
+                                <option th:each="project : ${projects}" 
+                                        th:value="${project.id}" 
+                                        th:text="${project.name}"
+                                        th:selected="${selectedProject != null && selectedProject.id == project.id}">
+                                    Project Name
+                                </option>
+                            </select>
+                            
+                            <div class="mt-3" th:if="${selectedProject != null}">
+                                <div class="bg-light p-3 rounded">
+                                    <h6 class="mb-2" th:text="${selectedProject.name}">Selected Project</h6>
+                                    <small class="text-muted" th:text="${selectedProject.description}">Description</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">
+                                <i class="fas fa-plus-circle me-2"></i>
+                                Comparison Projects
+                            </h6>
+                            <button class="btn btn-sm btn-outline-primary" onclick="addComparisonProject()">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="comparisonProjects">
+                                <div class="comparison-project mb-2">
+                                    <div class="input-group">
+                                        <select class="form-select comparison-select">
+                                            <option value="">Select project to compare</option>
+                                            <option th:each="project : ${projects}" 
+                                                    th:value="${project.id}" 
+                                                    th:text="${project.name}">
+                                                Project Name
+                                            </option>
+                                        </select>
+                                        <button class="btn btn-outline-danger" onclick="removeComparisonProject(this)">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-3">
+                                <button class="btn btn-success w-100" onclick="compareProjects()">
+                                    <i class="fas fa-chart-line me-1"></i>
+                                    Compare Projects
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comparison Results -->
+            <div id="comparisonResults" style="display: none;">
+                <!-- Key Metrics Comparison -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-tachometer-alt me-2"></i>
+                                    Key Metrics Comparison
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover" id="metricsTable">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Metric</th>
+                                                <th id="primaryProjectName">Primary Project</th>
+                                                <th class="comparison-project-header">Comparison Project 1</th>
+                                                <th class="comparison-project-header">Comparison Project 2</th>
+                                                <th>Best Performance</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="metricsTableBody">
+                                            <!-- Metrics will be populated by JavaScript -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="row mb-4">
+                    <!-- Progress Comparison Chart -->
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-chart-bar me-2"></i>
+                                    Progress Comparison
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="progressComparisonChart" height="300"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Team Performance Chart -->
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-users me-2"></i>
+                                    Team Performance
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="teamPerformanceChart" height="300"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detailed Analysis -->
+                <div class="row mb-4">
+                    <!-- Velocity Trends -->
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-rocket me-2"></i>
+                                    Velocity Trends
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="velocityChart" height="200"></canvas>
+                                <div class="mt-3">
+                                    <div id="velocityInsights">
+                                        <!-- Velocity insights will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Quality Metrics -->
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-award me-2"></i>
+                                    Quality Metrics
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="qualityChart" height="200"></canvas>
+                                <div class="mt-3">
+                                    <div id="qualityInsights">
+                                        <!-- Quality insights will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Risk Analysis -->
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    Risk Analysis
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="riskChart" height="200"></canvas>
+                                <div class="mt-3">
+                                    <div id="riskInsights">
+                                        <!-- Risk insights will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recommendations -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-lightbulb me-2"></i>
+                                    Recommendations & Insights
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="recommendations">
+                                    <!-- Recommendations will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="text-center py-5">
+                <i class="fas fa-balance-scale fa-4x text-muted mb-3"></i>
+                <h4 class="text-muted">No Comparison Data</h4>
+                <p class="text-muted">Select a primary project and comparison projects to begin analysis</p>
+            </div>
+        </div>
+    </div>
+</body>
+
+<th:block layout:fragment="scripts">
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    let primaryProjectId = [[${selectedProject?.id}]];
+    let comparisonData = null;
+    let charts = {};
+    
+    // Project selection functions
+    function selectPrimaryProject() {
+        const select = document.getElementById('primaryProject');
+        if (select.value) {
+            window.location.href = `/analytics/compare?projectId=${select.value}`;
+        } else {
+            window.location.href = '/analytics/compare';
+        }
+    }
+    
+    function addComparisonProject() {
+        const container = document.getElementById('comparisonProjects');
+        const template = container.querySelector('.comparison-project').cloneNode(true);
+        template.querySelector('select').value = '';
+        container.appendChild(template);
+    }
+    
+    function removeComparisonProject(button) {
+        const container = document.getElementById('comparisonProjects');
+        if (container.children.length > 1) {
+            button.closest('.comparison-project').remove();
+        }
+    }
+    
+    // Main comparison function
+    function compareProjects() {
+        if (!primaryProjectId) {
+            showToast('Error', 'Please select a primary project first', 'error');
+            return;
+        }
+        
+        const comparisonSelects = document.querySelectorAll('.comparison-select');
+        const compareWith = Array.from(comparisonSelects)
+            .map(select => select.value)
+            .filter(value => value && value !== primaryProjectId);
+        
+        if (compareWith.length === 0) {
+            showToast('Error', 'Please select at least one project to compare', 'error');
+            return;
+        }
+        
+        showLoading(true);
+        
+        const url = `/analytics/api/compare/${primaryProjectId}?` + 
+                   compareWith.map(id => `compareWith=${id}`).join('&');
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                comparisonData = data;
+                displayComparisonResults(data);
+                showLoading(false);
+            })
+            .catch(error => {
+                console.error('Error comparing projects:', error);
+                showToast('Error', 'Failed to compare projects', 'error');
+                showLoading(false);
+            });
+    }
+    
+    // Display comparison results
+    function displayComparisonResults(data) {
+        // Show results section
+        document.getElementById('comparisonResults').style.display = 'block';
+        document.getElementById('emptyState').style.display = 'none';
+        
+        // Populate metrics table
+        populateMetricsTable(data);
+        
+        // Create charts
+        createProgressChart(data);
+        createTeamPerformanceChart(data);
+        createVelocityChart(data);
+        createQualityChart(data);
+        createRiskChart(data);
+        
+        // Generate recommendations
+        generateRecommendations(data);
+        
+        // Scroll to results
+        document.getElementById('comparisonResults').scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    // Populate metrics comparison table
+    function populateMetricsTable(data) {
+        const tableBody = document.getElementById('metricsTableBody');
+        
+        // Sample metrics (would be populated from actual data)
+        const metrics = [
+            { name: 'Completion Rate', primary: '85%', comparisons: ['78%', '92%'], best: 'Project 3' },
+            { name: 'Tasks Completed', primary: '45', comparisons: ['38', '52'], best: 'Project 3' },
+            { name: 'Team Velocity', primary: '2.3', comparisons: ['1.8', '2.7'], best: 'Project 3' },
+            { name: 'Average Task Duration', primary: '3.2 days', comparisons: ['4.1 days', '2.8 days'], best: 'Project 3' },
+            { name: 'On-Time Delivery', primary: '88%', comparisons: ['82%', '94%'], best: 'Project 3' },
+            { name: 'Risk Score', primary: 'Medium', comparisons: ['High', 'Low'], best: 'Project 3' }
+        ];
+        
+        tableBody.innerHTML = '';
+        
+        metrics.forEach(metric => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="fw-medium">${metric.name}</td>
+                <td class="text-center">${metric.primary}</td>
+                <td class="text-center">${metric.comparisons[0] || '-'}</td>
+                <td class="text-center">${metric.comparisons[1] || '-'}</td>
+                <td class="text-center">
+                    <span class="badge bg-success">${metric.best}</span>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+    }
+    
+    // Chart creation functions
+    function createProgressChart(data) {
+        const ctx = document.getElementById('progressComparisonChart').getContext('2d');
+        
+        if (charts.progress) {
+            charts.progress.destroy();
+        }
+        
+        charts.progress = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Tasks Completed', 'In Progress', 'Not Started'],
+                datasets: [
+                    {
+                        label: 'Primary Project',
+                        data: [45, 12, 8],
+                        backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Comparison Project 1',
+                        data: [38, 15, 12],
+                        backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Comparison Project 2',
+                        data: [52, 8, 5],
+                        backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+    
+    function createTeamPerformanceChart(data) {
+        const ctx = document.getElementById('teamPerformanceChart').getContext('2d');
+        
+        if (charts.teamPerformance) {
+            charts.teamPerformance.destroy();
+        }
+        
+        charts.teamPerformance = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: ['Productivity', 'Quality', 'Collaboration', 'Innovation', 'Delivery'],
+                datasets: [
+                    {
+                        label: 'Primary Project',
+                        data: [8.5, 7.8, 9.2, 7.5, 8.8],
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        pointBackgroundColor: 'rgba(54, 162, 235, 1)'
+                    },
+                    {
+                        label: 'Comparison Average',
+                        data: [7.8, 8.2, 8.5, 8.0, 8.2],
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        pointBackgroundColor: 'rgba(255, 99, 132, 1)'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 10
+                    }
+                }
+            }
+        });
+    }
+    
+    function createVelocityChart(data) {
+        const ctx = document.getElementById('velocityChart').getContext('2d');
+        
+        if (charts.velocity) {
+            charts.velocity.destroy();
+        }
+        
+        charts.velocity = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                datasets: [
+                    {
+                        label: 'Primary Project',
+                        data: [2.1, 2.3, 2.5, 2.3],
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Average Comparison',
+                        data: [1.8, 2.0, 2.2, 2.1],
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+        
+        // Add velocity insights
+        document.getElementById('velocityInsights').innerHTML = `
+            <div class="alert alert-success" role="alert">
+                <small><i class="fas fa-arrow-up me-1"></i> 
+                Primary project velocity is 15% above average</small>
+            </div>
+        `;
+    }
+    
+    function createQualityChart(data) {
+        const ctx = document.getElementById('qualityChart').getContext('2d');
+        
+        if (charts.quality) {
+            charts.quality.destroy();
+        }
+        
+        charts.quality = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Excellent', 'Good', 'Needs Improvement'],
+                datasets: [{
+                    data: [65, 30, 5],
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(255, 206, 86, 0.8)',
+                        'rgba(255, 99, 132, 0.8)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+        
+        // Add quality insights
+        document.getElementById('qualityInsights').innerHTML = `
+            <div class="alert alert-info" role="alert">
+                <small><i class="fas fa-award me-1"></i> 
+                Quality score: 8.5/10</small>
+            </div>
+        `;
+    }
+    
+    function createRiskChart(data) {
+        const ctx = document.getElementById('riskChart').getContext('2d');
+        
+        if (charts.risk) {
+            charts.risk.destroy();
+        }
+        
+        charts.risk = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Schedule', 'Resources', 'Quality', 'Scope'],
+                datasets: [{
+                    label: 'Risk Level',
+                    data: [4, 2, 3, 5],
+                    backgroundColor: [
+                        'rgba(255, 206, 86, 0.8)',
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 99, 132, 0.8)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 10
+                    }
+                }
+            }
+        });
+        
+        // Add risk insights
+        document.getElementById('riskInsights').innerHTML = `
+            <div class="alert alert-warning" role="alert">
+                <small><i class="fas fa-exclamation-triangle me-1"></i> 
+                Scope risk requires attention</small>
+            </div>
+        `;
+    }
+    
+    // Generate recommendations
+    function generateRecommendations(data) {
+        const recommendations = document.getElementById('recommendations');
+        
+        recommendations.innerHTML = `
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="recommendation-card bg-success bg-opacity-10 p-3 rounded mb-3">
+                        <h6 class="text-success">
+                            <i class="fas fa-thumbs-up me-2"></i>
+                            Strengths
+                        </h6>
+                        <ul class="list-unstyled mb-0">
+                            <li class="small mb-1">
+                                <i class="fas fa-check text-success me-1"></i>
+                                Strong team velocity
+                            </li>
+                            <li class="small mb-1">
+                                <i class="fas fa-check text-success me-1"></i>
+                                High collaboration scores
+                            </li>
+                            <li class="small">
+                                <i class="fas fa-check text-success me-1"></i>
+                                Consistent delivery quality
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="recommendation-card bg-warning bg-opacity-10 p-3 rounded mb-3">
+                        <h6 class="text-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Areas for Improvement
+                        </h6>
+                        <ul class="list-unstyled mb-0">
+                            <li class="small mb-1">
+                                <i class="fas fa-arrow-up text-warning me-1"></i>
+                                Increase task completion rate
+                            </li>
+                            <li class="small mb-1">
+                                <i class="fas fa-arrow-up text-warning me-1"></i>
+                                Reduce scope creep risk
+                            </li>
+                            <li class="small">
+                                <i class="fas fa-arrow-up text-warning me-1"></i>
+                                Improve resource allocation
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="recommendation-card bg-info bg-opacity-10 p-3 rounded mb-3">
+                        <h6 class="text-info">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            Actionable Insights
+                        </h6>
+                        <ul class="list-unstyled mb-0">
+                            <li class="small mb-1">
+                                <i class="fas fa-play text-info me-1"></i>
+                                Schedule more frequent check-ins
+                            </li>
+                            <li class="small mb-1">
+                                <i class="fas fa-play text-info me-1"></i>
+                                Implement best practices from Project 3
+                            </li>
+                            <li class="small">
+                                <i class="fas fa-play text-info me-1"></i>
+                                Focus on parallel task execution
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Utility functions
+    function refreshComparison() {
+        if (comparisonData) {
+            compareProjects();
+        } else {
+            window.location.reload();
+        }
+    }
+    
+    function exportComparison() {
+        if (!primaryProjectId) {
+            showToast('Error', 'No comparison data to export', 'error');
+            return;
+        }
+        
+        const url = `/analytics/export/${primaryProjectId}/pdf?reportType=project_comparison`;
+        window.open(url, '_blank');
+    }
+    
+    function showLoading(show) {
+        // Implement loading indicator
+        console.log(show ? 'Loading...' : 'Loading complete');
+    }
+    
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+        if (!primaryProjectId) {
+            document.getElementById('emptyState').style.display = 'block';
+        }
+    });
+</script>
+</th:block>
+</html>

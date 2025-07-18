@@ -321,6 +321,28 @@
                 Meetings
             </a>
             
+            <!-- Analytics -->
+            <a class="nav-link" href="/analytics/dashboard" th:classappend="${currentSection == 'analytics'} ? 'active' : ''">
+                <i class="fas fa-chart-line"></i>
+                Analytics
+            </a>
+            
+            <!-- Analytics Sub-navigation -->
+            <div class="ps-3" th:if="${currentSection == 'analytics'}">
+                <a class="nav-link" href="/analytics/dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Dashboard
+                </a>
+                <a class="nav-link" href="/analytics/reports">
+                    <i class="fas fa-file-alt"></i>
+                    Reports
+                </a>
+                <a class="nav-link" href="/analytics/compare">
+                    <i class="fas fa-balance-scale"></i>
+                    Compare
+                </a>
+            </div>
+            
             <!-- Components -->
             <a class="nav-link" href="/components" th:classappend="${currentSection == 'components'} ? 'active' : ''">
                 <i class="fas fa-cogs"></i>

@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>Meeting Form - FRC Project Management</title>
+    <link th:href="@{/css/meetings.css}" rel="stylesheet">
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="container-fluid">
+            <!-- Page Header -->
+            <div class="row mb-4">
+                <div class="col">
+                    <h1 class="h3 mb-1">
+                        <i class="fas fa-calendar-plus"></i> 
+                        <span th:text="${meeting.id != null ? 'Edit Meeting' : 'New Meeting'}">New Meeting</span>
+                    </h1>
+                    <p class="text-muted">Schedule and configure team meetings</p>
+                </div>
+                <div class="col-auto">
+                    <a th:href="@{/meetings}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Meetings
+                    </a>
+                </div>
+            </div>
+
+            <!-- Meeting Form -->
+            <div class="row">
+                <div class="col-lg-8">
+                    <form th:action="@{/meetings}" th:object="${meeting}" method="post" 
+                          class="needs-validation" novalidate id="meetingForm">
+                        
+                        <!-- Hidden fields for editing -->
+                        <input type="hidden" th:field="*{id}" th:if="${meeting.id != null}">
+                        <input type="hidden" name="_method" value="PUT" th:if="${meeting.id != null}">
+                        
+                        <!-- Basic Information -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-info-circle"></i> Meeting Information
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="title" class="form-label">Meeting Title *</label>
+                                            <input type="text" 
+                                                   class="form-control" 
+                                                   th:field="*{title}" 
+                                                   id="title" 
+                                                   required
+                                                   minlength="3"
+                                                   maxlength="200"
+                                                   placeholder="Enter meeting title">
+                                            <div class="invalid-feedback">
+                                                Please provide a meeting title (3-200 characters).
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="projectId" class="form-label">Project *</label>
+                                            <select class="form-select" name="projectId" id="projectId" required>
+                                                <option value="">Select a project</option>
+                                                <option th:each="project : ${projects}" 
+                                                        th:value="${project.id}" 
+                                                        th:text="${project.name}"
+                                                        th:selected="${project.id == selectedProject?.id}">
+                                                    Project Name
+                                                </option>
+                                            </select>
+                                            <div class="invalid-feedback">
+                                                Please select a project.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="description" class="form-label">Description</label>
+                                    <textarea class="form-control" 
+                                              th:field="*{description}" 
+                                              id="description" 
+                                              rows="3"
+                                              maxlength="1000"
+                                              placeholder="Enter meeting description and objectives"></textarea>
+                                    <div class="form-text">
+                                        <span id="descriptionCount">0</span>/1000 characters
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="meetingType" class="form-label">Meeting Type *</label>
+                                            <select class="form-select" th:field="*{meetingType}" id="meetingType" required>
+                                                <option th:each="type : ${meetingTypes}" 
+                                                        th:value="${type}" 
+                                                        th:text="${type.displayNameWithEmoji}"
+                                                        th:data-description="${type.description}">
+                                                    Meeting Type
+                                                </option>
+                                            </select>
+                                            <div class="invalid-feedback">
+                                                Please select a meeting type.
+                                            </div>
+                                            <div class="form-text">
+                                                <span id="typeDescription">Select a meeting type to see description</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="status" class="form-label">Status</label>
+                                            <select class="form-select" th:field="*{status}" id="status">
+                                                <option th:each="status : ${meetingStatuses}" 
+                                                        th:value="${status}" 
+                                                        th:text="${status.displayNameWithEmoji}"
+                                                        th:selected="${status.name() == 'SCHEDULED'}">
+                                                    Status
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="priority" class="form-label">Priority *</label>
+                                            <select class="form-select" th:field="*{priority}" id="priority" required>
+                                                <option th:each="priority : ${meetingPriorities}" 
+                                                        th:value="${priority}" 
+                                                        th:text="${priority.displayNameWithEmoji}"
+                                                        th:data-description="${priority.description}"
+                                                        th:selected="${priority.name() == 'MEDIUM'}">
+                                                    Priority
+                                                </option>
+                                            </select>
+                                            <div class="invalid-feedback">
+                                                Please select a priority level.
+                                            </div>
+                                            <div class="form-text">
+                                                <span id="priorityDescription">Select a priority to see description</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Date and Time -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-clock"></i> Schedule
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="date" class="form-label">Date *</label>
+                                            <input type="date" 
+                                                   class="form-control" 
+                                                   th:field="*{date}" 
+                                                   id="date" 
+                                                   required
+                                                   th:min="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}">
+                                            <div class="invalid-feedback">
+                                                Please select a meeting date.
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="startTime" class="form-label">Start Time *</label>
+                                            <input type="time" 
+                                                   class="form-control" 
+                                                   th:field="*{startTime}" 
+                                                   id="startTime" 
+                                                   required>
+                                            <div class="invalid-feedback">
+                                                Please select a start time.
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="endTime" class="form-label">End Time *</label>
+                                            <input type="time" 
+                                                   class="form-control" 
+                                                   th:field="*{endTime}" 
+                                                   id="endTime" 
+                                                   required>
+                                            <div class="invalid-feedback">
+                                                Please select an end time.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" 
+                                                   type="checkbox" 
+                                                   th:field="*{recurring}" 
+                                                   id="recurring">
+                                            <label class="form-check-label" for="recurring">
+                                                Recurring Meeting
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3" id="recurrenceOptions" style="display: none;">
+                                            <label for="recurrencePattern" class="form-label">Recurrence Pattern</label>
+                                            <select class="form-select" th:field="*{recurrencePattern}" id="recurrencePattern">
+                                                <option value="">Select pattern</option>
+                                                <option value="DAILY">Daily</option>
+                                                <option value="WEEKLY">Weekly</option>
+                                                <option value="BIWEEKLY">Bi-weekly</option>
+                                                <option value="MONTHLY">Monthly</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-info" id="durationInfo" style="display: none;">
+                                    <i class="fas fa-info-circle"></i>
+                                    <strong>Duration:</strong> <span id="durationDisplay">0 hours</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Location and Virtual -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-map-marker-alt"></i> Location
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="location" class="form-label">Physical Location</label>
+                                            <input type="text" 
+                                                   class="form-control" 
+                                                   th:field="*{location}" 
+                                                   id="location"
+                                                   maxlength="200"
+                                                   placeholder="Enter meeting location">
+                                            <div class="form-text">
+                                                Leave blank for virtual-only meetings
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="virtualMeetingUrl" class="form-label">Virtual Meeting URL</label>
+                                            <input type="url" 
+                                                   class="form-control" 
+                                                   th:field="*{virtualMeetingUrl}" 
+                                                   id="virtualMeetingUrl"
+                                                   placeholder="https://zoom.us/j/123456789">
+                                            <div class="form-text">
+                                                Zoom, Teams, or other virtual meeting link
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="maxAttendees" class="form-label">Maximum Attendees</label>
+                                            <input type="number" 
+                                                   class="form-control" 
+                                                   th:field="*{maxAttendees}" 
+                                                   id="maxAttendees"
+                                                   min="1"
+                                                   max="100"
+                                                   placeholder="Leave blank for unlimited">
+                                            <div class="form-text">
+                                                Optional limit on number of attendees
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="alert alert-info" id="meetingFormatInfo">
+                                            <i class="fas fa-info-circle"></i>
+                                            <strong>Format:</strong> <span id="formatDisplay">In-Person</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Agenda and Preparation -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-list"></i> Agenda & Preparation
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="agenda" class="form-label">Agenda</label>
+                                    <textarea class="form-control" 
+                                              th:field="*{agenda}" 
+                                              id="agenda" 
+                                              rows="4"
+                                              maxlength="2000"
+                                              placeholder="Enter meeting agenda items..."></textarea>
+                                    <div class="form-text">
+                                        <span id="agendaCount">0</span>/2000 characters
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" 
+                                                   type="checkbox" 
+                                                   th:field="*{requiresPreparation}" 
+                                                   id="requiresPreparation">
+                                            <label class="form-check-label" for="requiresPreparation">
+                                                Requires Preparation
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3" id="preparationOptions" style="display: none;">
+                                    <label for="preparationNotes" class="form-label">Preparation Notes</label>
+                                    <textarea class="form-control" 
+                                              th:field="*{preparationNotes}" 
+                                              id="preparationNotes" 
+                                              rows="3"
+                                              maxlength="1000"
+                                              placeholder="What should attendees prepare for this meeting?"></textarea>
+                                    <div class="form-text">
+                                        <span id="preparationCount">0</span>/1000 characters
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Reminders -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-bell"></i> Reminders
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" 
+                                                   type="checkbox" 
+                                                   th:field="*{reminderEnabled}" 
+                                                   id="reminderEnabled"
+                                                   checked>
+                                            <label class="form-check-label" for="reminderEnabled">
+                                                Send Reminders
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3" id="reminderOptions">
+                                            <label for="reminderMinutesBefore" class="form-label">Minutes Before Meeting</label>
+                                            <select class="form-select" th:field="*{reminderMinutesBefore}" id="reminderMinutesBefore">
+                                                <option value="15">15 minutes</option>
+                                                <option value="30">30 minutes</option>
+                                                <option value="60" selected>1 hour</option>
+                                                <option value="120">2 hours</option>
+                                                <option value="1440">1 day</option>
+                                                <option value="4320">3 days</option>
+                                                <option value="10080">1 week</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save"></i> 
+                                            <span th:text="${meeting.id != null ? 'Update Meeting' : 'Create Meeting'}">Create Meeting</span>
+                                        </button>
+                                        <button type="button" class="btn btn-secondary ms-2" onclick="window.history.back()">
+                                            <i class="fas fa-times"></i> Cancel
+                                        </button>
+                                    </div>
+                                    <div>
+                                        <button type="button" class="btn btn-outline-info" onclick="previewMeeting()">
+                                            <i class="fas fa-eye"></i> Preview
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="col-lg-4">
+                    <!-- Meeting Tips -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-lightbulb"></i> Meeting Tips
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="tips-list">
+                                <div class="tip-item mb-3">
+                                    <h6><i class="fas fa-clock text-primary"></i> Timing</h6>
+                                    <p class="mb-0 text-muted">Keep meetings to 60 minutes or less for better engagement.</p>
+                                </div>
+                                <div class="tip-item mb-3">
+                                    <h6><i class="fas fa-list text-success"></i> Agenda</h6>
+                                    <p class="mb-0 text-muted">A clear agenda helps meetings stay focused and productive.</p>
+                                </div>
+                                <div class="tip-item mb-3">
+                                    <h6><i class="fas fa-bell text-warning"></i> Reminders</h6>
+                                    <p class="mb-0 text-muted">Set appropriate reminders based on meeting priority.</p>
+                                </div>
+                                <div class="tip-item">
+                                    <h6><i class="fas fa-users text-info"></i> Attendees</h6>
+                                    <p class="mb-0 text-muted">Invite only necessary participants to keep meetings efficient.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Conflict Detection -->
+                    <div class="card mb-4" id="conflictCard" style="display: none;">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0 text-warning">
+                                <i class="fas fa-exclamation-triangle"></i> Scheduling Conflicts
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="conflictList">
+                                <!-- Conflicts will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Meeting Preview -->
+                    <div class="card" id="previewCard" style="display: none;">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-eye"></i> Meeting Preview
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="meetingPreview">
+                                <!-- Preview will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <div layout:fragment="scripts">
+        <script src="/js/meetings.js"></script>
+        <script>
+            // Form validation
+            (function() {
+                'use strict';
+                window.addEventListener('load', function() {
+                    const forms = document.getElementsByClassName('needs-validation');
+                    Array.prototype.filter.call(forms, function(form) {
+                        form.addEventListener('submit', function(event) {
+                            if (form.checkValidity() === false) {
+                                event.preventDefault();
+                                event.stopPropagation();
+                            }
+                            form.classList.add('was-validated');
+                        }, false);
+                    });
+                }, false);
+            })();
+
+            // Character counters
+            function updateCharacterCount(textareaId, counterId, maxLength) {
+                const textarea = document.getElementById(textareaId);
+                const counter = document.getElementById(counterId);
+                if (textarea && counter) {
+                    const updateCount = () => {
+                        const count = textarea.value.length;
+                        counter.textContent = count;
+                        counter.className = count > maxLength * 0.9 ? 'text-danger' : 'text-muted';
+                    };
+                    textarea.addEventListener('input', updateCount);
+                    updateCount();
+                }
+            }
+
+            updateCharacterCount('description', 'descriptionCount', 1000);
+            updateCharacterCount('agenda', 'agendaCount', 2000);
+            updateCharacterCount('preparationNotes', 'preparationCount', 1000);
+
+            // Meeting type description
+            document.getElementById('meetingType').addEventListener('change', function() {
+                const selected = this.options[this.selectedIndex];
+                const description = selected.getAttribute('data-description');
+                document.getElementById('typeDescription').textContent = description || 'Select a meeting type to see description';
+            });
+
+            // Priority description
+            document.getElementById('priority').addEventListener('change', function() {
+                const selected = this.options[this.selectedIndex];
+                const description = selected.getAttribute('data-description');
+                document.getElementById('priorityDescription').textContent = description || 'Select a priority to see description';
+            });
+
+            // Recurring meeting options
+            document.getElementById('recurring').addEventListener('change', function() {
+                const recurrenceOptions = document.getElementById('recurrenceOptions');
+                if (this.checked) {
+                    recurrenceOptions.style.display = 'block';
+                    document.getElementById('recurrencePattern').required = true;
+                } else {
+                    recurrenceOptions.style.display = 'none';
+                    document.getElementById('recurrencePattern').required = false;
+                }
+            });
+
+            // Preparation options
+            document.getElementById('requiresPreparation').addEventListener('change', function() {
+                const preparationOptions = document.getElementById('preparationOptions');
+                preparationOptions.style.display = this.checked ? 'block' : 'none';
+            });
+
+            // Reminder options
+            document.getElementById('reminderEnabled').addEventListener('change', function() {
+                const reminderOptions = document.getElementById('reminderOptions');
+                reminderOptions.style.display = this.checked ? 'block' : 'none';
+            });
+
+            // Duration calculation
+            function updateDuration() {
+                const startTime = document.getElementById('startTime').value;
+                const endTime = document.getElementById('endTime').value;
+                const durationInfo = document.getElementById('durationInfo');
+                const durationDisplay = document.getElementById('durationDisplay');
+
+                if (startTime && endTime) {
+                    const start = new Date('2000-01-01T' + startTime);
+                    const end = new Date('2000-01-01T' + endTime);
+                    
+                    if (end > start) {
+                        const diffMs = end - start;
+                        const hours = Math.floor(diffMs / (1000 * 60 * 60));
+                        const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                        
+                        let durationText = '';
+                        if (hours > 0) {
+                            durationText += hours + ' hour' + (hours === 1 ? '' : 's');
+                        }
+                        if (minutes > 0) {
+                            if (durationText) durationText += ' ';
+                            durationText += minutes + ' minute' + (minutes === 1 ? '' : 's');
+                        }
+                        
+                        durationDisplay.textContent = durationText || '0 minutes';
+                        durationInfo.style.display = 'block';
+                    } else {
+                        durationInfo.style.display = 'none';
+                    }
+                } else {
+                    durationInfo.style.display = 'none';
+                }
+            }
+
+            document.getElementById('startTime').addEventListener('change', updateDuration);
+            document.getElementById('endTime').addEventListener('change', updateDuration);
+
+            // Meeting format detection
+            function updateMeetingFormat() {
+                const location = document.getElementById('location').value.trim();
+                const virtualUrl = document.getElementById('virtualMeetingUrl').value.trim();
+                const formatDisplay = document.getElementById('formatDisplay');
+
+                if (location && virtualUrl) {
+                    formatDisplay.textContent = 'Hybrid (In-Person + Virtual)';
+                    formatDisplay.className = 'text-warning';
+                } else if (virtualUrl) {
+                    formatDisplay.textContent = 'Virtual';
+                    formatDisplay.className = 'text-info';
+                } else {
+                    formatDisplay.textContent = 'In-Person';
+                    formatDisplay.className = 'text-secondary';
+                }
+            }
+
+            document.getElementById('location').addEventListener('input', updateMeetingFormat);
+            document.getElementById('virtualMeetingUrl').addEventListener('input', updateMeetingFormat);
+
+            // Conflict detection
+            function checkConflicts() {
+                const date = document.getElementById('date').value;
+                const startTime = document.getElementById('startTime').value;
+                const endTime = document.getElementById('endTime').value;
+                const projectId = document.getElementById('projectId').value;
+
+                if (date && startTime && endTime && projectId) {
+                    fetch('/api/meetings/conflicts', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            date: date,
+                            startTime: startTime,
+                            endTime: endTime,
+                            projectId: projectId,
+                            excludeMeetingId: /*[[${meeting.id}]]*/ null
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        const conflictCard = document.getElementById('conflictCard');
+                        const conflictList = document.getElementById('conflictList');
+                        
+                        if (data.conflicts && data.conflicts.length > 0) {
+                            conflictList.innerHTML = data.conflicts.map(conflict => 
+                                `<div class="alert alert-warning mb-2">
+                                    <strong>${conflict.title}</strong><br>
+                                    ${conflict.date} ${conflict.startTime} - ${conflict.endTime}
+                                </div>`
+                            ).join('');
+                            conflictCard.style.display = 'block';
+                        } else {
+                            conflictCard.style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error checking conflicts:', error);
+                    });
+                }
+            }
+
+            document.getElementById('date').addEventListener('change', checkConflicts);
+            document.getElementById('startTime').addEventListener('change', checkConflicts);
+            document.getElementById('endTime').addEventListener('change', checkConflicts);
+            document.getElementById('projectId').addEventListener('change', checkConflicts);
+
+            // Meeting preview
+            function previewMeeting() {
+                const form = document.getElementById('meetingForm');
+                const formData = new FormData(form);
+                const previewCard = document.getElementById('previewCard');
+                const previewDiv = document.getElementById('meetingPreview');
+
+                // Build preview HTML
+                const title = formData.get('title') || 'Untitled Meeting';
+                const date = formData.get('date');
+                const startTime = formData.get('startTime');
+                const endTime = formData.get('endTime');
+                const meetingType = formData.get('meetingType');
+                const priority = formData.get('priority');
+                const location = formData.get('location');
+                const virtualUrl = formData.get('virtualMeetingUrl');
+                const description = formData.get('description');
+                const agenda = formData.get('agenda');
+
+                let previewHtml = `
+                    <h6>${title}</h6>
+                    <p class="text-muted">${description || 'No description'}</p>
+                    <hr>
+                    <div class="row">
+                        <div class="col-6"><strong>Date:</strong></div>
+                        <div class="col-6">${date ? new Date(date).toLocaleDateString() : 'Not set'}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6"><strong>Time:</strong></div>
+                        <div class="col-6">${startTime && endTime ? startTime + ' - ' + endTime : 'Not set'}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6"><strong>Type:</strong></div>
+                        <div class="col-6">${meetingType || 'Not set'}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6"><strong>Priority:</strong></div>
+                        <div class="col-6">${priority || 'Not set'}</div>
+                    </div>
+                `;
+
+                if (location || virtualUrl) {
+                    previewHtml += `
+                        <div class="row">
+                            <div class="col-6"><strong>Location:</strong></div>
+                            <div class="col-6">${location || 'Virtual'}</div>
+                        </div>
+                    `;
+                }
+
+                if (agenda) {
+                    previewHtml += `
+                        <hr>
+                        <div><strong>Agenda:</strong></div>
+                        <div class="mt-2">${agenda.replace(/\n/g, '<br>')}</div>
+                    `;
+                }
+
+                previewDiv.innerHTML = previewHtml;
+                previewCard.style.display = 'block';
+            }
+
+            // Initialize form
+            document.addEventListener('DOMContentLoaded', function() {
+                // Trigger initial calculations
+                updateDuration();
+                updateMeetingFormat();
+                checkConflicts();
+                
+                // Show/hide conditional sections based on existing values
+                const recurring = document.getElementById('recurring');
+                if (recurring.checked) {
+                    document.getElementById('recurrenceOptions').style.display = 'block';
+                }
+                
+                const requiresPrep = document.getElementById('requiresPreparation');
+                if (requiresPrep.checked) {
+                    document.getElementById('preparationOptions').style.display = 'block';
+                }
+                
+                const reminderEnabled = document.getElementById('reminderEnabled');
+                if (!reminderEnabled.checked) {
+                    document.getElementById('reminderOptions').style.display = 'none';
+                }
+            });
+        </script>
+    </div>
+</body>
+</html>
