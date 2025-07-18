@@ -4,6 +4,7 @@ C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\fr
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\web\dto\ProjectNotification.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\NotificationService.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\FrcProjectManagementApplication.java
+C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\repositories\spring\ProjectTemplateRepository.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\models\MeetingPriority.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\impl\SubsystemServiceImpl.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\web\controllers\TaskController.java
@@ -34,6 +35,7 @@ C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\fr
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\config\WebConfig.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\impl\TeamMemberServiceImpl.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\web\dto\NotificationDto.java
+C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\models\SubsystemType.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\repositories\spring\TeamMemberRepository.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\models\MeetingType.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\web\dto\ActivityMessage.java
@@ -61,8 +63,10 @@ C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\fr
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\models\MeetingStatus.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\web\websocket\NotificationController.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\impl\EmailServiceImpl.java
+C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\models\ProjectTemplate.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\web\controllers\AnalyticsController.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\repositories\spring\UserRepository.java
+C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\models\ResourceRequirement.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\impl\TaskDependencyServiceImpl.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\repositories\spring\ComponentRepository.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\web\controllers\DependencyViewController.java
@@ -70,6 +74,7 @@ C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\fr
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\impl\SubteamServiceImpl.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\models\TaskStatus.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\web\controllers\TaskDependencyController.java
+C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\models\MilestoneTemplate.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\web\dto\TaskDependencyDto.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\TaskDependencyService.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\GanttChartTransformationService.java
@@ -85,6 +90,7 @@ C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\fr
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\models\Meeting.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\web\websocket\AttendanceController.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\config\PasswordEncoderConfig.java
+C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\models\TaskTemplate.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\security\MFAService.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\SubsystemService.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\MilestoneService.java
@@ -101,6 +107,7 @@ C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\fr
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\repositories\spring\ProjectRepository.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\models\Milestone.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\security\UserPrincipal.java
+C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\services\ProjectTemplateService.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\repositories\spring\TaskRepository.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\models\Task.java
 C:\Users\dhiebert\Local Repositories\Project Management 2.0\src\main\java\org\frcpm\security\UserDetailsServiceImpl.java
