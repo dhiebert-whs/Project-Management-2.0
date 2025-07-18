@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>Task Dependencies - FRC Project Management</title>
+</head>
+
+<div layout:fragment="styles">
+    <style>
+        .dependency-card {
+            transition: all 0.3s ease;
+            border: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
+        }
+        
+        .dependency-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        
+        .dependency-arrow {
+            font-size: 1.5rem;
+            color: #007bff;
+            margin: 0 1rem;
+        }
+        
+        .dependency-type {
+            font-size: 0.875rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            margin-left: 0.5rem;
+        }
+        
+        .critical-path {
+            border-left: 4px solid #dc3545;
+            background: #fff5f5;
+        }
+        
+        .task-node {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            min-width: 200px;
+        }
+        
+        .task-node.critical {
+            border-color: #dc3545;
+            background: #fff5f5;
+        }
+        
+        .dependency-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 1rem 0;
+        }
+        
+        .analysis-card {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .metric-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        
+        .blocked-task {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .ready-task {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+        
+        .cycle-warning {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</div>
+
+<div layout:fragment="content">
+    <div class="container mt-4">
+        
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <h1>
+                    <i class="fas fa-project-diagram text-primary me-2"></i>
+                    Task Dependencies
+                </h1>
+                <p class="text-muted mb-0" th:text="${project.name + ' - Manage task relationships and scheduling'}">
+                    Project Name - Manage task relationships and scheduling
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="btn-group">
+                    <a th:href="@{/dependencies/new(projectId=${project.id})}" 
+                       class="btn btn-primary"
+                       sec:authorize="hasAnyRole('MENTOR', 'ADMIN')">
+                        <i class="fas fa-plus me-1"></i>Add Dependency
+                    </a>
+                    <a th:href="@{/dependencies/critical-path(projectId=${project.id})}" 
+                       class="btn btn-outline-secondary">
+                        <i class="fas fa-route me-1"></i>Critical Path
+                    </a>
+                    <a th:href="@{/projects/{id}(id=${project.id})}" 
+                       class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Project
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cycle Warning -->
+        <div th:if="${hasCycles}" class="cycle-warning">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                <strong>Dependency Cycle Detected!</strong>
+            </div>
+            <p class="mb-0 mt-1">
+                There are circular dependencies in this project that may prevent proper scheduling. 
+                Please review and remove conflicting dependencies.
+            </p>
+        </div>
+
+        <!-- Project Analysis Overview -->
+        <div class="analysis-card">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <h4 th:text="${#lists.size(dependencies)}">0</h4>
+                        <small>Total Dependencies</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <h4 th:text="${#lists.size(blockedTasks)}">0</h4>
+                        <small>Blocked Tasks</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <h4 th:text="${#lists.size(readyTasks)}">0</h4>
+                        <small>Ready to Start</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <h4 th:text="${criticalPath != null ? #lists.size(criticalPath.criticalPath) : 0}">0</h4>
+                        <small>Critical Tasks</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="row">
+            <!-- Dependencies List -->
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-link me-2"></i>
+                            Project Dependencies
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div th:if="${#lists.isEmpty(dependencies)}" class="text-center py-5">
+                            <i class="fas fa-project-diagram fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No Dependencies Defined</h5>
+                            <p class="text-muted">
+                                Start by adding task dependencies to optimize your project schedule.
+                            </p>
+                            <a th:href="@{/dependencies/new(projectId=${project.id})}" 
+                               class="btn btn-primary"
+                               sec:authorize="hasAnyRole('MENTOR', 'ADMIN')">
+                                <i class="fas fa-plus me-1"></i>Add First Dependency
+                            </a>
+                        </div>
+                        
+                        <div th:if="${!#lists.isEmpty(dependencies)}">
+                            <div th:each="dependency : ${dependencies}" 
+                                 class="dependency-card card"
+                                 th:classappend="${dependency.onCriticalPath ? 'critical-path' : ''}">
+                                <div class="card-body">
+                                    <div class="dependency-flow">
+                                        <!-- Predecessor Task -->
+                                        <div class="task-node" 
+                                             th:classappend="${dependency.onCriticalPath ? 'critical' : ''}">
+                                            <h6 th:text="${dependency.prerequisiteTask.title}">Predecessor Task</h6>
+                                            <small class="text-muted">
+                                                Progress: <span th:text="${dependency.prerequisiteTask.progress}">0</span>%
+                                            </small>
+                                        </div>
+                                        
+                                        <!-- Dependency Arrow -->
+                                        <div class="dependency-arrow">
+                                            <i class="fas fa-arrow-right"></i>
+                                            <div class="dependency-type" 
+                                                 th:classappend="${dependency.dependencyType.name() == 'BLOCKING' ? 'bg-danger text-white' : 
+                                                                 (dependency.dependencyType.name() == 'FINISH_TO_START' ? 'bg-primary text-white' : 
+                                                                  'bg-secondary text-white')}"
+                                                 th:text="${dependency.dependencyType.displayName}">
+                                                Type
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Successor Task -->
+                                        <div class="task-node"
+                                             th:classappend="${dependency.onCriticalPath ? 'critical' : ''}">
+                                            <h6 th:text="${dependency.dependentTask.title}">Successor Task</h6>
+                                            <small class="text-muted">
+                                                Progress: <span th:text="${dependency.dependentTask.progress}">0</span>%
+                                            </small>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Dependency Details -->
+                                    <div class="row mt-3">
+                                        <div class="col-md-8">
+                                            <div th:if="${dependency.lagHours != null and dependency.lagHours != 0}">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-clock me-1"></i>
+                                                    Lag: <span th:text="${dependency.lagHours}">0</span> hours
+                                                </small>
+                                            </div>
+                                            <div th:if="${dependency.notes != null and !dependency.notes.isEmpty()}">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-sticky-note me-1"></i>
+                                                    <span th:text="${dependency.notes}">Notes</span>
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 text-end">
+                                            <div sec:authorize="hasAnyRole('MENTOR', 'ADMIN')">
+                                                <button class="btn btn-sm btn-outline-danger" 
+                                                        onclick="deleteDependency(this)"
+                                                        th:data-dependency-id="${dependency.id}">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <!-- Blocked Tasks -->
+                <div class="card mb-3" th:if="${!#lists.isEmpty(blockedTasks)}">
+                    <div class="card-header bg-warning text-dark">
+                        <h6 class="mb-0">
+                            <i class="fas fa-ban me-1"></i>
+                            Blocked Tasks
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div th:each="blockedTask : ${blockedTasks}" class="blocked-task p-2 rounded mb-2">
+                            <div class="fw-bold" th:text="${blockedTask.title}">Task Title</div>
+                            <small class="text-muted">Waiting for dependencies</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Ready Tasks -->
+                <div class="card mb-3" th:if="${!#lists.isEmpty(readyTasks)}">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-play me-1"></i>
+                            Ready to Start
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div th:each="readyTask : ${readyTasks}" class="ready-task p-2 rounded mb-2">
+                            <div class="fw-bold" th:text="${readyTask.title}">Task Title</div>
+                            <small class="text-muted">All dependencies satisfied</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-tools me-1"></i>
+                            Quick Actions
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a th:href="@{/dependencies/critical-path(projectId=${project.id})}" 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-route me-1"></i>View Critical Path
+                            </a>
+                            <a th:href="@{/tasks/kanban(projectId=${project.id})}" 
+                               class="btn btn-outline-success btn-sm">
+                                <i class="fas fa-columns me-1"></i>Kanban Board
+                            </a>
+                            <button class="btn btn-outline-info btn-sm" onclick="refreshAnalysis()">
+                                <i class="fas fa-sync-alt me-1"></i>Refresh Analysis
+                            </button>
+                            <button class="btn btn-outline-warning btn-sm" 
+                                    onclick="exportDependencies()"
+                                    sec:authorize="hasAnyRole('MENTOR', 'ADMIN')">
+                                <i class="fas fa-download me-1"></i>Export
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div layout:fragment="scripts">
+    <script>
+        // Dependencies management JavaScript
+        function deleteDependency(button) {
+            const dependencyId = button.dataset.dependencyId;
+            
+            if (confirm('Are you sure you want to delete this dependency?')) {
+                fetch(`/api/dependencies/${dependencyId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Remove the dependency card from the UI
+                        button.closest('.dependency-card').remove();
+                        showNotification('Dependency deleted successfully', 'success');
+                        
+                        // Refresh the page after a short delay to update metrics
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        showNotification('Error deleting dependency: ' + data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification('Error deleting dependency', 'error');
+                });
+            }
+        }
+        
+        function refreshAnalysis() {
+            // Refresh the page to update dependency analysis
+            location.reload();
+        }
+        
+        function exportDependencies() {
+            // Export dependencies functionality
+            const projectId = new URLSearchParams(window.location.search).get('projectId');
+            window.open(`/api/dependencies/export?projectId=${projectId}`, '_blank');
+        }
+        
+        function showNotification(message, type) {
+            // Simple notification system
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+            const notification = document.createElement('div');
+            notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+            notification.style.top = '20px';
+            notification.style.right = '20px';
+            notification.style.zIndex = '9999';
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto-dismiss after 3 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 3000);
+        }
+        
+        // Auto-refresh every 30 seconds if there are active dependencies
+        if (/*[[${!#lists.isEmpty(dependencies)}]]*/ false) {
+            setInterval(refreshAnalysis, 30000);
+        }
+    </script>
+</div>
+
+</html>

@@ -38,12 +38,14 @@ import java.util.logging.Logger;
 /**
  * TaskDependencyController - Phase 2E-D Implementation
  * 
- * REST controller for advanced task dependency management with real-time
- * WebSocket integration, critical path analysis, and comprehensive
- * dependency operations.
+ * Complete controller for advanced task dependency management with both
+ * view controllers and REST API endpoints, real-time WebSocket integration,
+ * critical path analysis, and comprehensive dependency operations.
  * 
  * Features:
  * - Full CRUD operations for task dependencies
+ * - Web UI templates for dependency management
+ * - REST API endpoints for AJAX operations
  * - Real-time WebSocket updates for dependency changes
  * - Critical path analysis and visualization
  * - Cycle detection and prevention
@@ -55,9 +57,8 @@ import java.util.logging.Logger;
  * @version 2.0.0-2E-D
  */
 @Controller
-@RequestMapping("/api/dependencies")
 @PreAuthorize("isAuthenticated()")
-public class TaskDependencyController {
+public class TaskDependencyController extends BaseController {
     
     // =========================================================================
     // CONSTANTS AND DEPENDENCIES
@@ -81,7 +82,235 @@ public class TaskDependencyController {
     private SimpMessagingTemplate messagingTemplate;
     
     // =========================================================================
-    // BASIC DEPENDENCY OPERATIONS
+    // VIEW CONTROLLERS
+    // =========================================================================
+    
+    /**
+     * Main dependency management page for a project.
+     * 
+     * @param projectId the project ID
+     * @param model Spring model for template data
+     * @param user current authenticated user
+     * @return template name
+     */
+    @GetMapping("/dependencies")
+    public String listDependencies(
+            @RequestParam Long projectId,
+            Model model,
+            @AuthenticationPrincipal UserPrincipal user) {
+        
+        try {
+            LOGGER.info("Loading dependency management for project: " + projectId);
+            
+            // Validate project access
+            Project project = projectService.findById(projectId);
+            if (project == null) {
+                addErrorMessage(model, "Project not found");
+                return redirect("/dashboard");
+            }
+            
+            // Add navigation data
+            addNavigationData(model);
+            addBreadcrumbs(model, "Projects", "/projects", project.getName(), 
+                          "/projects/" + projectId, "Dependencies", "/dependencies?projectId=" + projectId);
+            
+            // Load project and tasks
+            model.addAttribute("project", project);
+            List<Task> projectTasks = taskService.findByProject(project);
+            model.addAttribute("tasks", projectTasks);
+            
+            // Load existing dependencies
+            List<TaskDependency> dependencies = dependencyService.getProjectDependencies(project, true);
+            model.addAttribute("dependencies", dependencies);
+            
+            // Convert to DTOs for JSON/API usage
+            List<TaskDependencyDto> dependencyDtos = dependencies.stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+            model.addAttribute("dependencyDtos", dependencyDtos);
+            
+            // Dependency analysis
+            model.addAttribute("hasCycles", dependencyService.detectCycles(project).size() > 0);
+            model.addAttribute("criticalPath", dependencyService.calculateCriticalPath(project));
+            model.addAttribute("blockedTasks", dependencyService.getBlockedTasks(project));
+            model.addAttribute("readyTasks", dependencyService.getTasksReadyToStart(project));
+            
+            // Dependency types for form
+            model.addAttribute("dependencyTypes", DependencyType.values());
+            
+            // Create new dependency form object
+            model.addAttribute("newDependency", new TaskDependency());
+            
+            // User context
+            model.addAttribute("currentUser", user);
+            model.addAttribute("currentSection", "dependencies");
+            
+            return "dependencies/list";
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error loading dependency management", e);
+            addErrorMessage(model, "Error loading dependency management");
+            return redirect("/projects/" + projectId);
+        }
+    }
+    
+    /**
+     * Critical path analysis and visualization page.
+     * 
+     * @param projectId the project ID
+     * @param model Spring model for template data
+     * @param user current authenticated user
+     * @return template name
+     */
+    @GetMapping("/dependencies/critical-path")
+    public String criticalPathAnalysis(
+            @RequestParam Long projectId,
+            Model model,
+            @AuthenticationPrincipal UserPrincipal user) {
+        
+        try {
+            LOGGER.info("Loading critical path analysis for project: " + projectId);
+            
+            // Validate project access
+            Project project = projectService.findById(projectId);
+            if (project == null) {
+                addErrorMessage(model, "Project not found");
+                return redirect("/dashboard");
+            }
+            
+            // Add navigation data
+            addNavigationData(model);
+            addBreadcrumbs(model, "Projects", "/projects", project.getName(), 
+                          "/projects/" + projectId, "Critical Path", "/dependencies/critical-path?projectId=" + projectId);
+            
+            // Load critical path analysis
+            TaskDependencyService.CriticalPathResult criticalPathResult = dependencyService.calculateCriticalPath(project);
+            model.addAttribute("project", project);
+            model.addAttribute("criticalPath", criticalPathResult);
+            
+            // Additional analysis data
+            model.addAttribute("projectMetrics", dependencyService.getDependencyStatistics(project));
+            model.addAttribute("scheduleRisk", dependencyService.assessProjectRisk(project));
+            model.addAttribute("scheduleOptimization", dependencyService.optimizeSchedule(project));
+            
+            // User context
+            model.addAttribute("currentUser", user);
+            model.addAttribute("currentSection", "dependencies");
+            
+            return "dependencies/critical-path";
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error loading critical path analysis", e);
+            addErrorMessage(model, "Error loading critical path analysis");
+            return redirect("/dependencies?projectId=" + projectId);
+        }
+    }
+    
+    /**
+     * Dependency creation form.
+     * 
+     * @param projectId the project ID
+     * @param model Spring model for template data
+     * @param user current authenticated user
+     * @return template name
+     */
+    @GetMapping("/dependencies/new")
+    @PreAuthorize("hasAnyRole('MENTOR', 'ADMIN')")
+    public String newDependencyForm(
+            @RequestParam Long projectId,
+            Model model,
+            @AuthenticationPrincipal UserPrincipal user) {
+        
+        try {
+            // Validate project access
+            Project project = projectService.findById(projectId);
+            if (project == null) {
+                addErrorMessage(model, "Project not found");
+                return redirect("/dashboard");
+            }
+            
+            // Add navigation data
+            addNavigationData(model);
+            addBreadcrumbs(model, "Projects", "/projects", project.getName(), 
+                          "/projects/" + projectId, "Dependencies", "/dependencies?projectId=" + projectId,
+                          "New Dependency", "/dependencies/new?projectId=" + projectId);
+            
+            // Load project data
+            model.addAttribute("project", project);
+            List<Task> projectTasks = taskService.findByProject(project);
+            model.addAttribute("tasks", projectTasks);
+            model.addAttribute("dependencyTypes", DependencyType.values());
+            
+            // Create form object
+            TaskDependency newDependency = new TaskDependency();
+            model.addAttribute("dependency", newDependency);
+            model.addAttribute("projectId", projectId);
+            
+            return "dependencies/form";
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error loading dependency form", e);
+            addErrorMessage(model, "Error loading dependency form");
+            return redirect("/dependencies?projectId=" + projectId);
+        }
+    }
+    
+    /**
+     * Create a new task dependency via form submission.
+     * 
+     * @param predecessorTaskId the predecessor task ID
+     * @param successorTaskId the successor task ID
+     * @param dependencyType the dependency type
+     * @param lagHours lag time in hours (optional)
+     * @param notes dependency notes (optional)
+     * @param projectId the project ID
+     * @param redirectAttributes redirect attributes
+     * @param user current authenticated user
+     * @return redirect to dependency list
+     */
+    @PostMapping("/dependencies")
+    @PreAuthorize("hasAnyRole('MENTOR', 'ADMIN')")
+    public String createDependencyForm(
+            @RequestParam Long predecessorTaskId,
+            @RequestParam Long successorTaskId,
+            @RequestParam DependencyType dependencyType,
+            @RequestParam(required = false) Integer lagHours,
+            @RequestParam(required = false) String notes,
+            @RequestParam Long projectId,
+            RedirectAttributes redirectAttributes,
+            @AuthenticationPrincipal UserPrincipal user) {
+        
+        try {
+            LOGGER.info("Creating dependency via form: " + predecessorTaskId + " -> " + successorTaskId);
+            
+            // Load tasks
+            Task predecessorTask = taskService.findById(predecessorTaskId);
+            Task successorTask = taskService.findById(successorTaskId);
+            
+            if (predecessorTask == null || successorTask == null) {
+                addErrorMessage(redirectAttributes, "Invalid task selection");
+                return redirect("/dependencies?projectId=" + projectId);
+            }
+            
+            // Create dependency
+            TaskDependency created = dependencyService.createDependency(
+                successorTask, predecessorTask, dependencyType, lagHours, notes);
+            
+            // Send real-time update
+            webSocketEventPublisher.publishTaskProgressUpdate(successorTask, null, user.getUser());
+            
+            addSuccessMessage(redirectAttributes, "Dependency created successfully");
+            return redirect("/dependencies?projectId=" + projectId);
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error creating dependency", e);
+            addErrorMessage(redirectAttributes, "Error creating dependency: " + e.getMessage());
+            return redirect("/dependencies?projectId=" + projectId);
+        }
+    }
+    
+    // =========================================================================
+    // REST API ENDPOINTS
     // =========================================================================
     
     /**
@@ -92,7 +321,7 @@ public class TaskDependencyController {
      * @param user Current authenticated user
      * @return JSON response with dependencies list
      */
-    @GetMapping
+    @GetMapping("/api/dependencies")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> getDependencies(
             @RequestParam Long projectId,
@@ -141,7 +370,7 @@ public class TaskDependencyController {
      * @param user Current authenticated user
      * @return JSON response with task dependencies
      */
-    @GetMapping("/task/{taskId}")
+    @GetMapping("/api/dependencies/task/{taskId}")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> getTaskDependencies(
             @PathVariable Long taskId,
@@ -190,10 +419,10 @@ public class TaskDependencyController {
      * @param user Current authenticated user
      * @return JSON response with created dependency
      */
-    @PostMapping
+    @PostMapping("/api/dependencies")
     @ResponseBody
     @PreAuthorize("hasAnyRole('MENTOR', 'ADMIN')")
-    public ResponseEntity<Map<String, Object>> createDependency(
+    public ResponseEntity<Map<String, Object>> createDependencyApi(
             @Valid @RequestBody TaskDependencyDto dependencyDto,
             @AuthenticationPrincipal UserPrincipal user) {
         
@@ -258,7 +487,7 @@ public class TaskDependencyController {
      * @param user Current authenticated user
      * @return JSON response with updated dependency
      */
-    @PutMapping("/{dependencyId}")
+    @PutMapping("/api/dependencies/{dependencyId}")
     @ResponseBody
     @PreAuthorize("hasAnyRole('MENTOR', 'ADMIN')")
     public ResponseEntity<Map<String, Object>> updateDependency(
@@ -305,7 +534,7 @@ public class TaskDependencyController {
      * @param user Current authenticated user
      * @return JSON response with deletion result
      */
-    @DeleteMapping("/{dependencyId}")
+    @DeleteMapping("/api/dependencies/{dependencyId}")
     @ResponseBody
     @PreAuthorize("hasAnyRole('MENTOR', 'ADMIN')")
     public ResponseEntity<Map<String, Object>> deleteDependency(
@@ -359,9 +588,9 @@ public class TaskDependencyController {
      * @param user Current authenticated user
      * @return JSON response with critical path data
      */
-    @GetMapping("/critical-path")
+    @GetMapping("/api/dependencies/critical-path")
     @ResponseBody
-    public ResponseEntity<Map<String, Object>> getCriticalPath(
+    public ResponseEntity<Map<String, Object>> getCriticalPathApi(
             @RequestParam Long projectId,
             @AuthenticationPrincipal UserPrincipal user) {
         
