@@ -169,4 +169,18 @@ public interface UserService extends Service<User, Long> {
      * Find recently active users.
      */
     List<User> findRecentlyActiveUsers(int days);
+    
+    // =========================================================================
+    // PHASE 2E-E: ENHANCED REAL-TIME FEATURES
+    // =========================================================================
+    
+    /**
+     * Find all active users (enabled users who have logged in recently).
+     */
+    List<User> findActiveUsers();
+    
+    /**
+     * Find users by project (project members).
+     */
+    List<User> findByProject(org.frcpm.models.Project project);
 }

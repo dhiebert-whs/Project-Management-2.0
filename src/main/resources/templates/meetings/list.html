@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" 
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       layout:decorate="~{layout/base}">
 <head>
     <title>Meetings - FRC Project Management</title>
+    <link th:href="@{/css/meetings.css}" rel="stylesheet">
 </head>
 <body>
     <div layout:fragment="content">
@@ -11,13 +13,143 @@
             <!-- Page Header -->
             <div class="row mb-4">
                 <div class="col">
-                    <h1 class="h3 mb-1">Meetings</h1>
-                    <p class="text-muted">Coordinate team meetings and track attendance</p>
+                    <h1 class="h3 mb-1">
+                        <i class="fas fa-calendar-alt"></i> Meetings
+                        <span th:if="${selectedProject}" class="text-muted h5 ms-2">
+                            - <span th:text="${selectedProject.name}">Project Name</span>
+                        </span>
+                    </h1>
+                    <p class="text-muted">
+                        Coordinate team meetings and track attendance
+                        <span th:if="${meetingStatistics}" class="ms-2">
+                            • <span th:text="${meetingStatistics.totalMeetings}">0</span> meetings
+                            • <span th:text="${meetingStatistics.completedMeetings}">0</span> completed
+                        </span>
+                    </p>
                 </div>
                 <div class="col-auto">
-                    <a href="/meetings/new" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> New Meeting
-                    </a>
+                    <div class="btn-group">
+                        <a href="/meetings/calendar" class="btn btn-outline-secondary">
+                            <i class="fas fa-calendar"></i> Calendar
+                        </a>
+                        <a href="/meetings/new" class="btn btn-primary" sec:authorize="hasAnyRole('MENTOR', 'ADMIN')">
+                            <i class="fas fa-plus"></i> New Meeting
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters and Search -->
+            <div class="row mb-4">
+                <div class="col">
+                    <div class="card">
+                        <div class="card-body p-3">
+                            <form id="meetingFilters" class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="form-label">Project</label>
+                                    <select class="form-select" name="projectId" id="projectFilter">
+                                        <option value="">All Projects</option>
+                                        <option th:each="project : ${projects}" 
+                                                th:value="${project.id}" 
+                                                th:text="${project.name}"
+                                                th:selected="${project.id == selectedProjectId}">
+                                            Project Name
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Meeting Type</label>
+                                    <select class="form-select" name="meetingType" id="typeFilter">
+                                        <option value="">All Types</option>
+                                        <option th:each="type : ${meetingTypes}" 
+                                                th:value="${type}" 
+                                                th:text="${type.displayName}"
+                                                th:selected="${type == selectedType}">
+                                            Meeting Type
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Status</label>
+                                    <select class="form-select" name="status" id="statusFilter">
+                                        <option value="">All Statuses</option>
+                                        <option th:each="status : ${meetingStatuses}" 
+                                                th:value="${status}" 
+                                                th:text="${status.displayName}"
+                                                th:selected="${status == selectedStatus}">
+                                            Status
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Priority</label>
+                                    <select class="form-select" name="priority" id="priorityFilter">
+                                        <option value="">All Priorities</option>
+                                        <option th:each="priority : ${meetingPriorities}" 
+                                                th:value="${priority}" 
+                                                th:text="${priority.displayName}"
+                                                th:selected="${priority == selectedPriority}">
+                                            Priority
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">&nbsp;</label>
+                                    <button type="submit" class="btn btn-primary d-block w-100">
+                                        <i class="fas fa-filter"></i> Filter
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Meeting Statistics -->
+            <div class="row mb-4" th:if="${meetingStatistics}">
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-primary">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span th:text="${meetingStatistics.totalMeetings}">0</span>
+                            </h5>
+                            <p class="card-text text-muted">Total Meetings</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-success">
+                                <i class="fas fa-check-circle"></i>
+                                <span th:text="${meetingStatistics.completedMeetings}">0</span>
+                            </h5>
+                            <p class="card-text text-muted">Completed</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-info">
+                                <i class="fas fa-video"></i>
+                                <span th:text="${meetingStatistics.virtualMeetings}">0</span>
+                            </h5>
+                            <p class="card-text text-muted">Virtual</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-warning">
+                                <i class="fas fa-clock"></i>
+                                <span th:text="${meetingStatistics.avgDurationMinutes}">0</span>min
+                            </h5>
+                            <p class="card-text text-muted">Avg Duration</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -25,17 +157,149 @@
             <div class="row">
                 <div class="col-12">
                     <div class="card">
-                        <div class="card-header">
+                        <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="card-title mb-0">
-                                <i class="fas fa-calendar"></i> Upcoming Meetings
+                                <i class="fas fa-calendar"></i> Meetings
                             </h5>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-secondary" onclick="refreshMeetings()">
+                                    <i class="fas fa-sync"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary" onclick="exportMeetings()">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <div class="text-center py-4">
+                        <div class="card-body p-0">
+                            <!-- Meetings Table -->
+                            <div class="table-responsive" th:if="${meetings != null and !meetings.isEmpty()}">
+                                <table class="table table-hover meeting-table">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Meeting</th>
+                                            <th>Date & Time</th>
+                                            <th>Type</th>
+                                            <th>Status</th>
+                                            <th>Priority</th>
+                                            <th>Location</th>
+                                            <th>Attendees</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:each="meeting : ${meetings}" 
+                                            th:class="${meeting.isToday() ? 'table-warning' : ''}"
+                                            th:data-meeting-id="${meeting.id}">
+                                            <td>
+                                                <div class="meeting-info">
+                                                    <h6 class="mb-1">
+                                                        <span th:text="${meeting.formattedTitle}">Meeting Title</span>
+                                                        <span th:if="${meeting.isRecurring()}" class="badge bg-secondary ms-1">
+                                                            <i class="fas fa-redo"></i>
+                                                        </span>
+                                                    </h6>
+                                                    <small class="text-muted" th:text="${meeting.description}">Description</small>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="meeting-time">
+                                                    <strong th:text="${#temporals.format(meeting.date, 'MMM dd, yyyy')}">Date</strong><br>
+                                                    <span th:text="${#temporals.format(meeting.startTime, 'h:mm a')} + ' - ' + ${#temporals.format(meeting.endTime, 'h:mm a')}">Time</span>
+                                                    <br><small class="text-muted" th:text="${meeting.durationHours} + ' hours'">Duration</small>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge rounded-pill" 
+                                                      th:classappend="${meeting.meetingType.styleClass}"
+                                                      th:text="${meeting.meetingType.displayNameWithEmoji}">
+                                                    Type
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge rounded-pill" 
+                                                      th:classappend="${meeting.status.styleClass}"
+                                                      th:text="${meeting.status.displayNameWithEmoji}">
+                                                    Status
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge rounded-pill" 
+                                                      th:classappend="${meeting.priority.styleClass}"
+                                                      th:text="${meeting.priority.displayNameWithEmoji}">
+                                                    Priority
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="meeting-location">
+                                                    <span th:if="${meeting.isVirtual()}" class="text-info">
+                                                        <i class="fas fa-video"></i> Virtual
+                                                    </span>
+                                                    <span th:if="${meeting.isHybrid()}" class="text-warning">
+                                                        <i class="fas fa-globe"></i> Hybrid
+                                                    </span>
+                                                    <span th:if="${!meeting.isVirtual() and !meeting.isHybrid()}" class="text-secondary">
+                                                        <i class="fas fa-map-marker-alt"></i> In-Person
+                                                    </span>
+                                                    <br><small class="text-muted" th:text="${meeting.location}">Location</small>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="attendance-info">
+                                                    <span class="badge bg-light text-dark">
+                                                        <i class="fas fa-users"></i>
+                                                        <span th:text="${meeting.attendances.size()}">0</span>
+                                                        <span th:if="${meeting.maxAttendees != null}" th:text="'/' + ${meeting.maxAttendees}">
+                                                            /Max
+                                                        </span>
+                                                    </span>
+                                                    <br><small class="text-muted" th:text="${#numbers.formatPercent(meeting.attendancePercentage / 100, 0, 0)}">0%</small>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <a th:href="@{/meetings/{id}(id=${meeting.id})}" class="btn btn-outline-primary" title="View Details">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <a th:href="@{/meetings/{id}/edit(id=${meeting.id})}" 
+                                                       class="btn btn-outline-secondary" 
+                                                       title="Edit Meeting"
+                                                       sec:authorize="hasAnyRole('MENTOR', 'ADMIN')"
+                                                       th:if="${meeting.canBeEdited()}">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <button class="btn btn-outline-info" 
+                                                            th:if="${meeting.isVirtual()}"
+                                                            title="Join Virtual Meeting"
+                                                            th:onclick="'window.open(\'' + ${meeting.virtualMeetingUrl} + '\', \'_blank\')'">
+                                                        <i class="fas fa-video"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-danger" 
+                                                            title="Cancel Meeting"
+                                                            sec:authorize="hasAnyRole('MENTOR', 'ADMIN')"
+                                                            th:onclick="'cancelMeeting(' + ${meeting.id} + ')'"
+                                                            th:if="${meeting.canBeEdited()}">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Empty State -->
+                            <div class="text-center py-5" th:if="${meetings == null or meetings.isEmpty()}">
                                 <i class="fas fa-calendar-plus fa-3x text-muted mb-3"></i>
-                                <h5 class="text-muted">No meetings scheduled</h5>
-                                <p class="text-muted">Create your first meeting to start coordinating with your team.</p>
-                                <a href="/meetings/new" class="btn btn-outline-primary">
+                                <h5 class="text-muted">No meetings found</h5>
+                                <p class="text-muted">
+                                    <span th:if="${selectedProject}">
+                                        No meetings scheduled for this project.
+                                    </span>
+                                    <span th:unless="${selectedProject}">
+                                        Create your first meeting to start coordinating with your team.
+                                    </span>
+                                </p>
+                                <a href="/meetings/new" class="btn btn-primary" sec:authorize="hasAnyRole('MENTOR', 'ADMIN')">
                                     <i class="fas fa-plus"></i> Schedule Meeting
                                 </a>
                             </div>
@@ -44,6 +308,146 @@
                 </div>
             </div>
         </div>
+
+        <!-- Meeting Action Modals -->
+        <div class="modal fade" id="cancelMeetingModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Cancel Meeting</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to cancel this meeting?</p>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="cancelFuture">
+                            <label class="form-check-label" for="cancelFuture">
+                                Cancel all future occurrences (for recurring meetings)
+                            </label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Keep Meeting</button>
+                        <button type="button" class="btn btn-danger" onclick="confirmCancelMeeting()">Cancel Meeting</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <div layout:fragment="scripts">
+        <script src="/js/meetings.js"></script>
+        <script>
+            let currentMeetingId = null;
+
+            // Initialize meeting filters
+            document.getElementById('meetingFilters').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                const params = new URLSearchParams(formData);
+                window.location.href = '/meetings?' + params.toString();
+            });
+
+            // Refresh meetings
+            function refreshMeetings() {
+                window.location.reload();
+            }
+
+            // Export meetings
+            function exportMeetings() {
+                const params = new URLSearchParams(window.location.search);
+                window.location.href = '/meetings/export?' + params.toString();
+            }
+
+            // Cancel meeting
+            function cancelMeeting(meetingId) {
+                currentMeetingId = meetingId;
+                const modal = new bootstrap.Modal(document.getElementById('cancelMeetingModal'));
+                modal.show();
+            }
+
+            // Confirm cancel meeting
+            function confirmCancelMeeting() {
+                if (currentMeetingId) {
+                    const cancelFuture = document.getElementById('cancelFuture').checked;
+                    
+                    fetch(`/api/meetings/${currentMeetingId}/cancel`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({
+                            cancelFutureOccurrences: cancelFuture
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showNotification('Meeting cancelled successfully', 'success');
+                            setTimeout(() => window.location.reload(), 1000);
+                        } else {
+                            showNotification('Error cancelling meeting: ' + data.message, 'error');
+                        }
+                    })
+                    .catch(error => {
+                        showNotification('Error cancelling meeting: ' + error.message, 'error');
+                    });
+                    
+                    bootstrap.Modal.getInstance(document.getElementById('cancelMeetingModal')).hide();
+                }
+            }
+
+            // Show notification
+            function showNotification(message, type) {
+                const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+                const alert = `<div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>`;
+                
+                document.querySelector('.container-fluid').insertAdjacentHTML('afterbegin', alert);
+                
+                // Auto-dismiss after 5 seconds
+                setTimeout(() => {
+                    const alertElement = document.querySelector('.alert');
+                    if (alertElement) {
+                        alertElement.remove();
+                    }
+                }, 5000);
+            }
+
+            // WebSocket connection for real-time updates
+            const projectId = /*[[${selectedProject?.id}]]*/ null;
+            if (projectId && typeof connectWebSocket === 'function') {
+                connectWebSocket();
+                
+                // Subscribe to meeting updates
+                stompClient.subscribe(`/topic/project/${projectId}/meetings`, function(message) {
+                    const update = JSON.parse(message.body);
+                    handleMeetingUpdate(update);
+                });
+            }
+
+            // Handle meeting updates
+            function handleMeetingUpdate(update) {
+                if (update.action === 'MEETING_CREATED' || update.action === 'MEETING_UPDATED' || update.action === 'MEETING_DELETED') {
+                    // Add visual feedback for real-time updates
+                    const meetingRow = document.querySelector(`[data-meeting-id="${update.meetingId}"]`);
+                    if (meetingRow) {
+                        meetingRow.classList.add('table-info');
+                        setTimeout(() => meetingRow.classList.remove('table-info'), 2000);
+                    }
+                    
+                    // Show notification
+                    showNotification(`Meeting ${update.action.toLowerCase().replace('_', ' ')} by ${update.updatedBy}`, 'info');
+                    
+                    // Refresh after short delay
+                    setTimeout(() => refreshMeetings(), 3000);
+                }
+            }
+        </script>
     </div>
 </body>
 </html>

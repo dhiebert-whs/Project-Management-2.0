@@ -7,7 +7,9 @@
       "Bash(mvn clean:*)",
       "Bash(rm:*)",
       "Bash(sed:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(timeout 30 mvn spring-boot:run)",
+      "Bash(timeout 20 mvn spring-boot:run)"
     ],
     "deny": []
   }

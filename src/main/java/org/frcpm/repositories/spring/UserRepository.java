@@ -221,4 +221,20 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     @Query("SELECT u FROM User u WHERE LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :searchTerm, '%')) AND u.enabled = true")
     List<User> searchUsersByName(@Param("searchTerm") String searchTerm);
+    
+    // =========================================================================
+    // PHASE 2E-E: ENHANCED REAL-TIME FEATURES QUERIES
+    // =========================================================================
+    
+    /**
+     * Find users who have logged in after a specific time and are enabled.
+     */
+    @Query("SELECT u FROM User u WHERE u.enabled = true AND u.lastLogin >= :since ORDER BY u.lastLogin DESC")
+    List<User> findByEnabledTrueAndLastLoginAfter(@Param("since") LocalDateTime since);
+    
+    /**
+     * Find users by project through their team member relationships.
+     */
+    @Query("SELECT u FROM User u JOIN u.teamMember tm JOIN tm.projects p WHERE p = :project")
+    List<User> findByTeamMemberProjectsContaining(@Param("project") org.frcpm.models.Project project);
 }

@@ -513,4 +513,40 @@ public class UserServiceImpl implements UserService {
             throw new IllegalArgumentException("Age must be between 5 and 120");
         }
     }
+    
+    // =========================================================================
+    // PHASE 2E-E: ENHANCED REAL-TIME FEATURES IMPLEMENTATION
+    // =========================================================================
+    
+    @Override
+    public List<User> findActiveUsers() {
+        try {
+            // Find users who have logged in within the last hour and are enabled
+            LocalDateTime oneHourAgo = LocalDateTime.now().minusHours(1);
+            List<User> users = userRepository.findByEnabledTrueAndLastLoginAfter(oneHourAgo);
+            
+            LOGGER.info(String.format("Found %d active users", users.size()));
+            return users;
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error finding active users", e);
+            // Return all enabled users as fallback
+            return userRepository.findByEnabledTrue();
+        }
+    }
+    
+    @Override
+    public List<User> findByProject(org.frcpm.models.Project project) {
+        try {
+            // Find users through their team member relationships
+            List<User> users = userRepository.findByTeamMemberProjectsContaining(project);
+            
+            LOGGER.info(String.format("Found %d users for project %s", users.size(), project.getName()));
+            return users;
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, String.format("Error finding users for project %s", project.getName()), e);
+            return List.of(); // Return empty list on error
+        }
+    }
 }

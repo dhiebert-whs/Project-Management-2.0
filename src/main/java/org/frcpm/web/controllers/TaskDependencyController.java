@@ -154,57 +154,7 @@ public class TaskDependencyController extends BaseController {
         }
     }
     
-    /**
-     * Critical path analysis and visualization page.
-     * 
-     * @param projectId the project ID
-     * @param model Spring model for template data
-     * @param user current authenticated user
-     * @return template name
-     */
-    @GetMapping("/dependencies/critical-path")
-    public String criticalPathAnalysis(
-            @RequestParam Long projectId,
-            Model model,
-            @AuthenticationPrincipal UserPrincipal user) {
-        
-        try {
-            LOGGER.info("Loading critical path analysis for project: " + projectId);
-            
-            // Validate project access
-            Project project = projectService.findById(projectId);
-            if (project == null) {
-                addErrorMessage(model, "Project not found");
-                return redirect("/dashboard");
-            }
-            
-            // Add navigation data
-            addNavigationData(model);
-            addBreadcrumbs(model, "Projects", "/projects", project.getName(), 
-                          "/projects/" + projectId, "Critical Path", "/dependencies/critical-path?projectId=" + projectId);
-            
-            // Load critical path analysis
-            TaskDependencyService.CriticalPathResult criticalPathResult = dependencyService.calculateCriticalPath(project);
-            model.addAttribute("project", project);
-            model.addAttribute("criticalPath", criticalPathResult);
-            
-            // Additional analysis data
-            model.addAttribute("projectMetrics", dependencyService.getDependencyStatistics(project));
-            model.addAttribute("scheduleRisk", dependencyService.assessProjectRisk(project));
-            model.addAttribute("scheduleOptimization", dependencyService.optimizeSchedule(project));
-            
-            // User context
-            model.addAttribute("currentUser", user);
-            model.addAttribute("currentSection", "dependencies");
-            
-            return "dependencies/critical-path";
-            
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error loading critical path analysis", e);
-            addErrorMessage(model, "Error loading critical path analysis");
-            return redirect("/dependencies?projectId=" + projectId);
-        }
-    }
+    // Note: Critical path view controller is handled by DependencyViewController to avoid mapping conflicts
     
     /**
      * Dependency creation form.

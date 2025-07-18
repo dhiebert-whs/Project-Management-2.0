@@ -8,6 +8,8 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * WebSocket message for real-time task updates.
@@ -54,6 +56,9 @@ public class TaskUpdateMessage {
     private Long assigneeId; // For targeted notifications
     
     private String assigneeName; // For display purposes
+    
+    // Phase 2E-E: Enhanced Real-time Features metadata
+    private Map<String, Object> metadata = new HashMap<>();
 
     // ✅ NEW: KANBAN BOARD SUPPORT FIELDS - Phase 2E-C
     private String oldStatus; // Previous Kanban status (TODO, IN_PROGRESS, REVIEW, COMPLETED)
@@ -286,6 +291,10 @@ public class TaskUpdateMessage {
     
     public String getTargetColumn() { return targetColumn; }
     public void setTargetColumn(String targetColumn) { this.targetColumn = targetColumn; }
+    
+    // Phase 2E-E: Enhanced Real-time Features metadata getters/setters
+    public Map<String, Object> getMetadata() { return metadata; }
+    public void setMetadata(Map<String, Object> metadata) { this.metadata = metadata; }
 
     // =========================================================================
     // UTILITY METHODS

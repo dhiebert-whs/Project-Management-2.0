@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>Create Task Dependency - FRC Project Management</title>
+</head>
+
+<div layout:fragment="styles">
+    <style>
+        .dependency-form-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .form-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border-left: 4px solid #007bff;
+        }
+        
+        .task-preview {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            transition: all 0.3s ease;
+        }
+        
+        .task-preview:hover {
+            border-color: #007bff;
+            box-shadow: 0 2px 8px rgba(0,123,255,0.2);
+        }
+        
+        .task-preview.selected {
+            border-color: #007bff;
+            background: #e7f3ff;
+        }
+        
+        .dependency-visualization {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2rem 0;
+            text-align: center;
+        }
+        
+        .task-box {
+            display: inline-block;
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 0 1rem;
+            min-width: 150px;
+            vertical-align: middle;
+        }
+        
+        .task-box.prerequisite {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+        
+        .task-box.dependent {
+            border-color: #ffc107;
+            background: #fff3cd;
+        }
+        
+        .dependency-arrow {
+            display: inline-block;
+            margin: 0 1rem;
+            vertical-align: middle;
+        }
+        
+        .arrow-svg {
+            width: 60px;
+            height: 30px;
+        }
+        
+        .dependency-type-info {
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .lag-time-section {
+            background: #fff3e0;
+            border: 1px solid #ffcc02;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .validation-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .validation-error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .form-floating {
+            margin-bottom: 1rem;
+        }
+        
+        .btn-group-custom {
+            margin: 1rem 0;
+        }
+        
+        .preview-section {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+        
+        .help-text {
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-top: 0.5rem;
+        }
+        
+        .required-indicator {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        .task-search {
+            position: relative;
+        }
+        
+        .task-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .task-option {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #f8f9fa;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        
+        .task-option:hover {
+            background: #f8f9fa;
+        }
+        
+        .task-option:last-child {
+            border-bottom: none;
+        }
+        
+        .task-option.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            background: #f8f9fa;
+        }
+        
+        .dependency-impact {
+            background: #f0f9ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .spinner-border-sm {
+            width: 1rem;
+            height: 1rem;
+        }
+    </style>
+</div>
+
+<div layout:fragment="content">
+    <div class="container mt-4">
+        
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <h1>
+                    <i class="fas fa-plus-circle text-primary me-2"></i>
+                    Create Task Dependency
+                </h1>
+                <p class="text-muted mb-0" th:text="${project.name + ' - Define task relationships and scheduling constraints'}">
+                    Project Name - Define task relationships and scheduling constraints
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a th:href="@{/dependencies(projectId=${project.id})}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Dependencies
+                </a>
+            </div>
+        </div>
+
+        <!-- Dependency Creation Form -->
+        <div class="dependency-form-card">
+            <form th:action="@{/dependencies}" th:object="${dependency}" method="post" 
+                  class="needs-validation" id="dependencyForm" novalidate>
+                
+                <input type="hidden" th:field="*{projectId}" th:value="${project.id}">
+                
+                <!-- Step 1: Select Tasks -->
+                <div class="form-section">
+                    <h4 class="mb-3">
+                        <i class="fas fa-tasks me-2"></i>
+                        Step 1: Select Tasks
+                    </h4>
+                    
+                    <div class="row">
+                        <!-- Prerequisite Task -->
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <select class="form-select" th:field="*{prerequisiteTaskId}" 
+                                        id="prerequisiteTask" required>
+                                    <option value="">Choose prerequisite task...</option>
+                                    <option th:each="task : ${availableTasks}" 
+                                            th:value="${task.id}" 
+                                            th:text="${task.title + ' (' + task.subsystem.name + ')'}">
+                                        Task Title (Subsystem)
+                                    </option>
+                                </select>
+                                <label for="prerequisiteTask">
+                                    Prerequisite Task <span class="required-indicator">*</span>
+                                </label>
+                                <div class="help-text">
+                                    The task that must be completed or started first
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Dependent Task -->
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <select class="form-select" th:field="*{dependentTaskId}" 
+                                        id="dependentTask" required>
+                                    <option value="">Choose dependent task...</option>
+                                    <option th:each="task : ${availableTasks}" 
+                                            th:value="${task.id}" 
+                                            th:text="${task.title + ' (' + task.subsystem.name + ')'}">
+                                        Task Title (Subsystem)
+                                    </option>
+                                </select>
+                                <label for="dependentTask">
+                                    Dependent Task <span class="required-indicator">*</span>
+                                </label>
+                                <div class="help-text">
+                                    The task that depends on the prerequisite task
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Validation Messages -->
+                    <div id="taskValidation" class="validation-warning" style="display: none;">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <span id="validationMessage">Please select different tasks</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Dependency Type -->
+                <div class="form-section">
+                    <h4 class="mb-3">
+                        <i class="fas fa-link me-2"></i>
+                        Step 2: Dependency Type
+                    </h4>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <select class="form-select" th:field="*{dependencyType}" 
+                                        id="dependencyType" required>
+                                    <option th:each="type : ${T(org.frcpm.models.DependencyType).values()}"
+                                            th:value="${type}" 
+                                            th:text="${type.displayName}"
+                                            th:data-description="${type.description}">
+                                        Type
+                                    </option>
+                                </select>
+                                <label for="dependencyType">
+                                    Dependency Type <span class="required-indicator">*</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="dependency-type-info" id="typeInfo">
+                                <h6><i class="fas fa-info-circle me-1"></i>Dependency Information</h6>
+                                <p id="typeDescription" class="mb-0">
+                                    Select a dependency type to see its description
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Scheduling Options -->
+                <div class="form-section">
+                    <h4 class="mb-3">
+                        <i class="fas fa-clock me-2"></i>
+                        Step 3: Scheduling Options
+                    </h4>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <input type="number" class="form-control" th:field="*{lagHours}" 
+                                       id="lagHours" min="0" max="720" step="1" value="0">
+                                <label for="lagHours">Lag Time (hours)</label>
+                                <div class="help-text">
+                                    Additional time to wait after prerequisite completion (0-720 hours)
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="lag-time-section">
+                                <h6><i class="fas fa-hourglass-half me-1"></i>Lag Time Impact</h6>
+                                <p id="lagImpact" class="mb-0">
+                                    No additional delay - dependent task can start immediately
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Notes and Description -->
+                <div class="form-section">
+                    <h4 class="mb-3">
+                        <i class="fas fa-sticky-note me-2"></i>
+                        Step 4: Notes (Optional)
+                    </h4>
+                    
+                    <div class="form-floating">
+                        <textarea class="form-control" th:field="*{notes}" 
+                                  id="notes" style="height: 120px" 
+                                  placeholder="Enter any additional notes or explanations..."></textarea>
+                        <label for="notes">Dependency Notes</label>
+                        <div class="help-text">
+                            Explain why this dependency exists or any special considerations
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dependency Preview -->
+                <div class="preview-section" id="dependencyPreview" style="display: none;">
+                    <h4 class="mb-3">
+                        <i class="fas fa-eye me-2"></i>
+                        Dependency Preview
+                    </h4>
+                    
+                    <div class="dependency-visualization">
+                        <div class="task-box prerequisite" id="previewPrerequisite">
+                            <h6 class="mb-1">Prerequisite Task</h6>
+                            <small class="text-muted">Select a task above</small>
+                        </div>
+                        
+                        <div class="dependency-arrow">
+                            <svg class="arrow-svg" viewBox="0 0 60 30">
+                                <defs>
+                                    <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+                                            refX="0" refY="3.5" orient="auto">
+                                        <polygon points="0 0, 10 3.5, 0 7" fill="#007bff" />
+                                    </marker>
+                                </defs>
+                                <line x1="5" y1="15" x2="55" y2="15" stroke="#007bff" 
+                                      stroke-width="2" marker-end="url(#arrowhead)" />
+                                <text x="30" y="12" text-anchor="middle" font-size="10" fill="#007bff" id="arrowLabel">
+                                    FS
+                                </text>
+                            </svg>
+                        </div>
+                        
+                        <div class="task-box dependent" id="previewDependent">
+                            <h6 class="mb-1">Dependent Task</h6>
+                            <small class="text-muted">Select a task above</small>
+                        </div>
+                    </div>
+                    
+                    <div class="dependency-impact" id="impactAnalysis">
+                        <h6><i class="fas fa-chart-line me-1"></i>Impact Analysis</h6>
+                        <p id="impactDescription" class="mb-0">
+                            Select both tasks to see the impact analysis
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                    <div>
+                        <button type="button" class="btn btn-outline-info" id="validateBtn">
+                            <i class="fas fa-check-circle me-1"></i>Validate Dependency
+                        </button>
+                        <span id="validationSpinner" class="spinner-border spinner-border-sm ms-2" 
+                              style="display: none;"></span>
+                    </div>
+                    
+                    <div>
+                        <a th:href="@{/dependencies(projectId=${project.id})}" 
+                           class="btn btn-secondary me-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+                            <i class="fas fa-save me-1"></i>Create Dependency
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div layout:fragment="scripts">
+    <script>
+        // Dependency form management
+        class DependencyFormManager {
+            constructor() {
+                this.prerequisiteTaskId = null;
+                this.dependentTaskId = null;
+                this.dependencyType = null;
+                this.lagHours = 0;
+                
+                this.dependencyTypes = {
+                    'FINISH_TO_START': {
+                        name: 'Finish-to-Start (FS)',
+                        description: 'Dependent task cannot start until prerequisite task finishes. Most common dependency type.',
+                        shortCode: 'FS'
+                    },
+                    'START_TO_START': {
+                        name: 'Start-to-Start (SS)',
+                        description: 'Dependent task cannot start until prerequisite task starts. Used for parallel work.',
+                        shortCode: 'SS'
+                    },
+                    'FINISH_TO_FINISH': {
+                        name: 'Finish-to-Finish (FF)',
+                        description: 'Dependent task cannot finish until prerequisite task finishes.',
+                        shortCode: 'FF'
+                    },
+                    'START_TO_FINISH': {
+                        name: 'Start-to-Finish (SF)',
+                        description: 'Dependent task cannot finish until prerequisite task starts. Rarely used.',
+                        shortCode: 'SF'
+                    },
+                    'BLOCKING': {
+                        name: 'Blocking',
+                        description: 'Dependent task is completely blocked until prerequisite is finished. Critical path dependency.',
+                        shortCode: 'BLK'
+                    },
+                    'SOFT': {
+                        name: 'Soft Dependency',
+                        description: 'Recommended order but not strictly enforced. Used for best practices.',
+                        shortCode: 'SOFT'
+                    }
+                };
+                
+                this.init();
+            }
+            
+            init() {
+                this.setupEventHandlers();
+                this.updateFormState();
+            }
+            
+            setupEventHandlers() {
+                // Task selection handlers
+                document.getElementById('prerequisiteTask').addEventListener('change', (e) => {
+                    this.prerequisiteTaskId = e.target.value;
+                    this.updatePreview();
+                    this.validateSelection();
+                });
+                
+                document.getElementById('dependentTask').addEventListener('change', (e) => {
+                    this.dependentTaskId = e.target.value;
+                    this.updatePreview();
+                    this.validateSelection();
+                });
+                
+                // Dependency type handler
+                document.getElementById('dependencyType').addEventListener('change', (e) => {
+                    this.dependencyType = e.target.value;
+                    this.updateTypeInfo();
+                    this.updatePreview();
+                });
+                
+                // Lag time handler
+                document.getElementById('lagHours').addEventListener('input', (e) => {
+                    this.lagHours = parseInt(e.target.value) || 0;
+                    this.updateLagImpact();
+                    this.updatePreview();
+                });
+                
+                // Validation button
+                document.getElementById('validateBtn').addEventListener('click', () => {
+                    this.validateDependency();
+                });
+                
+                // Form submission
+                document.getElementById('dependencyForm').addEventListener('submit', (e) => {
+                    if (!this.isFormValid()) {
+                        e.preventDefault();
+                        this.showValidationErrors();
+                    }
+                });
+            }
+            
+            updateFormState() {
+                const submitBtn = document.getElementById('submitBtn');
+                const isValid = this.prerequisiteTaskId && this.dependentTaskId && 
+                               this.dependencyType && this.prerequisiteTaskId !== this.dependentTaskId;
+                
+                submitBtn.disabled = !isValid;
+                
+                // Show/hide preview
+                const preview = document.getElementById('dependencyPreview');
+                if (isValid) {
+                    preview.style.display = 'block';
+                } else {
+                    preview.style.display = 'none';
+                }
+            }
+            
+            validateSelection() {
+                const validation = document.getElementById('taskValidation');
+                const message = document.getElementById('validationMessage');
+                
+                if (this.prerequisiteTaskId && this.dependentTaskId) {
+                    if (this.prerequisiteTaskId === this.dependentTaskId) {
+                        validation.style.display = 'block';
+                        validation.className = 'validation-error';
+                        message.textContent = 'A task cannot depend on itself. Please select different tasks.';
+                        return false;
+                    } else {
+                        validation.style.display = 'none';
+                        return true;
+                    }
+                }
+                
+                validation.style.display = 'none';
+                return true;
+            }
+            
+            updateTypeInfo() {
+                const typeInfo = this.dependencyTypes[this.dependencyType];
+                if (typeInfo) {
+                    document.getElementById('typeDescription').textContent = typeInfo.description;
+                }
+            }
+            
+            updateLagImpact() {
+                const impact = document.getElementById('lagImpact');
+                if (this.lagHours === 0) {
+                    impact.textContent = 'No additional delay - dependent task can start immediately';
+                } else if (this.lagHours <= 8) {
+                    impact.textContent = `Short delay of ${this.lagHours} hour(s) - minimal impact on schedule`;
+                } else if (this.lagHours <= 24) {
+                    impact.textContent = `Moderate delay of ${this.lagHours} hour(s) - may affect daily scheduling`;
+                } else {
+                    const days = Math.round(this.lagHours / 24 * 10) / 10;
+                    impact.textContent = `Long delay of ${days} day(s) - significant impact on project timeline`;
+                }
+            }
+            
+            updatePreview() {
+                this.updateFormState();
+                
+                if (!this.prerequisiteTaskId || !this.dependentTaskId) return;
+                
+                // Update task boxes
+                const prerequisiteOption = document.querySelector(`#prerequisiteTask option[value="${this.prerequisiteTaskId}"]`);
+                const dependentOption = document.querySelector(`#dependentTask option[value="${this.dependentTaskId}"]`);
+                
+                if (prerequisiteOption && dependentOption) {
+                    document.querySelector('#previewPrerequisite h6').textContent = prerequisiteOption.textContent;
+                    document.querySelector('#previewPrerequisite small').textContent = 'Must be completed first';
+                    
+                    document.querySelector('#previewDependent h6').textContent = dependentOption.textContent;
+                    document.querySelector('#previewDependent small').textContent = 'Depends on prerequisite';
+                    
+                    // Update arrow label
+                    const typeInfo = this.dependencyTypes[this.dependencyType];
+                    if (typeInfo) {
+                        document.getElementById('arrowLabel').textContent = typeInfo.shortCode;
+                    }
+                    
+                    // Update impact analysis
+                    this.updateImpactAnalysis();
+                }
+            }
+            
+            updateImpactAnalysis() {
+                const impact = document.getElementById('impactDescription');
+                const typeInfo = this.dependencyTypes[this.dependencyType];
+                
+                if (typeInfo) {
+                    let description = `This ${typeInfo.name.toLowerCase()} dependency means: ${typeInfo.description}`;
+                    
+                    if (this.lagHours > 0) {
+                        description += ` Additionally, there will be a ${this.lagHours}-hour delay after the prerequisite is satisfied.`;
+                    }
+                    
+                    impact.textContent = description;
+                }
+            }
+            
+            async validateDependency() {
+                if (!this.prerequisiteTaskId || !this.dependentTaskId) {
+                    this.showNotification('Please select both tasks before validating', 'warning');
+                    return;
+                }
+                
+                const spinner = document.getElementById('validationSpinner');
+                const btn = document.getElementById('validateBtn');
+                
+                spinner.style.display = 'inline-block';
+                btn.disabled = true;
+                
+                try {
+                    const response = await fetch('/api/dependencies/validate', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            prerequisiteTaskId: this.prerequisiteTaskId,
+                            dependentTaskId: this.dependentTaskId,
+                            dependencyType: this.dependencyType,
+                            projectId: /*[[${project.id}]]*/ null
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.valid) {
+                        this.showNotification('Dependency is valid and can be created', 'success');
+                        document.getElementById('submitBtn').disabled = false;
+                    } else {
+                        this.showNotification(`Validation failed: ${result.message}`, 'error');
+                        document.getElementById('submitBtn').disabled = true;
+                    }
+                    
+                } catch (error) {
+                    console.error('Validation error:', error);
+                    this.showNotification('Error validating dependency. Please try again.', 'error');
+                } finally {
+                    spinner.style.display = 'none';
+                    btn.disabled = false;
+                }
+            }
+            
+            isFormValid() {
+                return this.prerequisiteTaskId && 
+                       this.dependentTaskId && 
+                       this.dependencyType && 
+                       this.prerequisiteTaskId !== this.dependentTaskId;
+            }
+            
+            showValidationErrors() {
+                const errors = [];
+                
+                if (!this.prerequisiteTaskId) errors.push('Please select a prerequisite task');
+                if (!this.dependentTaskId) errors.push('Please select a dependent task');
+                if (!this.dependencyType) errors.push('Please select a dependency type');
+                if (this.prerequisiteTaskId === this.dependentTaskId) errors.push('Tasks cannot be the same');
+                
+                this.showNotification(errors.join('. '), 'error');
+            }
+            
+            showNotification(message, type) {
+                const alertClass = type === 'success' ? 'alert-success' : 
+                                  type === 'warning' ? 'alert-warning' : 'alert-danger';
+                
+                const notification = document.createElement('div');
+                notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+                notification.style.top = '20px';
+                notification.style.right = '20px';
+                notification.style.zIndex = '9999';
+                notification.style.minWidth = '300px';
+                notification.innerHTML = `
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 5000);
+            }
+        }
+        
+        // Initialize form manager when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new DependencyFormManager();
+        });
+    </script>
+</div>
+
+</html>

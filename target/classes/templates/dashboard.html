@@ -8,6 +8,9 @@
 </head>
 
 <div layout:fragment="styles">
+    <!-- Live Activity Feed Styles -->
+    <div th:replace="~{fragments/activity-feed :: activity-feed-styles}"></div>
+    
     <style>
         /* Dashboard-specific styles */
         .dashboard-header {
@@ -422,6 +425,16 @@
             </div>
         </div>
 
+        <!-- Live Activity Feed Row -->
+        <div class="row mt-4">
+            <div class="col-lg-8">
+                <!-- Keep original recent activity for comparison -->
+            </div>
+            <div class="col-lg-4">
+                <div th:replace="~{fragments/activity-feed :: activity-feed}"></div>
+            </div>
+        </div>
+
         <!-- Advanced Features -->
         <div class="row mt-4">
             <div class="col-12">
@@ -668,6 +681,9 @@
             }
         }
     </script>
+    
+    <!-- Live Activity Feed Script -->
+    <div th:replace="~{fragments/activity-feed :: activity-feed-script}"></div>
 </div>
 
 </html>

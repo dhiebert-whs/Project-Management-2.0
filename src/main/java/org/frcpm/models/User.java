@@ -90,6 +90,10 @@ public class User {
     @Column(name = "parent_email")
     private String parentEmail;
     
+    // Phase 2E-E: Enhanced Real-time Features - Phone number for SMS notifications
+    @Column(name = "phone_number")
+    private String phoneNumber;
+    
     // MFA Fields
     @Column(name = "totp_secret")
     private String totpSecret;
@@ -332,6 +336,14 @@ public class User {
 
     public void setParentEmail(String parentEmail) {
         this.parentEmail = parentEmail;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
     }
 
     public String getTotpSecret() {

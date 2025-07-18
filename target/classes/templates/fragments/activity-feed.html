@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<!-- Live Activity Feed Fragment - Phase 2E-E Enhanced Real-time Features -->
+<div th:fragment="activity-feed" class="activity-feed-container">
+    <div class="card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-pulse text-success me-2" id="activityPulse"></i>
+                Live Activity Feed
+            </h5>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-success me-2" id="connectionStatus">Connected</span>
+                <button class="btn btn-sm btn-outline-secondary" onclick="toggleActivityFilters()">
+                    <i class="fas fa-filter"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Activity Filters -->
+        <div class="activity-filters p-2 border-bottom" id="activityFilters" style="display: none;">
+            <div class="row g-2">
+                <div class="col-auto">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="filterTasks" checked>
+                        <label class="form-check-label" for="filterTasks">Tasks</label>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="filterUsers" checked>
+                        <label class="form-check-label" for="filterUsers">Users</label>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="filterWorkshop" checked>
+                        <label class="form-check-label" for="filterWorkshop">Workshop</label>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <select class="form-select form-select-sm" id="subteamFilter">
+                        <option value="">All Subteams</option>
+                        <option value="drivetrain">Drivetrain</option>
+                        <option value="programming">Programming</option>
+                        <option value="electronics">Electronics</option>
+                        <option value="mechanical">Mechanical</option>
+                        <option value="strategy">Strategy</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-body p-0">
+            <!-- Real-time Activity Stream -->
+            <div class="activity-stream" id="activityStream">
+                <div class="activity-item loading-placeholder">
+                    <div class="d-flex align-items-center p-3">
+                        <div class="spinner-border spinner-border-sm text-primary me-3" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <span class="text-muted">Connecting to live activity feed...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Empty State -->
+            <div class="empty-state text-center p-4" id="emptyState" style="display: none;">
+                <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                <h6 class="text-muted">No recent activity</h6>
+                <p class="text-muted mb-0">Team activity will appear here in real-time</p>
+            </div>
+        </div>
+        
+        <!-- Activity Feed Footer -->
+        <div class="card-footer bg-light">
+            <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">
+                    <i class="fas fa-users me-1"></i>
+                    <span id="activeUsers">0</span> active team members
+                </small>
+                <button class="btn btn-sm btn-link p-0" onclick="scrollToBottom()">
+                    <i class="fas fa-arrow-down me-1"></i>Latest
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Activity Feed Styles -->
+<style th:fragment="activity-feed-styles">
+    .activity-feed-container {
+        height: 100%;
+        min-height: 400px;
+    }
+    
+    .activity-stream {
+        max-height: 350px;
+        overflow-y: auto;
+        scrollbar-width: thin;
+    }
+    
+    .activity-stream::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .activity-stream::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+    
+    .activity-stream::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+    }
+    
+    .activity-item {
+        border-bottom: 1px solid #f0f0f0;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    .activity-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .activity-item.new-activity {
+        animation: slideInRight 0.5s ease-out;
+        background-color: #e7f3ff;
+    }
+    
+    .activity-item .activity-content {
+        padding: 0.75rem 1rem;
+    }
+    
+    .activity-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: linear-gradient(45deg, #007bff, #28a745);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 0.8rem;
+        margin-right: 0.75rem;
+        flex-shrink: 0;
+    }
+    
+    .activity-text {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .activity-title {
+        font-size: 0.9rem;
+        margin-bottom: 0.25rem;
+        line-height: 1.3;
+    }
+    
+    .activity-meta {
+        font-size: 0.75rem;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .activity-time {
+        color: #999;
+    }
+    
+    .activity-type-badge {
+        display: inline-block;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-size: 0.7rem;
+        font-weight: bold;
+    }
+    
+    .activity-type-task {
+        background: #e3f2fd;
+        color: #1565c0;
+    }
+    
+    .activity-type-user {
+        background: #e8f5e8;
+        color: #2e7d32;
+    }
+    
+    .activity-type-workshop {
+        background: #fff3e0;
+        color: #f57c00;
+    }
+    
+    .activity-type-system {
+        background: #f3e5f5;
+        color: #7b1fa2;
+    }
+    
+    .activity-filters {
+        background: #f8f9fa;
+    }
+    
+    .loading-placeholder {
+        animation: pulse 1.5s ease-in-out infinite;
+    }
+    
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes pulse {
+        0%, 100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.5;
+        }
+    }
+    
+    #activityPulse {
+        animation: pulse 2s ease-in-out infinite;
+    }
+    
+    .connection-status {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .status-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #28a745;
+        animation: blink 2s infinite;
+    }
+    
+    .status-indicator.disconnected {
+        background: #dc3545;
+        animation: none;
+    }
+    
+    @keyframes blink {
+        0%, 50% {
+            opacity: 1;
+        }
+        51%, 100% {
+            opacity: 0.3;
+        }
+    }
+    
+    /* Mobile optimizations */
+    @media (max-width: 768px) {
+        .activity-stream {
+            max-height: 250px;
+        }
+        
+        .activity-avatar {
+            width: 28px;
+            height: 28px;
+            font-size: 0.7rem;
+        }
+        
+        .activity-title {
+            font-size: 0.85rem;
+        }
+        
+        .activity-meta {
+            font-size: 0.7rem;
+        }
+    }
+</style>
+
+<!-- Activity Feed JavaScript -->
+<script th:fragment="activity-feed-script">
+    class LiveActivityFeed {
+        constructor() {
+            this.stompClient = null;
+            this.activityStream = document.getElementById('activityStream');
+            this.emptyState = document.getElementById('emptyState');
+            this.connectionStatus = document.getElementById('connectionStatus');
+            this.activeUsers = document.getElementById('activeUsers');
+            this.activities = [];
+            this.maxActivities = 50;
+            this.isConnected = false;
+            this.activeUserCount = 0;
+            this.filters = {
+                tasks: true,
+                users: true,
+                workshop: true,
+                subteam: ''
+            };
+            
+            this.init();
+        }
+        
+        init() {
+            this.connectWebSocket();
+            this.setupEventListeners();
+            this.startHeartbeat();
+        }
+        
+        connectWebSocket() {
+            try {
+                const socket = new SockJS('/ws');
+                this.stompClient = new StompJs.Client({
+                    webSocketFactory: () => socket,
+                    debug: (str) => {
+                        console.debug('STOMP: ' + str);
+                    },
+                    reconnectDelay: 2000,
+                    heartbeatIncoming: 4000,
+                    heartbeatOutgoing: 4000
+                });
+                
+                this.stompClient.onConnect = (frame) => {
+                    console.log('Activity feed connected: ' + frame);
+                    this.onConnect();
+                };
+                
+                this.stompClient.onDisconnect = () => {
+                    console.log('Activity feed disconnected');
+                    this.onDisconnect();
+                };
+                
+                this.stompClient.onStompError = (frame) => {
+                    console.error('STOMP error: ' + frame.headers['message']);
+                    console.error('Details: ' + frame.body);
+                    this.onDisconnect();
+                };
+                
+                this.stompClient.activate();
+                
+            } catch (error) {
+                console.error('Failed to connect to activity feed:', error);
+                this.onDisconnect();
+            }
+        }
+        
+        onConnect() {
+            this.isConnected = true;
+            this.updateConnectionStatus('Connected', 'success');
+            this.clearLoadingState();
+            
+            // Subscribe to team activity feed
+            this.stompClient.subscribe('/topic/team/activity', (message) => {
+                const activity = JSON.parse(message.body);
+                this.addActivity(activity);
+            });
+            
+            // Subscribe to user presence updates
+            this.stompClient.subscribe('/topic/team/presence', (message) => {
+                const presence = JSON.parse(message.body);
+                this.updateUserPresence(presence);
+            });
+            
+            // Subscribe to workshop status
+            this.stompClient.subscribe('/topic/workshop/status', (message) => {
+                const status = JSON.parse(message.body);
+                this.addActivity(status);
+            });
+            
+            // Subscribe to current project if available
+            const projectId = this.getCurrentProjectId();
+            if (projectId) {
+                this.stompClient.subscribe(`/topic/project/${projectId}/activity`, (message) => {
+                    const activity = JSON.parse(message.body);
+                    this.addActivity(activity);
+                });
+            }
+            
+            // Request initial activity data
+            this.requestInitialData();
+        }
+        
+        onDisconnect() {
+            this.isConnected = false;
+            this.updateConnectionStatus('Disconnected', 'danger');
+            
+            // Try to reconnect after delay
+            setTimeout(() => {
+                if (!this.isConnected) {
+                    this.connectWebSocket();
+                }
+            }, 5000);
+        }
+        
+        addActivity(activity) {
+            if (!this.shouldShowActivity(activity)) {
+                return;
+            }
+            
+            // Add to activities list
+            this.activities.unshift(activity);
+            
+            // Limit activities to prevent memory issues
+            if (this.activities.length > this.maxActivities) {
+                this.activities = this.activities.slice(0, this.maxActivities);
+            }
+            
+            // Create activity element
+            const activityElement = this.createActivityElement(activity);
+            
+            // Insert at top of stream
+            const firstChild = this.activityStream.firstChild;
+            if (firstChild) {
+                this.activityStream.insertBefore(activityElement, firstChild);
+            } else {
+                this.activityStream.appendChild(activityElement);
+            }
+            
+            // Animate new activity
+            activityElement.classList.add('new-activity');
+            setTimeout(() => {
+                activityElement.classList.remove('new-activity');
+            }, 2000);
+            
+            // Update empty state
+            this.updateEmptyState();
+            
+            // Auto-scroll if user is at bottom
+            if (this.isScrolledToBottom()) {
+                this.scrollToBottom();
+            }
+        }
+        
+        createActivityElement(activity) {
+            const element = document.createElement('div');
+            element.className = 'activity-item';
+            element.dataset.activityType = this.getActivityType(activity);
+            element.dataset.subteam = activity.subteamName || '';
+            
+            const avatar = this.createAvatar(activity);
+            const typeClass = this.getActivityTypeClass(activity);
+            const timeAgo = this.formatTimeAgo(activity.timestamp);
+            
+            element.innerHTML = `
+                <div class="activity-content d-flex align-items-start">
+                    ${avatar}
+                    <div class="activity-text">
+                        <div class="activity-title">${this.formatActivityText(activity)}</div>
+                        <div class="activity-meta">
+                            <span class="activity-type-badge ${typeClass}">${this.getActivityTypeName(activity)}</span>
+                            ${activity.subteamName ? `<span class="text-muted">${activity.subteamName}</span>` : ''}
+                            <span class="activity-time">${timeAgo}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            return element;
+        }
+        
+        createAvatar(activity) {
+            const initials = this.getInitials(activity.userName || 'System');
+            const bgColor = this.getAvatarColor(activity.userName);
+            
+            return `
+                <div class="activity-avatar" style="background: ${bgColor};">
+                    ${initials}
+                </div>
+            `;
+        }
+        
+        getInitials(name) {
+            return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        }
+        
+        getAvatarColor(name) {
+            const colors = [
+                'linear-gradient(45deg, #007bff, #28a745)',
+                'linear-gradient(45deg, #dc3545, #fd7e14)',
+                'linear-gradient(45deg, #6f42c1, #e83e8c)',
+                'linear-gradient(45deg, #20c997, #17a2b8)',
+                'linear-gradient(45deg, #ffc107, #fd7e14)'
+            ];
+            
+            if (!name || name === 'System') {
+                return 'linear-gradient(45deg, #6c757d, #495057)';
+            }
+            
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) {
+                hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            
+            return colors[Math.abs(hash) % colors.length];
+        }
+        
+        formatActivityText(activity) {
+            const userName = activity.userName || 'Someone';
+            
+            switch (activity.action) {
+                case 'TASK_UPDATED':
+                    return `<strong>${userName}</strong> updated task progress to ${activity.progress || 0}%`;
+                case 'TASK_COMPLETED':
+                    return `<strong>${userName}</strong> completed task <em>${activity.taskTitle || 'Unknown'}</em>`;
+                case 'TASK_CREATED':
+                    return `<strong>${userName}</strong> created a new task`;
+                case 'USER_LOGIN':
+                    return `<strong>${userName}</strong> joined the workshop`;
+                case 'USER_LOGOUT':
+                    return `<strong>${userName}</strong> left the workshop`;
+                case 'WORKSHOP_STATUS':
+                    return `<strong>${userName}</strong> updated workshop status: ${activity.message || activity.taskTitle}`;
+                case 'MEETING_STARTED':
+                    return `<strong>${userName}</strong> started meeting: ${activity.meetingTitle || 'Team Meeting'}`;
+                case 'PROJECT_MILESTONE':
+                    return `<strong>Milestone achieved:</strong> ${activity.message || activity.taskTitle}`;
+                default:
+                    return activity.message || activity.taskTitle || `<strong>${userName}</strong> performed an action`;
+            }
+        }
+        
+        getActivityType(activity) {
+            if (activity.action && activity.action.startsWith('TASK_')) return 'task';
+            if (activity.action && activity.action.startsWith('USER_')) return 'user';
+            if (activity.action === 'WORKSHOP_STATUS') return 'workshop';
+            return 'system';
+        }
+        
+        getActivityTypeClass(activity) {
+            return `activity-type-${this.getActivityType(activity)}`;
+        }
+        
+        getActivityTypeName(activity) {
+            const type = this.getActivityType(activity);
+            const names = {
+                'task': 'Task',
+                'user': 'Team',
+                'workshop': 'Workshop',
+                'system': 'System'
+            };
+            return names[type] || 'Activity';
+        }
+        
+        formatTimeAgo(timestamp) {
+            if (!timestamp) return 'just now';
+            
+            const now = new Date();
+            const time = new Date(timestamp);
+            const diffMs = now - time;
+            const diffMins = Math.floor(diffMs / 60000);
+            
+            if (diffMins < 1) return 'just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
+            return `${Math.floor(diffMins / 1440)}d ago`;
+        }
+        
+        shouldShowActivity(activity) {
+            const type = this.getActivityType(activity);
+            
+            // Check type filters
+            if (type === 'task' && !this.filters.tasks) return false;
+            if (type === 'user' && !this.filters.users) return false;
+            if (type === 'workshop' && !this.filters.workshop) return false;
+            
+            // Check subteam filter
+            if (this.filters.subteam && activity.subteamName !== this.filters.subteam) return false;
+            
+            return true;
+        }
+        
+        updateUserPresence(presence) {
+            if (presence.action === 'USER_LOGIN') {
+                this.activeUserCount++;
+            } else if (presence.action === 'USER_LOGOUT') {
+                this.activeUserCount = Math.max(0, this.activeUserCount - 1);
+            }
+            
+            this.activeUsers.textContent = this.activeUserCount;
+        }
+        
+        updateConnectionStatus(status, type) {
+            this.connectionStatus.textContent = status;
+            this.connectionStatus.className = `badge bg-${type}`;
+        }
+        
+        clearLoadingState() {
+            const placeholder = this.activityStream.querySelector('.loading-placeholder');
+            if (placeholder) {
+                placeholder.remove();
+            }
+        }
+        
+        updateEmptyState() {
+            const hasActivities = this.activityStream.children.length > 0;
+            this.emptyState.style.display = hasActivities ? 'none' : 'block';
+        }
+        
+        setupEventListeners() {
+            // Filter checkboxes
+            document.getElementById('filterTasks').addEventListener('change', (e) => {
+                this.filters.tasks = e.target.checked;
+                this.applyFilters();
+            });
+            
+            document.getElementById('filterUsers').addEventListener('change', (e) => {
+                this.filters.users = e.target.checked;
+                this.applyFilters();
+            });
+            
+            document.getElementById('filterWorkshop').addEventListener('change', (e) => {
+                this.filters.workshop = e.target.checked;
+                this.applyFilters();
+            });
+            
+            document.getElementById('subteamFilter').addEventListener('change', (e) => {
+                this.filters.subteam = e.target.value;
+                this.applyFilters();
+            });
+        }
+        
+        applyFilters() {
+            const items = this.activityStream.querySelectorAll('.activity-item');
+            items.forEach(item => {
+                const type = item.dataset.activityType;
+                const subteam = item.dataset.subteam;
+                
+                let show = true;
+                
+                if (type === 'task' && !this.filters.tasks) show = false;
+                if (type === 'user' && !this.filters.users) show = false;
+                if (type === 'workshop' && !this.filters.workshop) show = false;
+                if (this.filters.subteam && subteam !== this.filters.subteam) show = false;
+                
+                item.style.display = show ? 'block' : 'none';
+            });
+        }
+        
+        isScrolledToBottom() {
+            const threshold = 50;
+            return this.activityStream.scrollTop + this.activityStream.clientHeight >= 
+                   this.activityStream.scrollHeight - threshold;
+        }
+        
+        scrollToBottom() {
+            this.activityStream.scrollTop = this.activityStream.scrollHeight;
+        }
+        
+        getCurrentProjectId() {
+            // Try to get project ID from current page context
+            const projectIdMeta = document.querySelector('meta[name="project-id"]');
+            return projectIdMeta ? projectIdMeta.content : null;
+        }
+        
+        requestInitialData() {
+            // Request recent activities to populate initial feed
+            // This would typically be an API call
+            console.log('Requesting initial activity data...');
+        }
+        
+        startHeartbeat() {
+            // Send periodic heartbeat to maintain connection
+            setInterval(() => {
+                if (this.isConnected && this.stompClient) {
+                    // The STOMP client handles heartbeats automatically
+                    console.debug('Activity feed heartbeat');
+                }
+            }, 30000);
+        }
+    }
+    
+    // Global functions for template usage
+    function toggleActivityFilters() {
+        const filters = document.getElementById('activityFilters');
+        filters.style.display = filters.style.display === 'none' ? 'block' : 'none';
+    }
+    
+    function scrollToBottom() {
+        if (window.liveActivityFeed) {
+            window.liveActivityFeed.scrollToBottom();
+        }
+    }
+    
+    // Initialize when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+        window.liveActivityFeed = new LiveActivityFeed();
+    });
+</script>
+
+</html>
