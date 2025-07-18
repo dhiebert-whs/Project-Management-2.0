@@ -254,9 +254,8 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long> {
     /**
      * Search meetings by title or description.
      */
-    @Query("SELECT m FROM Meeting m WHERE LOWER(m.title) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-           "LOWER(m.description) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
-    List<Meeting> searchMeetings(@Param("searchTerm") String searchTerm);
+    @Query("SELECT m FROM Meeting m WHERE LOWER(m.title) LIKE LOWER(:searchPattern) OR LOWER(m.description) LIKE LOWER(:searchPattern)")
+    List<Meeting> searchMeetings(@Param("searchPattern") String searchPattern);
     
     /**
      * Finds meetings by project and status.
@@ -339,8 +338,8 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long> {
     /**
      * Finds meetings with specific agenda content.
      */
-    @Query("SELECT m FROM Meeting m WHERE m.agenda IS NOT NULL AND LOWER(m.agenda) LIKE LOWER(CONCAT('%', :agendaContent, '%'))")
-    List<Meeting> findByAgendaContaining(@Param("agendaContent") String agendaContent);
+    @Query("SELECT m FROM Meeting m WHERE m.agenda IS NOT NULL AND LOWER(m.agenda) LIKE LOWER(:agendaPattern)")
+    List<Meeting> findByAgendaContaining(@Param("agendaPattern") String agendaPattern);
     
     /**
      * Finds meetings with action items.

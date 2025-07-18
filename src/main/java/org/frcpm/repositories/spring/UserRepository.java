@@ -219,8 +219,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     /**
      * Search users by name for autocomplete features.
      */
-    @Query("SELECT u FROM User u WHERE LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :searchTerm, '%')) AND u.enabled = true")
-    List<User> searchUsersByName(@Param("searchTerm") String searchTerm);
+    @Query("SELECT u FROM User u WHERE (LOWER(u.firstName) LIKE LOWER(:searchPattern) OR LOWER(u.lastName) LIKE LOWER(:searchPattern) OR LOWER(u.username) LIKE LOWER(:searchPattern)) AND u.enabled = true")
+    List<User> searchUsersByName(@Param("searchPattern") String searchPattern);
     
     // =========================================================================
     // PHASE 2E-E: ENHANCED REAL-TIME FEATURES QUERIES
@@ -234,7 +234,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     
     /**
      * Find users by project through their team member relationships.
+     * Uses the Task entity as the bridge between TeamMember and Project.
      */
-    @Query("SELECT u FROM User u JOIN u.teamMember tm JOIN tm.projects p WHERE p = :project")
+    @Query("SELECT DISTINCT u FROM User u JOIN u.teamMember tm JOIN tm.assignedTasks t WHERE t.project = :project")
     List<User> findByTeamMemberProjectsContaining(@Param("project") org.frcpm.models.Project project);
 }

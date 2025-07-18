@@ -36,13 +36,10 @@ public interface ComponentRepository extends JpaRepository<Component, Long> {
     Optional<Component> findByPartNumberIgnoreCase(String partNumber);
     
     /**
-     * Finds components by name.
-     * 
-     * @param name the name to search for
-     * @return a list of components with matching names
+     * Finds components by name containing search term.
+     * Uses Spring Data method naming - no custom query needed.
      */
-    @Query("SELECT c FROM Component c WHERE c.name LIKE %:name%")
-    List<Component> findByName(@Param("name") String name);
+    List<Component> findByNameContainingIgnoreCase(String name);
     
     /**
      * Finds components by name containing the search term (case-insensitive).

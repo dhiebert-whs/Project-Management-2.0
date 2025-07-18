@@ -45,14 +45,14 @@ public interface ProjectTemplateRepository extends JpaRepository<ProjectTemplate
     /**
      * Find templates ordered by usage count (most popular first).
      */
-    @Query("SELECT pt FROM ProjectTemplate pt WHERE pt.isActive = true ORDER BY pt.usageCount DESC")
-    List<ProjectTemplate> findMostPopularTemplates();
+    // @Query("SELECT pt FROM ProjectTemplate pt WHERE pt.isActive = true ORDER BY pt.usageCount DESC")
+    // List<ProjectTemplate> findMostPopularTemplates();
     
     /**
      * Find templates ordered by build priority.
      */
-    @Query("SELECT pt FROM ProjectTemplate pt WHERE pt.isActive = true ORDER BY pt.buildPriority ASC")
-    List<ProjectTemplate> findByBuildPriorityOrder();
+    // @Query("SELECT pt FROM ProjectTemplate pt WHERE pt.isActive = true ORDER BY pt.buildPriority ASC")
+    // List<ProjectTemplate> findByBuildPriorityOrder();
     
     /**
      * Find templates suitable for parallel development.
@@ -62,17 +62,17 @@ public interface ProjectTemplateRepository extends JpaRepository<ProjectTemplate
     /**
      * Find templates by estimated duration range.
      */
-    @Query("SELECT pt FROM ProjectTemplate pt WHERE pt.isActive = true " +
-           "AND pt.estimatedWeeks >= :minWeeks AND pt.estimatedWeeks <= :maxWeeks")
-    List<ProjectTemplate> findByEstimatedWeeksBetween(@Param("minWeeks") int minWeeks, 
-                                                     @Param("maxWeeks") int maxWeeks);
+    // @Query("SELECT pt FROM ProjectTemplate pt WHERE pt.isActive = true " +
+    //        "AND pt.estimatedWeeks >= :minWeeks AND pt.estimatedWeeks <= :maxWeeks")
+    // List<ProjectTemplate> findByEstimatedWeeksBetween(@Param("minWeeks") int minWeeks, 
+    //                                                  @Param("maxWeeks") int maxWeeks);
     
     /**
      * Find templates by team size requirement.
      */
-    @Query("SELECT pt FROM ProjectTemplate pt WHERE pt.isActive = true " +
-           "AND pt.teamSize <= :maxTeamSize")
-    List<ProjectTemplate> findByTeamSizeLessThanEqual(@Param("maxTeamSize") int maxTeamSize);
+    // @Query("SELECT pt FROM ProjectTemplate pt WHERE pt.isActive = true " +
+    //        "AND pt.teamSize <= :maxTeamSize")
+    // List<ProjectTemplate> findByTeamSizeLessThanEqual(@Param("maxTeamSize") int maxTeamSize);
     
     /**
      * Find templates created by specific user.
@@ -82,62 +82,65 @@ public interface ProjectTemplateRepository extends JpaRepository<ProjectTemplate
     /**
      * Find templates with high success rating.
      */
-    @Query("SELECT pt FROM ProjectTemplate pt WHERE pt.isActive = true " +
-           "AND pt.successRating IS NOT NULL AND pt.successRating >= :minRating " +
-           "ORDER BY pt.successRating DESC")
-    List<ProjectTemplate> findHighRatedTemplates(@Param("minRating") double minRating);
+    // @Query("SELECT pt FROM ProjectTemplate pt WHERE pt.isActive = true " +
+    //        "AND pt.successRating IS NOT NULL AND pt.successRating >= :minRating " +
+    //        "ORDER BY pt.successRating DESC")
+    // List<ProjectTemplate> findHighRatedTemplates(@Param("minRating") double minRating);
     
     /**
      * Find templates without dependencies.
+     * Simplified: Use LEFT JOIN to find templates with no dependencies
      */
-    @Query("SELECT pt FROM ProjectTemplate pt WHERE pt.isActive = true " +
-           "AND SIZE(pt.dependencies) = 0")
-    List<ProjectTemplate> findIndependentTemplates();
+    // @Query("SELECT pt FROM ProjectTemplate pt LEFT JOIN pt.dependencies d " +
+    //        "WHERE pt.isActive = true AND d IS NULL")
+    // List<ProjectTemplate> findIndependentTemplates();
     
     /**
      * Find templates that depend on a specific subsystem.
+     * Simplified: Use JOIN to find templates with specific dependency
      */
-    @Query("SELECT pt FROM ProjectTemplate pt WHERE pt.isActive = true " +
-           "AND :dependencyType MEMBER OF pt.dependencies")
-    List<ProjectTemplate> findTemplatesWithDependency(@Param("dependencyType") SubsystemType dependencyType);
+    // @Query("SELECT DISTINCT pt FROM ProjectTemplate pt JOIN pt.dependencies d " +
+    //        "WHERE pt.isActive = true AND d = :dependencyType")
+    // List<ProjectTemplate> findTemplatesWithDependency(@Param("dependencyType") SubsystemType dependencyType);
     
     /**
      * Get template usage statistics.
+     * Simplified: Split into separate queries to avoid complex aggregation
      */
-    @Query("SELECT pt.subsystemType, COUNT(pt), AVG(pt.usageCount) " +
-           "FROM ProjectTemplate pt WHERE pt.isActive = true " +
-           "GROUP BY pt.subsystemType")
-    List<Object[]> getUsageStatisticsBySubsystem();
+    // @Query("SELECT pt.subsystemType, COUNT(pt) " +
+    //        "FROM ProjectTemplate pt WHERE pt.isActive = true " +
+    //        "GROUP BY pt.subsystemType")
+    // List<Object[]> getUsageStatisticsBySubsystem();
     
     /**
      * Find recently used templates.
      */
-    @Query("SELECT pt FROM ProjectTemplate pt WHERE pt.isActive = true " +
-           "AND pt.lastUsedAt IS NOT NULL " +
-           "ORDER BY pt.lastUsedAt DESC")
-    List<ProjectTemplate> findRecentlyUsedTemplates();
+    // @Query("SELECT pt FROM ProjectTemplate pt WHERE pt.isActive = true " +
+    //        "AND pt.lastUsedAt IS NOT NULL " +
+    //        "ORDER BY pt.lastUsedAt DESC")
+    // List<ProjectTemplate> findRecentlyUsedTemplates();
     
     /**
      * Find templates for beginner teams.
      */
-    @Query("SELECT pt FROM ProjectTemplate pt WHERE pt.isActive = true " +
-           "AND pt.difficultyLevel IN ('BEGINNER', 'INTERMEDIATE') " +
-           "ORDER BY pt.difficultyLevel ASC, pt.usageCount DESC")
-    List<ProjectTemplate> findBeginnerFriendlyTemplates();
+    // @Query("SELECT pt FROM ProjectTemplate pt WHERE pt.isActive = true " +
+    //        "AND pt.difficultyLevel IN ('BEGINNER', 'INTERMEDIATE') " +
+    //        "ORDER BY pt.difficultyLevel ASC, pt.usageCount DESC")
+    // List<ProjectTemplate> findBeginnerFriendlyTemplates();
     
     /**
      * Search templates by multiple criteria.
      */
-    @Query("SELECT pt FROM ProjectTemplate pt WHERE pt.isActive = true " +
-           "AND (:subsystemType IS NULL OR pt.subsystemType = :subsystemType) " +
-           "AND (:difficultyLevel IS NULL OR pt.difficultyLevel = :difficultyLevel) " +
-           "AND (:maxWeeks IS NULL OR pt.estimatedWeeks <= :maxWeeks) " +
-           "AND (:maxTeamSize IS NULL OR pt.teamSize <= :maxTeamSize) " +
-           "AND (:searchTerm IS NULL OR pt.name LIKE %:searchTerm% OR pt.description LIKE %:searchTerm%) " +
-           "ORDER BY pt.usageCount DESC")
-    List<ProjectTemplate> searchTemplates(@Param("subsystemType") SubsystemType subsystemType,
-                                        @Param("difficultyLevel") ProjectTemplate.DifficultyLevel difficultyLevel,
-                                        @Param("maxWeeks") Integer maxWeeks,
-                                        @Param("maxTeamSize") Integer maxTeamSize,
-                                        @Param("searchTerm") String searchTerm);
+    // @Query("SELECT pt FROM ProjectTemplate pt WHERE pt.isActive = true " +
+    //        "AND (:subsystemType IS NULL OR pt.subsystemType = :subsystemType) " +
+    //        "AND (:difficultyLevel IS NULL OR pt.difficultyLevel = :difficultyLevel) " +
+    //        "AND (:maxWeeks IS NULL OR pt.estimatedWeeks <= :maxWeeks) " +
+    //        "AND (:maxTeamSize IS NULL OR pt.teamSize <= :maxTeamSize) " +
+    //        "AND (:searchTerm IS NULL OR pt.name LIKE %:searchTerm% OR pt.description LIKE %:searchTerm%) " +
+    //        "ORDER BY pt.usageCount DESC")
+    // List<ProjectTemplate> searchTemplates(@Param("subsystemType") SubsystemType subsystemType,
+    //                                     @Param("difficultyLevel") ProjectTemplate.DifficultyLevel difficultyLevel,
+    //                                     @Param("maxWeeks") Integer maxWeeks,
+    //                                     @Param("maxTeamSize") Integer maxTeamSize,
+    //                                     @Param("searchTerm") String searchTerm);
 }

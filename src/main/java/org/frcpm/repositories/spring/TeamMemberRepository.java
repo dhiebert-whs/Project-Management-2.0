@@ -60,11 +60,8 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
      * @param skill the skill to search for
      * @return a list of team members with matching skills
      */
-    @Query("SELECT DISTINCT tm FROM TeamMember tm WHERE " +
-           "EXISTS (SELECT 1 FROM TeamMember tm2 WHERE tm2.id = tm.id AND " +
-           "(LOWER(tm2.skills) LIKE LOWER(CONCAT('%', :skill, '%')))" +
-           ")")
-    List<TeamMember> findBySkillsContainingIgnoreCase(@Param("skill") String skill);
+    @Query("SELECT DISTINCT tm FROM TeamMember tm WHERE LOWER(tm.skills) LIKE LOWER(:skillPattern)")
+    List<TeamMember> findBySkillsContainingIgnoreCase(@Param("skillPattern") String skillPattern);
     
     /**
      * Finds team members who are leaders.
@@ -87,9 +84,8 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
      * @param name the name to search for
      * @return a list of team members matching the name
      */
-    @Query("SELECT tm FROM TeamMember tm WHERE " +
-           "LOWER(CONCAT(tm.firstName, ' ', tm.lastName)) LIKE LOWER(CONCAT('%', :name, '%'))")
-    List<TeamMember> findByName(@Param("name") String name);
+    @Query("SELECT tm FROM TeamMember tm WHERE (LOWER(tm.firstName) LIKE LOWER(:namePattern) OR LOWER(tm.lastName) LIKE LOWER(:namePattern) OR LOWER(tm.username) LIKE LOWER(:namePattern))")
+    List<TeamMember> findByName(@Param("namePattern") String namePattern);
     
     /**
      * Finds team members by first name containing the specified text.
@@ -128,11 +124,8 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
      * @param skills the list of skills to search for
      * @return a list of team members with any of the specified skills
      */
-    @Query("SELECT DISTINCT tm FROM TeamMember tm WHERE " +
-           "tm.skills IS NOT NULL AND " +
-           "EXISTS (SELECT 1 FROM TeamMember tm2 WHERE tm2.id = tm.id AND " +
-           "CONCAT(',', REPLACE(LOWER(tm2.skills), ' ', ''), ',') LIKE CONCAT('%,', LOWER(TRIM(:skill)), ',%'))")
-    List<TeamMember> findBySkillsIn(@Param("skill") String skill);
+    @Query("SELECT DISTINCT tm FROM TeamMember tm WHERE tm.skills IS NOT NULL AND LOWER(tm.skills) LIKE LOWER(:skillPattern)")
+    List<TeamMember> findBySkillsIn(@Param("skillPattern") String skillPattern);
     
     /**
      * Finds team members who are not leaders.

@@ -50,8 +50,7 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
      * @param name the exact project name
      * @return a list of projects with the exact name
      */
-    @Query("SELECT p FROM Project p WHERE p.name LIKE %:name%")
-    List<Project> findByName(@Param("name") String name);
+    List<Project> findByName(String name);
     
     /**
      * Finds projects with deadlines before the specified date.
