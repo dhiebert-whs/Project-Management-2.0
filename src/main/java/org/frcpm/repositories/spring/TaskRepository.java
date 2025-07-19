@@ -68,7 +68,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      * @param member the team member
      * @return a list of tasks assigned to the member
      */
-    // @Query("SELECT t FROM Task t WHERE :member MEMBER OF t.assignedTo")
+    @Query("SELECT t FROM Task t WHERE :member MEMBER OF t.assignedTo")
     List<Task> findByAssignedMember(@Param("member") TeamMember member);
     
     /**

@@ -42,14 +42,6 @@ public interface ComponentRepository extends JpaRepository<Component, Long> {
     List<Component> findByNameContainingIgnoreCase(String name);
     
     /**
-     * Finds components by name containing the search term (case-insensitive).
-     * 
-     * @param name the name to search for
-     * @return a list of components with matching names
-     */
-    List<Component> findByNameContainingIgnoreCase(String name);
-    
-    /**
      * Finds components by delivery status.
      * 
      * @param delivered whether to find delivered or undelivered components

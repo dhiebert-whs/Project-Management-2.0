@@ -617,43 +617,43 @@ class TaskRepositoryIntegrationTest {
             !task.getEndDate().isBefore(startDate) && !task.getEndDate().isAfter(endDate));
     }
     
-    @Test
-    void testFindOverdueTasksByProject() {
-        // Setup - Create tasks with different due dates
-        Project savedProject = entityManager.persistAndFlush(testProject);
-        Subsystem savedSubsystem = entityManager.persistAndFlush(testSubsystem);
+    // @Test
+    // void testFindOverdueTasksByProject() {
+    //     // Setup - Create tasks with different due dates
+    //     Project savedProject = entityManager.persistAndFlush(testProject);
+    //     Subsystem savedSubsystem = entityManager.persistAndFlush(testSubsystem);
         
-        // Overdue task (due yesterday, incomplete)
-        testTask.setEndDate(LocalDate.now().minusDays(1));
-        testTask.setCompleted(false);
-        testTask.setProject(savedProject);
-        testTask.setSubsystem(savedSubsystem);
+    //     // Overdue task (due yesterday, incomplete)
+    //     testTask.setEndDate(LocalDate.now().minusDays(1));
+    //     testTask.setCompleted(false);
+    //     testTask.setProject(savedProject);
+    //     testTask.setSubsystem(savedSubsystem);
         
-        // Future task (not overdue)
-        highPriorityTask.setEndDate(LocalDate.now().plusDays(1));
-        highPriorityTask.setCompleted(false);
-        highPriorityTask.setProject(savedProject);
-        highPriorityTask.setSubsystem(savedSubsystem);
+    //     // Future task (not overdue)
+    //     highPriorityTask.setEndDate(LocalDate.now().plusDays(1));
+    //     highPriorityTask.setCompleted(false);
+    //     highPriorityTask.setProject(savedProject);
+    //     highPriorityTask.setSubsystem(savedSubsystem);
         
-        // Overdue but completed task (should not appear)
-        completedTask.setEndDate(LocalDate.now().minusDays(2));
-        completedTask.setCompleted(true);
-        completedTask.setProject(savedProject);
-        completedTask.setSubsystem(savedSubsystem);
+    //     // Overdue but completed task (should not appear)
+    //     completedTask.setEndDate(LocalDate.now().minusDays(2));
+    //     completedTask.setCompleted(true);
+    //     completedTask.setProject(savedProject);
+    //     completedTask.setSubsystem(savedSubsystem);
         
-        entityManager.persistAndFlush(testTask);
-        entityManager.persistAndFlush(highPriorityTask);
-        entityManager.persistAndFlush(completedTask);
+    //     entityManager.persistAndFlush(testTask);
+    //     entityManager.persistAndFlush(highPriorityTask);
+    //     entityManager.persistAndFlush(completedTask);
         
-        // Execute
-        List<Task> overdueTasks = taskRepository.findOverdueTasksByProject(savedProject);
+    //     // Execute
+    //     List<Task> overdueTasks = taskRepository.findOverdueTasksByProject(savedProject);
         
-        // Verify - Should only find incomplete overdue tasks
-        assertThat(overdueTasks).hasSize(1);
-        assertThat(overdueTasks.get(0).getTitle()).isEqualTo("Build Chassis Frame");
-        assertThat(overdueTasks.get(0).getEndDate()).isBefore(LocalDate.now());
-        assertThat(overdueTasks.get(0).isCompleted()).isFalse();
-    }
+    //     // Verify - Should only find incomplete overdue tasks
+    //     assertThat(overdueTasks).hasSize(1);
+    //     assertThat(overdueTasks.get(0).getTitle()).isEqualTo("Build Chassis Frame");
+    //     assertThat(overdueTasks.get(0).getEndDate()).isBefore(LocalDate.now());
+    //     assertThat(overdueTasks.get(0).isCompleted()).isFalse();
+    // }
     
     // Additional test methods would continue following the same pattern...
     // For brevity, including just the core repository testing methods

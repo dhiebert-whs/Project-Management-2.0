@@ -199,12 +199,6 @@ public interface PartTransactionRepository extends JpaRepository<PartTransaction
             List<PartTransaction.TransactionType> incomingTypes);
     
     /**
-     * Finds outgoing transactions (usage, damage, disposal).
-     */
-    List<PartTransaction> findByTransactionTypeInOrderByTransactionDateDesc(
-            List<PartTransaction.TransactionType> outgoingTypes);
-    
-    /**
      * Finds transactions for parts in specific categories.
      */
     // Simplified without complex joins - get transactions and filter in service layer

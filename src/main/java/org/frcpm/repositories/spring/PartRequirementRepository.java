@@ -227,12 +227,7 @@ public interface PartRequirementRepository extends JpaRepository<PartRequirement
      */
     boolean existsByTaskTemplateAndPartAndIsActiveTrue(TaskTemplate taskTemplate, Part part);
     
-    // Active Status Management
-    
-    /**
-     * Finds all active requirements.
-     */
-    List<PartRequirement> findByIsActiveTrueOrderByPriorityAscPartNameAsc();
+    // Active Status Management - Already defined above
     
     /**
      * Finds all inactive requirements.

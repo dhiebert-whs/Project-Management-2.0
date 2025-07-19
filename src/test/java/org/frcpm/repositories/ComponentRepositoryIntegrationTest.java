@@ -442,9 +442,9 @@ class ComponentRepositoryIntegrationTest {
         componentRepository.save(motorComponent);
         entityManager.flush();
 
-        // Execute - Search by partial name
-        List<Component> testResults = componentRepository.findByName("Test");
-        List<Component> falconResults = componentRepository.findByName("Falcon");
+        // Execute - Search by partial name using findByNameContainingIgnoreCase
+        List<Component> testResults = componentRepository.findByNameContainingIgnoreCase("Test");
+        List<Component> falconResults = componentRepository.findByNameContainingIgnoreCase("Falcon");
 
         // Verify - Should find partial matches
         assertThat(testResults).hasSize(1);
@@ -847,8 +847,8 @@ class ComponentRepositoryIntegrationTest {
         Optional<Component> nullPartComponent = componentRepository.findByPartNumber(null);
         assertThat(nullPartComponent).isEmpty();
 
-        // findByName with null - Custom query handles this gracefully
-        List<Component> nullNameComponents = componentRepository.findByName(null);
+        // findByNameContainingIgnoreCase with null - Custom query handles this gracefully
+        List<Component> nullNameComponents = componentRepository.findByNameContainingIgnoreCase(null);
         assertThat(nullNameComponents).isEmpty();
 
         // findByDelivered method should work with boolean values
@@ -1186,9 +1186,9 @@ class ComponentRepositoryIntegrationTest {
         assertThat(motorComponents).extracting(Component::getName)
             .containsExactlyInAnyOrder("Falcon 500 Motor", "NEO Motor");
 
-        // Search by part number patterns using the custom findByName method (which searches within names)
-        // Note: The findByName method uses LIKE %:name% so it should find partial matches
-        List<Component> falconComponents = componentRepository.findByName("Falcon");
+        // Search by part number patterns using the findByNameContainingIgnoreCase method (which searches within names)
+        // Note: The findByNameContainingIgnoreCase method uses LIKE %:name% so it should find partial matches
+        List<Component> falconComponents = componentRepository.findByNameContainingIgnoreCase("Falcon");
         assertThat(falconComponents).hasSize(1); // Should find "Falcon 500 Motor"
 
         // Filter by delivery status
