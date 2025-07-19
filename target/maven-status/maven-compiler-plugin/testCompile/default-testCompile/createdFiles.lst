@@ -1,6 +1,7 @@
 org\frcpm\services\impl\COPPAComplianceServiceImplTest$MonitoringTests.class
 org\frcpm\repositories\MilestoneRepositoryIntegrationTest.class
 org\frcpm\repositories\spring\UserRepositoryTest$BasicCrudTests.class
+org\frcpm\repositories\TaskRepositoryIntegrationTest.class
 org\frcpm\security\MFAServiceTest$RecoveryCodeTests.class
 org\frcpm\security\TOTPServiceTest$FRCSpecificTests.class
 org\frcpm\services\impl\AuditServiceImplTest$BasicLoggingTests.class
@@ -11,6 +12,7 @@ org\frcpm\repositories\spring\UserRepositoryTest$COPPAComplianceTests.class
 org\frcpm\security\MFAServiceTest$TokenTimeManagementTests.class
 org\frcpm\repositories\spring\UserRepositoryTest$MFATests.class
 org\frcpm\services\impl\COPPAComplianceServiceImplTest$ComplianceCheckingTests.class
+org\frcpm\services\impl\GanttDataServiceTest.class
 org\frcpm\security\TOTPServiceTest$TokenValidationTests.class
 org\frcpm\security\TOTPServiceTest$TimeWindowTests.class
 org\frcpm\services\impl\AuditServiceImplTest$DataAccessLoggingTests.class
@@ -19,6 +21,7 @@ org\frcpm\services\impl\AttendanceServiceTest.class
 org\frcpm\repositories\spring\UserRepositoryTest.class
 org\frcpm\security\MFAServiceTest$MFATokenValidationTests.class
 org\frcpm\security\TOTPServiceTest$SecretGenerationTests.class
+org\frcpm\services\impl\ProjectServiceTest.class
 org\frcpm\services\impl\COPPAComplianceServiceImplTest$ConsentManagementTests.class
 org\frcpm\services\impl\COPPAComplianceServiceImplTest.class
 org\frcpm\services\impl\COPPAComplianceServiceImplTest$DataRetentionTests.class
@@ -41,12 +44,16 @@ org\frcpm\services\impl\AuditServiceImplTest$QueryMethodsTests.class
 org\frcpm\services\impl\AuditServiceImplTest$ErrorHandlingTests.class
 org\frcpm\services\impl\AuditServiceImplTest$PerformanceTests.class
 org\frcpm\security\SecurityIntegrationTest$TestSecurityConfig.class
+org\frcpm\repositories\ComponentRepositoryIntegrationTest.class
+org\frcpm\services\impl\ComponentServiceTest.class
+org\frcpm\services\impl\TaskServiceTest.class
 org\frcpm\security\TOTPServiceTest$IntegrationTests.class
 org\frcpm\security\MFAServiceTest$ErrorHandlingTests.class
 org\frcpm\services\impl\COPPAComplianceServiceImplTest$AdditionalCOPPAMethodsTests.class
 org\frcpm\services\impl\MeetingServiceTest.class
 org\frcpm\repositories\spring\UserRepositoryTest$RoleBasedTests.class
 org\frcpm\security\MFAServiceTest$MFAManagementTests.class
+org\frcpm\repositories\ProjectRepositoryIntegrationTest.class
 org\frcpm\security\TOTPServiceTest.class
 org\frcpm\repositories\spring\UserRepositoryTest$DataIntegrityTests.class
 org\frcpm\security\TOTPServiceTest$Base32Tests.class
