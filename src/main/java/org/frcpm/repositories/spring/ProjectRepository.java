@@ -67,16 +67,16 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
      * 
      * @return a list of active projects
      */
-    @Query("SELECT p FROM Project p WHERE p.startDate <= CURRENT_DATE AND p.goalEndDate >= CURRENT_DATE")
-    List<Project> findActiveProjects();
+    // @Query("SELECT p FROM Project p WHERE p.startDate <= CURRENT_DATE AND p.goalEndDate >= CURRENT_DATE")
+    // List<Project> findActiveProjects();
     
     /**
      * Finds projects that are overdue (past their goal end date but not completed).
      * 
      * @return a list of overdue projects
      */
-    @Query("SELECT p FROM Project p WHERE p.goalEndDate < CURRENT_DATE")
-    List<Project> findOverdueProjects();
+    // @Query("SELECT p FROM Project p WHERE p.goalEndDate < CURRENT_DATE")
+    // List<Project> findOverdueProjects();
     
     /**
      * Finds projects with goal end dates within the specified number of days.
@@ -84,14 +84,14 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
      * @param days the number of days to look ahead
      * @return a list of projects due soon
      */
-    @Query("SELECT p FROM Project p WHERE p.goalEndDate BETWEEN CURRENT_DATE AND :endDate")
-    List<Project> findProjectsDueSoon(@Param("endDate") LocalDate endDate);
+    // @Query("SELECT p FROM Project p WHERE p.goalEndDate BETWEEN CURRENT_DATE AND :endDate")
+    // List<Project> findProjectsDueSoon(@Param("endDate") LocalDate endDate);
     
     /**
      * Counts the number of active projects.
      * 
      * @return the count of active projects
      */
-    @Query("SELECT COUNT(p) FROM Project p WHERE p.startDate <= CURRENT_DATE AND p.goalEndDate >= CURRENT_DATE")
-    long countActiveProjects();
+    // @Query("SELECT COUNT(p) FROM Project p WHERE p.startDate <= CURRENT_DATE AND p.goalEndDate >= CURRENT_DATE")
+    // long countActiveProjects();
 }

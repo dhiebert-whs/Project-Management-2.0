@@ -209,9 +209,9 @@ public interface TaskDependencyRepository extends JpaRepository<TaskDependency, 
      * @param criticalPath the new critical path status
      * @return number of dependencies updated
      */
-    @Modifying
-    @Query("UPDATE TaskDependency td SET td.criticalPath = :criticalPath WHERE td.project = :project")
-    int updateCriticalPathForProject(@Param("project") Project project, @Param("criticalPath") boolean criticalPath);
+    // @Modifying
+    // @Query("UPDATE TaskDependency td SET td.criticalPath = :criticalPath WHERE td.project = :project")
+    // int updateCriticalPathForProject(@Param("project") Project project, @Param("criticalPath") boolean criticalPath);
     
     /**
      * Marks specific dependencies as critical path.
@@ -219,9 +219,9 @@ public interface TaskDependencyRepository extends JpaRepository<TaskDependency, 
      * @param dependencyIds list of dependency IDs to mark as critical
      * @return number of dependencies updated
      */
-    @Modifying
-    @Query("UPDATE TaskDependency td SET td.criticalPath = true WHERE td.id IN :dependencyIds")
-    int markDependenciesAsCriticalPath(@Param("dependencyIds") List<Long> dependencyIds);
+    // @Modifying
+    // @Query("UPDATE TaskDependency td SET td.criticalPath = true WHERE td.id IN :dependencyIds")
+    // int markDependenciesAsCriticalPath(@Param("dependencyIds") List<Long> dependencyIds);
     
     // =========================================================================
     // LAG TIME AND SCHEDULING QUERIES
@@ -233,8 +233,8 @@ public interface TaskDependencyRepository extends JpaRepository<TaskDependency, 
      * @param project the project
      * @return list of dependencies with lag time
      */
-    @Query("SELECT td FROM TaskDependency td WHERE td.project = :project AND td.lagHours IS NOT NULL AND td.lagHours != 0 AND td.active = true")
-    List<TaskDependency> findDependenciesWithLagTime(@Param("project") Project project);
+    // @Query("SELECT td FROM TaskDependency td WHERE td.project = :project AND td.lagHours IS NOT NULL AND td.lagHours != 0 AND td.active = true")
+    // List<TaskDependency> findDependenciesWithLagTime(@Param("project") Project project);
     
     /**
      * Finds dependencies with positive lag time (delays).
@@ -242,8 +242,8 @@ public interface TaskDependencyRepository extends JpaRepository<TaskDependency, 
      * @param project the project
      * @return list of dependencies with delays
      */
-    @Query("SELECT td FROM TaskDependency td WHERE td.project = :project AND td.lagHours > 0 AND td.active = true")
-    List<TaskDependency> findDependenciesWithDelays(@Param("project") Project project);
+    // @Query("SELECT td FROM TaskDependency td WHERE td.project = :project AND td.lagHours > 0 AND td.active = true")
+    // List<TaskDependency> findDependenciesWithDelays(@Param("project") Project project);
     
     /**
      * Finds dependencies with negative lag time (lead time).
@@ -251,8 +251,8 @@ public interface TaskDependencyRepository extends JpaRepository<TaskDependency, 
      * @param project the project
      * @return list of dependencies with lead time
      */
-    @Query("SELECT td FROM TaskDependency td WHERE td.project = :project AND td.lagHours < 0 AND td.active = true")
-    List<TaskDependency> findDependenciesWithLeadTime(@Param("project") Project project);
+    // @Query("SELECT td FROM TaskDependency td WHERE td.project = :project AND td.lagHours < 0 AND td.active = true")
+    // List<TaskDependency> findDependenciesWithLeadTime(@Param("project") Project project);
     
     /**
      * Finds the maximum lag time in a project.
@@ -260,8 +260,8 @@ public interface TaskDependencyRepository extends JpaRepository<TaskDependency, 
      * @param project the project
      * @return maximum lag time in hours
      */
-    @Query("SELECT MAX(td.lagHours) FROM TaskDependency td WHERE td.project = :project AND td.active = true")
-    Integer findMaxLagTimeInProject(@Param("project") Project project);
+    // @Query("SELECT MAX(td.lagHours) FROM TaskDependency td WHERE td.project = :project AND td.active = true")
+    // Integer findMaxLagTimeInProject(@Param("project") Project project);
     
     // =========================================================================
     // CYCLE DETECTION QUERIES
@@ -274,8 +274,8 @@ public interface TaskDependencyRepository extends JpaRepository<TaskDependency, 
      * @param task the task to check
      * @return list of all dependencies involving the task
      */
-    @Query("SELECT td FROM TaskDependency td WHERE (td.dependentTask = :task OR td.prerequisiteTask = :task) AND td.active = true")
-    List<TaskDependency> findAllDependenciesInvolvingTask(@Param("task") Task task);
+    // @Query("SELECT td FROM TaskDependency td WHERE (td.dependentTask = :task OR td.prerequisiteTask = :task) AND td.active = true")
+    // List<TaskDependency> findAllDependenciesInvolvingTask(@Param("task") Task task);
     
     /**
      * Finds potential cycle dependencies.
@@ -284,10 +284,10 @@ public interface TaskDependencyRepository extends JpaRepository<TaskDependency, 
      * @param project the project to check
      * @return list of potentially circular dependencies
      */
-    @Query("SELECT td1 FROM TaskDependency td1 WHERE td1.project = :project AND td1.active = true " +
-           "AND EXISTS (SELECT td2 FROM TaskDependency td2 WHERE td2.active = true " +
-           "AND td2.dependentTask = td1.prerequisiteTask AND td2.prerequisiteTask = td1.dependentTask)")
-    List<TaskDependency> findPotentialCircularDependencies(@Param("project") Project project);
+    // @Query("SELECT td1 FROM TaskDependency td1 WHERE td1.project = :project AND td1.active = true " +
+    //        "AND EXISTS (SELECT td2 FROM TaskDependency td2 WHERE td2.active = true " +
+    //        "AND td2.dependentTask = td1.prerequisiteTask AND td2.prerequisiteTask = td1.dependentTask)")
+    // List<TaskDependency> findPotentialCircularDependencies(@Param("project") Project project);
     
     /**
      * Checks if adding a dependency would create a cycle.
@@ -296,9 +296,9 @@ public interface TaskDependencyRepository extends JpaRepository<TaskDependency, 
      * @param prerequisiteTaskId the ID of the prerequisite task
      * @return true if adding this dependency would create a cycle
      */
-    @Query("SELECT COUNT(td) > 0 FROM TaskDependency td WHERE td.active = true " +
-           "AND td.dependentTask.id = :prerequisiteTaskId AND td.prerequisiteTask.id = :dependentTaskId")
-    boolean wouldCreateDirectCycle(@Param("dependentTaskId") Long dependentTaskId, @Param("prerequisiteTaskId") Long prerequisiteTaskId);
+    // @Query("SELECT COUNT(td) > 0 FROM TaskDependency td WHERE td.active = true " +
+    //        "AND td.dependentTask.id = :prerequisiteTaskId AND td.prerequisiteTask.id = :dependentTaskId")
+    // boolean wouldCreateDirectCycle(@Param("dependentTaskId") Long dependentTaskId, @Param("prerequisiteTaskId") Long prerequisiteTaskId);
     
     // =========================================================================
     // BULK OPERATIONS
@@ -311,9 +311,9 @@ public interface TaskDependencyRepository extends JpaRepository<TaskDependency, 
      * @param task the task
      * @return number of dependencies deactivated
      */
-    @Modifying
-    @Query("UPDATE TaskDependency td SET td.active = false WHERE td.dependentTask = :task OR td.prerequisiteTask = :task")
-    int deactivateDependenciesForTask(@Param("task") Task task);
+    // @Modifying
+    // @Query("UPDATE TaskDependency td SET td.active = false WHERE td.dependentTask = :task OR td.prerequisiteTask = :task")
+    // int deactivateDependenciesForTask(@Param("task") Task task);
     
     /**
      * Reactivates all dependencies for a specific task.
@@ -321,9 +321,9 @@ public interface TaskDependencyRepository extends JpaRepository<TaskDependency, 
      * @param task the task
      * @return number of dependencies reactivated
      */
-    @Modifying
-    @Query("UPDATE TaskDependency td SET td.active = true WHERE td.dependentTask = :task OR td.prerequisiteTask = :task")
-    int reactivateDependenciesForTask(@Param("task") Task task);
+    // @Modifying
+    // @Query("UPDATE TaskDependency td SET td.active = true WHERE td.dependentTask = :task OR td.prerequisiteTask = :task")
+    // int reactivateDependenciesForTask(@Param("task") Task task);
     
     /**
      * Deletes all dependencies for a specific task.
@@ -332,9 +332,9 @@ public interface TaskDependencyRepository extends JpaRepository<TaskDependency, 
      * @param task the task
      * @return number of dependencies deleted
      */
-    @Modifying
-    @Query("DELETE FROM TaskDependency td WHERE td.dependentTask = :task OR td.prerequisiteTask = :task")
-    int deleteDependenciesForTask(@Param("task") Task task);
+    // @Modifying
+    // @Query("DELETE FROM TaskDependency td WHERE td.dependentTask = :task OR td.prerequisiteTask = :task")
+    // int deleteDependenciesForTask(@Param("task") Task task);
     
     /**
      * Updates all dependencies in a project to not be on critical path.
@@ -343,9 +343,9 @@ public interface TaskDependencyRepository extends JpaRepository<TaskDependency, 
      * @param project the project
      * @return number of dependencies updated
      */
-    @Modifying
-    @Query("UPDATE TaskDependency td SET td.criticalPath = false WHERE td.project = :project")
-    int clearCriticalPathForProject(@Param("project") Project project);
+    // @Modifying
+    // @Query("UPDATE TaskDependency td SET td.criticalPath = false WHERE td.project = :project")
+    // int clearCriticalPathForProject(@Param("project") Project project);
     
     // =========================================================================
     // ANALYTICS AND REPORTING QUERIES
@@ -357,8 +357,8 @@ public interface TaskDependencyRepository extends JpaRepository<TaskDependency, 
      * @param project the project
      * @return list of dependency type counts
      */
-    @Query("SELECT td.dependencyType, COUNT(td) FROM TaskDependency td WHERE td.project = :project AND td.active = true GROUP BY td.dependencyType")
-    List<Object[]> getDependencyStatsByProject(@Param("project") Project project);
+    // @Query("SELECT td.dependencyType, COUNT(td) FROM TaskDependency td WHERE td.project = :project AND td.active = true GROUP BY td.dependencyType")
+    // List<Object[]> getDependencyStatsByProject(@Param("project") Project project);
     
     /**
      * Finds the most connected tasks (tasks with the most dependencies).
@@ -367,12 +367,12 @@ public interface TaskDependencyRepository extends JpaRepository<TaskDependency, 
      * @param limit maximum number of results
      * @return list of tasks ordered by dependency count
      */
-    @Query(value = "SELECT td.dependent_task, COUNT(td) as depCount FROM task_dependency td " +
-           "WHERE td.project = :project AND td.active = true " +
-           "GROUP BY td.dependent_task " +
-           "ORDER BY depCount DESC " +
-           "LIMIT :limit", nativeQuery = true)
-    List<Object[]> findMostDependentTasks(@Param("project") Project project, @Param("limit") int limit);
+    // @Query(value = "SELECT td.dependent_task, COUNT(td) as depCount FROM task_dependency td " +
+    //        "WHERE td.project = :project AND td.active = true " +
+    //        "GROUP BY td.dependent_task " +
+    //        "ORDER BY depCount DESC " +
+    //        "LIMIT :limit", nativeQuery = true)
+    // List<Object[]> findMostDependentTasks(@Param("project") Project project, @Param("limit") int limit);
     
     /**
      * Finds tasks that others depend on most (blocking tasks).
@@ -381,12 +381,12 @@ public interface TaskDependencyRepository extends JpaRepository<TaskDependency, 
      * @param limit maximum number of results
      * @return list of tasks ordered by how many depend on them
      */
-    @Query(value = "SELECT td.prerequisite_task, COUNT(td) as blockCount FROM task_dependency td " +
-           "WHERE td.project = :project AND td.active = true " +
-           "GROUP BY td.prerequisite_task " +
-           "ORDER BY blockCount DESC " +
-           "LIMIT :limit", nativeQuery = true)
-    List<Object[]> findMostBlockingTasks(@Param("project") Project project, @Param("limit") int limit);
+    // @Query(value = "SELECT td.prerequisite_task, COUNT(td) as blockCount FROM task_dependency td " +
+    //        "WHERE td.project = :project AND td.active = true " +
+    //        "GROUP BY td.prerequisite_task " +
+    //        "ORDER BY blockCount DESC " +
+    //        "LIMIT :limit", nativeQuery = true)
+    // List<Object[]> findMostBlockingTasks(@Param("project") Project project, @Param("limit") int limit);
     
     /**
      * Calculates average lag time for dependencies in a project.
@@ -394,8 +394,8 @@ public interface TaskDependencyRepository extends JpaRepository<TaskDependency, 
      * @param project the project
      * @return average lag time in hours
      */
-    @Query("SELECT AVG(td.lagHours) FROM TaskDependency td WHERE td.project = :project AND td.active = true AND td.lagHours IS NOT NULL")
-    Double getAverageLagTimeForProject(@Param("project") Project project);
+    // @Query("SELECT AVG(td.lagHours) FROM TaskDependency td WHERE td.project = :project AND td.active = true AND td.lagHours IS NOT NULL")
+    // Double getAverageLagTimeForProject(@Param("project") Project project);
     
     // =========================================================================
     // BUILD SEASON SPECIFIC QUERIES
@@ -409,10 +409,10 @@ public interface TaskDependencyRepository extends JpaRepository<TaskDependency, 
      * @param minLagHours minimum lag time to consider external
      * @return list of external constraint dependencies
      */
-    @Query("SELECT td FROM TaskDependency td WHERE td.project = :project AND td.active = true " +
-           "AND td.lagHours >= :minLagHours " +
-           "ORDER BY td.lagHours DESC")
-    List<TaskDependency> findExternalConstraints(@Param("project") Project project, @Param("minLagHours") int minLagHours);
+    // @Query("SELECT td FROM TaskDependency td WHERE td.project = :project AND td.active = true " +
+    //        "AND td.lagHours >= :minLagHours " +
+    //        "ORDER BY td.lagHours DESC")
+    // List<TaskDependency> findExternalConstraints(@Param("project") Project project, @Param("minLagHours") int minLagHours);
     
     /**
      * Finds blocking dependencies (dependencies that prevent work from starting).
@@ -420,9 +420,9 @@ public interface TaskDependencyRepository extends JpaRepository<TaskDependency, 
      * @param project the project
      * @return list of blocking dependencies
      */
-    @Query("SELECT td FROM TaskDependency td WHERE td.project = :project AND td.active = true " +
-           "AND td.dependencyType IN ('BLOCKING', 'FINISH_TO_START') " +
-           "AND td.prerequisiteTask.completed = false " +
-           "ORDER BY td.prerequisiteTask.endDate ASC")
-    List<TaskDependency> findCurrentlyBlockingDependencies(@Param("project") Project project);
+    // @Query("SELECT td FROM TaskDependency td WHERE td.project = :project AND td.active = true " +
+    //        "AND td.dependencyType IN ('BLOCKING', 'FINISH_TO_START') " +
+    //        "AND td.prerequisiteTask.completed = false " +
+    //        "ORDER BY td.prerequisiteTask.endDate ASC")
+    // List<TaskDependency> findCurrentlyBlockingDependencies(@Param("project") Project project);
 }

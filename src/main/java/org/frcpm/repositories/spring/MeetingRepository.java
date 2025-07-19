@@ -219,15 +219,15 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long> {
     /**
      * Finds overbooked meetings (more attendees than max allowed).
      */
-    @Query("SELECT m FROM Meeting m WHERE m.maxAttendees IS NOT NULL AND SIZE(m.attendances) > m.maxAttendees")
-    List<Meeting> findOverbookedMeetings();
+    // @Query("SELECT m FROM Meeting m WHERE m.maxAttendees IS NOT NULL AND SIZE(m.attendances) > m.maxAttendees")
+    // List<Meeting> findOverbookedMeetings();
     
     /**
      * Finds meetings that need reminders to be sent.
      */
-    @Query("SELECT m FROM Meeting m WHERE m.reminderEnabled = true AND m.date >= :today AND " +
-           "FUNCTION('TIMESTAMPDIFF', 'MINUTE', :now, FUNCTION('TIMESTAMP', m.date, m.startTime)) <= m.reminderMinutesBefore")
-    List<Meeting> findMeetingsNeedingReminders(@Param("today") LocalDate today, @Param("now") LocalDateTime now);
+    // @Query("SELECT m FROM Meeting m WHERE m.reminderEnabled = true AND m.date >= :today AND " +
+    //        "FUNCTION('TIMESTAMPDIFF', 'MINUTE', :now, FUNCTION('TIMESTAMP', m.date, m.startTime)) <= m.reminderMinutesBefore")
+    // List<Meeting> findMeetingsNeedingReminders(@Param("today") LocalDate today, @Param("now") LocalDateTime now);
     
     /**
      * Finds the next meeting for a project.
@@ -300,22 +300,22 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long> {
     /**
      * Gets meeting statistics for a project.
      */
-    @Query("SELECT COUNT(m) as totalMeetings, " +
-           "SUM(CASE WHEN m.status = 'COMPLETED' THEN 1 ELSE 0 END) as completedMeetings, " +
-           "SUM(CASE WHEN m.status = 'CANCELLED' THEN 1 ELSE 0 END) as cancelledMeetings, " +
-           "AVG(FUNCTION('TIMESTAMPDIFF', 'MINUTE', m.startTime, m.endTime)) as avgDurationMinutes " +
-           "FROM Meeting m WHERE m.project.id = :projectId")
-    Object[] getMeetingStatisticsByProject(@Param("projectId") Long projectId);
+    // @Query("SELECT COUNT(m) as totalMeetings, " +
+    //        "SUM(CASE WHEN m.status = 'COMPLETED' THEN 1 ELSE 0 END) as completedMeetings, " +
+    //        "SUM(CASE WHEN m.status = 'CANCELLED' THEN 1 ELSE 0 END) as cancelledMeetings, " +
+    //        "AVG(FUNCTION('TIMESTAMPDIFF', 'MINUTE', m.startTime, m.endTime)) as avgDurationMinutes " +
+    //        "FROM Meeting m WHERE m.project.id = :projectId")
+    // Object[] getMeetingStatisticsByProject(@Param("projectId") Long projectId);
     
     /**
      * Gets meeting statistics for a date range.
      */
-    @Query("SELECT COUNT(m) as totalMeetings, " +
-           "SUM(CASE WHEN m.status = 'COMPLETED' THEN 1 ELSE 0 END) as completedMeetings, " +
-           "SUM(CASE WHEN m.status = 'CANCELLED' THEN 1 ELSE 0 END) as cancelledMeetings, " +
-           "AVG(FUNCTION('TIMESTAMPDIFF', 'MINUTE', m.startTime, m.endTime)) as avgDurationMinutes " +
-           "FROM Meeting m WHERE m.date BETWEEN :startDate AND :endDate")
-    Object[] getMeetingStatisticsByDateRange(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+    // @Query("SELECT COUNT(m) as totalMeetings, " +
+    //        "SUM(CASE WHEN m.status = 'COMPLETED' THEN 1 ELSE 0 END) as completedMeetings, " +
+    //        "SUM(CASE WHEN m.status = 'CANCELLED' THEN 1 ELSE 0 END) as cancelledMeetings, " +
+    //        "AVG(FUNCTION('TIMESTAMPDIFF', 'MINUTE', m.startTime, m.endTime)) as avgDurationMinutes " +
+    //        "FROM Meeting m WHERE m.date BETWEEN :startDate AND :endDate")
+    // Object[] getMeetingStatisticsByDateRange(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
     
     /**
      * Finds meetings with specific recurrence pattern.

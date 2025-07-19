@@ -68,7 +68,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      * @param member the team member
      * @return a list of tasks assigned to the member
      */
-    @Query("SELECT t FROM Task t WHERE :member MEMBER OF t.assignedTo")
+    // @Query("SELECT t FROM Task t WHERE :member MEMBER OF t.assignedTo")
     List<Task> findByAssignedMember(@Param("member") TeamMember member);
     
     /**
@@ -127,11 +127,11 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      * @param project the project
      * @return a list of overdue tasks
      */
-    @Query("SELECT t FROM Task t WHERE t.project = :project " +
-           "AND t.completed = false " +
-           "AND t.endDate IS NOT NULL " +
-           "AND t.endDate < CURRENT_DATE")
-    List<Task> findOverdueTasksByProject(@Param("project") Project project);
+    // @Query("SELECT t FROM Task t WHERE t.project = :project " +
+    //        "AND t.completed = false " +
+    //        "AND t.endDate IS NOT NULL " +
+    //        "AND t.endDate < CURRENT_DATE")
+    // List<Task> findOverdueTasksByProject(@Param("project") Project project);
     
     /**
      * Finds tasks by title containing the specified text.
@@ -147,8 +147,8 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      * @param memberIds the list of team member IDs
      * @return a list of tasks assigned to any of the specified members
      */
-    @Query("SELECT DISTINCT t FROM Task t WHERE EXISTS (SELECT m FROM t.assignedTo m WHERE m.id IN :memberIds)")
-    List<Task> findTasksAssignedToMembers(@Param("memberIds") List<Long> memberIds);
+    // @Query("SELECT DISTINCT t FROM Task t WHERE EXISTS (SELECT m FROM t.assignedTo m WHERE m.id IN :memberIds)")
+    // List<Task> findTasksAssignedToMembers(@Param("memberIds") List<Long> memberIds);
     
     /**
      * Counts completed tasks for a project.
@@ -260,20 +260,20 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      * @param projectId the project ID
      * @return tasks with no unsatisfied dependencies
      */
-    @Query("SELECT t FROM Task t " +
-           "WHERE t.project.id = :projectId " +
-           "AND t.completed = false " +
-           "AND t.progress = 0 " +
-           "AND NOT EXISTS (" +
-           "    SELECT 1 FROM TaskDependency td " +
-           "    WHERE td.dependentTask = t " +
-           "    AND td.isActive = true " +
-           "    AND (" +
-           "        (td.dependencyType IN ('FINISH_TO_START', 'BLOCKING') AND td.prerequisiteTask.completed = false) " +
-           "        OR (td.dependencyType = 'START_TO_START' AND td.prerequisiteTask.progress = 0)" +
-           "    )" +
-           ")")
-    List<Task> findTasksReadyToStart(@Param("projectId") Long projectId);
+    // @Query("SELECT t FROM Task t " +
+    //        "WHERE t.project.id = :projectId " +
+    //        "AND t.completed = false " +
+    //        "AND t.progress = 0 " +
+    //        "AND NOT EXISTS (" +
+    //        "    SELECT 1 FROM TaskDependency td " +
+    //        "    WHERE td.dependentTask = t " +
+    //        "    AND td.isActive = true " +
+    //        "    AND (" +
+    //        "        (td.dependencyType IN ('FINISH_TO_START', 'BLOCKING') AND td.prerequisiteTask.completed = false) " +
+    //        "        OR (td.dependencyType = 'START_TO_START' AND td.prerequisiteTask.progress = 0)" +
+    //        "    )" +
+    //        ")")
+    // List<Task> findTasksReadyToStart(@Param("projectId") Long projectId);
     
     /**
      * Finds all direct prerequisite tasks for a given task using TaskDependency entities.
@@ -334,17 +334,17 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      * @param projectId the project ID
      * @return tasks with only soft dependencies
      */
-    @Query("SELECT DISTINCT td.dependentTask FROM TaskDependency td " +
-           "WHERE td.project.id = :projectId " +
-           "AND td.isActive = true " +
-           "AND td.dependencyType = 'SOFT' " +
-           "AND NOT EXISTS (" +
-           "    SELECT 1 FROM TaskDependency td2 " +
-           "    WHERE td2.dependentTask = td.dependentTask " +
-           "    AND td2.active = true " +
-           "    AND td2.dependencyType != 'SOFT'" +
-           ")")
-    List<Task> findTasksWithOnlySoftDependencies(@Param("projectId") Long projectId);
+    // @Query("SELECT DISTINCT td.dependentTask FROM TaskDependency td " +
+    //        "WHERE td.project.id = :projectId " +
+    //        "AND td.isActive = true " +
+    //        "AND td.dependencyType = 'SOFT' " +
+    //        "AND NOT EXISTS (" +
+    //        "    SELECT 1 FROM TaskDependency td2 " +
+    //        "    WHERE td2.dependentTask = td.dependentTask " +
+    //        "    AND td2.active = true " +
+    //        "    AND td2.dependencyType != 'SOFT'" +
+    //        ")")
+    // List<Task> findTasksWithOnlySoftDependencies(@Param("projectId") Long projectId);
     
     /**
      * Performance analytics: Find tasks with the most dependencies.
@@ -371,19 +371,19 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      * @param projectId the project ID
      * @return tasks that might have external constraints
      */
-    @Query("SELECT t FROM Task t " +
-           "WHERE t.project.id = :projectId " +
-           "AND (" +
-           "    SIZE(t.requiredComponents) > 0 " +
-           "    OR EXISTS (" +
-           "        SELECT 1 FROM TaskDependency td " +
-           "        WHERE td.dependentTask = t " +
-           "        AND td.isActive = true " +
-           "        AND td.lagHours IS NOT NULL " +
-           "        AND td.lagHours > 24" +  // More than 1 day lag suggests external dependency
-           "    )" +
-           ")")
-    List<Task> findTasksWithExternalConstraints(@Param("projectId") Long projectId);
+    // @Query("SELECT t FROM Task t " +
+    //        "WHERE t.project.id = :projectId " +
+    //        "AND (" +
+    //        "    SIZE(t.requiredComponents) > 0 " +
+    //        "    OR EXISTS (" +
+    //        "        SELECT 1 FROM TaskDependency td " +
+    //        "        WHERE td.dependentTask = t " +
+    //        "        AND td.isActive = true " +
+    //        "        AND td.lagHours IS NOT NULL " +
+    //        "        AND td.lagHours > 24" +  // More than 1 day lag suggests external dependency
+    //        "    )" +
+    //        ")")
+    // List<Task> findTasksWithExternalConstraints(@Param("projectId") Long projectId);
     
     /**
      * Finds orphaned tasks (no dependencies in either direction).
@@ -392,15 +392,15 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      * @param projectId the project ID
      * @return tasks with no dependency relationships
      */
-    @Query("SELECT t FROM Task t " +
-           "WHERE t.project.id = :projectId " +
-           "AND t.completed = false " +
-           "AND NOT EXISTS (" +
-           "    SELECT 1 FROM TaskDependency td " +
-           "    WHERE (td.dependentTask = t OR td.prerequisiteTask = t) " +
-           "    AND td.isActive = true" +
-           ")")
-    List<Task> findIndependentTasks(@Param("projectId") Long projectId);
+    // @Query("SELECT t FROM Task t " +
+    //        "WHERE t.project.id = :projectId " +
+    //        "AND t.completed = false " +
+    //        "AND NOT EXISTS (" +
+    //        "    SELECT 1 FROM TaskDependency td " +
+    //        "    WHERE (td.dependentTask = t OR td.prerequisiteTask = t) " +
+    //        "    AND td.isActive = true" +
+    //        ")")
+    // List<Task> findIndependentTasks(@Param("projectId") Long projectId);
     
     /**
      * Advanced search: Find tasks by dependency relationship and completion status.
