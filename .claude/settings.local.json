@@ -11,7 +11,8 @@
       "Bash(timeout 30 mvn spring-boot:run)",
       "Bash(timeout 20 mvn spring-boot:run)",
       "Bash(mvn:*)",
-      "Bash(timeout 10 mvn:*)"
+      "Bash(timeout 10 mvn:*)",
+      "Bash(mv:*)"
     ],
     "deny": []
   }

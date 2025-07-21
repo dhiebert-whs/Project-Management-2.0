@@ -118,6 +118,15 @@ public class SkillDevelopmentRecord {
     private Integer mentorshipHours = 0;
     
     @Column
+    private Integer mentorshipSessionCount = 0;
+    
+    @Column
+    private LocalDate lastMentorshipDate;
+    
+    @Column(length = 200)
+    private String lastMentorshipType;
+    
+    @Column
     private Integer instructionHours = 0;
     
     @Column
@@ -132,6 +141,12 @@ public class SkillDevelopmentRecord {
     
     @Column
     private Integer applicationCount = 0; // Times skill was applied
+    
+    @Column
+    private Integer successfulApplicationCount = 0; // Successful applications
+    
+    @Column
+    private Double applicationSuccessRate = 0.0; // Success rate percentage
     
     @Column
     private LocalDate lastPracticeDate;
@@ -163,6 +178,21 @@ public class SkillDevelopmentRecord {
     @Column
     private Double overallAssessmentScore = 0.0; // Composite score
     
+    @Column
+    private Double multiSourceAssessmentScore = 0.0; // Multi-source assessment score
+    
+    @Column(length = 200)
+    private String primaryAssessor; // Primary assessor name
+    
+    @Column
+    private Integer peerAssessmentCount = 0; // Number of peer assessments
+    
+    @Column(length = 1000)
+    private String lastPeerFeedback; // Latest peer feedback
+    
+    @Column(length = 2000)
+    private String selfReflectionNotes; // Self-reflection notes
+    
     @ElementCollection
     @CollectionTable(name = "skill_assessment_evidence")
     private List<String> assessmentEvidence = new ArrayList<>();
@@ -174,6 +204,9 @@ public class SkillDevelopmentRecord {
     // Certification and Recognition
     @Column
     private Boolean isCertified = false;
+    
+    @Enumerated(EnumType.STRING)
+    private CertificationStatus certificationStatus;
     
     @Column(length = 200)
     private String certificationType;
@@ -238,10 +271,19 @@ public class SkillDevelopmentRecord {
     private Double performanceImpact = 0.0; // Impact on team performance
     
     @Column
+    private Double performanceImpactScore = 0.0; // Calculated performance impact score
+    
+    @Column
     private Double skillUtilization = 0.0; // How often skill is used
     
     @Column
     private Double skillImportance = 0.0; // Importance to team success
+    
+    @Column
+    private Double engagementScore = 0.0; // Engagement level score
+    
+    @Column
+    private Double competitionUtilization = 0.0; // Competition usage percentage
     
     @Column
     private Integer projectsApplied = 0; // Projects where skill was applied
@@ -252,6 +294,10 @@ public class SkillDevelopmentRecord {
     @ElementCollection
     @CollectionTable(name = "skill_performance_metrics")
     private List<String> performanceMetrics = new ArrayList<>();
+    
+    @ElementCollection
+    @CollectionTable(name = "skill_performance_correlations")
+    private List<String> performanceCorrelations = new ArrayList<>();
     
     // Learning Path and Progression
     @Column(length = 200)
@@ -318,6 +364,12 @@ public class SkillDevelopmentRecord {
     private Boolean isCompetitionRelevant = false;
     
     @Column
+    private Boolean competitionCritical = false; // Critical for competition success
+    
+    @Column
+    private Double competitionReadinessScore = 0.0; // Readiness score for competition
+    
+    @Column
     private Integer competitionsUsed = 0; // Competitions where skill was used
     
     @Column
@@ -334,6 +386,19 @@ public class SkillDevelopmentRecord {
     @ElementCollection
     @CollectionTable(name = "skill_documentation")
     private List<String> documentation = new ArrayList<>();
+    
+    @ElementCollection
+    @CollectionTable(name = "skill_documentation_evidence")
+    private List<String> documentationEvidence = new ArrayList<>();
+    
+    @Column
+    private Double portfolioCompleteness = 0.0;
+    
+    @Column(nullable = false)
+    private Boolean portfolioValidated = false;
+    
+    @Column
+    private LocalDate portfolioValidationDate;
     
     @ElementCollection
     @CollectionTable(name = "skill_portfolio_items")
@@ -366,6 +431,9 @@ public class SkillDevelopmentRecord {
     @Column
     private LocalDate lastImprovementDate;
     
+    @Column
+    private Integer daysSinceActivity = 0; // Days since last activity
+    
     // Feedback and Reviews
     @Column
     private Integer feedbackCount = 0;
@@ -393,6 +461,21 @@ public class SkillDevelopmentRecord {
     
     @Column(length = 500)
     private String interventionPlan;
+    
+    @Column(length = 500)
+    private String interventionReason;
+    
+    @Column
+    private Integer interventionCount = 0;
+    
+    @Column(length = 200)
+    private String lastInterventionType;
+    
+    @Column(length = 1000)
+    private String lastInterventionDescription;
+    
+    @Column
+    private LocalDate lastInterventionDate;
     
     @Column
     private Boolean isAtRisk = false; // At risk of not meeting goals
@@ -427,6 +510,10 @@ public class SkillDevelopmentRecord {
     
     @Column(length = 500)
     private String archiveReason;
+    
+    // Sync and integration fields
+    @Column(length = 100)
+    private String syncStatus;
     
     // Enums
     public enum SkillCategory {
@@ -545,6 +632,27 @@ public class SkillDevelopmentRecord {
         
         public int getNumericValue() {
             return ordinal() + 1;
+        }
+    }
+    
+    public enum CertificationStatus {
+        NOT_APPLICABLE("Not Applicable"),
+        NOT_STARTED("Not Started"),
+        IN_PROGRESS("In Progress"),
+        PENDING_REVIEW("Pending Review"),
+        CERTIFIED("Certified"),
+        EXPIRED("Expired"),
+        SUSPENDED("Suspended"),
+        REVOKED("Revoked");
+        
+        private final String displayName;
+        
+        CertificationStatus(String displayName) {
+            this.displayName = displayName;
+        }
+        
+        public String getDisplayName() {
+            return displayName;
         }
     }
     
@@ -1250,4 +1358,95 @@ public class SkillDevelopmentRecord {
     
     public String getArchiveReason() { return archiveReason; }
     public void setArchiveReason(String archiveReason) { this.archiveReason = archiveReason; }
+    
+    // Additional getters and setters for new fields
+    public CertificationStatus getCertificationStatus() { return certificationStatus; }
+    public void setCertificationStatus(CertificationStatus certificationStatus) { this.certificationStatus = certificationStatus; }
+    
+    public Double getMultiSourceAssessmentScore() { return multiSourceAssessmentScore; }
+    public void setMultiSourceAssessmentScore(Double multiSourceAssessmentScore) { this.multiSourceAssessmentScore = multiSourceAssessmentScore; }
+    
+    public String getPrimaryAssessor() { return primaryAssessor; }
+    public void setPrimaryAssessor(String primaryAssessor) { this.primaryAssessor = primaryAssessor; }
+    
+    public Integer getPeerAssessmentCount() { return peerAssessmentCount; }
+    public void setPeerAssessmentCount(Integer peerAssessmentCount) { this.peerAssessmentCount = peerAssessmentCount; }
+    
+    public String getLastPeerFeedback() { return lastPeerFeedback; }
+    public void setLastPeerFeedback(String lastPeerFeedback) { this.lastPeerFeedback = lastPeerFeedback; }
+    
+    public String getSelfReflectionNotes() { return selfReflectionNotes; }
+    public void setSelfReflectionNotes(String selfReflectionNotes) { this.selfReflectionNotes = selfReflectionNotes; }
+    
+    public Integer getSuccessfulApplicationCount() { return successfulApplicationCount; }
+    public void setSuccessfulApplicationCount(Integer successfulApplicationCount) { this.successfulApplicationCount = successfulApplicationCount; }
+    
+    public Double getApplicationSuccessRate() { return applicationSuccessRate; }
+    public void setApplicationSuccessRate(Double applicationSuccessRate) { this.applicationSuccessRate = applicationSuccessRate; }
+    
+    // Convenience method for service compatibility
+    public void setLastUpdateDate(LocalDateTime lastUpdateDate) { this.updatedAt = lastUpdateDate; }
+    public LocalDateTime getLastUpdateDate() { return this.updatedAt; }
+    
+    // Additional getters and setters for new fields
+    public String getInterventionReason() { return interventionReason; }
+    public void setInterventionReason(String interventionReason) { this.interventionReason = interventionReason; }
+    
+    public Integer getInterventionCount() { return interventionCount; }
+    public void setInterventionCount(Integer interventionCount) { this.interventionCount = interventionCount; }
+    
+    public String getLastInterventionType() { return lastInterventionType; }
+    public void setLastInterventionType(String lastInterventionType) { this.lastInterventionType = lastInterventionType; }
+    
+    public String getLastInterventionDescription() { return lastInterventionDescription; }
+    public void setLastInterventionDescription(String lastInterventionDescription) { this.lastInterventionDescription = lastInterventionDescription; }
+    
+    public LocalDate getLastInterventionDate() { return lastInterventionDate; }
+    public void setLastInterventionDate(LocalDate lastInterventionDate) { this.lastInterventionDate = lastInterventionDate; }
+    
+    public Double getEngagementScore() { return engagementScore; }
+    public void setEngagementScore(Double engagementScore) { this.engagementScore = engagementScore; }
+    
+    public Double getPerformanceImpactScore() { return performanceImpactScore; }
+    public void setPerformanceImpactScore(Double performanceImpactScore) { this.performanceImpactScore = performanceImpactScore; }
+    
+    public List<String> getPerformanceCorrelations() { return performanceCorrelations; }
+    public void setPerformanceCorrelations(List<String> performanceCorrelations) { this.performanceCorrelations = performanceCorrelations; }
+    
+    public Double getCompetitionUtilization() { return competitionUtilization; }
+    public void setCompetitionUtilization(Double competitionUtilization) { this.competitionUtilization = competitionUtilization; }
+    
+    public Integer getMentorshipSessionCount() { return mentorshipSessionCount; }
+    public void setMentorshipSessionCount(Integer mentorshipSessionCount) { this.mentorshipSessionCount = mentorshipSessionCount; }
+    
+    public LocalDate getLastMentorshipDate() { return lastMentorshipDate; }
+    public void setLastMentorshipDate(LocalDate lastMentorshipDate) { this.lastMentorshipDate = lastMentorshipDate; }
+    
+    public String getLastMentorshipType() { return lastMentorshipType; }
+    public void setLastMentorshipType(String lastMentorshipType) { this.lastMentorshipType = lastMentorshipType; }
+    
+    // Additional getters and setters for remaining new fields
+    public List<String> getDocumentationEvidence() { return documentationEvidence; }
+    public void setDocumentationEvidence(List<String> documentationEvidence) { this.documentationEvidence = documentationEvidence; }
+    
+    public Double getPortfolioCompleteness() { return portfolioCompleteness; }
+    public void setPortfolioCompleteness(Double portfolioCompleteness) { this.portfolioCompleteness = portfolioCompleteness; }
+    
+    public Boolean getPortfolioValidated() { return portfolioValidated; }
+    public void setPortfolioValidated(Boolean portfolioValidated) { this.portfolioValidated = portfolioValidated; }
+    
+    public LocalDate getPortfolioValidationDate() { return portfolioValidationDate; }
+    public void setPortfolioValidationDate(LocalDate portfolioValidationDate) { this.portfolioValidationDate = portfolioValidationDate; }
+    
+    public Boolean getCompetitionCritical() { return competitionCritical; }
+    public void setCompetitionCritical(Boolean competitionCritical) { this.competitionCritical = competitionCritical; }
+    
+    public Double getCompetitionReadinessScore() { return competitionReadinessScore; }
+    public void setCompetitionReadinessScore(Double competitionReadinessScore) { this.competitionReadinessScore = competitionReadinessScore; }
+    
+    public Integer getDaysSinceActivity() { return daysSinceActivity; }
+    public void setDaysSinceActivity(Integer daysSinceActivity) { this.daysSinceActivity = daysSinceActivity; }
+    
+    public String getSyncStatus() { return syncStatus; }
+    public void setSyncStatus(String syncStatus) { this.syncStatus = syncStatus; }
 }

@@ -171,6 +171,9 @@ public class WikiPage {
     private LocalDateTime lastViewed;
     
     @Column
+    private Long lastViewedBy; // User ID who last viewed
+    
+    @Column
     private LocalDateTime lastEdited;
     
     @Column(nullable = false)
@@ -192,6 +195,9 @@ public class WikiPage {
     @Column(nullable = false)
     private Boolean isFeatured = false;
     
+    @Column
+    private LocalDateTime featuredAt;
+    
     @Column(nullable = false)
     private Integer searchRank = 0;
     
@@ -211,12 +217,20 @@ public class WikiPage {
     @Column(nullable = false)
     private Boolean hasAttachments = false;
     
+    @ElementCollection
+    @CollectionTable(name = "wiki_page_attachments", joinColumns = @JoinColumn(name = "page_id"))
+    @Column(name = "attachment_url")
+    private List<String> attachmentUrls = new ArrayList<>();
+    
     @Column(nullable = false)
     private Boolean hasLinks = false;
     
     // Template and Layout
     @Column(length = 100)
     private String templateName;
+    
+    @Column(nullable = false)
+    private Boolean isTemplate = false;
     
     @Column(length = 100)
     private String layoutStyle;
@@ -248,6 +262,9 @@ public class WikiPage {
     @Column
     private LocalDateTime archivedAt;
     
+    @Column
+    private LocalDateTime restoredAt;
+    
     @Column(length = 500)
     private String archiveReason;
     
@@ -256,6 +273,34 @@ public class WikiPage {
     
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+    
+    // Approval workflow fields
+    @Column
+    private LocalDateTime submittedForApprovalAt;
+    
+    @Column(length = 1000)
+    private String approvalNotes;
+    
+    @Column(length = 1000)
+    private String rejectionReason;
+    
+    @Column
+    private LocalDateTime rejectedAt;
+    
+    // Locking fields for concurrent editing
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "locked_by_id")
+    private TeamMember lockedBy;
+    
+    @Column
+    private LocalDateTime lockedAt;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "force_unlocked_by_id")
+    private TeamMember forceUnlockedBy;
+    
+    @Column
+    private LocalDateTime forceUnlockedAt;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_id")
@@ -311,6 +356,7 @@ public class WikiPage {
     public enum PageStatus {
         DRAFT("Draft", "Page is being written"),
         REVIEW("Under Review", "Page is being reviewed"),
+        PENDING_APPROVAL("Pending Approval", "Page is awaiting approval"),
         APPROVED("Approved", "Page is approved and published"),
         PUBLISHED("Published", "Page is live and visible"),
         ARCHIVED("Archived", "Page is archived"),
@@ -954,6 +1000,9 @@ public class WikiPage {
     public LocalDateTime getLastViewed() { return lastViewed; }
     public void setLastViewed(LocalDateTime lastViewed) { this.lastViewed = lastViewed; }
     
+    public Long getLastViewedBy() { return lastViewedBy; }
+    public void setLastViewedBy(Long lastViewedBy) { this.lastViewedBy = lastViewedBy; }
+    
     public LocalDateTime getLastEdited() { return lastEdited; }
     public void setLastEdited(LocalDateTime lastEdited) { this.lastEdited = lastEdited; }
     
@@ -1043,6 +1092,49 @@ public class WikiPage {
     
     public LocalDateTime getApprovedAt() { return approvedAt; }
     public void setApprovedAt(LocalDateTime approvedAt) { this.approvedAt = approvedAt; }
+    
+    // Approval workflow getters and setters
+    public LocalDateTime getSubmittedForApprovalAt() { return submittedForApprovalAt; }
+    public void setSubmittedForApprovalAt(LocalDateTime submittedForApprovalAt) { this.submittedForApprovalAt = submittedForApprovalAt; }
+    
+    public String getApprovalNotes() { return approvalNotes; }
+    public void setApprovalNotes(String approvalNotes) { this.approvalNotes = approvalNotes; }
+    
+    public String getRejectionReason() { return rejectionReason; }
+    public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }
+    
+    public LocalDateTime getRejectedAt() { return rejectedAt; }
+    public void setRejectedAt(LocalDateTime rejectedAt) { this.rejectedAt = rejectedAt; }
+    
+    // Locking getters and setters
+    public TeamMember getLockedBy() { return lockedBy; }
+    public void setLockedBy(TeamMember lockedBy) { this.lockedBy = lockedBy; }
+    
+    public LocalDateTime getLockedAt() { return lockedAt; }
+    public void setLockedAt(LocalDateTime lockedAt) { this.lockedAt = lockedAt; }
+    
+    // Additional new field getters and setters
+    public TeamMember getForceUnlockedBy() { return forceUnlockedBy; }
+    public void setForceUnlockedBy(TeamMember forceUnlockedBy) { this.forceUnlockedBy = forceUnlockedBy; }
+    
+    public LocalDateTime getForceUnlockedAt() { return forceUnlockedAt; }
+    public void setForceUnlockedAt(LocalDateTime forceUnlockedAt) { this.forceUnlockedAt = forceUnlockedAt; }
+    
+    public LocalDateTime getFeaturedAt() { return featuredAt; }
+    public void setFeaturedAt(LocalDateTime featuredAt) { this.featuredAt = featuredAt; }
+    
+    public List<String> getAttachmentUrls() { return attachmentUrls; }
+    public void setAttachmentUrls(List<String> attachmentUrls) { this.attachmentUrls = attachmentUrls; }
+    
+    public Boolean getIsTemplate() { return isTemplate; }
+    public void setIsTemplate(Boolean isTemplate) { this.isTemplate = isTemplate; }
+    
+    public LocalDateTime getRestoredAt() { return restoredAt; }
+    public void setRestoredAt(LocalDateTime restoredAt) { this.restoredAt = restoredAt; }
+    
+    // Convenience method for reading time (compatibility)
+    public void setReadingTime(int minutes) { this.readingTimeMinutes = minutes; }
+    public int getReadingTime() { return this.readingTimeMinutes; }
     
     @Override
     public String toString() {

@@ -42,24 +42,10 @@ public class ResourceDemandForecastServiceImpl implements ResourceDemandForecast
     // STANDARD SERVICE METHODS
     // =========================================================================
     
+    // Service interface implementation
     @Override
-    public ResourceDemandForecast create(ResourceDemandForecast forecast) {
-        return createForecast(forecast);
-    }
-    
-    @Override
-    public ResourceDemandForecast update(Long id, ResourceDemandForecast forecast) {
-        return updateForecast(id, forecast);
-    }
-    
-    @Override
-    public void delete(Long id) {
-        deactivateForecast(id);
-    }
-    
-    @Override
-    public Optional<ResourceDemandForecast> findById(Long id) {
-        return forecastRepository.findById(id);
+    public ResourceDemandForecast findById(Long id) {
+        return forecastRepository.findById(id).orElse(null);
     }
     
     @Override
@@ -68,13 +54,46 @@ public class ResourceDemandForecastServiceImpl implements ResourceDemandForecast
     }
     
     @Override
-    public boolean existsById(Long id) {
-        return forecastRepository.existsById(id);
+    public ResourceDemandForecast save(ResourceDemandForecast entity) {
+        return forecastRepository.save(entity);
+    }
+    
+    @Override
+    public void delete(ResourceDemandForecast entity) {
+        entity.setIsActive(false);
+        forecastRepository.save(entity);
+    }
+    
+    @Override
+    public boolean deleteById(Long id) {
+        Optional<ResourceDemandForecast> forecast = forecastRepository.findById(id);
+        if (forecast.isPresent()) {
+            delete(forecast.get());
+            return true;
+        }
+        return false;
     }
     
     @Override
     public long count() {
         return forecastRepository.count();
+    }
+    
+    // Additional convenience methods
+    public ResourceDemandForecast create(ResourceDemandForecast forecast) {
+        return createForecast(forecast);
+    }
+    
+    public ResourceDemandForecast update(Long id, ResourceDemandForecast forecast) {
+        return updateForecast(id, forecast);
+    }
+    
+    public void delete(Long id) {
+        deleteById(id);
+    }
+    
+    public boolean existsById(Long id) {
+        return forecastRepository.existsById(id);
     }
     
     // =========================================================================
