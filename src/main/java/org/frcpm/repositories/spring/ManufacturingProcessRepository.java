@@ -62,25 +62,25 @@ public interface ManufacturingProcessRepository extends JpaRepository<Manufactur
     /**
      * Finds processes by status.
      */
-    List<ManufacturingProcess> findByStatusAndIsActiveTrueOrderByPriorityAscStartedAtAsc(
+    List<ManufacturingProcess> findByStatusAndIsActiveTrueOrderByPriorityAscCreatedAtAsc(
             ManufacturingProcess.ProcessStatus status);
     
     /**
      * Finds processes by multiple statuses.
      */
-    List<ManufacturingProcess> findByStatusInAndIsActiveTrueOrderByPriorityAscStartedAtAsc(
+    List<ManufacturingProcess> findByStatusInAndIsActiveTrueOrderByPriorityAscCreatedAtAsc(
             List<ManufacturingProcess.ProcessStatus> statuses);
     
     /**
      * Finds active processes (in progress).
      */
-    List<ManufacturingProcess> findByStatusAndIsActiveTrueOrderByStartedAtAsc(
+    List<ManufacturingProcess> findByStatusAndIsActiveTrueOrderByActualStartTimeAsc(
             ManufacturingProcess.ProcessStatus status);
     
     /**
      * Finds completed processes.
      */
-    List<ManufacturingProcess> findByStatusAndIsActiveTrueOrderByCompletedAtDesc(
+    List<ManufacturingProcess> findByStatusAndIsActiveTrueOrderByActualEndTimeDesc(
             ManufacturingProcess.ProcessStatus status);
     
     // Process Type Queries
@@ -127,12 +127,12 @@ public interface ManufacturingProcessRepository extends JpaRepository<Manufactur
     /**
      * Finds processes assigned to a team member.
      */
-    List<ManufacturingProcess> findByAssignedToAndIsActiveTrueOrderByPriorityAscStartedAtAsc(TeamMember assignedTo);
+    List<ManufacturingProcess> findByAssignedToAndIsActiveTrueOrderByPriorityAscActualStartTimeAsc(TeamMember assignedTo);
     
     /**
      * Finds processes assigned to a team member with specific status.
      */
-    List<ManufacturingProcess> findByAssignedToAndStatusAndIsActiveTrueOrderByPriorityAscStartedAtAsc(
+    List<ManufacturingProcess> findByAssignedToAndStatusAndIsActiveTrueOrderByPriorityAscActualStartTimeAsc(
             TeamMember assignedTo, ManufacturingProcess.ProcessStatus status);
     
     /**
@@ -145,13 +145,13 @@ public interface ManufacturingProcessRepository extends JpaRepository<Manufactur
     /**
      * Finds processes started within a date range.
      */
-    List<ManufacturingProcess> findByStartedAtBetweenAndIsActiveTrueOrderByStartedAtAsc(
+    List<ManufacturingProcess> findByActualStartTimeBetweenAndIsActiveTrueOrderByActualStartTimeAsc(
             LocalDateTime startDate, LocalDateTime endDate);
     
     /**
      * Finds processes completed within a date range.
      */
-    List<ManufacturingProcess> findByCompletedAtBetweenAndIsActiveTrueOrderByCompletedAtDesc(
+    List<ManufacturingProcess> findByActualEndTimeBetweenAndIsActiveTrueOrderByActualEndTimeDesc(
             LocalDateTime startDate, LocalDateTime endDate);
     
     /**
@@ -176,7 +176,7 @@ public interface ManufacturingProcessRepository extends JpaRepository<Manufactur
     /**
      * Finds processes requiring approval.
      */
-    List<ManufacturingProcess> findByRequiresApprovalTrueAndIsActiveTrueOrderByPriorityAscNameAsc();
+    List<ManufacturingProcess> findByRequiresQualityInspectionTrueAndIsActiveTrueOrderByPriorityAscNameAsc();
     
     /**
      * Finds processes with quality issues.
@@ -186,7 +186,7 @@ public interface ManufacturingProcessRepository extends JpaRepository<Manufactur
     /**
      * Finds approved processes.
      */
-    List<ManufacturingProcess> findByIsApprovedTrueAndIsActiveTrueOrderByApprovedAtDesc();
+    List<ManufacturingProcess> findByApprovedByNotNullAndIsActiveTrueOrderByUpdatedAtDesc();
     
     // Search and Filter Queries
     
@@ -213,7 +213,7 @@ public interface ManufacturingProcessRepository extends JpaRepository<Manufactur
     /**
      * Finds processes by tools containing search term.
      */
-    List<ManufacturingProcess> findByToolsRequiredContainingIgnoreCaseAndIsActiveTrueOrderByPriorityAscNameAsc(String searchTerm);
+    List<ManufacturingProcess> findByRequiredToolsContainingIgnoreCaseAndIsActiveTrueOrderByPriorityAscNameAsc(String searchTerm);
     
     // Statistics and Analytics Queries
     

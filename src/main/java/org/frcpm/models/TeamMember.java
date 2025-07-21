@@ -32,7 +32,8 @@ public class TeamMember {
     
     // Authentication relationship (new in Phase 2B)
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", unique = true) User user;
+    @JoinColumn(name = "user_id", unique = true)
+    User user; // Package-private to allow direct access from User.java to avoid circular references
     
     // Core profile information (preserved from Phase 1/2A)
     @Column(name = "username", length = 150, nullable = false, unique = true)

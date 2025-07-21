@@ -77,7 +77,7 @@ public interface GitHubIntegrationRepository extends JpaRepository<GitHubIntegra
      * Finds active and healthy GitHub integrations.
      */
     @Query("SELECT gi FROM GitHubIntegration gi WHERE gi.teamNumber = :teamNumber AND gi.season = :season " +
-           "AND gi.integrationStatus = org.frcpm.models.GitHubIntegration.IntegrationStatus.ACTIVE " +
+           "AND gi.integrationStatus = 'ACTIVE' " +
            "AND gi.lastSyncTime > :healthyThreshold AND gi.isActive = true")
     List<GitHubIntegration> findActiveAndHealthyIntegrations(@Param("teamNumber") Integer teamNumber,
                                                            @Param("season") Integer season,
@@ -87,7 +87,7 @@ public interface GitHubIntegrationRepository extends JpaRepository<GitHubIntegra
      * Finds GitHub integrations with sync errors.
      */
     @Query("SELECT gi FROM GitHubIntegration gi WHERE gi.teamNumber = :teamNumber AND gi.season = :season " +
-           "AND gi.integrationStatus = org.frcpm.models.GitHubIntegration.IntegrationStatus.ERROR " +
+           "AND gi.integrationStatus = 'ERROR' " +
            "AND gi.isActive = true ORDER BY gi.lastSyncTime DESC")
     List<GitHubIntegration> findIntegrationsWithErrors(@Param("teamNumber") Integer teamNumber,
                                                       @Param("season") Integer season);
@@ -96,9 +96,9 @@ public interface GitHubIntegrationRepository extends JpaRepository<GitHubIntegra
      * Finds GitHub integrations requiring attention.
      */
     @Query("SELECT gi FROM GitHubIntegration gi WHERE gi.teamNumber = :teamNumber AND gi.season = :season " +
-           "AND (gi.integrationStatus IN (org.frcpm.models.GitHubIntegration.IntegrationStatus.ERROR, " +
-           "org.frcpm.models.GitHubIntegration.IntegrationStatus.EXPIRED, " +
-           "org.frcpm.models.GitHubIntegration.IntegrationStatus.UNAUTHORIZED) " +
+           "AND (gi.integrationStatus IN ('ERROR', " +
+           "'EXPIRED', " +
+           "'UNAUTHORIZED') " +
            "OR gi.lastSyncTime IS NULL OR gi.lastSyncTime < :overdueThreshold) " +
            "AND gi.isActive = true ORDER BY gi.lastSyncTime ASC")
     List<GitHubIntegration> findIntegrationsRequiringAttention(@Param("teamNumber") Integer teamNumber,
@@ -119,8 +119,7 @@ public interface GitHubIntegrationRepository extends JpaRepository<GitHubIntegra
      * Finds GitHub integrations pending configuration.
      */
     @Query("SELECT gi FROM GitHubIntegration gi WHERE gi.teamNumber = :teamNumber AND gi.season = :season " +
-           "AND gi.integrationStatus IN (org.frcpm.models.GitHubIntegration.IntegrationStatus.PENDING, " +
-           "org.frcpm.models.GitHubIntegration.IntegrationStatus.CONFIGURATION_NEEDED) " +
+           "AND gi.integrationStatus IN ('PENDING', 'CONFIGURATION_NEEDED') " +
            "AND gi.isActive = true ORDER BY gi.createdAt ASC")
     List<GitHubIntegration> findPendingConfigurationIntegrations(@Param("teamNumber") Integer teamNumber,
                                                                 @Param("season") Integer season);
@@ -575,8 +574,8 @@ public interface GitHubIntegrationRepository extends JpaRepository<GitHubIntegra
      * Finds GitHub integrations with access token issues.
      */
     @Query("SELECT gi FROM GitHubIntegration gi WHERE gi.teamNumber = :teamNumber AND gi.season = :season " +
-           "AND gi.integrationStatus IN (org.frcpm.models.GitHubIntegration.IntegrationStatus.EXPIRED, " +
-           "org.frcpm.models.GitHubIntegration.IntegrationStatus.UNAUTHORIZED) " +
+           "AND gi.integrationStatus IN ('EXPIRED', " +
+           "'UNAUTHORIZED') " +
            "AND gi.isActive = true ORDER BY gi.lastSyncTime ASC")
     List<GitHubIntegration> findWithAccessTokenIssues(@Param("teamNumber") Integer teamNumber,
                                                      @Param("season") Integer season);

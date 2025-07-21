@@ -82,6 +82,7 @@ org\frcpm\services\MeetingService.class
 org\frcpm\models\DependencyType.class
 org\frcpm\services\impl\ReportingServiceImpl.class
 org\frcpm\config\WebSocketConfig.class
+org\frcpm\services\impl\TeamReadinessScoreServiceImpl.class
 org\frcpm\services\COPPAComplianceService.class
 org\frcpm\models\BuildLogEntry$Priority.class
 org\frcpm\models\VideoTutorialSeries$SkillLevel.class
@@ -139,10 +140,12 @@ org\frcpm\repositories\spring\TaskRepository.class
 org\frcpm\services\impl\EmailServiceImpl.class
 org\frcpm\web\dto\TaskUpdateMessage.class
 org\frcpm\services\Service.class
+org\frcpm\services\impl\WikiPageServiceImpl.class
 org\frcpm\services\TaskDependencyService$DependencyValidationResult.class
 org\frcpm\web\dto\TaskDependencyDto$1.class
 org\frcpm\services\ProjectTemplateService.class
 org\frcpm\repositories\spring\WikiPageRepository.class
+org\frcpm\services\impl\FinancialTransactionServiceImpl.class
 org\frcpm\models\Attendance.class
 org\frcpm\models\MeetingType.class
 org\frcpm\models\MultiYearPerformance.class
@@ -151,6 +154,7 @@ org\frcpm\models\SubsystemType.class
 org\frcpm\web\dto\TeamPresenceMessage.class
 org\frcpm\models\BuildSeasonTemplate$TemplateType.class
 org\frcpm\services\impl\PartRequirementServiceImpl.class
+org\frcpm\services\impl\MultiYearPerformanceServiceImpl.class
 org\frcpm\repositories\spring\ComponentRepository.class
 org\frcpm\services\impl\TaskDependencyServiceImpl.class
 org\frcpm\web\websocket\AttendanceController.class
@@ -167,6 +171,7 @@ org\frcpm\web\controllers\TaskController$1.class
 org\frcpm\models\Milestone$MilestoneType.class
 org\frcpm\repositories\spring\QualityCheckpointRepository.class
 org\frcpm\repositories\spring\UserRepository.class
+org\frcpm\services\impl\BuildLogEntryServiceImpl.class
 org\frcpm\models\TaskTemplate$RequiredSkill.class
 org\frcpm\models\TaskDependency$1.class
 org\frcpm\models\MeetingStatus.class
@@ -177,6 +182,7 @@ org\frcpm\services\impl\TeamConfigurationServiceImpl$1.class
 org\frcpm\services\impl\GanttChartTransformationServiceImpl.class
 org\frcpm\models\FinancialTransaction$TransactionCategory.class
 org\frcpm\models\MentorshipRelationship.class
+org\frcpm\services\impl\SkillDevelopmentRecordServiceImpl.class
 org\frcpm\models\BuildSeasonMilestone$MilestonePriority.class
 org\frcpm\services\ProjectTemplateService$TeamProfile.class
 org\frcpm\models\VideoTutorialSeries$SeriesType.class
@@ -202,6 +208,7 @@ org\frcpm\services\impl\SubteamServiceImpl.class
 org\frcpm\config\SecurityConfig.class
 org\frcpm\models\BuildSeasonTemplate$TeamSize.class
 org\frcpm\repositories\spring\PartRepository.class
+org\frcpm\services\impl\MentorshipRelationshipServiceImpl.class
 org\frcpm\services\impl\PartTransactionServiceImpl.class
 org\frcpm\models\PartTransaction$TransactionType.class
 org\frcpm\models\ProjectTemplate$DifficultyLevel.class
@@ -283,6 +290,7 @@ org\frcpm\models\PartRequirement$RequirementPriority.class
 org\frcpm\repositories\spring\SubteamRepository.class
 org\frcpm\models\Part.class
 org\frcpm\repositories\spring\VideoTutorialSeriesRepository.class
+org\frcpm\services\impl\VideoTutorialServiceImpl.class
 org\frcpm\models\FinancialTransaction$RecurrencePattern.class
 org\frcpm\models\TeamConfiguration.class
 org\frcpm\models\BuildSeasonMilestone$MilestoneType.class

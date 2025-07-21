@@ -217,10 +217,10 @@ public interface ResourceDemandForecastRepository extends JpaRepository<Resource
     /**
      * Finds most accurate forecasters.
      */
-    @Query("SELECT f.createdBy.id, f.createdBy.user.firstName, f.createdBy.user.lastName, AVG(f.forecastAccuracy) FROM ResourceDemandForecast f " +
+    @Query("SELECT f.createdBy.id, f.createdBy.firstName, f.createdBy.lastName, AVG(f.forecastAccuracy) FROM ResourceDemandForecast f " +
            "WHERE f.forecastAccuracy IS NOT NULL " +
            "AND f.createdBy IS NOT NULL " +
-           "GROUP BY f.createdBy.id, f.createdBy.user.firstName, f.createdBy.user.lastName " +
+           "GROUP BY f.createdBy.id, f.createdBy.firstName, f.createdBy.lastName " +
            "ORDER BY AVG(f.forecastAccuracy) DESC")
     List<Object[]> getMostAccurateForecasters();
     

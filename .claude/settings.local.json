@@ -12,7 +12,10 @@
       "Bash(timeout 20 mvn spring-boot:run)",
       "Bash(mvn:*)",
       "Bash(timeout 10 mvn:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(curl:*)",
+      "Bash(find:*)",
+      "Bash(timeout 60 mvn:*)"
     ],
     "deny": []
   }
