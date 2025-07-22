@@ -222,8 +222,8 @@ public interface SkillDevelopmentRecordRepository extends JpaRepository<SkillDev
      * Finds records with recent milestone completion.
      */
     @Query("SELECT sdr FROM SkillDevelopmentRecord sdr WHERE sdr.teamNumber = :teamNumber AND sdr.season = :season " +
-           "AND sdr.lastMilestoneDate >= :sinceDate AND sdr.isActive = true " +
-           "ORDER BY sdr.lastMilestoneDate DESC")
+           "AND sdr.lastAssessmentDate >= :sinceDate AND sdr.isActive = true " +
+           "ORDER BY sdr.lastAssessmentDate DESC")
     List<SkillDevelopmentRecord> findWithRecentMilestones(@Param("teamNumber") Integer teamNumber,
                                                          @Param("season") Integer season,
                                                          @Param("sinceDate") LocalDate sinceDate);

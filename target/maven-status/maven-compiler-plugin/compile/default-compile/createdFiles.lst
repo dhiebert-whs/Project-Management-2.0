@@ -52,7 +52,6 @@ org\frcpm\models\MentorshipRelationship$MentorshipFocus.class
 org\frcpm\models\VideoTutorial$SkillLevel.class
 org\frcpm\models\BuildLogEntry$EntryType.class
 org\frcpm\models\QualityCheckpoint$CheckpointPriority.class
-org\frcpm\repositories\spring\ManufacturingProcessRepository.class
 org\frcpm\services\GanttChartTransformationService.class
 org\frcpm\services\impl\PartRequirementServiceImpl$1.class
 org\frcpm\config\SecurityMethodConfig.class
@@ -207,7 +206,6 @@ org\frcpm\events\WebSocketEventPublisher.class
 org\frcpm\services\impl\SubteamServiceImpl.class
 org\frcpm\config\SecurityConfig.class
 org\frcpm\models\BuildSeasonTemplate$TeamSize.class
-org\frcpm\repositories\spring\PartRepository.class
 org\frcpm\services\impl\MentorshipRelationshipServiceImpl.class
 org\frcpm\services\impl\PartTransactionServiceImpl.class
 org\frcpm\models\PartTransaction$TransactionType.class
@@ -227,7 +225,6 @@ org\frcpm\models\ProjectTemplate.class
 org\frcpm\repositories\spring\VideoTutorialRepository.class
 org\frcpm\models\ManufacturingProcess$SkillLevel.class
 org\frcpm\models\WikiPage$PageStatus.class
-org\frcpm\services\impl\ManufacturingProcessServiceImpl.class
 org\frcpm\services\MentorshipRelationshipService.class
 org\frcpm\models\PartTransaction.class
 org\frcpm\models\VideoTutorial$AccessLevel.class
@@ -309,7 +306,6 @@ org\frcpm\models\Milestone.class
 org\frcpm\models\TeamConfiguration$ConfigurationDataType.class
 org\frcpm\models\VideoTutorial$VideoQuality.class
 org\frcpm\web\dto\ProjectNotification.class
-org\frcpm\services\impl\PartServiceImpl.class
 org\frcpm\models\WikiPage$VisibilityLevel.class
 org\frcpm\models\BuildLogEntry$BuildPhase.class
 org\frcpm\models\MentorshipRelationship$CommunicationFrequency.class

@@ -15,7 +15,11 @@
       "Bash(mv:*)",
       "Bash(curl:*)",
       "Bash(find:*)",
-      "Bash(timeout 60 mvn:*)"
+      "Bash(timeout 60 mvn:*)",
+      "Bash(ls:*)",
+      "Bash(powershell:*)",
+      "Bash(wc:*)",
+      "Bash(tail:*)"
     ],
     "deny": []
   }

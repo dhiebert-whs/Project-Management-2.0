@@ -99,7 +99,8 @@ public interface PartRepository extends JpaRepository<Part, Long> {
     /**
      * Finds parts that need reordering based on stock levels.
      */
-    @Query("SELECT p FROM Part p WHERE p.quantityOnHand < p.minimumStock AND p.isActive = true")\n    List<Part> findByQuantityOnHandLessThanMinimumStockAndIsActiveTrue();
+    @Query("SELECT p FROM Part p WHERE p.quantityOnHand < p.minimumStock AND p.isActive = true")
+    List<Part> findByQuantityOnHandLessThanMinimumStockAndIsActiveTrue();
     
     /**
      * Finds parts with quantities between specified values.
@@ -181,7 +182,8 @@ public interface PartRepository extends JpaRepository<Part, Long> {
     /**
      * Counts low stock parts.
      */
-    @Query("SELECT COUNT(p) FROM Part p WHERE p.quantityOnHand <= p.minimumStock AND p.isActive = true")\n    long countByQuantityOnHandLessThanEqualMinimumStockAndIsActiveTrue();
+    @Query("SELECT COUNT(p) FROM Part p WHERE p.quantityOnHand <= p.minimumStock AND p.isActive = true")
+    long countByQuantityOnHandLessThanEqualMinimumStockAndIsActiveTrue();
     
     /**
      * Counts out of stock parts.
