@@ -81,15 +81,15 @@
     
             <!-- ===== DATABASE CONNECTIVITY ===== -->
             
-            <!-- H2 for development and testing -->
+            <!-- H2 for testing only -->
             <dependency>
                 <groupId>com.h2database</groupId>
                 <artifactId>h2</artifactId>
                 <version>${h2.version}</version>
-                <scope>runtime</scope>
+                <scope>test</scope>
             </dependency>
             
-            <!-- SQLite for production -->
+            <!-- SQLite for development and production -->
             <dependency>
                 <groupId>org.xerial</groupId>
                 <artifactId>sqlite-jdbc</artifactId>

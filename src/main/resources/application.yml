@@ -35,14 +35,10 @@ spring:
       mode: embedded
       continue-on-error: false
       
-  # H2 Console (development only)
+  # H2 Console (disabled - using SQLite)
   h2:
     console:
-      enabled: false  # Enabled in development profile
-      path: /h2-console
-      settings:
-        web-allow-others: false
-        trace: false
+      enabled: false
       
   # Thymeleaf Template Engine
   thymeleaf:

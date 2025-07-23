@@ -41,7 +41,7 @@ import java.util.logging.Logger;
  * @version 2.0.0-2E-D
  */
 @Controller
-@RequestMapping("/dependencies")
+@RequestMapping("/dependency-management")
 @PreAuthorize("isAuthenticated()")
 public class DependencyViewController {
     

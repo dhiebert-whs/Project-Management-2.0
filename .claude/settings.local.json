@@ -19,7 +19,10 @@
       "Bash(ls:*)",
       "Bash(powershell:*)",
       "Bash(wc:*)",
-      "Bash(tail:*)"
+      "Bash(tail:*)",
+      "Bash(rg:*)",
+      "Bash(git config:*)",
+      "Bash(git add:*)"
     ],
     "deny": []
   }

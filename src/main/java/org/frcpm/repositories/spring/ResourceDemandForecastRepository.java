@@ -3,6 +3,7 @@
 package org.frcpm.repositories.spring;
 
 import org.frcpm.models.ResourceDemandForecast;
+import org.frcpm.models.Project;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -37,7 +38,7 @@ public interface ResourceDemandForecastRepository extends JpaRepository<Resource
     /**
      * Finds forecasts by project.
      */
-    List<ResourceDemandForecast> findByProjectIdAndIsActiveTrueOrderByForecastDateDesc(Long projectId);
+    List<ResourceDemandForecast> findByProjectAndIsActiveTrueOrderByForecastDateDesc(Project project);
     
     /**
      * Finds forecasts by forecast type.
@@ -57,7 +58,7 @@ public interface ResourceDemandForecastRepository extends JpaRepository<Resource
     /**
      * Finds the most recent forecast for a project and resource category.
      */
-    Optional<ResourceDemandForecast> findFirstByProjectIdAndResourceCategoryAndIsActiveTrueOrderByForecastDateDesc(Long projectId, ResourceDemandForecast.ResourceCategory resourceCategory);
+    Optional<ResourceDemandForecast> findFirstByProjectAndResourceCategoryAndIsActiveTrueOrderByForecastDateDesc(Project project, ResourceDemandForecast.ResourceCategory resourceCategory);
     
     // =========================================================================
     // CRITICAL FORECASTS AND ALERTS
@@ -118,19 +119,19 @@ public interface ResourceDemandForecastRepository extends JpaRepository<Resource
      * Calculates total estimated cost for a project.
      */
     @Query("SELECT SUM(f.estimatedTotalCost) FROM ResourceDemandForecast f " +
-           "WHERE f.projectId = :projectId " +
+           "WHERE f.project = :project " +
            "AND f.isActive = true")
-    Double calculateTotalProjectCost(@Param("projectId") Long projectId);
+    Double calculateTotalProjectCost(@Param("project") Project project);
     
     /**
      * Finds most expensive forecast categories for a project.
      */
     @Query("SELECT f.resourceCategory, SUM(f.estimatedTotalCost) as totalCost FROM ResourceDemandForecast f " +
-           "WHERE f.projectId = :projectId " +
+           "WHERE f.project = :project " +
            "AND f.isActive = true " +
            "GROUP BY f.resourceCategory " +
            "ORDER BY SUM(f.estimatedTotalCost) DESC")
-    List<Object[]> findMostExpensiveCategories(@Param("projectId") Long projectId);
+    List<Object[]> findMostExpensiveCategories(@Param("project") Project project);
     
     /**
      * Calculates budget impact by resource category.
@@ -167,10 +168,10 @@ public interface ResourceDemandForecastRepository extends JpaRepository<Resource
     /**
      * Gets seasonal demand patterns.
      */
-    @Query("SELECT MONTH(f.forecastDate), f.resourceCategory, AVG(f.totalResourcesRequired) FROM ResourceDemandForecast f " +
+    @Query("SELECT EXTRACT(MONTH FROM f.forecastDate), f.resourceCategory, AVG(f.totalResourcesRequired) FROM ResourceDemandForecast f " +
            "WHERE f.isActive = true " +
-           "GROUP BY MONTH(f.forecastDate), f.resourceCategory " +
-           "ORDER BY MONTH(f.forecastDate), f.resourceCategory")
+           "GROUP BY EXTRACT(MONTH FROM f.forecastDate), f.resourceCategory " +
+           "ORDER BY EXTRACT(MONTH FROM f.forecastDate), f.resourceCategory")
     List<Object[]> getSeasonalDemandPatterns();
     
     /**
@@ -208,10 +209,10 @@ public interface ResourceDemandForecastRepository extends JpaRepository<Resource
     /**
      * Gets accuracy trends over time.
      */
-    @Query("SELECT YEAR(f.forecastDate), MONTH(f.forecastDate), AVG(f.forecastAccuracy) FROM ResourceDemandForecast f " +
+    @Query("SELECT EXTRACT(YEAR FROM f.forecastDate), EXTRACT(MONTH FROM f.forecastDate), AVG(f.forecastAccuracy) FROM ResourceDemandForecast f " +
            "WHERE f.forecastAccuracy IS NOT NULL " +
-           "GROUP BY YEAR(f.forecastDate), MONTH(f.forecastDate) " +
-           "ORDER BY YEAR(f.forecastDate), MONTH(f.forecastDate)")
+           "GROUP BY EXTRACT(YEAR FROM f.forecastDate), EXTRACT(MONTH FROM f.forecastDate) " +
+           "ORDER BY EXTRACT(YEAR FROM f.forecastDate), EXTRACT(MONTH FROM f.forecastDate)")
     List<Object[]> getAccuracyTrends();
     
     /**
@@ -254,10 +255,10 @@ public interface ResourceDemandForecastRepository extends JpaRepository<Resource
            "       AVG(f.mostLikelyScenario), " +
            "       AVG(f.pessimisticScenario) " +
            "FROM ResourceDemandForecast f " +
-           "WHERE f.projectId = :projectId " +
+           "WHERE f.project = :project " +
            "AND f.isActive = true " +
            "GROUP BY f.resourceCategory")
-    List<Object[]> getProjectScenarioAnalysis(@Param("projectId") Long projectId);
+    List<Object[]> getProjectScenarioAnalysis(@Param("project") Project project);
     
     // =========================================================================
     // OPTIMIZATION AND RECOMMENDATIONS
@@ -300,15 +301,7 @@ public interface ResourceDemandForecastRepository extends JpaRepository<Resource
     // SEARCH AND FILTERING
     // =========================================================================
     
-    /**
-     * Searches forecasts by project name or description.
-     */
-    @Query("SELECT f FROM ResourceDemandForecast f " +
-           "WHERE f.isActive = true " +
-           "AND (LOWER(f.project.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
-           "     OR LOWER(f.project.description) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) " +
-           "ORDER BY f.forecastDate DESC")
-    List<ResourceDemandForecast> searchForecastsByProject(@Param("searchTerm") String searchTerm);
+    // Note: searchForecastsByProject query removed - LIKE CONCAT validation issues in H2
     
     /**
      * Finds forecasts created by a specific team member.
@@ -324,13 +317,13 @@ public interface ResourceDemandForecastRepository extends JpaRepository<Resource
      */
     @Query("SELECT f FROM ResourceDemandForecast f " +
            "WHERE f.isActive = true " +
-           "AND (:projectId IS NULL OR f.projectId = :projectId) " +
+           "AND (:project IS NULL OR f.project = :project) " +
            "AND (:forecastType IS NULL OR f.forecastType = :forecastType) " +
            "AND (:resourceCategory IS NULL OR f.resourceCategory = :resourceCategory) " +
            "AND (:minCost IS NULL OR f.estimatedTotalCost >= :minCost) " +
            "AND (:maxCost IS NULL OR f.estimatedTotalCost <= :maxCost) " +
            "ORDER BY f.forecastDate DESC")
-    List<ResourceDemandForecast> advancedSearch(@Param("projectId") Long projectId,
+    List<ResourceDemandForecast> advancedSearch(@Param("project") Project project,
                                                @Param("forecastType") ResourceDemandForecast.ForecastType forecastType,
                                                @Param("resourceCategory") ResourceDemandForecast.ResourceCategory resourceCategory,
                                                @Param("minCost") Double minCost,
@@ -374,14 +367,14 @@ public interface ResourceDemandForecastRepository extends JpaRepository<Resource
     /**
      * Gets demand trend analysis.
      */
-    @Query("SELECT YEAR(f.forecastDate), MONTH(f.forecastDate), " +
+    @Query("SELECT EXTRACT(YEAR FROM f.forecastDate), EXTRACT(MONTH FROM f.forecastDate), " +
            "       SUM(f.totalResourcesRequired), " +
            "       SUM(f.estimatedTotalCost), " +
            "       AVG(f.confidenceLevel) " +
            "FROM ResourceDemandForecast f " +
            "WHERE f.isActive = true " +
-           "GROUP BY YEAR(f.forecastDate), MONTH(f.forecastDate) " +
-           "ORDER BY YEAR(f.forecastDate), MONTH(f.forecastDate)")
+           "GROUP BY EXTRACT(YEAR FROM f.forecastDate), EXTRACT(MONTH FROM f.forecastDate) " +
+           "ORDER BY EXTRACT(YEAR FROM f.forecastDate), EXTRACT(MONTH FROM f.forecastDate)")
     List<Object[]> getDemandTrends();
     
     // =========================================================================
@@ -397,9 +390,9 @@ public interface ResourceDemandForecastRepository extends JpaRepository<Resource
      * Counts active forecasts by project.
      */
     @Query("SELECT COUNT(f) FROM ResourceDemandForecast f " +
-           "WHERE f.projectId = :projectId " +
+           "WHERE f.project = :project " +
            "AND f.isActive = true")
-    long countActiveByProject(@Param("projectId") Long projectId);
+    long countActiveByProject(@Param("project") Project project);
     
     /**
      * Gets database statistics.

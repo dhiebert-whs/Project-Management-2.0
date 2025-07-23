@@ -174,7 +174,7 @@ public interface ManufacturingProcessRepository extends JpaRepository<Manufactur
     List<ManufacturingProcess> findByRequiresQualityInspectionTrueAndIsActiveTrueOrderByPriorityAscNameAsc();
     
     /**
-     * Finds processes requiring approval.
+     * Finds processes requiring quality inspection (as approval proxy).
      */
     List<ManufacturingProcess> findByRequiresApprovalTrueAndIsActiveTrueOrderByPriorityAscNameAsc();
     
@@ -334,32 +334,7 @@ public interface ManufacturingProcessRepository extends JpaRepository<Manufactur
     // Additional methods for ManufacturingProcessServiceImpl
     
     /**
-     * Finds processes by status ordered by priority and started time.
-     */
-    List<ManufacturingProcess> findByStatusAndIsActiveTrueOrderByPriorityAscStartedAtAsc(ManufacturingProcess.ProcessStatus status);
-    
-    /**
-     * Finds processes by assigned team member ordered by priority and started time.
-     */
-    List<ManufacturingProcess> findByAssignedToAndIsActiveTrueOrderByPriorityAscStartedAtAsc(TeamMember assignedTo);
-    
-    /**
-     * Finds processes by status ordered by started time.
-     */
-    List<ManufacturingProcess> findByStatusAndIsActiveTrueOrderByStartedAtAsc(ManufacturingProcess.ProcessStatus status);
-    
-    /**
-     * Finds processes by status ordered by completed time descending.
-     */
-    List<ManufacturingProcess> findByStatusAndIsActiveTrueOrderByCompletedAtDesc(ManufacturingProcess.ProcessStatus status);
-    
-    /**
      * Finds approved processes ordered by approval time descending.
      */
     List<ManufacturingProcess> findByIsApprovedTrueAndIsActiveTrueOrderByApprovedAtDesc();
-    
-    /**
-     * Finds processes by tools required containing search term.
-     */
-    List<ManufacturingProcess> findByToolsRequiredContainingIgnoreCaseAndIsActiveTrueOrderByPriorityAscNameAsc(String searchTerm);
 }

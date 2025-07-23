@@ -8,7 +8,7 @@ This Spring Boot application supports FIRST Robotics Competition (FRC) teams in 
 
 - **Architecture**: Spring Boot 3.2 + Spring Data JPA + Thymeleaf + Spring Security
 - **Java Version**: 21
-- **Database**: H2 (development) / SQLite (production)
+- **Database**: SQLite (development and production) / H2 (testing only)
 - **Build Tool**: Maven 3.11+
 - **Current Phase**: Phase 2E-D (Advanced Task Management) - **100% COMPLETE**
 
@@ -40,8 +40,9 @@ The **primary goals** are to:
 | Frontend         | Thymeleaf + Bootstrap 5  | Responsive UI |
 | Gantt Chart      | `dhtmlxGantt` Standard   | Free educational license |
 | Real-Time        | WebSocket (STOMP/SockJS) | Push task updates |
-| Database (Dev)   | H2 (in-memory or file)   | |
+| Database (Dev)   | SQLite + HikariCP        | Persistent embedded DB |
 | Database (Prod)  | SQLite + HikariCP        | Lightweight embedded DB |
+| Database (Test)  | H2 (in-memory)           | Fast test execution |
 | Authentication   | Spring Security + Google OAuth | Mentor SSO |
 | Mobile Support   | PWA, responsive layout   | Installable on mobile |
 | Gantt Export     | `html2canvas` + `jsPDF`  | Client-side export to PDF/image |
@@ -96,14 +97,21 @@ mvn test -Dtest=*RepositoryTest
 
 ### Database Commands
 ```bash
-# Access H2 console (development)
-# URL: http://localhost:8080/h2-console
-# JDBC URL: jdbc:h2:./db/frc-project-dev
-# Username: sa, Password: (empty)
+# SQLite database locations
+# Development: ./db/frc-project-dev.db
+# Production: ./db/frc-project.db
 
-# Reset database
-rm -rf db/frc-project-dev.mv.db
+# Reset development database
+rm -f db/frc-project-dev.db
 mvn spring-boot:run  # Will recreate tables
+
+# Reset production database
+rm -f db/frc-project.db
+mvn spring-boot:run -Dspring-boot.run.profiles=production
+
+# View SQLite database (requires sqlite3 command line tool)
+sqlite3 db/frc-project-dev.db ".tables"
+sqlite3 db/frc-project-dev.db ".schema"
 ```
 
 ## Architecture Overview
@@ -505,13 +513,31 @@ mvn test -Dspring.profiles.active=test
 
 ## 🧹 Removed Features
 
-| Feature                      | Status |
-|------------------------------|--------|
-| Competition/match tracking   | ❌     |
-| Blue Alliance / FIRST APIs   | ❌     |
-| GitHub integration           | ❌     |
-| Messaging & chat             | ❌     |
-| JavaFX/TestFX Architecture   | ❌     |
+The following features have been removed from the application as they are beyond the core FRC project management scope. These are documented as possible (but unlikely) future additions:
+
+### **Completely Removed Components (July 2025)**
+| Feature                      | Status | Scope |
+|------------------------------|--------|-------|
+| **Mentorship Management**    | ❌ Removed | Mentor-student relationship tracking, mentorship programs |
+| **Financial Management**     | ❌ Removed | Budget tracking, financial transactions, expense management |
+| **Skills Development**       | ❌ Removed | Skill assessments, training programs, certification tracking |
+| **GitHub Integration**       | ❌ Removed | Code repository management, commit tracking, programming analytics |
+| **Video Tutorial System**    | ❌ Removed | Tutorial management, learning paths, educational content |
+| **Competition/match tracking** | ❌ Never Implemented | Match results, competition schedules |
+| **Blue Alliance / FIRST APIs** | ❌ Never Implemented | External competition data integration |
+| **Messaging & chat**         | ❌ Never Implemented | Internal team communications |
+| **JavaFX/TestFX Architecture** | ❌ Migrated | Replaced with Spring Boot web architecture |
+
+### **Core Focus Maintained**
+The application focuses exclusively on:
+- ✅ **Task Management** with Kanban workflows and dependencies
+- ✅ **Project Management** with Gantt charts and deadlines  
+- ✅ **Component Tracking** with reuse and lifecycle management
+- ✅ **Manufacturing Processes** with quality checkpoints and workflows
+- ✅ **Team Member Management** with role-based access
+- ✅ **Real-time Collaboration** via WebSocket integration
+
+**Note**: The removed features represented significant scope creep beyond core FRC project management. They may be considered for future development as separate modules or integrations, but are not part of the current application architecture.
 
 ## Reference Files
 

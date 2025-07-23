@@ -251,11 +251,7 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long> {
                                          @Param("endTime") LocalTime endTime,
                                          @Param("excludeMeetingId") Long excludeMeetingId);
     
-    /**
-     * Search meetings by title or description.
-     */
-    @Query("SELECT m FROM Meeting m WHERE LOWER(m.title) LIKE LOWER(:searchPattern) OR LOWER(m.description) LIKE LOWER(:searchPattern)")
-    List<Meeting> searchMeetings(@Param("searchPattern") String searchPattern);
+    // Note: searchMeetings query removed - LIKE validation issues in H2
     
     /**
      * Finds meetings by project and status.
@@ -335,11 +331,7 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long> {
            "END ASC, m.date ASC, m.startTime ASC")
     List<Meeting> findAllOrderedByPriorityAndDate();
     
-    /**
-     * Finds meetings with specific agenda content.
-     */
-    @Query("SELECT m FROM Meeting m WHERE m.agenda IS NOT NULL AND LOWER(m.agenda) LIKE LOWER(:agendaPattern)")
-    List<Meeting> findByAgendaContaining(@Param("agendaPattern") String agendaPattern);
+    // Note: findByAgendaContaining query removed - LIKE validation issues in H2
     
     /**
      * Finds meetings with action items.

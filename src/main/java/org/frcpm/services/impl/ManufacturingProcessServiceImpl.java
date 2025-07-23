@@ -369,7 +369,7 @@ public class ManufacturingProcessServiceImpl implements ManufacturingProcessServ
     
     @Override
     public List<ManufacturingProcess> findByStatus(ManufacturingProcess.ProcessStatus status) {
-        return manufacturingProcessRepository.findByStatusAndIsActiveTrueOrderByPriorityAscStartedAtAsc(status);
+        return manufacturingProcessRepository.findByStatusAndIsActiveTrueOrderByPriorityAscCreatedAtAsc(status);
     }
     
     @Override
@@ -389,7 +389,7 @@ public class ManufacturingProcessServiceImpl implements ManufacturingProcessServ
     
     @Override
     public List<ManufacturingProcess> findByAssignedTo(TeamMember assignedTo) {
-        return manufacturingProcessRepository.findByAssignedToAndIsActiveTrueOrderByPriorityAscStartedAtAsc(assignedTo);
+        return manufacturingProcessRepository.findByAssignedToAndIsActiveTrueOrderByPriorityAscActualStartTimeAsc(assignedTo);
     }
     
     @Override
@@ -412,7 +412,7 @@ public class ManufacturingProcessServiceImpl implements ManufacturingProcessServ
     
     @Override
     public List<ManufacturingProcess> findActiveProcesses(Project project) {
-        return manufacturingProcessRepository.findByStatusAndIsActiveTrueOrderByStartedAtAsc(
+        return manufacturingProcessRepository.findByStatusAndIsActiveTrueOrderByActualStartTimeAsc(
             ManufacturingProcess.ProcessStatus.IN_PROGRESS);
     }
     
@@ -434,7 +434,7 @@ public class ManufacturingProcessServiceImpl implements ManufacturingProcessServ
     
     @Override
     public List<ManufacturingProcess> findCompletedProcesses(Project project) {
-        return manufacturingProcessRepository.findByStatusAndIsActiveTrueOrderByCompletedAtDesc(
+        return manufacturingProcessRepository.findByStatusAndIsActiveTrueOrderByActualEndTimeDesc(
             ManufacturingProcess.ProcessStatus.COMPLETED);
     }
     
@@ -655,7 +655,7 @@ public class ManufacturingProcessServiceImpl implements ManufacturingProcessServ
     
     @Override
     public List<ManufacturingProcess> searchByTools(String searchTerm) {
-        return manufacturingProcessRepository.findByToolsRequiredContainingIgnoreCaseAndIsActiveTrueOrderByPriorityAscNameAsc(searchTerm);
+        return manufacturingProcessRepository.findByRequiredToolsContainingIgnoreCaseAndIsActiveTrueOrderByPriorityAscNameAsc(searchTerm);
     }
     
     @Override

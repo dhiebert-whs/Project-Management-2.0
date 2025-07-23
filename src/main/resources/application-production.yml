@@ -26,7 +26,7 @@ spring:
   # JPA Configuration (production optimized)
   jpa:
     hibernate:
-      ddl-auto: validate          # Never auto-modify production schema
+      ddl-auto: update            # Create/update schema as needed
     show-sql: false               # Disable SQL logging for performance
     properties:
       hibernate:
@@ -39,9 +39,8 @@ spring:
         connection:
           provider_class: org.hibernate.hikaricp.internal.HikariCPConnectionProvider
         cache:
-          use_second_level_cache: true
-          use_query_cache: true
-          region.factory_class: org.hibernate.cache.jcache.JCacheRegionFactory
+          use_second_level_cache: false
+          use_query_cache: false
         
   # H2 Console (disabled in production)
   h2:

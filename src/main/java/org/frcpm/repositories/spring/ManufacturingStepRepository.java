@@ -248,7 +248,7 @@ public interface ManufacturingStepRepository extends JpaRepository<Manufacturing
     /**
      * Finds blocked steps.
      */
-    List<ManufacturingStep> findByStatusAndIsActiveTrueOrderByStartedAtAscForBlocked(
+    List<ManufacturingStep> findByStatusAndIsActiveTrueOrderByCreatedAtAsc(
             ManufacturingStep.StepStatus blockedStatus);
     
     /**

@@ -250,6 +250,26 @@ public class ManufacturingProcess {
     private Boolean requiresQualityInspection = false;
     
     /**
+     * Whether this process requires approval before proceeding.
+     */
+    @Column(nullable = false)
+    @NotNull(message = "Requires approval status is required")
+    private Boolean requiresApproval = false;
+    
+    /**
+     * Whether this process has been approved.
+     */
+    @Column(nullable = false)
+    @NotNull(message = "Approval status is required")  
+    private Boolean isApproved = false;
+    
+    /**
+     * When this process was approved.
+     */
+    @Column
+    private LocalDateTime approvedAt;
+    
+    /**
      * Whether this process is currently blocked.
      */
     @Column(nullable = false)
@@ -816,6 +836,15 @@ public class ManufacturingProcess {
     
     public String getApprovalNotes() { return approvalNotes; }
     public void setApprovalNotes(String approvalNotes) { this.approvalNotes = approvalNotes; }
+    
+    public Boolean getRequiresApproval() { return requiresApproval; }
+    public void setRequiresApproval(Boolean requiresApproval) { this.requiresApproval = requiresApproval; }
+    
+    public Boolean getIsApproved() { return isApproved; }
+    public void setIsApproved(Boolean isApproved) { this.isApproved = isApproved; }
+    
+    public LocalDateTime getApprovedAt() { return approvedAt; }
+    public void setApprovedAt(LocalDateTime approvedAt) { this.approvedAt = approvedAt; }
     
     // equals, hashCode, toString
     @Override

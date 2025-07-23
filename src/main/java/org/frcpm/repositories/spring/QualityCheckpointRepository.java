@@ -291,11 +291,6 @@ public interface QualityCheckpointRepository extends JpaRepository<QualityCheckp
     
     // Workflow State Queries
     
-    /**
-     * Finds checkpoints ready for inspection.
-     */
-    List<QualityCheckpoint> findByStatusAndIsActiveTrueOrderByPriorityAscNameAscForInspection(
-            QualityCheckpoint.CheckpointStatus pendingStatus);
     
     /**
      * Finds checkpoints in progress.
@@ -309,11 +304,7 @@ public interface QualityCheckpointRepository extends JpaRepository<QualityCheckp
     List<QualityCheckpoint> findByStatusAndIsActiveTrueOrderByUpdatedAtDesc(
             QualityCheckpoint.CheckpointStatus deferredStatus);
     
-    /**
-     * Finds skipped checkpoints.
-     */
-    List<QualityCheckpoint> findByStatusAndIsActiveTrueOrderByUpdatedAtDescForSkipped(
-            QualityCheckpoint.CheckpointStatus skippedStatus);
+    // Note: Skipped checkpoints query removed - duplicate method signature
     
     // Complex Analytics Queries
     

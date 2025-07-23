@@ -6,12 +6,10 @@
 # while preserving the existing H2 database setup from the JavaFX version.
 
 spring:
-  # DataSource Configuration (preserves existing H2 setup)
+  # DataSource Configuration (converted to SQLite for consistency)
   datasource:
-    url: jdbc:h2:mem:testdb
-    driver-class-name: org.h2.Driver
-    username: sa
-    password: ""
+    url: jdbc:sqlite:./db/frc-project-dev.db
+    driver-class-name: org.sqlite.JDBC
     hikari:
       connection-timeout: 20000
       maximum-pool-size: 10
@@ -19,14 +17,20 @@ spring:
       idle-timeout: 300000
       max-lifetime: 1200000
       leak-detection-threshold: 60000
+      data-source-properties:
+        journal_mode: WAL         # Write-Ahead Logging for better concurrency
+        synchronous: NORMAL       # Balance between safety and performance
+        cache_size: 1000          # 1MB cache for development
+        temp_store: MEMORY        # Use memory for temporary storage
     
-  # JPA Configuration (enhanced for development)
+  # JPA Configuration (enhanced for development with SQLite)
   jpa:
     hibernate:
       ddl-auto: update  # Preserve data between restarts
     show-sql: true           # Show SQL queries for debugging
     properties:
       hibernate:
+        dialect: org.hibernate.community.dialect.SQLiteDialect
         format_sql: true     # Pretty-print SQL queries
         use_sql_comments: true
         jdbc:
@@ -35,14 +39,10 @@ spring:
         order_updates: true
         generate_statistics: true
         
-  # H2 Console (enabled for development)
+  # H2 Console (disabled - using SQLite)
   h2:
     console:
-      enabled: true
-      path: /h2-console
-      settings:
-        web-allow-others: false  # Security: only local access
-        trace: false
+      enabled: false
         
   # Thymeleaf (development optimizations)
   thymeleaf:
@@ -167,22 +167,23 @@ management:
 info:
   environment: development
   database:
-    url: "jdbc:h2:./db/frc-project-dev"
-    console: "http://localhost:8080/h2-console"
+    type: SQLite
+    url: "jdbc:sqlite:./db/frc-project-dev.db"
+    location: "./db/frc-project-dev.db"
   endpoints:
-    h2-console: "http://localhost:8080/h2-console"
     application: "http://localhost:8080"
     actuator: "http://localhost:8080/actuator"
   development:
     features:
-      - "H2 Console Access"
+      - "SQLite Development Database"
       - "Live Template Reload"
       - "Enhanced SQL Logging"
       - "Full Stack Traces"
       - "All Actuator Endpoints"
       - "Relaxed Security"
     notes:
-      - "Database recreated on each restart (create-drop)"
+      - "Using SQLite for consistency with production"
+      - "Database persists between restarts"
       - "Template and static resource caching disabled"
       - "Enhanced logging for debugging"
       - "Development credentials: dev/dev"
