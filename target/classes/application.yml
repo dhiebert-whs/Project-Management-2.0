@@ -35,7 +35,7 @@ spring:
       mode: embedded
       continue-on-error: false
       
-  # H2 Console (disabled - using SQLite)
+  # H2 Console (disabled - using PostgreSQL)
   h2:
     console:
       enabled: false

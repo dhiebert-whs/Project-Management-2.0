@@ -85,12 +85,12 @@
                             <div class="mb-3">
                                 <small class="text-muted">
                                     <i class="fas fa-calendar-alt"></i> 
-                                    <span th:text="${#temporals.format(project.startDate, 'MMM dd, yyyy')}">Start Date</span>
+                                    <span th:text="${project.startDate != null ? #temporals.format(project.startDate, 'MMM dd, yyyy') : 'Not set'}">Start Date</span>
                                     -
-                                    <span th:text="${#temporals.format(project.goalEndDate, 'MMM dd, yyyy')}">Goal Date</span>
+                                    <span th:text="${project.goalEndDate != null ? #temporals.format(project.goalEndDate, 'MMM dd, yyyy') : 'Not set'}">Goal Date</span>
                                 </small>
                                 <br>
-                                <small class="text-danger" th:if="${project.hardDeadline}">
+                                <small class="text-danger" th:if="${project.hardDeadline != null}">
                                     <i class="fas fa-exclamation-triangle"></i>
                                     Hard deadline: <span th:text="${#temporals.format(project.hardDeadline, 'MMM dd, yyyy')}">Deadline</span>
                                 </small>
@@ -98,13 +98,13 @@
 
                             <!-- Project Status Badge -->
                             <div class="mb-3">
-                                <span th:if="${#temporals.createNow().isAfter(project.hardDeadline)}" 
+                                <span th:if="${project.hardDeadline != null && #temporals.createNow().isAfter(project.hardDeadline)}" 
                                       class="badge bg-danger">Overdue</span>
-                                <span th:if="${!#temporals.createNow().isAfter(project.hardDeadline) && #temporals.createNow().isAfter(project.goalEndDate)}" 
+                                <span th:if="${project.hardDeadline != null && project.goalEndDate != null && !#temporals.createNow().isAfter(project.hardDeadline) && #temporals.createNow().isAfter(project.goalEndDate)}" 
                                       class="badge bg-warning">Past Goal Date</span>
-                                <span th:if="${#temporals.createNow().isBefore(project.startDate)}" 
+                                <span th:if="${project.startDate != null && #temporals.createNow().isBefore(project.startDate)}" 
                                       class="badge bg-info">Upcoming</span>
-                                <span th:if="${!#temporals.createNow().isBefore(project.startDate) && !#temporals.createNow().isAfter(project.goalEndDate)}" 
+                                <span th:if="${project.startDate != null && project.goalEndDate != null && !#temporals.createNow().isBefore(project.startDate) && !#temporals.createNow().isAfter(project.goalEndDate)}" 
                                       class="badge bg-success">Active</span>
                             </div>
                         </div>

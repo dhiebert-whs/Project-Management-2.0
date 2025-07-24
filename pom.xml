@@ -48,6 +48,12 @@
                 <artifactId>spring-boot-starter-thymeleaf</artifactId>
             </dependency>
             
+            <!-- Thymeleaf Layout Dialect for layout:fragment support -->
+            <dependency>
+                <groupId>nz.net.ultraq.thymeleaf</groupId>
+                <artifactId>thymeleaf-layout-dialect</artifactId>
+            </dependency>
+            
             <!-- Spring Security -->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
@@ -81,25 +87,19 @@
     
             <!-- ===== DATABASE CONNECTIVITY ===== -->
             
-            <!-- H2 for testing only -->
+            <!-- H2 for development and testing -->
             <dependency>
                 <groupId>com.h2database</groupId>
                 <artifactId>h2</artifactId>
                 <version>${h2.version}</version>
-                <scope>test</scope>
+                <scope>runtime</scope>
             </dependency>
             
-            <!-- SQLite for development and production -->
+            <!-- PostgreSQL for development and production -->
             <dependency>
-                <groupId>org.xerial</groupId>
-                <artifactId>sqlite-jdbc</artifactId>
-                <version>3.44.1.0</version>
-            </dependency>
-            
-            <!-- SQLite Hibernate dialect -->
-            <dependency>
-                <groupId>org.hibernate.orm</groupId>
-                <artifactId>hibernate-community-dialects</artifactId>
+                <groupId>org.postgresql</groupId>
+                <artifactId>postgresql</artifactId>
+                <scope>runtime</scope>
             </dependency>
             
             <!-- HikariCP Connection Pool -->

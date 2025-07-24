@@ -526,6 +526,7 @@ public class DashboardController extends BaseController {
         activity1.put("userName", "John Doe");
         activity1.put("projectName", "Robot 2024");
         activity1.put("timestamp", now.minusHours(2));
+        activity1.put("type", "task-completed");
         activities.add(activity1);
         
         Map<String, Object> activity2 = new java.util.HashMap<>();
@@ -533,6 +534,7 @@ public class DashboardController extends BaseController {
         activity2.put("userName", "Jane Smith");
         activity2.put("projectName", "Robot 2024");
         activity2.put("timestamp", now.minusHours(4));
+        activity2.put("type", "component-updated");
         activities.add(activity2);
         
         Map<String, Object> activity3 = new java.util.HashMap<>();
@@ -540,6 +542,7 @@ public class DashboardController extends BaseController {
         activity3.put("userName", "Mike Johnson");
         activity3.put("projectName", "Offseason Project");
         activity3.put("timestamp", now.minusHours(6));
+        activity3.put("type", "task-created");
         activities.add(activity3);
         
         Map<String, Object> activity4 = new java.util.HashMap<>();
@@ -547,6 +550,7 @@ public class DashboardController extends BaseController {
         activity4.put("userName", "Sarah Wilson");
         activity4.put("projectName", "Robot 2024");
         activity4.put("timestamp", now.minusHours(8));
+        activity4.put("type", "meeting-scheduled");
         activities.add(activity4);
         
         return activities;

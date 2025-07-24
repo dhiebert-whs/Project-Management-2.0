@@ -240,6 +240,7 @@ org\frcpm\repositories\spring\AttendanceRepository.class
 org\frcpm\services\impl\ResourceDemandForecastServiceImpl.class
 org\frcpm\services\NotificationService$NotificationPreferences.class
 org\frcpm\models\PartRequirement$RequirementPriority.class
+org\frcpm\config\SampleDataLoader.class
 org\frcpm\repositories\spring\SubteamRepository.class
 org\frcpm\models\Part.class
 org\frcpm\models\TeamConfiguration.class

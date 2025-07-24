@@ -359,25 +359,26 @@
                     <div th:if="${recentActivities != null and !#lists.isEmpty(recentActivities)}">
                         <div th:each="activity : ${recentActivities}" 
                              class="activity-item" 
-                             th:classappend="${activity.type}">
+                             th:classappend="${activity.type ?: ''}">
                             <div class="d-flex justify-content-between align-items-start">
                                 <div>
                                     <strong th:text="${activity.description}">Activity description</strong>
                                     <div class="activity-meta">
                                         <span th:text="${activity.userName}">User Name</span>
-                                        <span th:if="${activity.projectName}">
+                                        <span th:if="${activity.projectName != null}">
                                             in <span th:text="${activity.projectName}">Project</span>
                                         </span>
                                     </div>
                                 </div>
-                                <small class="text-muted" th:text="${#temporals.format(activity.timestamp, 'MMM dd, HH:mm')}">
-                                    Jan 01, 12:00
+                                <small class="text-muted">
+                                    <span th:if="${activity.timestamp != null}" th:text="${#temporals.format(activity.timestamp, 'MMM dd, HH:mm')}">Jan 01, 12:00</span>
+                                    <span th:if="${activity.timestamp == null}">Unknown time</span>
                                 </small>
                             </div>
                         </div>
                     </div>
                     
-                    <div th:if="${recentActivities == null or #lists.isEmpty(recentActivities)}" class="text-center py-4">
+                    <div th:if="${recentActivities == null || #lists.isEmpty(recentActivities)}" class="text-center py-4">
                         <i class="fas fa-history fa-2x text-muted mb-3"></i>
                         <p class="text-muted">No recent activity to display</p>
                         <p class="text-muted">
@@ -398,23 +399,23 @@
                     <div th:if="${projectProgressData != null and !#lists.isEmpty(projectProgressData)}">
                         <div th:each="project : ${projectProgressData}" class="progress-item">
                             <div class="progress-label">
-                                <span th:text="${project.name}">Project Name</span>
-                                <span th:text="${project.completionPercentage + '%'}">0%</span>
+                                <span th:text="${project.name ?: 'Unknown Project'}">Project Name</span>
+                                <span th:text="${(project.completionPercentage ?: 0) + '%'}">0%</span>
                             </div>
                             <div class="progress-bar-custom">
                                 <div class="progress-fill" 
-                                     th:classappend="${project.completionPercentage >= 80 ? 'success' : (project.completionPercentage >= 50 ? 'info' : 'warning')}"
-                                     th:style="'width: ' + ${project.completionPercentage} + '%'">
+                                     th:classappend="${(project.completionPercentage ?: 0) >= 80 ? 'success' : ((project.completionPercentage ?: 0) >= 50 ? 'info' : 'warning')}"
+                                     th:style="'width: ' + ${project.completionPercentage ?: 0} + '%'">
                                 </div>
                             </div>
                             <small class="text-muted">
-                                <span th:text="${project.completedTasks}">0</span> / 
-                                <span th:text="${project.totalTasks}">0</span> tasks completed
+                                <span th:text="${project.completedTasks ?: 0}">0</span> / 
+                                <span th:text="${project.totalTasks ?: 0}">0</span> tasks completed
                             </small>
                         </div>
                     </div>
                     
-                    <div th:if="${projectProgressData == null or #lists.isEmpty(projectProgressData)}" class="text-center py-4">
+                    <div th:if="${projectProgressData == null || #lists.isEmpty(projectProgressData)}" class="text-center py-4">
                         <i class="fas fa-project-diagram fa-2x text-muted mb-3"></i>
                         <p class="text-muted">No projects to display</p>
                         <a href="/projects/new" class="btn btn-primary btn-sm">
@@ -431,7 +432,15 @@
                 <!-- Keep original recent activity for comparison -->
             </div>
             <div class="col-lg-4">
-                <div th:replace="~{fragments/activity-feed :: activity-feed}"></div>
+                <!-- <div th:replace="~{fragments/activity-feed :: activity-feed}"></div> -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Activity Feed</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">Activity feed temporarily disabled for debugging</p>
+                    </div>
+                </div>
             </div>
         </div>
 

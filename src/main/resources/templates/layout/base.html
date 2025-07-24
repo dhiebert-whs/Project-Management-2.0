@@ -415,28 +415,28 @@
         </div>
         
         <!-- Flash Messages -->
-        <div class="container-fluid" th:if="${successMessage or errorMessage or warningMessage or infoMessage}">
+        <div class="container-fluid" th:if="${successMessage != null or errorMessage != null or warningMessage != null or infoMessage != null}">
             <div class="row">
                 <div class="col-12">
-                    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+                    <div th:if="${successMessage != null}" class="alert alert-success alert-dismissible fade show mt-3" role="alert">
                         <i class="fas fa-check-circle me-2"></i>
                         <span th:text="${successMessage}">Success message</span>
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                     
-                    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+                    <div th:if="${errorMessage != null}" class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
                         <i class="fas fa-exclamation-triangle me-2"></i>
                         <span th:text="${errorMessage}">Error message</span>
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                     
-                    <div th:if="${warningMessage}" class="alert alert-warning alert-dismissible fade show mt-3" role="alert">
+                    <div th:if="${warningMessage != null}" class="alert alert-warning alert-dismissible fade show mt-3" role="alert">
                         <i class="fas fa-exclamation-circle me-2"></i>
                         <span th:text="${warningMessage}">Warning message</span>
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                     
-                    <div th:if="${infoMessage}" class="alert alert-info alert-dismissible fade show mt-3" role="alert">
+                    <div th:if="${infoMessage != null}" class="alert alert-info alert-dismissible fade show mt-3" role="alert">
                         <i class="fas fa-info-circle me-2"></i>
                         <span th:text="${infoMessage}">Info message</span>
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -494,8 +494,15 @@
         
         // Initialize application when page loads
         document.addEventListener('DOMContentLoaded', function() {
-            initializeApp();
-            connectWebSocket();
+            try {
+                initializeApp();
+                // Add delay to WebSocket connection to avoid race conditions
+                setTimeout(() => {
+                    connectWebSocket();
+                }, 1000);
+            } catch (error) {
+                console.error('Error during app initialization:', error);
+            }
         });
         
         // Initialize base application features
@@ -524,41 +531,51 @@
             const connectionText = document.getElementById('connection-text');
             
             try {
-                const socket = new SockJS('/ws');
+                // Force WebSocket to use current host and port to avoid 8081 issue
+                const wsUrl = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+                const fullWsUrl = wsUrl + window.location.host + '/ws';
+                console.log('Connecting to WebSocket at:', fullWsUrl);
+                
+                const socket = new SockJS('/ws', null, {
+                    transports: ['websocket', 'xhr-streaming', 'xhr-polling']
+                });
                 stompClient = new StompJs.Client({
                     webSocketFactory: () => socket,
                     reconnectDelay: 5000,
                     heartbeatIncoming: 4000,
-                    heartbeatOutgoing: 4000
+                    heartbeatOutgoing: 4000,
+                    debug: function (str) {
+                        console.log('STOMP Debug: ' + str);
+                    }
                 });
                 
                 stompClient.onConnect = function(frame) {
                     console.log('Connected to WebSocket:', frame);
                     isConnected = true;
-                    indicator.classList.remove('disconnected');
-                    connectionText.textContent = 'Real-time Active';
+                    if (indicator) indicator.classList.remove('disconnected');
+                    if (connectionText) connectionText.textContent = 'Real-time Active';
                 };
                 
                 stompClient.onStompError = function(frame) {
                     console.error('STOMP error:', frame);
                     isConnected = false;
-                    indicator.classList.add('disconnected');
-                    connectionText.textContent = 'Connection Error';
+                    if (indicator) indicator.classList.add('disconnected');
+                    if (connectionText) connectionText.textContent = 'Connection Error';
                 };
                 
                 stompClient.onWebSocketClose = function(event) {
                     console.log('WebSocket connection closed');
                     isConnected = false;
-                    indicator.classList.add('disconnected');
-                    connectionText.textContent = 'Offline Mode';
+                    if (indicator) indicator.classList.add('disconnected');
+                    if (connectionText) connectionText.textContent = 'Offline Mode';
                 };
                 
                 stompClient.activate();
                 
             } catch (error) {
                 console.error('Error connecting to WebSocket:', error);
-                indicator.classList.add('disconnected');
-                connectionText.textContent = 'WebSocket Unavailable';
+                if (indicator) indicator.classList.add('disconnected');
+                if (connectionText) connectionText.textContent = 'WebSocket Unavailable';
             }
         }
         

@@ -42,7 +42,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(authz -> authz
                 .requestMatchers("/css/**", "/js/**", "/images/**", 
                                "/manifest.json", "/sw.js", "/h2-console/**").permitAll()
-                .requestMatchers("/login", "/register", "/error").permitAll()
+                .requestMatchers("/login", "/register", "/error", "/debug/**").permitAll()
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 .requestMatchers("/mentor/**").hasAnyRole("MENTOR", "ADMIN")
                 .anyRequest().authenticated()

@@ -13,7 +13,7 @@ import javax.sql.DataSource;
 
 /**
  * Database configuration for FRC Project Management System.
- * ✅ UPDATED: Converted to use SQLite for development and production, H2 for tests only
+ * ✅ UPDATED: Converted to use PostgreSQL for development and production, H2 for tests only
  */
 @Configuration
 @EnableJpaRepositories(basePackages = "org.frcpm.repositories.spring")
@@ -35,26 +35,14 @@ public class DatabaseConfig {
     }
     
     /**
-     * SQLite DataSource for development environment.
+     * PostgreSQL DataSource for development environment with sample data.
+     * Configuration is handled via application-development.yml
      */
-    @Bean
-    @Profile("development")
-    public DataSource sqliteDevDataSource() {
-        return DataSourceBuilder.create()
-            .driverClassName("org.sqlite.JDBC")
-            .url("jdbc:sqlite:./db/frc-project-dev.db")
-            .build();
-    }
+    // Development datasource configured via application-development.yml
     
     /**
-     * SQLite DataSource for production environment.
+     * PostgreSQL DataSource for production environment.
+     * Configuration is handled via application-production.yml and environment variables
      */
-    @Bean
-    @Profile("production")
-    public DataSource sqliteDataSource() {
-        return DataSourceBuilder.create()
-            .driverClassName("org.sqlite.JDBC")
-            .url("jdbc:sqlite:./db/frc-project.db")
-            .build();
-    }
+    // Production datasource configured via application-production.yml
 }

@@ -6,10 +6,12 @@
 # while preserving the existing H2 database setup from the JavaFX version.
 
 spring:
-  # DataSource Configuration (converted to SQLite for consistency)
+  # DataSource Configuration (Supabase PostgreSQL for development with sample data)
   datasource:
-    url: jdbc:sqlite:./db/frc-project-dev.db
-    driver-class-name: org.sqlite.JDBC
+    url: jdbc:postgresql://aws-0-us-east-2.pooler.supabase.com:6543/postgres
+    username: postgres.pskzshlscnicatyqthtk
+    password: ${SUPABASE_PASSWORD:ShrapnelSergeants2408!}
+    driver-class-name: org.postgresql.Driver
     hikari:
       connection-timeout: 20000
       maximum-pool-size: 10
@@ -17,29 +19,24 @@ spring:
       idle-timeout: 300000
       max-lifetime: 1200000
       leak-detection-threshold: 60000
-      data-source-properties:
-        journal_mode: WAL         # Write-Ahead Logging for better concurrency
-        synchronous: NORMAL       # Balance between safety and performance
-        cache_size: 1000          # 1MB cache for development
-        temp_store: MEMORY        # Use memory for temporary storage
     
-  # JPA Configuration (enhanced for development with SQLite)
+  # JPA Configuration (PostgreSQL optimized)
   jpa:
     hibernate:
-      ddl-auto: update  # Preserve data between restarts
+      ddl-auto: update  # Update schema without dropping existing data
     show-sql: true           # Show SQL queries for debugging
     properties:
       hibernate:
-        dialect: org.hibernate.community.dialect.SQLiteDialect
+        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true     # Pretty-print SQL queries
         use_sql_comments: true
         jdbc:
-          batch_size: 20
+          batch_size: 20     # PostgreSQL handles batching well
         order_inserts: true
         order_updates: true
         generate_statistics: true
         
-  # H2 Console (disabled - using SQLite)
+  # H2 Console (disabled - using PostgreSQL)
   h2:
     console:
       enabled: false
@@ -70,7 +67,7 @@ spring:
       additional-paths: src/main/java
       exclude: static/**,templates/**
     livereload:
-      enabled: true
+      enabled: false
       port: 35729
     add-properties: true
 
@@ -91,14 +88,14 @@ server:
 # Enhanced Logging for Development
 logging:
   level:
-    org.frcpm: DEBUG                    # Detailed application logging
-    org.springframework.web: DEBUG      # Web request logging
-    org.springframework.security: DEBUG # Security debugging
-    org.hibernate.SQL: DEBUG           # SQL query logging
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE  # Parameter binding
-    org.springframework.transaction: DEBUG  # Transaction debugging
-    org.springframework.data.jpa: DEBUG     # JPA debugging
-    de.saxsys.mvvmfx: DEBUG             # MVVMFx framework (if still present)
+    org.frcpm: INFO                     # Application logging
+    org.springframework.web: WARN       # Web request logging
+    org.springframework.security: WARN  # Security debugging
+    org.hibernate.SQL: WARN            # SQL query logging
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN  # Parameter binding
+    org.springframework.transaction: WARN  # Transaction debugging
+    org.springframework.data.jpa: WARN     # JPA debugging
+    de.saxsys.mvvmfx: WARN              # MVVMFx framework (if still present)
   pattern:
     console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx"
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
@@ -140,13 +137,9 @@ spring.security:
     password: dev
     roles: ADMIN,DEVELOPER
     
-# Development Database Initialization
+# Development Database Initialization (using Java-based loader instead of SQL)
 spring.sql.init:
   mode: never
-  data-locations: 
-    - classpath:data-dev.sql  # Development test data
-  schema-locations:
-    - classpath:schema-dev.sql  # Development schema if needed
 
 # Development Actuator (more endpoints exposed)
 management:
@@ -167,22 +160,22 @@ management:
 info:
   environment: development
   database:
-    type: SQLite
-    url: "jdbc:sqlite:./db/frc-project-dev.db"
-    location: "./db/frc-project-dev.db"
+    type: PostgreSQL
+    url: "jdbc:postgresql://aws-0-us-east-2.pooler.supabase.com:6543/postgres"
+    location: "aws-0-us-east-2.pooler.supabase.com:6543"
   endpoints:
     application: "http://localhost:8080"
     actuator: "http://localhost:8080/actuator"
   development:
     features:
-      - "SQLite Development Database"
+      - "PostgreSQL Development Database"
       - "Live Template Reload"
       - "Enhanced SQL Logging"
       - "Full Stack Traces"
       - "All Actuator Endpoints"
       - "Relaxed Security"
     notes:
-      - "Using SQLite for consistency with production"
+      - "Using PostgreSQL for better compatibility and performance"
       - "Database persists between restarts"
       - "Template and static resource caching disabled"
       - "Enhanced logging for debugging"
